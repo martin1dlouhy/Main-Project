@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Přehled Investment Tools - Aktuální UI & Funkce</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 15px;
+            font-weight: 800;
+        }
+
+        .header p {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+
+        .section {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .section h2 {
+            color: #1e293b;
+            font-size: 32px;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .section h3 {
+            color: #475569;
+            font-size: 22px;
+            margin: 25px 0 15px 0;
+            font-weight: 600;
+        }
+
+        .pages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .page-card {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 25px;
+            border-radius: 16px;
+            border: 2px solid #2196f3;
+        }
+
+        .page-card h4 {
+            color: #1565c0;
+            font-size: 20px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .page-card p {
+            color: #1e293b;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: start;
+            line-height: 1.6;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            color: #10b981;
+            font-weight: bold;
+            font-size: 20px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .tech-badge {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 2px solid #cbd5e1;
+        }
+
+        .calculator-features {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe4e6 100%);
+            padding: 30px;
+            border-radius: 16px;
+            margin-top: 25px;
+            border: 2px solid #f43f5e;
+        }
+
+        .calculator-features h4 {
+            color: #be123c;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .input-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .input-item strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .input-item span {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-left: 10px;
+        }
+
+        .status-live {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-soon {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+            border-left: 5px solid #f59e0b;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .highlight-box strong {
+            color: #92400e;
+            font-size: 16px;
+        }
+
+        .screenshot-placeholder {
+            background: #f8fafc;
+            border: 3px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 60px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💼 Investment Tools</h1>
+            <p>Kompletní přehled aktuálního UI a funkcí</p>
+        </div>
+
+        <!-- STRUKTURA STRÁNEK -->
+        <div class="section">
+            <h2>📄 Struktura webových stránek</h2>
+            
+            <div class="pages-grid">
+                <div class="page-card">
+                    <h4>🏠 index.html <span class="status-badge status-live">LIVE</span></h4>
+                    <p><strong>Hlavní vstupní stránka</strong></p>
+                    <p>Hero sekce s CTA tlačítky, preview dostupných aplikací (4 karty), features sekce, footer s kontakty</p>
+                </div>
+
+                <div class="page-card">
+                    <h4>📱 apps.html</h4>
+                    <p><strong>Přehled aplikací</strong></p>
+                    <p>Grid se všemi dostupnými a plánovanými kalkulačkami a nástroji</p>
+                </div>
+
+                <div class="page-card">
+                    <h4>👤 about.html</h4>
+                    <p><strong>O mně stránka</strong></p>
+                    <p>Informace o tvé osobě a profesním zaměření</p>
+                </div>
+
+                <div class="page-card">
+                    <h4>💰 debt-calculator.html <span class="status-badge status-live">LIVE</span></h4>
+                    <p><strong>Hlavní aplikace - Debt Financing Calculator</strong></p>
+                    <p>Pokročilá kalkulačka dluhového financování s nemovitostní zástavou</p>
+                </div>
+            </div>
+
+            <div class="tech-stack">
+                <div class="tech-badge">HTML5</div>
+                <div class="tech-badge">CSS3 (vlastní)</div>
+                <div class="tech-badge">Vanilla JavaScript</div>
+                <div class="tech-badge">jsPDF</div>
+                <div class="tech-badge">jsPDF AutoTable</div>
+                <div class="tech-badge">Responsive Design</div>
+            </div>
+        </div>
+
+        <!-- HLAVNÍ APLIKACE -->
+        <div class="section">
+            <h2>💰 Debt Financing Calculator - Detailní funkce</h2>
+
+            <div class="highlight-box">
+                <strong>🎯 Hlavní účel:</strong> Komplexní výpočet dluhového financování s nemovitostní zástavou včetně všech poplatků, úroků a splátkového kalendáře
+            </div>
+
+            <h3>📊 Vstupní parametry</h3>
+            <div class="input-grid">
+                <div class="input-item">
+                    <strong>Hodnota nemovitosti</strong>
+                    <span>Tržní hodnota zástavy</span>
+                </div>
+                <div class="input-item">
+                    <strong>Výše úvěru</strong>
+                    <span>Požadovaná částka financování</span>
+                </div>
+                <div class="input-item">
+                    <strong>Úroková sazba</strong>
+                    <span>% p.a. (roční sazba)</span>
+                </div>
+                <div class="input-item">
+                    <strong>Doba splatnosti</strong>
+                    <span>V měsících</span>
+                </div>
+                <div class="input-item">
+                    <strong>Datum čerpání</strong>
+                    <span>Začátek úvěru</span>
+                </div>
+                <div class="input-item">
+                    <strong>Datum splatnosti</strong>
+                    <span>Automatický výpočet</span>
+                </div>
+                <div class="input-item">
+                    <strong>Předčasné splacení</strong>
+                    <span>Volitelné datum</span>
+                </div>
+                <div class="input-item">
+                    <strong>Poplatek za sjednání</strong>
+                    <span>% nebo pevná částka</span>
+                </div>
+                <div class="input-item">
+                    <strong>Poplatek předčasné splacení</strong>
+                    <span>% nebo pevná částka</span>
+                </div>
+                <div class="input-item">
+                    <strong>Smluvní pokuta</strong>
+                    <span>Při porušení podmínek</span>
+                </div>
+            </div>
+
+            <h3>💱 Měnová podpora</h3>
+            <ul class="feature-list">
+                <li><strong>CZK</strong> - Česká koruna (výchozí)</li>
+                <li><strong>EUR</strong> - Euro</li>
+                <li><strong>USD</strong> - Americký dolar</li>
+                <li>Přepínání měny v reálném čase s automatickým přeformátováním čísel</li>
+            </ul>
+
+            <h3>📈 Typy splácení</h3>
+            <ul class="feature-list">
+                <li><strong>Anuitní splácení</strong> - Pravidelné splátky obsahující úrok + jistinu</li>
+                <li><strong>Úroky pravidelně, jistina na konci</strong> - Interest-only platby s finálním splacením jistiny</li>
+                <li><strong>Bullet payment</strong> - Jistina s úroky k době konečné splatnosti (jednorázová splátka)</li>
+                <li>Nastavitelná frekvence placení úroků: měsíčně, čtvrtletně, pololetně, ročně</li>
+            </ul>
+
+            <h3>🧮 Výpočty a výstupy</h3>
+            <ul class="feature-list">
+                <li><strong>LTV ratio</strong> - Loan-to-Value poměr s varovným systémem (nad 80%)</li>
+                <li><strong>Měsíční splátka</strong> - Pro anuitní typ splácení</li>
+                <li><strong>Celkový úrok</strong> - Součet všech úrokových plateb</li>
+                <li><strong>Celková částka k vrácení</strong> - Jistina + úroky + všechny poplatky</li>
+                <li><strong>Efektivní úroková sazba (APR)</strong> - Skutečná cena úvěru včetně poplatků</li>
+                <li><strong>Čistá částka k dispozici</strong> - Po odečtení poplatku za sjednání</li>
+                <li><strong>Poplatek za předčasné splacení</strong> - Pokud je zadáno předčasné splacení</li>
+            </ul>
+
+            <div class="calculator-features">
+                <h4>🗓️ Splátkový kalendář</h4>
+                <ul class="feature-list">
+                    <li>Detailní tabulka všech splátek podle zvoleného typu</li>
+                    <li>Pro každou splátku: měsíc, datum, jistina, úrok, celková splátka, zůstatek</li>
+                    <li>Barevné označení úroků vs. jistiny</li>
+                    <li>Responsive design pro mobilní zařízení</li>
+                </ul>
+            </div>
+
+            <h3>📥 Export & Print funkce</h3>
+            <ul class="feature-list">
+                <li><strong>Export do PDF</strong> - Kompletní report s vizuálně formátovanou tabulkou</li>
+                <li><strong>Export do Excel</strong> - Exportovatelný .xlsx soubor se splátkovou tabulkou</li>
+                <li><strong>Tisk</strong> - Optimalizovaná verze pro tisk</li>
+                <li><strong>Uložení kalkulace</strong> - Pojmenované kalkulace s možností pozdějšího načtení</li>
+            </ul>
+
+            <h3>💾 Správa kalkulací</h3>
+            <ul class="feature-list">
+                <li>Uložení aktuální kalkulace s vlastním názvem</li>
+                <li>Seznam všech uložených kalkulací</li>
+                <li>Rychlé načtení předchozích výpočtů</li>
+                <li>Smazání nepotřebných kalkulací</li>
+                <li>Data uložena lokálně v prohlížeči (localStorage)</li>
+            </ul>
+
+            <h3>✨ UX vylepšení</h3>
+            <ul class="feature-list">
+                <li><strong>Smart formátování čísel</strong> - Automatické mezery tisíců při psaní</li>
+                <li><strong>Varovný systém</strong> - Upozornění na vysoké LTV nebo neadekvátní hodnoty</li>
+                <li><strong>Success hlášky</strong> - Potvrzení úspěšných operací</li>
+                <li><strong>Animace</strong> - Plynulé přechody a slide-in efekty</li>
+                <li><strong>Hover efekty</strong> - Interaktivní karty výsledků</li>
+                <li><strong>Automatický výpočet data splatnosti</strong> - Podle data čerpání a doby trvání</li>
+                <li><strong>Přepínač % vs. absolutní částka</strong> - Pro všechny poplatky</li>
+            </ul>
+
+            <h3>📱 Responsivita</h3>
+            <ul class="feature-list">
+                <li>Plně responzivní design pro mobily, tablety a PC</li>
+                <li>Grid layout s automatickým přepnutím na 1 sloupec na mobilu</li>
+                <li>Přizpůsobené velikosti fontů a paddingů</li>
+                <li>Touch-friendly ovládací prvky</li>
+            </ul>
+        </div>
+
+        <!-- NAVIGACE -->
+        <div class="section">
+            <h2>🧭 Navigační systém</h2>
+            <ul class="feature-list">
+                <li><strong>Jednotná navigační lišta</strong> - Na všech stránkách (kromě kalkulačky)</li>
+                <li><strong>Logo/branding</strong> - 💼 Investment Tools</li>
+                <li><strong>Menu položky:</strong> Domů, Aplikace, O mně</li>
+                <li><strong>Mobile hamburger menu</strong> - Responsivní navigace</li>
+                <li><strong>Active state</strong> - Zvýraznění aktuální stránky</li>
+            </ul>
+        </div>
+
+        <!-- DESIGN SYSTÉM -->
+        <div class="section">
+            <h2>🎨 Design systém</h2>
+            
+            <h3>Barevná paleta</h3>
+            <ul class="feature-list">
+                <li><strong>Primární:</strong> Modré odstíny (#2196f3, #1976d2, #1565c0) - profesionální, důvěryhodné</li>
+                <li><strong>Sekundární:</strong> Světlé modré tóny (#e3f2fd, #bbdefb) - pozadí a karty</li>
+                <li><strong>Gradienty:</strong> Používané pro tlačítka a pozadí</li>
+                <li><strong>Warnings:</strong> Červená (#ef5350, #c62828) pro varování</li>
+                <li><strong>Success:</strong> Zelená (#66bb6a, #2e7d32) pro úspěchy</li>
+                <li><strong>Texty:</strong> Tmavé odstíny (#1e293b, #64748b)</li>
+            </ul>
+
+            <h3>Typografie</h3>
+            <ul class="feature-list">
+                <li><strong>Font stack:</strong> -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto (systémové fonty)</li>
+                <li><strong>Nadpisy:</strong> Font-weight 700-900, velikosti 20-32px</li>
+                <li><strong>Tělo textu:</strong> 14-16px, line-height 1.6</li>
+                <li><strong>Uppercase:</strong> Pro labely a speciální prvky s letter-spacing</li>
+            </ul>
+
+            <h3>Komponenty</h3>
+            <ul class="feature-list">
+                <li><strong>Tlačítka:</strong> Gradientová s shadow efekty a hover animacemi</li>
+                <li><strong>Input fieldy:</strong> Zaoblené rohy, fokus stavy, formátování</li>
+                <li><strong>Karty:</strong> Bílé s jemným stínem a hover efekty</li>
+                <li><strong>Tabulky:</strong> Stripované řádky, hover efekty</li>
+                <li><strong>Modální okna:</strong> Pro uložení kalkulací</li>
+            </ul>
+        </div>
+
+        <!-- PLÁNOVANÉ APLIKACE -->
+        <div class="section">
+            <h2>🚀 Plánované aplikace (Coming Soon)</h2>
+            
+            <div class="pages-grid">
+                <div class="page-card">
+                    <h4>📊 Portfolio Tracker <span class="status-badge status-soon">SOON</span></h4>
+                    <p>Sledování investičního portfolia v reálném čase s grafy a analýzami výkonu</p>
+                </div>
+
+                <div class="page-card">
+                    <h4>📈 IRR Calculator <span class="status-badge status-soon">SOON</span></h4>
+                    <p>Výpočet vnitřního výnosového procenta (Internal Rate of Return) pro investiční projekty</p>
+                </div>
+
+                <div class="page-card">
+                    <h4>🏠 Real Estate Analyzer <span class="status-badge status-soon">SOON</span></h4>
+                    <p>Komplexní analýza výnosnosti nemovitostních investic včetně cash flow a ROI</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TECHNICKÉ INFORMACE -->
+        <div class="section">
+            <h2>⚙️ Technické informace</h2>
+            
+            <h3>Soubory projektu</h3>
+            <ul class="feature-list">
+                <li><strong>index.html</strong> - Hlavní vstupní stránka (6.5 KB)</li>
+                <li><strong>apps.html</strong> - Přehled aplikací (9 KB)</li>
+                <li><strong>about.html</strong> - O mně (7 KB)</li>
+                <li><strong>debt-calculator.html</strong> - Hlavní kalkulačka (62 KB - vše v jednom souboru)</li>
+                <li><strong>styles.css</strong> - Globální styly (12 KB)</li>
+                <li><strong>script.js</strong> - Základní JS funkce (2.5 KB)</li>
+                <li><strong>vercel.json</strong> - Konfigurace pro deployment</li>
+            </ul>
+
+            <h3>Externí závislosti</h3>
+            <ul class="feature-list">
+                <li><strong>jsPDF 2.5.1</strong> - Generování PDF dokumentů</li>
+                <li><strong>jsPDF AutoTable 3.5.31</strong> - Tabulky v PDF</li>
+                <li>Všechny závislosti načítány z CDN (cdnjs.cloudflare.com)</li>
+            </ul>
+
+            <h3>Hosting a deployment</h3>
+            <ul class="feature-list">
+                <li><strong>Vercel</strong> - Připraveno pro deployment na Vercel</li>
+                <li><strong>Static hosting</strong> - Čistě statický web bez backendu</li>
+                <li><strong>GitHub</strong> - Zdrojový kód v repozitáři</li>
+            </ul>
+        </div>
+
+        <!-- MOŽNOSTI VYLEPŠENÍ -->
+        <div class="section">
+            <h2>💡 Doporučení pro další rozvoj</h2>
+            
+            <h3>Priorita vysoká</h3>
+            <ul class="feature-list">
+                <li>Přidání grafů a vizualizací (např. Chart.js pro amortizační křivku)</li>
+                <li>Porovnání více scénářů financování side-by-side</li>
+                <li>Simulace různých úrokových sazeb (stress testing)</li>
+                <li>Export do více formátů (CSV, JSON)</li>
+            </ul>
+
+            <h3>Priorita střední</h3>
+            <ul class="feature-list">
+                <li>Dark mode přepínač</li>
+                <li>Možnost sdílení kalkulace přes URL (URL parameters)</li>
+                <li>Email zasílání výsledků</li>
+                <li>Implementace IRR Calculator a Portfolio Tracker aplikací</li>
+            </ul>
+
+            <h3>Priorita nízká</h3>
+            <ul class="feature-list">
+                <li>Multi-language podpora (EN)</li>
+                <li>PWA (Progressive Web App) funkce</li>
+                <li>Backend pro ukládání do cloudu</li>
+                <li>User accounts a synchronizace napříč zařízeními</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>📝 Poznámky</h2>
+            <div class="highlight-box">
+                <p><strong>Aktuální stav:</strong> Funkční Debt Financing Calculator s kompletními features. Ostatní aplikace jsou placeholdery označené jako "Coming Soon".</p>
+                <p style="margin-top: 10px;"><strong>GitHub struktura:</strong> Všechny soubory jsou v root složce repozitáře Calculator-01-main.</p>
+                <p style="margin-top: 10px;"><strong>Silné stránky:</strong> Čistý kód, responzivní design, profesionální UI, kompletní funkcionalita pro dluhové financování.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

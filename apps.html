@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikace | Investment Tools</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">💼 Investment Tools</div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Domů</a></li>
+                <li><a href="apps.html" class="active">Aplikace</a></li>
+                <li><a href="about.html">O mně</a></li>
+            </ul>
+            <button class="nav-toggle" onclick="toggleMenu()">☰</button>
+        </div>
+    </nav>
+
+    <div class="page-header">
+        <div class="container">
+            <h1>Všechny aplikace</h1>
+            <p>Profesionální nástroje pro investice a finance</p>
+        </div>
+    </div>
+
+    <section class="apps-section">
+        <div class="container">
+            <div class="filter-tabs">
+                <button class="tab-btn active" onclick="filterApps('all')">Vše</button>
+                <button class="tab-btn" onclick="filterApps('live')">Dostupné</button>
+                <button class="tab-btn" onclick="filterApps('soon')">Připravujeme</button>
+            </div>
+
+            <div class="apps-grid" id="appsGrid">
+                <!-- Live Apps -->
+                <a href="debt-calculator.html" class="app-card" data-status="live">
+                    <div class="app-icon">💰</div>
+                    <h3>Debt Financing Calculator</h3>
+                    <p>Kompletní kalkulačka pro dluhové financování s nemovitostní zástavou. Obsahuje IRR výpočty, splátkový kalendář, export do PDF a Excel.</p>
+                    <div class="app-features">
+                        <div class="feature-item">✓ IRR kalkulace</div>
+                        <div class="feature-item">✓ Splátkový kalendář</div>
+                        <div class="feature-item">✓ PDF & Excel export</div>
+                        <div class="feature-item">✓ Více měn (CZK/EUR/USD)</div>
+                        <div class="feature-item">✓ 3 typy splácení</div>
+                    </div>
+                    <div class="app-tags">
+                        <span class="tag">Finance</span>
+                        <span class="tag">Real Estate</span>
+                        <span class="tag">Calculator</span>
+                    </div>
+                    <div class="app-footer">
+                        <span class="app-status live">● Live</span>
+                        <span class="app-arrow">Spustit →</span>
+                    </div>
+                </a>
+
+                <!-- Coming Soon Apps -->
+                <div class="app-card" data-status="soon">
+                    <div class="app-icon">📊</div>
+                    <h3>Portfolio Tracker</h3>
+                    <p>Sledujte své investiční portfolio v reálném čase. Automatické aktualizace cen, výpočet výnosů, a detailní analytika.</p>
+                    <div class="app-features">
+                        <div class="feature-item">○ Real-time tracking</div>
+                        <div class="feature-item">○ Výpočet P&L</div>
+                        <div class="feature-item">○ Asset allocation</div>
+                        <div class="feature-item">○ Performance analytics</div>
+                    </div>
+                    <div class="app-tags">
+                        <span class="tag">Investments</span>
+                        <span class="tag">Tracking</span>
+                        <span class="tag">Analytics</span>
+                    </div>
+                    <div class="app-footer">
+                        <span class="app-status">Q2 2026</span>
+                    </div>
+                </div>
+
+                <div class="app-card" data-status="soon">
+                    <div class="app-icon">📈</div>
+                    <h3>IRR Calculator</h3>
+                    <p>Pokročilý nástroj pro výpočet vnitřního výnosového procenta (IRR) a NPV pro investiční projekty.</p>
+                    <div class="app-features">
+                        <div class="feature-item">○ IRR & XIRR</div>
+                        <div class="feature-item">○ NPV kalkulace</div>
+                        <div class="feature-item">○ Cash flow analýza</div>
+                        <div class="feature-item">○ Sensitivity analysis</div>
+                    </div>
+                    <div class="app-tags">
+                        <span class="tag">Finance</span>
+                        <span class="tag">Analysis</span>
+                    </div>
+                    <div class="app-footer">
+                        <span class="app-status">Q3 2026</span>
+                    </div>
+                </div>
+
+                <div class="app-card" data-status="soon">
+                    <div class="app-icon">🏠</div>
+                    <h3>Real Estate Analyzer</h3>
+                    <p>Kompletní analýza výnosnosti nemovitostních investic včetně cash flow projekce a ROI výpočtů.</p>
+                    <div class="app-features">
+                        <div class="feature-item">○ ROI kalkulace</div>
+                        <div class="feature-item">○ Cash flow projekce</div>
+                        <div class="feature-item">○ Cap rate výpočet</div>
+                        <div class="feature-item">○ Scenario modeling</div>
+                    </div>
+                    <div class="app-tags">
+                        <span class="tag">Real Estate</span>
+                        <span class="tag">ROI</span>
+                    </div>
+                    <div class="app-footer">
+                        <span class="app-status">Q3 2026</span>
+                    </div>
+                </div>
+
+                <div class="app-card" data-status="soon">
+                    <div class="app-icon">💹</div>
+                    <h3>Risk Calculator</h3>
+                    <p>Nástroj pro výpočet a analýzu investičního rizika, volatility a Value at Risk (VaR).</p>
+                    <div class="app-features">
+                        <div class="feature-item">○ VaR kalkulace</div>
+                        <div class="feature-item">○ Sharpe ratio</div>
+                        <div class="feature-item">○ Beta & Alpha</div>
+                        <div class="feature-item">○ Risk metrics</div>
+                    </div>
+                    <div class="app-tags">
+                        <span class="tag">Risk</span>
+                        <span class="tag">Analytics</span>
+                    </div>
+                    <div class="app-footer">
+                        <span class="app-status">Q4 2026</span>
+                    </div>
+                </div>
+
+                <div class="app-card" data-status="soon">
+                    <div class="app-icon">🎯</div>
+                    <h3>Goal Planner</h3>
+                    <p>Plánování finančních cílů a výpočet potřebných investic pro dosažení cílů.</p>
+                    <div class="app-features">
+                        <div class="feature-item">○ Goal tracking</div>
+                        <div class="feature-item">○ Investment plans</div>
+                        <div class="feature-item">○ Time projections</div>
+                        <div class="feature-item">○ Monte Carlo simulation</div>
+                    </div>
+                    <div class="app-tags">
+                        <span class="tag">Planning</span>
+                        <span class="tag">Goals</span>
+                    </div>
+                    <div class="app-footer">
+                        <span class="app-status">Q4 2026</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Investment Tools</h4>
+                    <p>Profesionální nástroje pro správu investic a financí.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Navigace</h4>
+                    <ul>
+                        <li><a href="index.html">Domů</a></li>
+                        <li><a href="apps.html">Aplikace</a></li>
+                        <li><a href="about.html">O mně</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Kontakt</h4>
+                    <p>Email: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c7aaa6b5b3aea9f6a3aba8b2afbe87a0aaa6aeabe9a4a8aa">[email&#160;protected]</a></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Martin Dlouhý. Al
