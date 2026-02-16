@@ -71,6 +71,8 @@
             padding: 10px 16px;
             border-radius: 10px;
             transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
         }
         
         .back-btn:hover { background: var(--accent-light); }
@@ -308,6 +310,13 @@
             cursor: pointer;
             transition: var(--transition);
             font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn svg {
+            flex-shrink: 0;
         }
         
         .btn-primary {
@@ -464,7 +473,12 @@
 </head>
 <body>
     <div class="container">
-        <a href="index.html" class="back-btn">← Zpět</a>
+        <a href="index.html" class="back-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 4px; vertical-align: middle;">
+                <path d="M10 2L4 8l6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Zpět
+        </a>
         
         <h1>R-E Prompt Generator</h1>
         <p class="subtitle">Profesionální AI valuace pro zástavní financování</p>
@@ -510,7 +524,12 @@
                 </div>
             </div>
             <div class="buttons">
-                <button class="btn btn-primary" onclick="nextStep()" id="step1Next" disabled>Pokračovat →</button>
+                <button class="btn btn-primary" onclick="nextStep()" id="step1Next" disabled>
+                    Pokračovat
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-left: 6px; vertical-align: middle;">
+                        <path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -524,8 +543,18 @@
                 </div>
             </div>
             <div class="buttons">
-                <button class="btn btn-secondary" onclick="prevStep()">← Zpět</button>
-                <button class="btn btn-primary" onclick="nextStep()">Pokračovat →</button>
+                <button class="btn btn-secondary" onclick="prevStep()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px; vertical-align: middle;">
+                        <path d="M10 2L4 8l6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Zpět
+                </button>
+                <button class="btn btn-primary" onclick="nextStep()">
+                    Pokračovat
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-left: 6px; vertical-align: middle;">
+                        <path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -536,8 +565,18 @@
                 <div id="detailForm"></div>
             </div>
             <div class="buttons">
-                <button class="btn btn-secondary" onclick="prevStep()">← Zpět</button>
-                <button class="btn btn-primary" onclick="generatePrompt()">Vygenerovat AI Prompt →</button>
+                <button class="btn btn-secondary" onclick="prevStep()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px; vertical-align: middle;">
+                        <path d="M10 2L4 8l6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Zpět
+                </button>
+                <button class="btn btn-primary" onclick="generatePrompt()">
+                    Vygenerovat AI Prompt
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-left: 6px; vertical-align: middle;">
+                        <path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -550,15 +589,24 @@
                     <strong>Návod:</strong> Zkopírujte tento prompt a vložte ho do ChatGPT, Claude nebo Gemini. AI vám poskytne profesionální ocenění včetně zástavní hodnoty pro dluhové financování.
                 </div>
 
-                <div class="prompt-output">
-                    <button class="copy-btn" onclick="copyPrompt()">Kopírovat</button>
-                    <div class="prompt-text" id="promptText"></div>
-                </div>
+                <div class="prompt-output" id="promptText"></div>
             </div>
 
             <div class="buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px;">
+                        <path d="M10 2L4 8l6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Zpět
+                </button>
+                <button class="btn btn-primary" onclick="copyPrompt()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px;">
+                        <rect x="5" y="5" width="9" height="9" stroke-width="1.5" rx="1"/>
+                        <path d="M3 11V3a1 1 0 0 1 1-1h8" stroke-width="1.5"/>
+                    </svg>
+                    Kopírovat prompt
+                </button>
                 <button class="btn btn-secondary" onclick="resetGenerator()">Nová valuace</button>
-                <button class="btn btn-primary" onclick="window.location.href='index.html'">← Hlavní stránka</button>
             </div>
         </div>
     </div>
@@ -770,7 +818,7 @@
                 if (fieldId === 'najemne' && !selectedInputs.includes('najemni_smlouva') && !selectedInputs.includes('najemni_smlouvy')) continue;
                 html += '<div class="form-group">';
                 // Add "required" class for important fields
-                const isRequired = fieldId.includes('adresa') || fieldId.includes('plocha') || fieldId.includes('parcelni');
+                const isRequired = fieldId.includes('adresa') || fieldId.includes('plocha') || fieldId.includes('parcelni') || fieldId === 'stav';
                 html += `<label for="${fieldId}" ${isRequired ? 'class="required"' : ''}>${field.label}</label>`;
                 if (field.type === 'textarea') {
                     html += `<textarea id="${fieldId}" placeholder="${field.placeholder || ''}"></textarea>`;
@@ -791,19 +839,47 @@
             formData = {};
             const missingFields = [];
             
-            // Collect form data and check for empty required fields
+            console.log('=== VALIDATION START ===');
+            console.log('Property type:', propertyType);
+            console.log('Fields:', Object.keys(config.fields));
+            
+            // Collect form data and check required fields
             for (const fieldId of Object.keys(config.fields)) {
                 const element = document.getElementById(fieldId);
-                if (element && element.value) {
-                    formData[fieldId] = element.value;
-                } else {
-                    // Mark as missing if it's an important field
-                    const field = config.fields[fieldId];
-                    if (field && (fieldId.includes('adresa') || fieldId.includes('plocha') || fieldId.includes('parcelni'))) {
-                        missingFields.push(field.label);
-                    }
+                const field = config.fields[fieldId];
+                
+                if (!element) {
+                    console.log(`Field ${fieldId}: element NOT FOUND`);
+                    continue;
+                }
+                
+                const value = element.value ? element.value.trim() : '';
+                
+                // Store value if not empty
+                if (value !== '') {
+                    formData[fieldId] = value;
+                }
+                
+                // Check if this specific field is required
+                const isRequired = (
+                    fieldId === 'adresa' ||
+                    fieldId === 'uzitna_plocha' ||
+                    fieldId === 'plocha' ||
+                    fieldId === 'parcelni_cislo' ||
+                    fieldId === 'stav'
+                );
+                
+                console.log(`Field ${fieldId}: value="${value}", required=${isRequired}, label="${field.label}"`);
+                
+                // If required and empty, add to missing list
+                if (isRequired && value === '') {
+                    console.log(`  -> MISSING! Adding to list`);
+                    missingFields.push(field.label);
                 }
             }
+            
+            console.log('Missing fields:', missingFields);
+            console.log('=== VALIDATION END ===');
             
             // Show warning if important fields are missing
             if (missingFields.length > 0) {
