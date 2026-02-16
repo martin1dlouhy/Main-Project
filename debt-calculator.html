@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debt Financing Calculator | Investment Tools</title>
+    <script>if(localStorage.getItem("daynight-theme")==="carbon"){document.documentElement.classList.add("carbon");document.body.classList.add("carbon");}</script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* CSS Variables - Light Mode */
+        :root {
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8FAFC;
+            --bg-surface: #F1F5F9;
+            --border-color: #E2E8F0;
+            --text-primary: #1E293B;
+            --text-secondary: #64748B;
+            --accent: #38BDF8;
+            --accent-hover: #0EA5E9;
+            --accent-light: rgba(56, 189, 248, 0.1);
+            --success: #22C55E;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --transition: all 0.2s ease;
+        }
+
+        /* Dark Mode */
+        html.carbon,
+        body.carbon {
+            --bg-primary: #0F0F0F;
+            --bg-secondary: #171717;
+            --bg-surface: #1F1F1F;
+            --border-color: #2E2E2E;
+            --text-primary: #F5F5F5;
+            --text-secondary: #A3A3A3;
+            --accent: #38BDF8;
+            --accent-hover: #7DD3FC;
+            --accent-light: rgba(56, 189, 248, 0.15);
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        html {
+            background: var(--bg-secondary);
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            transition: var(--transition);
+        }
+
+        .container {
+            background: var(--bg-primary);
+            border-radius: 24px;
+            box-shadow: var(--shadow-md);
+            max-width: 1000px;
+            width: 100%;
+            padding: 70px 50px 50px 50px;
+            position: relative;
+            margin: 20px auto;
+        }
+
+        .currency-selector {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            display: flex;
+            gap: 8px;
+            background: var(--bg-surface);
+            padding: 6px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .currency-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .currency-btn:hover {
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+
+        .currency-btn.active {
+            background: var(--accent);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-decoration: none;
+            color: var(--accent);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            transition: var(--transition);
+            font-size: 14px;
+        }
+
+        .back-btn:hover {
+            background: var(--accent-light);
+        }
+
+        h1 {
+            color: var(--text-primary);
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 50px;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 35px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        select {
+            padding: 16px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            font-size: 17px;
+            transition: var(--transition);
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            width: 100%;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        select:focus {
+            outline: none;
+            background: var(--bg-primary);
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        select {
+            cursor: pointer;
+        }
+
+        .fee-type-selector {
+            display: inline-flex;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 3px;
+            margin-bottom: 10px;
+        }
+
+        .fee-type-selector label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            margin: 0;
+            text-transform: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 9px;
+            transition: var(--transition);
+            min-width: 65px;
+            position: relative;
+        }
+
+        .fee-type-selector input[type="radio"] {
+            display: none;
+        }
+
+        .fee-type-selector label span {
+            transition: var(--transition);
+            position: relative;
+            z-index: 1;
+        }
+
+        .fee-type-selector input[type="radio"]:checked + span {
+            color: white;
+            font-weight: 700;
+        }
+
+        .fee-type-selector label::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--accent);
+            border-radius: 9px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .fee-type-selector label:has(input[type="radio"]:checked)::before {
+            opacity: 1;
+        }
+
+        .fee-type-selector label:hover {
+            color: var(--accent);
+        }
+
+        .calculate-btn {
+            grid-column: 1 / -1;
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-md);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .calculate-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(56, 189, 248, 0.4);
+            background: var(--accent-hover);
+        }
+
+        .results {
+            background: var(--accent-light);
+            border-radius: 20px;
+            padding: 35px;
+            margin-top: 35px;
+            display: none;
+            border: 1px solid var(--accent);
+        }
+
+        .results.show {
+            display: block;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .results h2 {
+            color: var(--text-primary);
+            font-size: 24px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .result-item {
+            background: var(--bg-primary);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+        }
+
+        .result-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent);
+        }
+
+        .result-label {
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-value {
+            color: var(--accent);
+            font-size: 28px;
+            font-weight: 800;
+            word-break: break-word;
+        }
+
+        .highlight-value {
+            background: var(--bg-primary);
+            padding: 6px 12px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .action-buttons button {
+            flex: 1;
+            min-width: 180px;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .schedule {
+            margin-top: 40px;
+            background: var(--bg-primary);
+            border-radius: 16px;
+            padding: 30px;
+            border: 1px solid var(--border-color);
+        }
+
+        .schedule h3 {
+            color: var(--text-primary);
+            font-size: 20px;
+            margin-bottom: 25px;
+            font-weight: 700;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .schedule-table th {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .schedule-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .schedule-table tr:hover {
+            background: var(--bg-surface);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9998;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-primary);
+            padding: 35px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-content h3 {
+            color: var(--text-primary);
+            font-size: 22px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-buttons .btn-save {
+            background: var(--accent);
+            color: white;
+        }
+
+        .modal-buttons .btn-cancel {
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        small {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 5px;
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .result-grid { grid-template-columns: 1fr; }
+            .container { padding: 60px 30px 30px; }
+            .currency-selector { right: 20px; top: 70px; }
+        }
+    </style>
+
+        /* Save Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-btn">← Zpět</a>
+        
+        <div class="currency-selector">
+            <button class="currency-btn active" onclick="setCurrency('CZK')">CZK</button>
+            <button class="currency-btn" onclick="setCurrency('EUR')">EUR</button>
+            <button class="currency-btn" onclick="setCurrency('USD')">USD</button>
+        </div>
+        
+        <h1>💼 Kalkulačka dluhového financování</h1>
+        <p class="subtitle">Financování se zástavou nemovitosti</p>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="propertyValue">Hodnota nemovitosti (<span id="propertyValueCurrency">CZK</span>)</label>
+                <input type="text" id="propertyValue" placeholder="5 000 000" value="5 000 000">
+            </div>
+
+            <div class="form-group">
+                <label for="loanAmount">Výše úvěru (<span id="loanAmountCurrency">CZK</span>)</label>
+                <input type="text" id="loanAmount" placeholder="3 000 000" value="3 000 000">
+            </div>
+
+            <div class="form-group">
+                <label for="interestRate">Úroková sazba (% p.a.)</label>
+                <input type="text" id="interestRate" placeholder="8.5" value="8.5">
+            </div>
+
+            <div class="form-group">
+                <label for="loanTerm">Doba splatnosti (měsíce)</label>
+                <input type="text" id="loanTerm" placeholder="36" value="36" onchange="updateRepaymentDate()">
+            </div>
+
+            <!-- DATES SECTION -->
+            <div class="form-group">
+                <label for="drawdownDate">Datum čerpání</label>
+                <input type="date" id="drawdownDate" value="" onchange="updateRepaymentDate()">
+            </div>
+
+            <div class="form-group">
+                <label for="repaymentDate">Datum splatnosti (automaticky)</label>
+                <input type="date" id="repaymentDate" value="" readonly style="background: #f0f4f8; cursor: not-allowed;">
+            </div>
+
+            <div class="form-group">
+                <label for="earlyRepaymentDate">Datum předčasného splacení (volitelné)</label>
+                <input type="date" id="earlyRepaymentDate" value="">
+                <small style="color: #64748b; font-size: 12px; margin-top: 5px; display: block;">Ponechte prázdné pro běžné splacení bez poplatku</small>
+            </div>
+
+            <!-- Empty space to align fees side by side -->
+            <div class="form-group">
+            </div>
+
+            <!-- FEES SECTION - Side by side -->
+            <div class="form-group">
+                <label for="setupFee">Poplatek za sjednání</label>
+                <div class="fee-type-selector">
+                    <label>
+                        <input type="radio" name="setupFeeType" value="percent" checked onchange="updateFeeInputs()">
+                        <span>%</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="setupFeeType" value="absolute" onchange="updateFeeInputs()">
+                        <span id="setupFeeCurrency">CZK</span>
+                    </label>
+                </div>
+                <input type="text" id="setupFee" placeholder="2.0" value="2.0">
+            </div>
+
+            <div class="form-group">
+                <label for="earlyRepaymentFee">Poplatek za předčasné splacení</label>
+                <div class="fee-type-selector">
+                    <label>
+                        <input type="radio" name="earlyRepaymentFeeType" value="percent" checked onchange="updateFeeInputs()">
+                        <span>%</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="earlyRepaymentFeeType" value="absolute" onchange="updateFeeInputs()">
+                        <span id="earlyRepaymentFeeCurrency">CZK</span>
+                    </label>
+                </div>
+                <input type="text" id="earlyRepaymentFee" placeholder="1.0" value="1.0">
+                <small style="color: #64748b; font-size: 12px; margin-top: 5px; display: block;">Platí pouze při předčasném splacení</small>
+            </div>
+
+            <div class="form-group">
+                <label for="contractualPenalty">Smluvní pokuta za porušení povinností</label>
+                <div class="fee-type-selector">
+                    <label>
+                        <input type="radio" name="contractualPenaltyType" value="percent" checked onchange="updateFeeInputs()">
+                        <span>%</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="contractualPenaltyType" value="absolute" onchange="updateFeeInputs()">
+                        <span id="contractualPenaltyCurrency">CZK</span>
+                    </label>
+                </div>
+                <input type="text" id="contractualPenalty" placeholder="0" value="0">
+                <small style="color: #64748b; font-size: 12px; margin-top: 5px; display: block;">Volitelné - pokud dojde k porušení</small>
+            </div>
+
+            <!-- Empty space -->
+            <div class="form-group">
+            </div>
+
+            <div class="form-group full-width">
+                <label for="paymentType">Typ splácení</label>
+                <select id="paymentType" onchange="updatePaymentTypeInfo()">
+                    <option value="annuity">Anuitní splácení (pravidelné splátky úrok + jistina)</option>
+                    <option value="interestOnly">Úroky pravidelně, jistina na konci</option>
+                    <option value="bullet">Jistina s úroky k době konečné splatnosti</option>
+                </select>
+            </div>
+
+            <div class="form-group full-width" id="interestPaymentFrequency" style="display: none;">
+                <label for="interestFrequency">Frekvence placení úroků</label>
+                <select id="interestFrequency">
+                    <option value="1">Měsíčně</option>
+                    <option value="3">Čtvrtletně</option>
+                    <option value="6">Pololetně</option>
+                    <option value="12">Ročně</option>
+                </select>
+            </div>
+
+            <button class="calculate-btn" onclick="calculate()">Vypočítat</button>
+        </div>
+
+        <div class="results" id="results">
+            <h2>📊 Výsledky financování</h2>
+            <div class="result-grid">
+                <div class="result-item">
+                    <div class="result-label">LTV ratio</div>
+                    <div class="result-value" id="ltv">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">IRR (% p.a.)</div>
+                    <div class="result-value highlight" id="irr">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Měsíční/Pravidelná splátka</div>
+                    <div class="result-value" id="monthlyPayment">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Celkové poplatky</div>
+                    <div class="result-value" id="totalFees">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Celkové úroky</div>
+                    <div class="result-value" id="totalInterest">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Celkový výnos (úroky + poplatky)</div>
+                    <div class="result-value" id="totalReturn">-</div>
+                </div>
+            </div>
+            <div id="riskAssessment"></div>
+            
+            <div class="schedule-section" id="scheduleSection">
+                <h3>📅 Splátkový kalendář</h3>
+                <div style="overflow-x: auto;">
+                    <table class="schedule-table" id="scheduleTable">
+                        <thead>
+                            <tr>
+                                <th class="text-center">Číslo</th>
+                                <th>Datum</th>
+                                <th class="text-right">Počáteční zůstatek</th>
+                                <th class="text-right">Úrok</th>
+                                <th class="text-right">Jistina</th>
+                                <th class="text-right">Splátka</th>
+                                <th class="text-right">Konečný zůstatek</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-btn primary" onclick="showSaveModal()">
+                    💾 Uložit kalkulaci
+                </button>
+                <button class="action-btn" onclick="printSchedule()">
+                    🖨️ Vytisknout splátkový kalendář
+                </button>
+                <button class="action-btn" onclick="exportToExcel()">
+                    📊 Export do Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Modal -->
+    <div class="modal" id="saveModal">
+        <div class="modal-content">
+            <h3>💾 Uložit kalkulaci</h3>
+            <input type="text" id="calculationName" placeholder="Zadejte název kalkulace (např. 'Projekt Praha 5')">
+            <div class="modal-buttons">
+                <button class="btn-save" onclick="saveCalculation()">Uložit</button>
+                <button class="btn-cancel" onclick="closeSaveModal()">Zrušit</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global currency state
+        let currentCurrency = 'CZK';
+
+        // Currency symbols and formatting
+        const currencyConfig = {
+            'CZK': { symbol: 'Kč', locale: 'cs-CZ' },
+            'EUR': { symbol: '€', locale: 'de-DE' },
+            'USD': { symbol: '$', locale: 'en-US' }
+        };
+
+        // Set currency
+        function setCurrency(currency) {
+            currentCurrency = currency;
+            
+            // Update button states
+            document.querySelectorAll('.currency-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update currency labels in all relevant fields
+            document.getElementById('propertyValueCurrency').textContent = currency;
+            document.getElementById('loanAmountCurrency').textContent = currency;
+            document.getElementById('setupFeeCurrency').textContent = currency;
+            document.getElementById('earlyRepaymentFeeCurrency').textContent = currency;
+            document.getElementById('contractualPenaltyCurrency').textContent = currency;
+            
+            // Recalculate if results are visible
+            if (document.getElementById('results').classList.contains('show')) {
+                calculate();
+            }
+        }
+
+        // Update fee input placeholders based on type
+        function updateFeeInputs() {
+            const setupFeeType = document.querySelector('input[name="setupFeeType"]:checked').value;
+            const earlyFeeType = document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value;
+            const penaltyType = document.querySelector('input[name="contractualPenaltyType"]:checked').value;
+            
+            const setupFeeInput = document.getElementById('setupFee');
+            const earlyFeeInput = document.getElementById('earlyRepaymentFee');
+            const penaltyInput = document.getElementById('contractualPenalty');
+            
+            if (setupFeeType === 'percent') {
+                setupFeeInput.placeholder = '2.0';
+                if (setupFeeInput.value && !setupFeeInput.value.includes('.')) {
+                    setupFeeInput.value = '2.0';
+                }
+            } else {
+                setupFeeInput.placeholder = '60 000';
+            }
+            
+            if (earlyFeeType === 'percent') {
+                earlyFeeInput.placeholder = '1.0';
+                if (earlyFeeInput.value && !earlyFeeInput.value.includes('.')) {
+                    earlyFeeInput.value = '1.0';
+                }
+            } else {
+                earlyFeeInput.placeholder = '30 000';
+            }
+            
+            if (penaltyType === 'percent') {
+                penaltyInput.placeholder = '0';
+            } else {
+                penaltyInput.placeholder = '0';
+            }
+        }
+
+        // Format number with spaces for thousands separator
+        function formatNumberInput(value) {
+            const cleaned = value.replace(/\D/g, '');
+            return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        }
+
+        // Parse formatted number back to plain number
+        function parseFormattedNumber(value) {
+            return value.replace(/\s/g, '');
+        }
+
+        // Add formatting to all number inputs
+        function setupNumberFormatting() {
+            const textInputs = document.querySelectorAll('input[type="text"]');
+            
+            textInputs.forEach(input => {
+                // Auto-select all text on focus
+                input.addEventListener('focus', function() {
+                    this.select();
+                });
+
+                // Auto-select on click as well (for mobile)
+                input.addEventListener('click', function() {
+                    this.select();
+                });
+
+                if (input.id === 'interestRate' || input.id === 'setupFee' || input.id === 'earlyRepaymentFee') {
+                    // Special handling for inputs that can be percentages
+                    input.addEventListener('input', function(e) {
+                        const isSetupFee = this.id === 'setupFee';
+                        const isEarlyFee = this.id === 'earlyRepaymentFee';
+                        
+                        if (isSetupFee || isEarlyFee) {
+                            const feeType = isSetupFee ? 
+                                document.querySelector('input[name="setupFeeType"]:checked').value :
+                                document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value;
+                            
+                            if (feeType === 'percent') {
+                                // Allow decimal for percentages
+                                let cleaned = this.value.replace(/[^\d.]/g, '');
+                                const parts = cleaned.split('.');
+                                if (parts.length > 2) {
+                                    cleaned = parts[0] + '.' + parts.slice(1).join('');
+                                }
+                                this.value = cleaned;
+                                return;
+                            }
+                        }
+                        
+                        if (this.id === 'interestRate') {
+                            // Allow decimal for interest rate
+                            let cleaned = this.value.replace(/[^\d.]/g, '');
+                            const parts = cleaned.split('.');
+                            if (parts.length > 2) {
+                                cleaned = parts[0] + '.' + parts.slice(1).join('');
+                            }
+                            this.value = cleaned;
+                            return;
+                        }
+                        
+                        // For other numeric inputs, format with spaces
+                        const cursorPos = this.selectionStart;
+                        const oldValue = this.value;
+                        const oldLength = oldValue.length;
+                        
+                        const cleaned = parseFormattedNumber(this.value);
+                        const formatted = formatNumberInput(cleaned);
+                        this.value = formatted;
+                        
+                        const newLength = formatted.length;
+                        const diff = newLength - oldLength;
+                        this.setSelectionRange(cursorPos + diff, cursorPos + diff);
+                    });
+                } else {
+                    // Regular numeric inputs
+                    input.addEventListener('input', function(e) {
+                        const cursorPos = this.selectionStart;
+                        const oldValue = this.value;
+                        const oldLength = oldValue.length;
+                        
+                        const cleaned = parseFormattedNumber(this.value);
+                        const formatted = formatNumberInput(cleaned);
+                        this.value = formatted;
+                        
+                        const newLength = formatted.length;
+                        const diff = newLength - oldLength;
+                        this.setSelectionRange(cursorPos + diff, cursorPos + diff);
+                    });
+                }
+            });
+        }
+
+        // Set default dates and format numbers
+        window.onload = function() {
+            const today = new Date();
+            document.getElementById('drawdownDate').valueAsDate = today;
+            
+            // Calculate initial repayment date
+            updateRepaymentDate();
+            
+            setupNumberFormatting();
+        };
+
+        function updateRepaymentDate() {
+            const drawdownDate = document.getElementById('drawdownDate').value;
+            const loanTerm = parseFormattedNumber(document.getElementById('loanTerm').value);
+            
+            if (drawdownDate && loanTerm) {
+                const repaymentDate = new Date(drawdownDate);
+                repaymentDate.setMonth(repaymentDate.getMonth() + parseInt(loanTerm));
+                document.getElementById('repaymentDate').valueAsDate = repaymentDate;
+            }
+        }
+
+        function updatePaymentTypeInfo() {
+            const paymentType = document.getElementById('paymentType').value;
+            const interestFreqDiv = document.getElementById('interestPaymentFrequency');
+            
+            if (paymentType === 'interestOnly') {
+                interestFreqDiv.style.display = 'block';
+            } else {
+                interestFreqDiv.style.display = 'none';
+            }
+        }
+
+        function formatCurrency(amount) {
+            const config = currencyConfig[currentCurrency];
+            return new Intl.NumberFormat(config.locale, {
+                style: 'currency',
+                currency: currentCurrency,
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function calculateIRR(cashFlows, dates) {
+            let guess = 0.1;
+            const maxIterations = 1000;
+            const tolerance = 0.0001;
+            
+            for (let i = 0; i < maxIterations; i++) {
+                let npv = 0;
+                let dnpv = 0;
+                
+                for (let j = 0; j < cashFlows.length; j++) {
+                    const daysDiff = (dates[j] - dates[0]) / (1000 * 60 * 60 * 24);
+                    const yearsDiff = daysDiff / 365.25;
+                    const discountFactor = Math.pow(1 + guess, yearsDiff);
+                    
+                    npv += cashFlows[j] / discountFactor;
+                    dnpv -= cashFlows[j] * yearsDiff / discountFactor / (1 + guess);
+                }
+                
+                const newGuess = guess - npv / dnpv;
+                
+                if (Math.abs(newGuess - guess) < tolerance) {
+                    return newGuess * 100;
+                }
+                
+                guess = newGuess;
+            }
+            
+            return guess * 100;
+        }
+
+        function calculate() {
+            const propertyValue = parseFloat(parseFormattedNumber(document.getElementById('propertyValue').value));
+            const loanAmount = parseFloat(parseFormattedNumber(document.getElementById('loanAmount').value));
+            const interestRate = parseFloat(document.getElementById('interestRate').value);
+            const loanTerm = parseInt(parseFormattedNumber(document.getElementById('loanTerm').value));
+            
+            const setupFeeType = document.querySelector('input[name="setupFeeType"]:checked').value;
+            const earlyRepaymentFeeType = document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value;
+            const contractualPenaltyType = document.querySelector('input[name="contractualPenaltyType"]:checked').value;
+            
+            const setupFeeInput = document.getElementById('setupFee').value;
+            const earlyRepaymentFeeInput = document.getElementById('earlyRepaymentFee').value;
+            const contractualPenaltyInput = document.getElementById('contractualPenalty').value;
+            
+            // Calculate setup fee amount
+            let setupFeeAmount;
+            if (setupFeeType === 'percent') {
+                const setupFeePercent = parseFloat(setupFeeInput);
+                setupFeeAmount = loanAmount * (setupFeePercent / 100);
+            } else {
+                setupFeeAmount = parseFloat(parseFormattedNumber(setupFeeInput));
+            }
+            
+            // Calculate early repayment fee amount
+            let earlyRepaymentFeeAmount;
+            if (earlyRepaymentFeeType === 'percent') {
+                const earlyRepaymentFeePercent = parseFloat(earlyRepaymentFeeInput);
+                earlyRepaymentFeeAmount = loanAmount * (earlyRepaymentFeePercent / 100);
+            } else {
+                earlyRepaymentFeeAmount = parseFloat(parseFormattedNumber(earlyRepaymentFeeInput));
+            }
+            
+            // Calculate contractual penalty amount
+            let contractualPenaltyAmount = 0;
+            if (contractualPenaltyInput && contractualPenaltyInput !== '0') {
+                if (contractualPenaltyType === 'percent') {
+                    const contractualPenaltyPercent = parseFloat(contractualPenaltyInput);
+                    contractualPenaltyAmount = loanAmount * (contractualPenaltyPercent / 100);
+                } else {
+                    contractualPenaltyAmount = parseFloat(parseFormattedNumber(contractualPenaltyInput));
+                }
+            }
+            
+            const drawdownDate = new Date(document.getElementById('drawdownDate').value);
+            const repaymentDate = new Date(document.getElementById('repaymentDate').value);
+            const earlyRepaymentDateInput = document.getElementById('earlyRepaymentDate').value;
+            const earlyRepaymentDate = earlyRepaymentDateInput ? new Date(earlyRepaymentDateInput) : null;
+            
+            const paymentType = document.getElementById('paymentType').value;
+            const interestFrequency = parseInt(document.getElementById('interestFrequency').value);
+
+            if (!propertyValue || !loanAmount || !interestRate || !loanTerm) {
+                alert('Prosím vyplňte všechna povinná pole');
+                return;
+            }
+
+            // Determine actual repayment date (early or normal)
+            const actualRepaymentDate = earlyRepaymentDate || repaymentDate;
+            const isEarlyRepayment = earlyRepaymentDate !== null;
+            
+            const actualLoanTermMonths = Math.round((actualRepaymentDate - drawdownDate) / (1000 * 60 * 60 * 24 * 30.44));
+            const netDisbursement = loanAmount - setupFeeAmount;
+            const ltv = (loanAmount / propertyValue) * 100;
+
+            let monthlyPayment, totalInterest, cashFlows, cashFlowDates;
+
+            if (paymentType === 'annuity') {
+                const monthlyRate = interestRate / 100 / 12;
+                monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, actualLoanTermMonths)) / 
+                                       (Math.pow(1 + monthlyRate, actualLoanTermMonths) - 1);
+                
+                const totalPayment = monthlyPayment * actualLoanTermMonths;
+                totalInterest = totalPayment - loanAmount;
+
+                cashFlows = [-netDisbursement];
+                cashFlowDates = [drawdownDate];
+
+                for (let i = 1; i <= actualLoanTermMonths; i++) {
+                    const paymentDate = new Date(drawdownDate);
+                    paymentDate.setMonth(paymentDate.getMonth() + i);
+                    
+                    // Last payment includes early repayment fee if applicable
+                    const payment = (i === actualLoanTermMonths && isEarlyRepayment) 
+                        ? monthlyPayment + earlyRepaymentFeeAmount 
+                        : monthlyPayment;
+                    
+                    cashFlows.push(payment);
+                    cashFlowDates.push(paymentDate);
+                }
+
+            } else if (paymentType === 'interestOnly') {
+                const annualInterest = loanAmount * (interestRate / 100);
+                const periodicInterestPayment = annualInterest * (interestFrequency / 12);
+                monthlyPayment = periodicInterestPayment;
+                
+                const numberOfPayments = Math.floor(actualLoanTermMonths / interestFrequency);
+                totalInterest = periodicInterestPayment * numberOfPayments;
+
+                cashFlows = [-netDisbursement];
+                cashFlowDates = [drawdownDate];
+
+                for (let i = 1; i <= numberOfPayments; i++) {
+                    cashFlows.push(periodicInterestPayment);
+                    const paymentDate = new Date(drawdownDate);
+                    paymentDate.setMonth(paymentDate.getMonth() + (i * interestFrequency));
+                    cashFlowDates.push(paymentDate);
+                }
+
+                // Final payment: last interest + principal + early repayment fee (only if early repayment)
+                const finalFee = isEarlyRepayment ? earlyRepaymentFeeAmount : 0;
+                const finalPayment = periodicInterestPayment + loanAmount + finalFee;
+                
+                if (cashFlows.length > 1) {
+                    cashFlows[cashFlows.length - 1] = finalPayment;
+                } else {
+                    cashFlows.push(finalPayment);
+                    cashFlowDates.push(actualRepaymentDate);
+                }
+            } else if (paymentType === 'bullet') {
+                // Bullet repayment - all principal and interest at maturity
+                monthlyPayment = 0; // No periodic payments
+                totalInterest = loanAmount * (interestRate / 100) * (actualLoanTermMonths / 12);
+
+                cashFlows = [-netDisbursement];
+                cashFlowDates = [drawdownDate];
+
+                // Single payment at maturity: principal + all interest + early repayment fee (if applicable)
+                const finalFee = isEarlyRepayment ? earlyRepaymentFeeAmount : 0;
+                const finalPayment = loanAmount + totalInterest + finalFee;
+                
+                cashFlows.push(finalPayment);
+                cashFlowDates.push(actualRepaymentDate);
+            }
+
+            const irr = calculateIRR(cashFlows, cashFlowDates);
+            
+            // Total return calculation - only include early repayment fee if there is early repayment
+            const earlyFeeForReturn = isEarlyRepayment ? earlyRepaymentFeeAmount : 0;
+            const totalReturnAmount = totalInterest + setupFeeAmount + earlyFeeForReturn;
+
+            // Display results
+            document.getElementById('ltv').textContent = ltv.toFixed(2) + '%';
+            document.getElementById('irr').textContent = irr.toFixed(2) + '%';
+            
+            if (paymentType === 'annuity') {
+                document.getElementById('monthlyPayment').textContent = formatCurrency(monthlyPayment) + ' / měsíc';
+            } else if (paymentType === 'interestOnly') {
+                const frequencyText = interestFrequency === 1 ? 'měsíc' : 
+                                     interestFrequency === 3 ? 'čtvrtletí' : 
+                                     interestFrequency === 6 ? 'půlrok' : 'rok';
+                document.getElementById('monthlyPayment').textContent = formatCurrency(monthlyPayment) + ' / ' + frequencyText;
+            } else if (paymentType === 'bullet') {
+                document.getElementById('monthlyPayment').textContent = 'Bez pravidelných splátek';
+            }
+            
+            const totalFeesAmount = setupFeeAmount + earlyFeeForReturn + contractualPenaltyAmount;
+            document.getElementById('totalFees').textContent = formatCurrency(totalFeesAmount);
+            document.getElementById('totalInterest').textContent = formatCurrency(totalInterest);
+            
+            // Update total return to include contractual penalty
+            const totalReturnWithPenalty = totalReturnAmount + contractualPenaltyAmount;
+            document.getElementById('totalReturn').textContent = formatCurrency(totalReturnWithPenalty);
+
+            // Risk assessment
+            const riskDiv = document.getElementById('riskAssessment');
+            let riskHTML = '';
+            
+            if (ltv > 80) {
+                riskHTML += '<div class="warning"><strong>⚠️ Vysoké riziko:</strong> LTV ratio přesahuje 80%. Doporučujeme snížit výši úvěru nebo zvýšit hodnotu zástavy.</div>';
+            } else if (ltv > 65) {
+                riskHTML += '<div class="warning" style="background: #fffaf0; border-left-color: #ed8936; color: #7c2d12;"><strong>⚡ Střední riziko:</strong> LTV ratio je mezi 65-80%. Standardní riziko pro dluhové financování.</div>';
+            } else {
+                riskHTML += '<div class="success"><strong>✅ Nízké riziko:</strong> LTV ratio je pod 65%. Konzervativní a bezpečná úroveň financování.</div>';
+            }
+
+            if (irr > 15) {
+                riskHTML += '<div class="success" style="margin-top: 10px;"><strong>💰 Výborný výnos:</strong> IRR ' + irr.toFixed(2) + '% je nadprůměrný výnos pro dluhové financování.</div>';
+            } else if (irr > 10) {
+                riskHTML += '<div class="success" style="margin-top: 10px; background: #fffaf0; border-left-color: #ed8936; color: #7c2d12;"><strong>📈 Dobrý výnos:</strong> IRR ' + irr.toFixed(2) + '% je solidní výnos.</div>';
+            } else {
+                riskHTML += '<div class="warning" style="margin-top: 10px;"><strong>📉 Nižší výnos:</strong> IRR ' + irr.toFixed(2) + '% může být pod očekáváním pro toto riziko.</div>';
+            }
+            
+            // Add early repayment note
+            if (isEarlyRepayment) {
+                riskHTML += '<div class="success" style="margin-top: 10px; background: #fff3e0; border-left-color: #ff9800; color: #e65100;"><strong>⏰ Předčasné splacení:</strong> Kalkulace zahrnuje předčasné splacení dne ' + earlyRepaymentDate.toLocaleDateString('cs-CZ') + ' s poplatkem ' + formatCurrency(earlyRepaymentFeeAmount) + '.</div>';
+            } else {
+                riskHTML += '<div class="success" style="margin-top: 10px;"><strong>✅ Běžné splacení:</strong> Bez poplatku za předčasné splacení.</div>';
+            }
+
+            riskDiv.innerHTML = riskHTML;
+            document.getElementById('results').classList.add('show');
+
+            // Generate payment schedule
+            generatePaymentSchedule(paymentType, loanAmount, interestRate, actualLoanTermMonths, 
+                                   drawdownDate, monthlyPayment, interestFrequency, 
+                                   setupFeeAmount, earlyRepaymentFeeAmount, isEarlyRepayment);
+        }
+
+        function generatePaymentSchedule(paymentType, loanAmount, interestRate, loanTermMonths, 
+                                        startDate, payment, interestFrequency, setupFee, earlyFee, isEarlyRepayment) {
+            const scheduleBody = document.getElementById('scheduleBody');
+            scheduleBody.innerHTML = '';
+            
+            let balance = loanAmount;
+            let totalInterestPaid = 0;
+            let totalPrincipalPaid = 0;
+            
+            if (paymentType === 'annuity') {
+                // Annuity schedule
+                const monthlyRate = interestRate / 100 / 12;
+                
+                for (let i = 1; i <= loanTermMonths; i++) {
+                    const paymentDate = new Date(startDate);
+                    paymentDate.setMonth(paymentDate.getMonth() + i);
+                    
+                    const interestPayment = balance * monthlyRate;
+                    const principalPayment = payment - interestPayment;
+                    const endingBalance = balance - principalPayment;
+                    
+                    totalInterestPaid += interestPayment;
+                    totalPrincipalPaid += principalPayment;
+                    
+                    const row = `
+                        <tr>
+                            <td class="text-center">${i}</td>
+                            <td>${paymentDate.toLocaleDateString('cs-CZ')}</td>
+                            <td class="text-right">${formatCurrency(balance)}</td>
+                            <td class="text-right">${formatCurrency(interestPayment)}</td>
+                            <td class="text-right">${formatCurrency(principalPayment)}</td>
+                            <td class="text-right">${formatCurrency(payment)}</td>
+                            <td class="text-right">${formatCurrency(Math.max(0, endingBalance))}</td>
+                        </tr>
+                    `;
+                    scheduleBody.innerHTML += row;
+                    
+                    balance = endingBalance;
+                }
+            } else if (paymentType === 'interestOnly') {
+                // Interest-only schedule
+                const annualInterest = loanAmount * (interestRate / 100);
+                const periodicInterest = annualInterest * (interestFrequency / 12);
+                const numberOfPayments = Math.floor(loanTermMonths / interestFrequency);
+                
+                for (let i = 1; i <= numberOfPayments; i++) {
+                    const paymentDate = new Date(startDate);
+                    paymentDate.setMonth(paymentDate.getMonth() + (i * interestFrequency));
+                    
+                    const isLastPayment = (i === numberOfPayments);
+                    const interestPayment = periodicInterest;
+                    const principalPayment = isLastPayment ? loanAmount : 0;
+                    const earlyFeeToApply = (isLastPayment && isEarlyRepayment) ? earlyFee : 0;
+                    const totalPayment = interestPayment + principalPayment + earlyFeeToApply;
+                    const endingBalance = isLastPayment ? 0 : balance;
+                    
+                    totalInterestPaid += interestPayment;
+                    if (isLastPayment) totalPrincipalPaid += principalPayment;
+                    
+                    const row = `
+                        <tr>
+                            <td class="text-center">${i}</td>
+                            <td>${paymentDate.toLocaleDateString('cs-CZ')}</td>
+                            <td class="text-right">${formatCurrency(balance)}</td>
+                            <td class="text-right">${formatCurrency(interestPayment)}${(isLastPayment && isEarlyRepayment) ? ' + ' + formatCurrency(earlyFee) : ''}</td>
+                            <td class="text-right">${formatCurrency(principalPayment)}</td>
+                            <td class="text-right">${formatCurrency(totalPayment)}</td>
+                            <td class="text-right">${formatCurrency(endingBalance)}</td>
+                        </tr>
+                    `;
+                    scheduleBody.innerHTML += row;
+                    
+                    balance = endingBalance;
+                }
+            } else if (paymentType === 'bullet') {
+                // Bullet repayment - single payment at maturity
+                const paymentDate = new Date(startDate);
+                paymentDate.setMonth(paymentDate.getMonth() + loanTermMonths);
+                
+                const totalInterest = loanAmount * (interestRate / 100) * (loanTermMonths / 12);
+                const earlyFeeToApply = isEarlyRepayment ? earlyFee : 0;
+                const totalPayment = loanAmount + totalInterest + earlyFeeToApply;
+                
+                totalInterestPaid = totalInterest;
+                totalPrincipalPaid = loanAmount;
+                
+                const row = `
+                    <tr>
+                        <td class="text-center">1</td>
+                        <td>${paymentDate.toLocaleDateString('cs-CZ')}</td>
+                        <td class="text-right">${formatCurrency(loanAmount)}</td>
+                        <td class="text-right">${formatCurrency(totalInterest)}${isEarlyRepayment ? ' + ' + formatCurrency(earlyFee) : ''}</td>
+                        <td class="text-right">${formatCurrency(loanAmount)}</td>
+                        <td class="text-right">${formatCurrency(totalPayment)}</td>
+                        <td class="text-right">${formatCurrency(0)}</td>
+                    </tr>
+                `;
+                scheduleBody.innerHTML += row;
+            }
+            
+            // Add fees row
+            const earlyFeeForTotal = isEarlyRepayment ? earlyFee : 0;
+            const totalFeesAmount = setupFee + earlyFeeForTotal;
+            
+            const feesRow = `
+                <tr style="background: #fff3e0; border-top: 2px solid #2196f3;">
+                    <td colspan="3" class="text-right"><strong>Poplatky celkem:</strong></td>
+                    <td class="text-right" colspan="3">
+                        <span style="color: #64748b; font-size: 13px;">
+                            Poplatek za sjednání: ${formatCurrency(setupFee)}
+                            ${isEarlyRepayment ? ' + Poplatek za předčasné splacení: ' + formatCurrency(earlyFee) : ''}
+                        </span>
+                    </td>
+                    <td class="text-right"><strong>${formatCurrency(totalFeesAmount)}</strong></td>
+                </tr>
+            `;
+            
+            // Add total row
+            const totalRow = `
+                <tr class="schedule-total">
+                    <td colspan="3" class="text-right"><strong>CELKEM K ÚHRADĚ:</strong></td>
+                    <td class="text-right"><strong>${formatCurrency(totalInterestPaid + earlyFeeForTotal)}</strong></td>
+                    <td class="text-right"><strong>${formatCurrency(totalPrincipalPaid)}</strong></td>
+                    <td class="text-right"><strong>${formatCurrency(totalInterestPaid + totalPrincipalPaid + totalFeesAmount)}</strong></td>
+                    <td class="text-right"><strong>0</strong></td>
+                </tr>
+            `;
+            scheduleBody.innerHTML += feesRow + totalRow;
+        }
+
+        function showSaveModal() {
+            document.getElementById('saveModal').classList.add('show');
+            document.getElementById('calculationName').focus();
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveModal').classList.remove('show');
+        }
+
+        function saveCalculation() {
+            const name = document.getElementById('calculationName').value.trim();
+            if (!name) {
+                alert('Prosím zadejte název kalkulace');
+                return;
+            }
+            
+            const calculation = {
+                name: name,
+                date: new Date().toISOString(),
+                currency: currentCurrency,
+                inputs: {
+                    propertyValue: document.getElementById('propertyValue').value,
+                    loanAmount: document.getElementById('loanAmount').value,
+                    interestRate: document.getElementById('interestRate').value,
+                    loanTerm: document.getElementById('loanTerm').value,
+                    setupFee: document.getElementById('setupFee').value,
+                    setupFeeType: document.querySelector('input[name="setupFeeType"]:checked').value,
+                    earlyRepaymentFee: document.getElementById('earlyRepaymentFee').value,
+                    earlyRepaymentFeeType: document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value,
+                    drawdownDate: document.getElementById('drawdownDate').value,
+                    repaymentDate: document.getElementById('repaymentDate').value,
+                    paymentType: document.getElementById('paymentType').value,
+                    interestFrequency: document.getElementById('interestFrequency').value
+                },
+                results: {
+                    ltv: document.getElementById('ltv').textContent,
+                    irr: document.getElementById('irr').textContent,
+                    monthlyPayment: document.getElementById('monthlyPayment').textContent,
+                    totalFees: document.getElementById('totalFees').textContent,
+                    totalInterest: document.getElementById('totalInterest').textContent,
+                    totalReturn: document.getElementById('totalReturn').textContent
+                }
+            };
+            
+            // Save to localStorage
+            let savedCalculations = JSON.parse(localStorage.getItem('debtCalculations') || '[]');
+            savedCalculations.push(calculation);
+            localStorage.setItem('debtCalculations', JSON.stringify(savedCalculations));
+            
+            alert('✅ Kalkulace "' + name + '" byla úspěšně uložena!');
+            closeSaveModal();
+        }
+
+        function printSchedule() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Set font to support Czech characters
+            doc.setFont("helvetica");
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.setFont(undefined, 'bold');
+            doc.text('Splátkový kalendář', 14, 20);
+            
+            // Add basic info only
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            
+            const drawdownDate = document.getElementById('drawdownDate').value;
+            const drawdownFormatted = drawdownDate ? new Date(drawdownDate).toLocaleDateString('cs-CZ') : 'N/A';
+            
+            doc.text('Datum sjednání: ' + drawdownFormatted, 14, 35);
+            doc.text('Měna: ' + currentCurrency, 14, 42);
+            
+            const loanVal = document.getElementById('loanAmount').value;
+            doc.text('Výše úvěru: ' + loanVal + ' ' + currentCurrency, 14, 49);
+            
+            const interestVal = document.getElementById('interestRate').value;
+            doc.text('Úroková sazba: ' + interestVal + '% p.a.', 14, 56);
+            
+            // Add spacing before table
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('Rozpad splátek:', 14, 68);
+            
+            // Prepare table data
+            const table = document.getElementById('scheduleTable');
+            const headers = [['Číslo', 'Datum', 'Počáteční\nzůstatek', 'Úrok', 'Jistina', 'Splátka', 'Konečný\nzůstatek']];
+            const rows = [];
+            
+            const tbody = table.querySelector('tbody');
+            const tableRows = tbody.querySelectorAll('tr');
+            
+            tableRows.forEach(row => {
+                const cols = row.querySelectorAll('td');
+                if (cols.length > 0) {
+                    const rowData = [];
+                    cols.forEach(col => {
+                        let text = col.textContent.trim();
+                        // Clean up the text - remove extra spaces
+                        text = text.replace(/\s+/g, ' ');
+                        rowData.push(text);
+                    });
+                    rows.push(rowData);
+                }
+            });
+            
+            // Add table to PDF
+            doc.autoTable({
+                head: headers,
+                body: rows,
+                startY: 75,
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2.5,
+                    font: 'helvetica',
+                },
+                headStyles: {
+                    fillColor: [33, 150, 243],
+                    fontStyle: 'bold',
+                    halign: 'center',
+                    fontSize: 8,
+                },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 13 },
+                    1: { halign: 'left', cellWidth: 23 },
+                    2: { halign: 'right', cellWidth: 28 },
+                    3: { halign: 'right', cellWidth: 26 },
+                    4: { halign: 'right', cellWidth: 26 },
+                    5: { halign: 'right', cellWidth: 26 },
+                    6: { halign: 'right', cellWidth: 28 }
+                },
+                didParseCell: function(data) {
+                    // Highlight fees row (second to last)
+                    if (data.row.index === rows.length - 2) {
+                        data.cell.styles.fillColor = [255, 243, 224];
+                        data.cell.styles.fontStyle = 'normal';
+                        data.cell.styles.fontSize = 7;
+                    }
+                    // Highlight total row (last row)
+                    if (data.row.index === rows.length - 1) {
+                        data.cell.styles.fillColor = [227, 242, 253];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            });
+            
+            // Save the PDF
+            const today = new Date().toLocaleDateString('cs-CZ');
+            const filename = 'splatkovy_kalendar_' + today.replace(/\./g, '_').replace(/\s/g, '') + '.pdf';
+            doc.save(filename);
+        }
+
+        function exportToExcel() {
+            // Create CSV content
+            let csv = 'Splátkový kalendář\n\n';
+            csv += 'Číslo,Datum,Počáteční zůstatek,Úrok,Jistina,Splátka,Konečný zůstatek\n';
+            
+            const table = document.getElementById('scheduleTable');
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('td');
+                const rowData = Array.from(cols).map(col => {
+                    let text = col.textContent.trim();
+                    // Remove currency symbols and clean up
+                    text = text.replace(/\s*Kč\s*/g, '').replace(/\s*€\s*/g, '').replace(/\s*\$\s*/g, '');
+                    text = text.replace(/\s/g, '');
+                    return text;
+                });
+                csv += rowData.join(',') + '\n';
+            });
+            
+            // Create download link
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'splatkovy_kalendar.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Allow Enter key to calculate
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    calculate();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
