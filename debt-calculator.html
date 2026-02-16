@@ -8,13 +8,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        /* CSS Variables - Light Mode */
+        /* CSS Variables - přesně jako homepage */
         :root {
             --bg-primary: #FFFFFF;
             --bg-secondary: #F8FAFC;
@@ -31,7 +25,6 @@
             --transition: all 0.2s ease;
         }
 
-        /* Dark Mode */
         html.carbon,
         body.carbon {
             --bg-primary: #0F0F0F;
@@ -47,8 +40,10 @@
             --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
         }
 
-        html {
-            background: var(--bg-secondary);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
@@ -56,11 +51,10 @@
             background: var(--bg-secondary);
             color: var(--text-primary);
             padding: 20px;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            min-height: 100vh;
-            transition: var(--transition);
         }
 
         .container {
@@ -71,7 +65,7 @@
             width: 100%;
             padding: 70px 50px 50px 50px;
             position: relative;
-            margin: 20px auto;
+            margin: 20px 0;
         }
 
         .currency-selector {
@@ -83,7 +77,6 @@
             background: var(--bg-surface);
             padding: 6px;
             border-radius: 12px;
-            box-shadow: var(--shadow);
             border: 1px solid var(--border-color);
         }
 
@@ -107,7 +100,6 @@
         .currency-btn.active {
             background: var(--accent);
             color: white;
-            box-shadow: var(--shadow);
         }
 
         .back-btn {
@@ -123,7 +115,6 @@
             padding: 10px 16px;
             border-radius: 10px;
             transition: var(--transition);
-            font-size: 14px;
         }
 
         .back-btn:hover {
@@ -178,13 +169,13 @@
             border: 1px solid var(--border-color);
             border-radius: 14px;
             font-size: 17px;
-            transition: var(--transition);
             background: var(--bg-surface);
             color: var(--text-primary);
             font-weight: 500;
             box-shadow: var(--shadow);
             width: 100%;
             font-family: inherit;
+            transition: var(--transition);
         }
 
         input[type="text"]:focus,
@@ -194,7 +185,6 @@
             background: var(--bg-primary);
             box-shadow: var(--shadow-md);
             border-color: var(--accent);
-            transform: translateY(-2px);
         }
 
         input[type="text"]::placeholder {
@@ -237,23 +227,18 @@
         }
 
         .fee-type-selector label span {
-            transition: var(--transition);
             position: relative;
             z-index: 1;
         }
 
         .fee-type-selector input[type="radio"]:checked + span {
             color: white;
-            font-weight: 700;
         }
 
         .fee-type-selector label::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background: var(--accent);
             border-radius: 9px;
             opacity: 0;
@@ -262,10 +247,6 @@
 
         .fee-type-selector label:has(input[type="radio"]:checked)::before {
             opacity: 1;
-        }
-
-        .fee-type-selector label:hover {
-            color: var(--accent);
         }
 
         .calculate-btn {
@@ -279,15 +260,14 @@
             font-weight: 700;
             cursor: pointer;
             transition: var(--transition);
-            box-shadow: var(--shadow-md);
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
         .calculate-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(56, 189, 248, 0.4);
             background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
 
         .results {
@@ -301,18 +281,12 @@
 
         .results.show {
             display: block;
-            animation: slideIn 0.5s ease-out;
+            animation: slideIn 0.3s;
         }
 
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .results h2 {
@@ -320,7 +294,6 @@
             font-size: 24px;
             margin-bottom: 30px;
             text-align: center;
-            font-weight: 700;
         }
 
         .result-grid {
@@ -334,14 +307,13 @@
             padding: 24px;
             border-radius: 16px;
             box-shadow: var(--shadow);
-            transition: var(--transition);
             border: 1px solid var(--border-color);
+            transition: var(--transition);
         }
 
         .result-item:hover {
-            transform: translateY(-4px);
+            transform: translateY(-2px);
             box-shadow: var(--shadow-md);
-            border-color: var(--accent);
         }
 
         .result-label {
@@ -350,22 +322,12 @@
             font-weight: 600;
             margin-bottom: 12px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         .result-value {
             color: var(--accent);
             font-size: 28px;
             font-weight: 800;
-            word-break: break-word;
-        }
-
-        .highlight-value {
-            background: var(--bg-primary);
-            padding: 6px 12px;
-            border-radius: 8px;
-            display: inline-block;
-            margin-top: 8px;
         }
 
         .action-buttons {
@@ -385,30 +347,28 @@
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
         }
 
+        .action-btn.primary,
         .btn-primary {
             background: var(--accent);
             color: white;
-            box-shadow: var(--shadow);
         }
 
+        .action-btn.primary:hover,
         .btn-primary:hover {
             background: var(--accent-hover);
             transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
         }
 
+        .action-btn,
         .btn-secondary {
             background: var(--bg-surface);
             color: var(--text-primary);
             border: 1px solid var(--border-color);
         }
 
+        .action-btn:hover,
         .btn-secondary:hover {
             background: var(--bg-primary);
             border-color: var(--accent);
@@ -426,13 +386,11 @@
             color: var(--text-primary);
             font-size: 20px;
             margin-bottom: 25px;
-            font-weight: 700;
         }
 
         .schedule-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
         }
 
         .schedule-table th {
@@ -454,77 +412,6 @@
             background: var(--bg-surface);
         }
 
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 9998;
-        }
-
-        .modal-overlay.show {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background: var(--bg-primary);
-            padding: 35px;
-            border-radius: 20px;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border-color);
-        }
-
-        .modal-content h3 {
-            color: var(--text-primary);
-            font-size: 22px;
-            margin-bottom: 20px;
-            font-weight: 700;
-        }
-
-        .modal-content input {
-            width: 100%;
-            padding: 14px 18px;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 20px;
-            background: var(--bg-surface);
-            color: var(--text-primary);
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-        }
-
-        .modal-buttons button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .modal-buttons .btn-save {
-            background: var(--accent);
-            color: white;
-        }
-
-        .modal-buttons .btn-cancel {
-            background: var(--bg-surface);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-        }
-
         small {
             color: var(--text-secondary);
             font-size: 12px;
@@ -539,30 +426,6 @@
             .currency-selector { right: 20px; top: 70px; }
         }
     </style>
-
-        /* Save Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.show {
-            display: flex;
-            animation: fadeIn 0.2s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -747,9 +610,6 @@
             </div>
 
             <div class="action-buttons">
-                <button class="action-btn primary" onclick="showSaveModal()">
-                    💾 Uložit kalkulaci
-                </button>
                 <button class="action-btn" onclick="printSchedule()">
                     🖨️ Vytisknout splátkový kalendář
                 </button>
@@ -761,16 +621,6 @@
     </div>
 
     <!-- Save Modal -->
-    <div class="modal" id="saveModal">
-        <div class="modal-content">
-            <h3>💾 Uložit kalkulaci</h3>
-            <input type="text" id="calculationName" placeholder="Zadejte název kalkulace (např. 'Projekt Praha 5')">
-            <div class="modal-buttons">
-                <button class="btn-save" onclick="saveCalculation()">Uložit</button>
-                <button class="btn-cancel" onclick="closeSaveModal()">Zrušit</button>
-            </div>
-        </div>
-    </div>
 
     <script>
         // Global currency state
@@ -1335,58 +1185,6 @@
             scheduleBody.innerHTML += feesRow + totalRow;
         }
 
-        function showSaveModal() {
-            document.getElementById('saveModal').classList.add('show');
-            document.getElementById('calculationName').focus();
-        }
-
-        function closeSaveModal() {
-            document.getElementById('saveModal').classList.remove('show');
-        }
-
-        function saveCalculation() {
-            const name = document.getElementById('calculationName').value.trim();
-            if (!name) {
-                alert('Prosím zadejte název kalkulace');
-                return;
-            }
-            
-            const calculation = {
-                name: name,
-                date: new Date().toISOString(),
-                currency: currentCurrency,
-                inputs: {
-                    propertyValue: document.getElementById('propertyValue').value,
-                    loanAmount: document.getElementById('loanAmount').value,
-                    interestRate: document.getElementById('interestRate').value,
-                    loanTerm: document.getElementById('loanTerm').value,
-                    setupFee: document.getElementById('setupFee').value,
-                    setupFeeType: document.querySelector('input[name="setupFeeType"]:checked').value,
-                    earlyRepaymentFee: document.getElementById('earlyRepaymentFee').value,
-                    earlyRepaymentFeeType: document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value,
-                    drawdownDate: document.getElementById('drawdownDate').value,
-                    repaymentDate: document.getElementById('repaymentDate').value,
-                    paymentType: document.getElementById('paymentType').value,
-                    interestFrequency: document.getElementById('interestFrequency').value
-                },
-                results: {
-                    ltv: document.getElementById('ltv').textContent,
-                    irr: document.getElementById('irr').textContent,
-                    monthlyPayment: document.getElementById('monthlyPayment').textContent,
-                    totalFees: document.getElementById('totalFees').textContent,
-                    totalInterest: document.getElementById('totalInterest').textContent,
-                    totalReturn: document.getElementById('totalReturn').textContent
-                }
-            };
-            
-            // Save to localStorage
-            let savedCalculations = JSON.parse(localStorage.getItem('debtCalculations') || '[]');
-            savedCalculations.push(calculation);
-            localStorage.setItem('debtCalculations', JSON.stringify(savedCalculations));
-            
-            alert('✅ Kalkulace "' + name + '" byla úspěšně uložena!');
-            closeSaveModal();
-        }
 
         function printSchedule() {
             const { jsPDF } = window.jspdf;
