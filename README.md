@@ -1,131 +1,222 @@
-# Investment Tools - Update Documentation
+# Investment Tools - GitHub Deployment Package
 
-## 📅 Datum aktualizace: 10. února 2026
+## 📦 Obsah balíčku
 
-## 🆕 Nové funkce a změny
+Tento balíček obsahuje všechny soubory potřebné pro nasazení Investment Tools na Vercel.
 
-### ✅ Nová aplikace: R-E Prompt Generator
-- **Soubor**: `real-estate-prompt-generator.html`
-- **Účel**: Generování profesionálních AI promptů pro valuaci nemovitostí
-- **Funkce**:
-  - Podporuje 4 typy nemovitostí: Pozemek, Byt, Rodinný dům, Komerční objekt
-  - Profesionální bankovní prompty založené na zákoně č. 151/1997 Sb. a § 29 zákona o dluhopisech
-  - Reziduální metoda pro developerské projekty
-  - Výnosová, porovnávací a nákladová metoda ocenění
-  - Identifikace Red Flags (právní vady, věcná břemena)
-  - Výpočet zástavní hodnoty pro LTV
-  - Export promptu do schránky pro použití v ChatGPT/Claude/Gemini
+### ✅ Soubory k nahrání na GitHub:
 
-### 🔧 Vylepšení Debt Calculator
-- **Přidáno**: Tlačítko "← Zpět" pro návrat na hlavní stránku
-- **Soubor**: `debt-calculator.html`
+#### Hlavní stránky:
+1. **index.html** - Homepage s DayNight designem
+2. **apps.html** - Přehled všech aplikací
+3. **styles.css** - Globální styly (light/dark mode)
+4. **script.js** - Theme switching a funkce
 
-### 🎨 Design úpravy
-- **R-E Prompt Generator**: Barevné gradienty pro rozlišení typů nemovitostí
-  - Pozemek: zelený gradient
-  - Byt: modrý gradient
-  - Dům: oranžový gradient
-  - Komerční: fialový gradient
-- **Profesionální vzhled**: Odstranění emoji, čistý finanční design
-- **Konzistentní UI**: Stejný design napříč všemi aplikacemi
+#### Aplikace:
+5. **debt-calculator.html** - Debt Financing Calculator (aktualizováno)
+6. **real-estate-prompt-generator.html** - Z původního projektu (nebo nahraďte novou verzí)
 
-### 📝 Oprava inline CSS
-- **index.html**: Přidán kompletní inline CSS pro zajištění správného načtení stylů
-- **Důvod**: Řešení problému nenačítání externího `styles.css` na Vercel
+#### Konfigurace:
+7. **vercel.json** - Vercel konfigurace
 
-## 📂 Struktura souborů
+#### Dokumentace:
+8. **APP-TEMPLATE.html** - Šablona pro nové aplikace
+9. **DESIGN-SYSTEM.md** - Design system dokumentace
+10. **default-ai-prompt.md** - AI prompt template
+11. **README.md** - Tento soubor
 
-```
-├── index.html                          # Hlavní vstupní stránka (s inline CSS)
-├── styles.css                          # Globální styly
-├── script.js                           # Základní JavaScript
-├── apps.html                           # Přehled aplikací
-├── about.html                          # O mně
-├── debt-calculator.html                # Kalkulačka dluhového financování (+ tlačítko zpět)
-├── real-estate-prompt-generator.html   # NOVÝ - R-E Prompt Generator
-├── vercel.json                         # Vercel konfigurace
-└── README.md                           # Tato dokumentace
-```
+## 🚀 Postup nasazení
 
-## 🚀 Deployment instrukce
+### Způsob 1: Přes GitHub Web Interface (Jednodušší)
 
-### Rychlý update přes GitHub:
-
-1. **Nahraď všechny soubory v repozitáři**
-   ```bash
-   # Smažte staré soubory a nahraďte novými
-   git pull
-   # Zkopírujte všechny soubory z této složky
-   git add .
-   git commit -m "Update: Přidán R-E Prompt Generator, vylepšení UI"
-   git push
+1. **Jděte na GitHub repozitář:**
+   ```
+   https://github.com/martin1dlouhy/Main-Project
    ```
 
-2. **Vercel automaticky deployuje**
-   - Vercel detekuje změny v GitHub
-   - Automaticky spustí nový build
-   - Za ~30-60 sekund budou změny live
+2. **Pro každý soubor:**
+   - Klikněte na soubor (např. `index.html`)
+   - Klikněte na ikonu tužky (Edit)
+   - Smažte obsah
+   - Zkopírujte obsah z nového souboru
+   - Klikněte "Commit changes"
 
-### Kontrola po deployi:
+3. **Pro nové soubory:**
+   - Klikněte "Add file" → "Create new file"
+   - Pojmenujte soubor (např. `APP-TEMPLATE.html`)
+   - Vložte obsah
+   - Klikněte "Commit changes"
 
-✅ Zkontrolujte:
-- [ ] `https://calculator-01-roan.vercel.app/` - hlavní stránka se načte
-- [ ] CSS se načítá správně (barevný gradient pozadí)
-- [ ] Debt Calculator má tlačítko "← Zpět"
-- [ ] R-E Prompt Generator funguje
-- [ ] Tlačítko "Kopírovat" ve R-E Prompt Generator funguje (na HTTPS už nebude error)
+### Způsob 2: Přes Git (Pro pokročilé)
 
-## 🔗 Odkazy na aplikace
+```bash
+# 1. Klonujte repozitář
+git clone https://github.com/martin1dlouhy/Main-Project.git
+cd Main-Project
 
-Po deployi budou dostupné:
-- **Hlavní stránka**: `https://calculator-01-roan.vercel.app/`
-- **Debt Calculator**: `https://calculator-01-roan.vercel.app/debt-calculator.html`
-- **R-E Prompt Generator**: `https://calculator-01-roan.vercel.app/real-estate-prompt-generator.html`
+# 2. Nahraďte soubory novými verzemi
+# (překopírujte všechny soubory z tohoto balíčku)
 
-## 📊 Testovací checklist
+# 3. Přidejte změny
+git add .
 
-Po nahrání na Vercel otestuj:
+# 4. Commitněte
+git commit -m "Update: Unified DayNight design with dark/light mode"
 
-### Index.html
-- [ ] Gradient pozadí se zobrazuje
-- [ ] Navigace funguje
-- [ ] 4 karty aplikací se zobrazují
-- [ ] CTA tlačítka jsou klikací
+# 5. Pushněte na GitHub
+git push origin main
+```
 
-### Debt Calculator
-- [ ] Tlačítko "← Zpět" funguje
-- [ ] Všechny výpočty fungují
-- [ ] Export PDF/Excel funguje
-- [ ] Měnový přepínač (CZK/EUR/USD) funguje
+## ⚙️ Automatický deployment na Vercel
 
-### R-E Prompt Generator
-- [ ] 4 typy nemovitostí mají barevné pozadí (zelená/modrá/oranžová/fialová)
-- [ ] Výběr typu funguje
-- [ ] Checkboxy vstupů fungují
-- [ ] Formulář se vyplňuje
-- [ ] Prompt se generuje
-- [ ] **Tlačítko "Kopírovat" funguje** (error zmizí na HTTPS!)
-- [ ] Tlačítko "← Zpět" funguje
+Vercel automaticky detekuje změny na GitHubu a deployuje:
 
-## 🐛 Známé problémy a řešení
+1. **Push na GitHub** → Změny nahrány
+2. **Vercel detekuje** → Spustí build (~30 sekund)
+3. **Live na webu** → https://main-five-alpha.vercel.app
 
-### Clipboard API error (lokální testování)
-**Problém**: `NotAllowedError: Failed to execute 'writeText' on 'Clipboard'`
-**Řešení**: Error je pouze při lokálním testování (`file://`). Po nahrání na Vercel (HTTPS) funguje perfektně.
+## ✅ Kontrola po nasazení
 
-### CSS se nenačítá
-**Problém**: Styly se neaplikují
-**Řešení**: `index.html` má nyní inline CSS jako fallback. Externí `styles.css` zůstává pro ostatní stránky.
+Po deployi zkontrolujte:
 
-## 📞 Podpora
+- [ ] Homepage se načte správně
+- [ ] Navigace funguje (Domů, Aplikace)
+- [ ] Dark/Light mode přepínač funguje
+- [ ] Debt Calculator funguje a počítá správně
+- [ ] Apps stránka zobrazuje všechny aplikace
+- [ ] Footer je kompletní
+- [ ] Responzivní na mobilu
 
-Pokud se po deployi objeví problémy:
-1. Zkontroluj Vercel deployment log
-2. Ověř, že všechny soubory byly nahrány
+## 🎨 Design Features
+
+### Nový unified design:
+- ✅ **DayNight minimalistický styl**
+- ✅ **Light/Dark mode** (přepínač vpravo nahoře)
+- ✅ **Profesionální SVG logo**
+- ✅ **Jednotné barvy** napříč stránkami
+- ✅ **DM Sans font**
+- ✅ **Responzivní design**
+
+### Zachované funkce:
+- ✅ Všechny kalkulace v Debt Calculator
+- ✅ Export PDF/Excel (tlačítka připravena)
+- ✅ Měnový přepínač
+- ✅ Všechny stránky funkční
+
+## 📁 Struktura projektu
+
+```
+Main-Project/
+├── index.html                      # Homepage ✨ NOVÝ
+├── apps.html                       # Aplikace ✨ NOVÝ
+├── styles.css                      # Globální styly ✨ NOVÝ
+├── script.js                       # JavaScript ✨ NOVÝ
+├── debt-calculator.html            # Kalkulačka ✨ AKTUALIZOVÁNO
+├── real-estate-prompt-generator.html  # Prompt gen (ponechat/nahradit)
+├── vercel.json                     # Vercel config
+├── default-ai-prompt.md            # AI template
+├── APP-TEMPLATE.html               # Template ✨ NOVÝ
+├── DESIGN-SYSTEM.md                # Dokumentace ✨ NOVÝ
+└── README.md                       # Tento soubor
+```
+
+## 🔧 Pro budoucí aplikace
+
+### Vytvoření nové aplikace:
+
+1. **Zkopírujte template:**
+   ```bash
+   cp APP-TEMPLATE.html my-new-app.html
+   ```
+
+2. **Upravte obsah:**
+   - Změňte `<title>` a `.app-title`
+   - Přidejte své formuláře
+   - Přidejte funkcionalitu
+
+3. **NEMĚŇTE:**
+   - Navigaci (`.top-nav`)
+   - Footer (`.footer`)
+   - Theme switching
+
+4. **Přečtěte dokumentaci:**
+   - Otevřete `DESIGN-SYSTEM.md`
+   - Následujte best practices
+
+## 🌓 Dark Mode
+
+### Jak funguje:
+- Uživatel klikne na ikonu slunce/měsíce
+- JavaScript přidá třídu `.carbon` na `<html>` a `<body>`
+- CSS automaticky použije dark mode proměnné
+- Stav se uloží do `localStorage`
+
+### Pro vývojáře:
+Používejte CSS proměnné místo fixed barev:
+```css
+/* ✅ Správně */
+color: var(--text-primary);
+background: var(--bg-primary);
+
+/* ❌ Špatně */
+color: #1E293B;
+background: #FFFFFF;
+```
+
+## 📞 Troubleshooting
+
+### Vercel se neaktualizoval:
+1. Zkontrolujte Vercel dashboard
+2. Zkontrolujte deployment log
 3. Hard refresh (Ctrl+F5) v prohlížeči
+
+### CSS se nenačítá:
+1. Zkontrolujte konzoli prohlížeče (F12)
+2. Ověřte, že `styles.css` je na GitHubu
+3. Zkontrolujte cesty (`href="styles.css"`)
+
+### Dark mode nefunguje:
+1. Zkontrolujte, že `script.js` se načítá
+2. Otevřete konzoli prohlížeče
+3. Zkontrolujte localStorage
+
+## 📊 Design System
+
+Kompletní dokumentace designu je v souboru `DESIGN-SYSTEM.md`.
+
+Obsahuje:
+- Barvy (light/dark mode)
+- Typografii
+- Spacing
+- Komponenty
+- Best practices
+- Příklady kódu
+
+## 🎯 Priority po nasazení
+
+1. **Zkontrolujte funkčnost** všech stránek
+2. **Otestujte dark mode** na všech stránkách
+3. **Zkontrolujte mobil** (responzivita)
+4. **Nahraďte R-E Prompt Generator** novou verzí (volitelné)
+
+## 📝 Changelog
+
+### Version 3.0 (14. února 2026)
+- ✅ Nový DayNight minimalistický design
+- ✅ Light/Dark mode support
+- ✅ Jednotný vizuál napříč aplikacemi
+- ✅ Aktualizovaný Debt Calculator
+- ✅ Nové profesionální logo
+- ✅ Design system dokumentace
+- ✅ App template pro budoucí aplikace
+
+## 👤 Autor
+
+**Martin Dlouhý**
+Email: martin@dlouhy.com
 
 ---
 
-**Verze**: 2.0
-**Datum**: 10. února 2026
-**Autor**: Martin Dlouhý
+**Version**: 3.0  
+**Last Updated**: 14. února 2026  
+**License**: All rights reserved
