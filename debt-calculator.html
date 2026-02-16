@@ -186,6 +186,12 @@
             box-shadow: var(--shadow-md);
             border-color: var(--accent);
         }
+        
+        .readonly-input {
+            background: var(--bg-surface) !important;
+            cursor: not-allowed !important;
+            opacity: 0.7;
+        }
 
         input[type="text"]::placeholder {
             color: var(--text-secondary);
@@ -419,6 +425,60 @@
             display: block;
         }
 
+        
+        /* Info notes - unified style */
+        .info-note {
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-top: 15px;
+            font-size: 15px;
+            line-height: 1.6;
+            border-left: 4px solid;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+        }
+        
+        .info-note.success {
+            border-left-color: var(--success);
+            background: rgba(34, 197, 94, 0.1);
+        }
+        
+        .info-note.warning {
+            border-left-color: var(--warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+        
+        .info-note.good-yield {
+            border-left-color: var(--accent);
+            background: var(--accent-light);
+        }
+        
+        .info-note strong {
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        
+        /* Fees row - subtle highlight */
+        .fees-summary-row {
+            background: var(--bg-surface) !important;
+            border-top: 2px solid var(--border-color) !important;
+            border-bottom: 2px solid var(--border-color) !important;
+        }
+        
+        .fees-summary-row td {
+            padding: 16px 12px !important;
+            font-weight: 600 !important;
+        }
+        
+        .fees-breakdown {
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 400;
+            display: block;
+            margin-top: 4px;
+        }
+        
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr; }
             .result-grid { grid-template-columns: 1fr; }
@@ -439,7 +499,13 @@
             <button class="currency-btn" onclick="setCurrency('USD')">USD</button>
         </div>
         
-        <h1>💼 Kalkulačka dluhového financování</h1>
+        <h1>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px; vertical-align: middle;">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+            </svg>
+            Kalkulačka dluhového financování
+        </h1>
         <p class="subtitle">Financování se zástavou nemovitosti</p>
 
         <div class="form-grid">
@@ -471,7 +537,7 @@
 
             <div class="form-group">
                 <label for="repaymentDate">Datum splatnosti (automaticky)</label>
-                <input type="date" id="repaymentDate" value="" readonly style="background: #f0f4f8; cursor: not-allowed;">
+                <input type="date" id="repaymentDate" value="" readonly class="readonly-input">
             </div>
 
             <div class="form-group">
@@ -559,7 +625,14 @@
         </div>
 
         <div class="results" id="results">
-            <h2>📊 Výsledky financování</h2>
+            <h2>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px; vertical-align: middle;">
+                    <line x1="12" y1="20" x2="12" y2="10"/>
+                    <line x1="18" y1="20" x2="18" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="16"/>
+                </svg>
+                Výsledky financování
+            </h2>
             <div class="result-grid">
                 <div class="result-item">
                     <div class="result-label">LTV ratio</div>
@@ -611,10 +684,21 @@
 
             <div class="action-buttons">
                 <button class="action-btn" onclick="printSchedule()">
-                    🖨️ Vytisknout splátkový kalendář
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
+                        <path d="M6 9V2h12v7"/>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                        <rect x="6" y="14" width="12" height="8"/>
+                    </svg>
+                    Vytisknout splátkový kalendář
                 </button>
                 <button class="action-btn" onclick="exportToExcel()">
-                    📊 Export do Excel
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="12" y1="18" x2="12" y2="12"/>
+                        <line x1="9" y1="15" x2="15" y2="15"/>
+                    </svg>
+                    Export do Excel
                 </button>
             </div>
         </div>
@@ -1024,26 +1108,26 @@
             let riskHTML = '';
             
             if (ltv > 80) {
-                riskHTML += '<div class="warning"><strong>⚠️ Vysoké riziko:</strong> LTV ratio přesahuje 80%. Doporučujeme snížit výši úvěru nebo zvýšit hodnotu zástavy.</div>';
+                riskHTML += '<div class="info-note warning"><strong>Vysoké riziko:</strong> LTV ratio přesahuje 80%. Doporučujeme snížit výši úvěru nebo zvýšit hodnotu zástavy.</div>';
             } else if (ltv > 65) {
-                riskHTML += '<div class="warning" style="background: #fffaf0; border-left-color: #ed8936; color: #7c2d12;"><strong>⚡ Střední riziko:</strong> LTV ratio je mezi 65-80%. Standardní riziko pro dluhové financování.</div>';
+                riskHTML += '<div class="info-note warning" style="border-left-color: #f59e0b;"><strong>Střední riziko:</strong> LTV ratio je mezi 65-80%. Standardní riziko pro dluhové financování.</div>';
             } else {
-                riskHTML += '<div class="success"><strong>✅ Nízké riziko:</strong> LTV ratio je pod 65%. Konzervativní a bezpečná úroveň financování.</div>';
+                riskHTML += '<div class="info-note success"><strong>Nízké riziko:</strong> LTV ratio je pod 65%. Konzervativní a bezpečná úroveň financování.</div>';
             }
 
             if (irr > 15) {
-                riskHTML += '<div class="success" style="margin-top: 10px;"><strong>💰 Výborný výnos:</strong> IRR ' + irr.toFixed(2) + '% je nadprůměrný výnos pro dluhové financování.</div>';
+                riskHTML += '<div class="info-note success"><strong>Výborný výnos:</strong> IRR ' + irr.toFixed(2) + '% je nadprůměrný výnos pro dluhové financování.</div>';
             } else if (irr > 10) {
-                riskHTML += '<div class="success" style="margin-top: 10px; background: #fffaf0; border-left-color: #ed8936; color: #7c2d12;"><strong>📈 Dobrý výnos:</strong> IRR ' + irr.toFixed(2) + '% je solidní výnos.</div>';
+                riskHTML += '<div class="info-note good-yield"><strong>Dobrý výnos:</strong> IRR ' + irr.toFixed(2) + '% je solidní výnos.</div>';
             } else {
-                riskHTML += '<div class="warning" style="margin-top: 10px;"><strong>📉 Nižší výnos:</strong> IRR ' + irr.toFixed(2) + '% může být pod očekáváním pro toto riziko.</div>';
+                riskHTML += '<div class="info-note warning"><strong>Nižší výnos:</strong> IRR ' + irr.toFixed(2) + '% může být pod očekáváním pro toto riziko.</div>';
             }
             
             // Add early repayment note
             if (isEarlyRepayment) {
                 riskHTML += '<div class="success" style="margin-top: 10px; background: #fff3e0; border-left-color: #ff9800; color: #e65100;"><strong>⏰ Předčasné splacení:</strong> Kalkulace zahrnuje předčasné splacení dne ' + earlyRepaymentDate.toLocaleDateString('cs-CZ') + ' s poplatkem ' + formatCurrency(earlyRepaymentFeeAmount) + '.</div>';
             } else {
-                riskHTML += '<div class="success" style="margin-top: 10px;"><strong>✅ Běžné splacení:</strong> Bez poplatku za předčasné splacení.</div>';
+                riskHTML += '<div class="info-note success"><strong>Běžné splacení:</strong> Bez poplatku za předčasné splacení.</div>';
             }
 
             riskDiv.innerHTML = riskHTML;
@@ -1160,10 +1244,10 @@
             const totalFeesAmount = setupFee + earlyFeeForTotal;
             
             const feesRow = `
-                <tr style="background: #fff3e0; border-top: 2px solid #2196f3;">
+                <tr class="fees-summary-row">
                     <td colspan="3" class="text-right"><strong>Poplatky celkem:</strong></td>
                     <td class="text-right" colspan="3">
-                        <span style="color: #64748b; font-size: 13px;">
+                        <span class="fees-breakdown">
                             Poplatek za sjednání: ${formatCurrency(setupFee)}
                             ${isEarlyRepayment ? ' + Poplatek za předčasné splacení: ' + formatCurrency(earlyFee) : ''}
                         </span>
@@ -1190,103 +1274,203 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // Set font to support Czech characters
-            doc.setFont("helvetica");
+            // === PAGE 1: VÝSLEDKY FINANCOVÁNÍ ===
             
-            // Add title
-            doc.setFontSize(18);
-            doc.setFont(undefined, 'bold');
-            doc.text('Splátkový kalendář', 14, 20);
+            // Title
+            doc.setFontSize(20);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Kalkulacka dluhoveho financovani', 105, 20, { align: 'center' });
             
-            // Add basic info only
             doc.setFontSize(11);
-            doc.setFont(undefined, 'normal');
+            doc.setFont('helvetica', 'normal');
+            doc.text('Financovani se zastavou nemovitosti', 105, 28, { align: 'center' });
+            
+            // Basic parameters
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Zakladni udaje:', 14, 45);
+            
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            let y = 55;
             
             const drawdownDate = document.getElementById('drawdownDate').value;
             const drawdownFormatted = drawdownDate ? new Date(drawdownDate).toLocaleDateString('cs-CZ') : 'N/A';
+            doc.text('Datum sjednani: ' + drawdownFormatted, 20, y);
+            y += 6;
             
-            doc.text('Datum sjednání: ' + drawdownFormatted, 14, 35);
-            doc.text('Měna: ' + currentCurrency, 14, 42);
+            const currency = currentCurrency;
+            doc.text('Mena: ' + currency, 20, y);
+            y += 6;
             
-            const loanVal = document.getElementById('loanAmount').value;
-            doc.text('Výše úvěru: ' + loanVal + ' ' + currentCurrency, 14, 49);
+            const loanAmount = document.getElementById('loanAmount').value;
+            doc.text('Vyse uveru: ' + loanAmount + ' ' + currency, 20, y);
+            y += 6;
             
-            const interestVal = document.getElementById('interestRate').value;
-            doc.text('Úroková sazba: ' + interestVal + '% p.a.', 14, 56);
+            const interestRate = document.getElementById('interestRate').value;
+            doc.text('Urokova sazba: ' + interestRate + '% p.a.', 20, y);
+            y += 6;
             
-            // Add spacing before table
+            const loanTerm = document.getElementById('loanTerm').value;
+            doc.text('Doba splatnosti: ' + loanTerm + ' mesicu', 20, y);
+            y += 10;
+            
+            // Results section
             doc.setFontSize(12);
-            doc.setFont(undefined, 'bold');
-            doc.text('Rozpad splátek:', 14, 68);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Vysledky financovani:', 14, y);
+            y += 10;
             
-            // Prepare table data
-            const table = document.getElementById('scheduleTable');
-            const headers = [['Číslo', 'Datum', 'Počáteční\nzůstatek', 'Úrok', 'Jistina', 'Splátka', 'Konečný\nzůstatek']];
-            const rows = [];
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
             
-            const tbody = table.querySelector('tbody');
-            const tableRows = tbody.querySelectorAll('tr');
+            // Get results from page
+            const ltv = document.getElementById('ltv')?.textContent || 'N/A';
+            const irr = document.getElementById('irr')?.textContent || 'N/A';
+            const effRate = document.getElementById('effectiveRate')?.textContent || 'N/A';
+            const monthlyPay = document.getElementById('monthlyPayment')?.textContent || 'N/A';
+            const totalFees = document.getElementById('totalFees')?.textContent || 'N/A';
+            const totalInt = document.getElementById('totalInterest')?.textContent || 'N/A';
             
-            tableRows.forEach(row => {
-                const cols = row.querySelectorAll('td');
-                if (cols.length > 0) {
-                    const rowData = [];
-                    cols.forEach(col => {
-                        let text = col.textContent.trim();
-                        // Clean up the text - remove extra spaces
-                        text = text.replace(/\s+/g, ' ');
-                        rowData.push(text);
-                    });
-                    rows.push(rowData);
-                }
-            });
+            doc.text('LTV (Loan-to-Value): ' + ltv, 20, y);
+            y += 6;
+            doc.text('IRR (% p.a.): ' + irr, 20, y);
+            y += 6;
+            doc.text('Efektivni urokova sazba: ' + effRate, 20, y);
+            y += 6;
+            doc.text('Mesicni splatka: ' + monthlyPay, 20, y);
+            y += 6;
+            doc.text('Celkove poplatky: ' + totalFees, 20, y);
+            y += 6;
+            doc.text('Celkovy urok: ' + totalInt, 20, y);
+            y += 10;
             
-            // Add table to PDF
-            doc.autoTable({
-                head: headers,
-                body: rows,
-                startY: 75,
-                styles: {
-                    fontSize: 8,
-                    cellPadding: 2.5,
-                    font: 'helvetica',
-                },
-                headStyles: {
-                    fillColor: [33, 150, 243],
-                    fontStyle: 'bold',
-                    halign: 'center',
-                    fontSize: 8,
-                },
-                columnStyles: {
-                    0: { halign: 'center', cellWidth: 13 },
-                    1: { halign: 'left', cellWidth: 23 },
-                    2: { halign: 'right', cellWidth: 28 },
-                    3: { halign: 'right', cellWidth: 26 },
-                    4: { halign: 'right', cellWidth: 26 },
-                    5: { halign: 'right', cellWidth: 26 },
-                    6: { halign: 'right', cellWidth: 28 }
-                },
-                didParseCell: function(data) {
-                    // Highlight fees row (second to last)
-                    if (data.row.index === rows.length - 2) {
-                        data.cell.styles.fillColor = [255, 243, 224];
-                        data.cell.styles.fontStyle = 'normal';
-                        data.cell.styles.fontSize = 7;
+            // Risk assessment
+            const riskSection = document.getElementById('riskAssessment');
+            if (riskSection && riskSection.innerHTML.trim()) {
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Hodnoceni rizika:', 14, y);
+                y += 8;
+                
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                
+                // Extract text from risk HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = riskSection.innerHTML;
+                const riskText = tempDiv.textContent || tempDiv.innerText || '';
+                
+                // Split into lines and add to PDF
+                const lines = doc.splitTextToSize(riskText, 180);
+                lines.forEach(line => {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
                     }
-                    // Highlight total row (last row)
-                    if (data.row.index === rows.length - 1) {
-                        data.cell.styles.fillColor = [227, 242, 253];
-                        data.cell.styles.fontStyle = 'bold';
-                    }
-                }
-            });
+                    doc.text(line, 20, y);
+                    y += 5;
+                });
+            }
             
-            // Save the PDF
-            const today = new Date().toLocaleDateString('cs-CZ');
-            const filename = 'splatkovy_kalendar_' + today.replace(/\./g, '_').replace(/\s/g, '') + '.pdf';
+            // === PAGE 2: SPLATKOVY KALENDAR ===
+            doc.addPage();
+            y = 20;
+            
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Splatkovy kalendar', 105, y, { align: 'center' });
+            y += 10;
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Datum sjednani: ' + drawdownFormatted, 14, y);
+            y += 5;
+            doc.text('Mena: ' + currency, 14, y);
+            y += 5;
+            doc.text('Vyse uveru: ' + loanAmount + ' ' + currency, 14, y);
+            y += 5;
+            doc.text('Urokova sazba: ' + interestRate + '% p.a.', 14, y);
+            y += 10;
+            
+            // Table header
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.text('Rozpad splatek:', 14, y);
+            y += 8;
+            
+            // Get schedule table data
+            const scheduleTable = document.querySelector('#paymentSchedule tbody');
+            if (scheduleTable) {
+                // Use autoTable for nice table formatting
+                const rows = [];
+                const tableRows = scheduleTable.querySelectorAll('tr');
+                
+                tableRows.forEach(tr => {
+                    const cells = tr.querySelectorAll('td');
+                    if (cells.length >= 7) {
+                        rows.push([
+                            cells[0].textContent.trim(),  // Cislo
+                            cells[1].textContent.trim(),  // Datum
+                            cells[2].textContent.trim(),  // Pocatecni zůstatek
+                            cells[3].textContent.trim(),  // Urok
+                            cells[4].textContent.trim(),  // Jistina
+                            cells[5].textContent.trim(),  // Splatka
+                            cells[6].textContent.trim()   // Konecny zůstatek
+                        ]);
+                    }
+                });
+                
+                doc.autoTable({
+                    startY: y,
+                    head: [[
+                        'Cislo',
+                        'Datum',
+                        'Pocatecni zůstatek',
+                        'Urok',
+                        'Jistina',
+                        'Splatka',
+                        'Konecny zůstatek'
+                    ]],
+                    body: rows,
+                    theme: 'striped',
+                    headStyles: {
+                        fillColor: [56, 189, 248],
+                        textColor: [255, 255, 255],
+                        fontSize: 8,
+                        fontStyle: 'bold'
+                    },
+                    bodyStyles: {
+                        fontSize: 8,
+                        textColor: [30, 41, 59]
+                    },
+                    alternateRowStyles: {
+                        fillColor: [248, 250, 252]
+                    },
+                    margin: { left: 14, right: 14 },
+                    styles: {
+                        cellPadding: 3,
+                        lineWidth: 0.1,
+                        lineColor: [226, 232, 240]
+                    }
+                });
+            }
+            
+            // Footer on each page
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(100);
+                doc.text('Strana ' + i + ' z ' + pageCount, 105, 290, { align: 'center' });
+                doc.text('Vygenerovano: ' + new Date().toLocaleDateString('cs-CZ'), 14, 290);
+            }
+            
+            // Save PDF
+            const filename = 'splatkovy-kalendar-' + drawdownFormatted.replace(/\./g, '-') + '.pdf';
             doc.save(filename);
         }
-
         function exportToExcel() {
             // Create CSV content
             let csv = 'Splátkový kalendář\n\n';
