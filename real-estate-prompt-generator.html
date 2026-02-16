@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R-E Prompt Generator | Investment Tools</title>
+    <script>if(localStorage.getItem("daynight-theme")==="carbon"){document.documentElement.classList.add("carbon");document.body.classList.add("carbon");}</script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8FAFC;
+            --bg-surface: #F1F5F9;
+            --border-color: #E2E8F0;
+            --text-primary: #1E293B;
+            --text-secondary: #64748B;
+            --accent: #38BDF8;
+            --accent-hover: #0EA5E9;
+            --accent-light: rgba(56, 189, 248, 0.1);
+            --success: #22C55E;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --transition: all 0.2s ease;
+        }
+
+        html.carbon,
+        body.carbon {
+            --bg-primary: #0F0F0F;
+            --bg-secondary: #171717;
+            --bg-surface: #1F1F1F;
+            --border-color: #2E2E2E;
+            --text-primary: #F5F5F5;
+            --text-secondary: #A3A3A3;
+            --accent: #38BDF8;
+            --accent-hover: #7DD3FC;
+            --accent-light: rgba(56, 189, 248, 0.15);
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        html {
+            background: var(--bg-secondary);
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            transition: var(--transition);
+        }
+
+        .container {
+            background: var(--bg-primary);
+            border-radius: 24px;
+            box-shadow: var(--shadow-md);
+            max-width: 1200px;
+            width: 100%;
+            padding: 50px;
+            position: relative;
+            margin: 20px auto;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-decoration: none;
+            color: var(--accent);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            transition: var(--transition);
+        }
+
+        .back-btn:hover {
+            background: var(--accent-light);
+        }
+
+        h1 {
+            color: var(--text-primary);
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 50px;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            background: var(--bg-surface);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+        }
+
+        .step.active {
+            background: var(--accent);
+            color: white;
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent);
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .step.active .step-number {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .property-type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .property-type-card {
+            background: var(--bg-surface);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            padding: 35px 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .property-type-card:hover {
+            border-color: var(--accent);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-5px);
+        }
+
+        .property-type-card.selected {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            box-shadow: var(--shadow-md);
+        }
+
+        .property-icon {
+            font-size: 56px;
+            margin-bottom: 20px;
+        }
+
+        .property-type-card h3 {
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .property-type-card p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 16px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            font-size: 17px;
+            transition: var(--transition);
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            background: var(--bg-primary);
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent);
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .checkbox-item:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+            text-transform: none;
+            letter-spacing: normal;
+            cursor: pointer;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .prompt-output {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 25px;
+            margin-top: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 600px;
+            overflow-y: auto;
+            color: var(--text-primary);
+        }
+
+        .copy-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            z-index: 10000;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 30px 20px; }
+            .property-type-grid { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: 1fr; }
+            .button-container { flex-direction: column; }
+            button { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-btn">← Zpět</a>
+        
+        <h1>R-E Prompt Generator</h1>
+        <p class="subtitle">Profesionální AI valuace pro zástavní financování</p>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <span>Typ</span>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <span>Vstupy</span>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <span>Údaje</span>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-number">4</div>
+                <span>Prompt</span>
+            </div>
+        </div>
+
+        <!-- STEP 1 -->
+        <div class="section active" id="step1">
+            <div class="property-type-grid">
+                <div class="property-type-card" onclick="selectPropertyType('land')">
+                    <h3>Pozemek</h3>
+                    <p>Stavební parcela nebo developerský projekt</p>
+                </div>
+                <div class="property-type-card" onclick="selectPropertyType('apartment')">
+                    <h3>Byt</h3>
+                    <p>Bytová jednotka</p>
+                </div>
+                <div class="property-type-card" onclick="selectPropertyType('house')">
+                    <h3>Rodinný dům</h3>
+                    <p>Samostatný dům s pozemkem</p>
+                </div>
+                <div class="property-type-card" onclick="selectPropertyType('commercial')">
+                    <h3>Komerční objekt</h3>
+                    <p>Kanceláře, sklady, retail</p>
+                </div>
+            </div>
+            <div class="buttons">
+                <button class="btn btn-primary" onclick="nextStep()" id="step1Next" disabled>Pokračovat →</button>
+            </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="section" id="step2">
+            <div class="inputs-section">
+                <h3>Dostupné materiály a podklady:</h3>
+                <div class="checkbox-grid" id="inputsGrid"></div>
+                <div class="info-box">
+                    <strong>Pro zástavní ocenění doporučujeme:</strong> Znalecký posudek, List vlastnictví (LV) a parcelní číslo. Čím více podkladů, tím přesnější valuace.
+                </div>
+            </div>
+            <div class="buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Zpět</button>
+                <button class="btn btn-primary" onclick="nextStep()">Pokračovat →</button>
+            </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="section" id="step3">
+            <div class="inputs-section">
+                <h3>Vyplňte dostupné údaje:</h3>
+                <div id="detailForm"></div>
+            </div>
+            <div class="buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">← Zpět</button>
+                <button class="btn btn-primary" onclick="generatePrompt()">Vygenerovat AI Prompt →</button>
+            </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="section" id="step4">
+            <div class="result-section">
+                <h2>AI Prompt pro bankovní valuaci</h2>
+                
+                <div class="info-box">
+                    <strong>Návod:</strong> Zkopírujte tento prompt a vložte ho do ChatGPT, Claude nebo Gemini. AI vám poskytne profesionální ocenění včetně zástavní hodnoty pro dluhové financování.
+                </div>
+
+                <div class="prompt-output">
+                    <button class="copy-btn" onclick="copyPrompt()">Kopírovat</button>
+                    <div class="prompt-text" id="promptText"></div>
+                </div>
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-secondary" onclick="resetGenerator()">Nová valuace</button>
+                <button class="btn btn-primary" onclick="window.location.href='index.html'">← Hlavní stránka</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let propertyType = '';
+        let selectedInputs = [];
+        let formData = {};
+
+        const propertyConfigs = {
+            land: {
+                name: 'Pozemek',
+                inputs: [
+                    { id: 'znalecky_posudek', label: 'Znalecký posudek', icon: '◆' },
+                    { id: 'lv', label: 'List vlastnictví (LV)', icon: '◆' },
+                    { id: 'parcelni_cislo', label: 'Parcelní číslo', icon: '◆' },
+                    { id: 'vymer_listu', label: 'Výměr z katastru', icon: '◆' },
+                    { id: 'uzemni_plan', label: 'Územní plán', icon: '◆' },
+                    { id: 'studie_projektu', label: 'Studie/Projekt záměru', icon: '◆' },
+                    { id: 'stavebni_povoleni', label: 'Stavební povolení', icon: '◆' },
+                    { id: 'fotografie', label: 'Fotografie pozemku', icon: '◆' },
+                    { id: 'geologicky_pruzkum', label: 'Geologický průzkum', icon: '◆' }
+                ],
+                fields: {
+                    parcelni_cislo: { type: 'text', label: 'Parcelní číslo', placeholder: 'např. 123/45' },
+                    katastralni_uzemi: { type: 'text', label: 'Katastrální území', placeholder: 'např. Černošice' },
+                    plocha: { type: 'number', label: 'Výměra pozemku (m²)', placeholder: 'např. 2500' },
+                    druh_pozemku: { type: 'select', label: 'Druh pozemku', options: ['Stavební parcela', 'Orná půda', 'Zahrada', 'Les', 'Ostatní plocha'] },
+                    ucel: { type: 'select', label: 'Účel využití / Záměr', options: ['Individuální bydlení', 'Bytová výstavba', 'Komerční výstavba', 'Zemědělství', 'Rekreace', 'Jiné'] },
+                    kzp: { type: 'text', label: 'Koeficient zastavěné plochy (KZP) z ÚP', placeholder: 'např. 30%' },
+                    kpp: { type: 'text', label: 'Koeficient podlažních ploch (KPP) z ÚP', placeholder: 'např. 0.6' },
+                    vyskova_hladina: { type: 'text', label: 'Výšková hladina / Max. podlaží', placeholder: 'např. 2 NP' },
+                    inzenyrske_site: { type: 'select', label: 'Inženýrské sítě', options: ['Vše připojeno', 'Částečně - voda, elektřina', 'V dosahu', 'Není'] },
+                    pristup: { type: 'select', label: 'Přístup k pozemku', options: ['Ano - asfaltová cesta', 'Ano - zpevněná cesta', 'Částečný', 'Pouze pěšky'] },
+                    developer_projekt: { type: 'select', label: 'Developerský projekt', options: ['Ano - s projektem', 'Ano - se studií', 'Plánovaný', 'Ne'] },
+                    pocet_jednotek: { type: 'number', label: 'Plánovaný počet jednotek (byty/domy)', placeholder: 'např. 12' },
+                    gdv_ocekavane: { type: 'number', label: 'Očekávaná prodejní cena projektu (GDV) v Kč', placeholder: 'např. 80000000' },
+                    dodatecne_info: { type: 'textarea', label: 'Dodatečné informace o projektu/pozemku', placeholder: 'Fáze projektu, podmínky výstavby, územní studie, věcná břemena, časový harmonogram...' }
+                }
+            },
+            apartment: {
+                name: 'Byt',
+                inputs: [
+                    { id: 'znalecky_posudek', label: 'Znalecký posudek', icon: '◆' },
+                    { id: 'lv', label: 'List vlastnictví (LV)', icon: '◆' },
+                    { id: 'adresa', label: 'Adresa nemovitosti', icon: '◆' },
+                    { id: 'fotografie', label: 'Fotografie bytu', icon: '◆' },
+                    { id: 'pudorys', label: 'Půdorys', icon: '◆' },
+                    { id: 'energeticky_stitek', label: 'Energetický štítek', icon: '◆' },
+                    { id: 'najemni_smlouva', label: 'Nájemní smlouva', icon: '◆' },
+                    { id: 'vymer_listu', label: 'Výměr z katastru', icon: '◆' }
+                ],
+                fields: {
+                    adresa: { type: 'text', label: 'Přesná adresa', placeholder: 'např. Pařížská 123, Praha 1' },
+                    uzitna_plocha: { type: 'number', label: 'Užitná plocha (m²)', placeholder: 'např. 75' },
+                    podlazi: { type: 'text', label: 'Podlaží', placeholder: 'např. 3. patro z 5' },
+                    stav: { type: 'select', label: 'Stav bytu', options: ['Výborný', 'Velmi dobrý', 'Dobrý', 'Průměrný', 'Před rekonstrukcí', 'Nutná rekonstrukce'] },
+                    rok_stavby: { type: 'number', label: 'Rok stavby budovy', placeholder: 'např. 1998' },
+                    balkon_terasa: { type: 'number', label: 'Plocha balkonu/terasy (m²) - pokud je', placeholder: 'např. 8' },
+                    sklep: { type: 'number', label: 'Plocha sklepa (m²) - pokud je', placeholder: 'např. 4' },
+                    parking: { type: 'select', label: 'Parkování', options: ['Ano - garáž', 'Ano - venkovní stání', 'Ne'] },
+                    vyuz: { type: 'text', label: 'Současné využití', placeholder: 'např. vlastní bydlení, pronájem' },
+                    najemne: { type: 'number', label: 'Měsíční nájemné (Kč) - pokud pronajímáte', placeholder: 'např. 18000' },
+                    dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Výtah, orientace, rekonstrukce, věcná břemena, právní vady...' }
+                }
+            },
+            house: {
+                name: 'Rodinný dům',
+                inputs: [
+                    { id: 'znalecky_posudek', label: 'Znalecký posudek', icon: '◆' },
+                    { id: 'lv', label: 'List vlastnictví (LV)', icon: '◆' },
+                    { id: 'adresa', label: 'Adresa', icon: '◆' },
+                    { id: 'parcelni_cislo', label: 'Parcelní číslo pozemku', icon: '◆' },
+                    { id: 'fotografie', label: 'Fotografie domu', icon: '◆' },
+                    { id: 'pudorys', label: 'Půdorysy', icon: '◆' },
+                    { id: 'energeticky_stitek', label: 'Energetický štítek', icon: '◆' },
+                    { id: 'najemni_smlouva', label: 'Nájemní smlouva', icon: '◆' },
+                    { id: 'vymer_listu', label: 'Výměr z katastru', icon: '◆' },
+                    { id: 'stavebni_povoleni', label: 'Kolaudace', icon: '◆' }
+                ],
+                fields: {
+                    adresa: { type: 'text', label: 'Adresa', placeholder: 'např. Zahradní 45, Černošice' },
+                    uzitna_plocha: { type: 'number', label: 'Užitná plocha domu (m²)', placeholder: 'např. 150' },
+                    plocha_pozemku: { type: 'number', label: 'Plocha pozemku (m²)', placeholder: 'např. 800' },
+                    podlazi: { type: 'text', label: 'Počet podlaží', placeholder: 'např. 2 NP + půda' },
+                    stav: { type: 'select', label: 'Stav domu', options: ['Výborný - nový', 'Velmi dobrý', 'Dobrý', 'Průměrný', 'Před rekonstrukcí', 'Nutná rekonstrukce'] },
+                    rok_stavby: { type: 'number', label: 'Rok stavby/rekonstrukce', placeholder: 'např. 2005' },
+                    parking: { type: 'select', label: 'Garáž/Parkování', options: ['Ano - v domě', 'Ano - samostatná garáž', 'Venkovní stání', 'Ne'] },
+                    vyuz: { type: 'text', label: 'Současné využití', placeholder: 'např. rodinné bydlení' },
+                    najemne: { type: 'number', label: 'Měsíční nájemné (Kč)', placeholder: 'např. 35000' },
+                    dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Přístavby, bazén, technické vybavení, věcná břemena...' }
+                }
+            },
+            commercial: {
+                name: 'Komerční objekt',
+                inputs: [
+                    { id: 'znalecky_posudek', label: 'Znalecký posudek', icon: '◆' },
+                    { id: 'lv', label: 'List vlastnictví (LV)', icon: '◆' },
+                    { id: 'adresa', label: 'Adresa', icon: '◆' },
+                    { id: 'najemni_smlouvy', label: 'Nájemní smlouvy', icon: '◆' },
+                    { id: 'provozni_naklady', label: 'Provozní náklady', icon: '◆' },
+                    { id: 'fotografie', label: 'Fotografie objektu', icon: '◆' },
+                    { id: 'pudorys', label: 'Půdorysy', icon: '◆' },
+                    { id: 'energeticky_stitek', label: 'Energetický štítek', icon: '◆' }
+                ],
+                fields: {
+                    adresa: { type: 'text', label: 'Adresa', placeholder: 'např. Průmyslová 789, Praha 10' },
+                    typ_objektu: { type: 'select', label: 'Typ objektu', options: ['Kanceláře', 'Obchod/Retail', 'Sklady/Logistika', 'Výroba', 'Hotel', 'Smíšené využití'] },
+                    pronajimatelna_plocha: { type: 'number', label: 'Pronajímatelná plocha (m²)', placeholder: 'např. 500' },
+                    obsazenost: { type: 'number', label: 'Obsazenost (%)', placeholder: 'např. 85' },
+                    najemne_rocni: { type: 'number', label: 'Roční nájemné (Kč)', placeholder: 'např. 1200000' },
+                    stav: { type: 'select', label: 'Stav objektu', options: ['Výborný', 'Velmi dobrý', 'Dobrý', 'Průměrný', 'Nutná renovace'] },
+                    rok_stavby: { type: 'number', label: 'Rok stavby/rekonstrukce', placeholder: 'např. 2010' },
+                    dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Kvalita nájemníků, délka smluv, OpEx, CapEx...' }
+                }
+            }
+        };
+
+        function selectPropertyType(type) {
+            propertyType = type;
+            document.querySelectorAll('.property-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            document.getElementById('step1Next').disabled = false;
+        }
+
+        function nextStep() {
+            if (currentStep === 1 && !propertyType) return;
+            if (currentStep === 2) populateDetailForm();
+            currentStep++;
+            updateStepIndicator();
+            showSection(currentStep);
+        }
+
+        function prevStep() {
+            currentStep--;
+            updateStepIndicator();
+            showSection(currentStep);
+        }
+
+        function updateStepIndicator() {
+            document.querySelectorAll('.step').forEach((step, index) => {
+                if (index + 1 <= currentStep) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            });
+        }
+
+        function showSection(step) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById('step' + step).classList.add('active');
+            if (step === 2) populateInputsGrid();
+        }
+
+        function populateInputsGrid() {
+            const grid = document.getElementById('inputsGrid');
+            const config = propertyConfigs[propertyType];
+            grid.innerHTML = config.inputs.map(input => `
+                <div class="checkbox-item" onclick="toggleInput('${input.id}', this)">
+                    <input type="checkbox" id="${input.id}" onchange="toggleInput('${input.id}', this.parentElement)">
+                    <span class="icon">${input.icon}</span>
+                    <label for="${input.id}">${input.label}</label>
+                </div>
+            `).join('');
+        }
+
+        function toggleInput(inputId, element) {
+            const checkbox = element.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            if (checkbox.checked) {
+                element.classList.add('checked');
+                if (!selectedInputs.includes(inputId)) selectedInputs.push(inputId);
+            } else {
+                element.classList.remove('checked');
+                selectedInputs = selectedInputs.filter(id => id !== inputId);
+            }
+        }
+
+        function populateDetailForm() {
+            const form = document.getElementById('detailForm');
+            const config = propertyConfigs[propertyType];
+            let html = '';
+            for (const [fieldId, field] of Object.entries(config.fields)) {
+                if (fieldId === 'najemne' && !selectedInputs.includes('najemni_smlouva') && !selectedInputs.includes('najemni_smlouvy')) continue;
+                html += '<div class="form-group">';
+                html += `<label for="${fieldId}">${field.label}</label>`;
+                if (field.type === 'textarea') {
+                    html += `<textarea id="${fieldId}" placeholder="${field.placeholder || ''}"></textarea>`;
+                } else if (field.type === 'select') {
+                    html += `<select id="${fieldId}"><option value="">-- Vyberte --</option>`;
+                    field.options.forEach(opt => html += `<option value="${opt}">${opt}</option>`);
+                    html += '</select>';
+                } else {
+                    html += `<input type="${field.type}" id="${fieldId}" placeholder="${field.placeholder || ''}">`;
+                }
+                html += '</div>';
+            }
+            form.innerHTML = html;
+        }
+
+        function generatePrompt() {
+            const config = propertyConfigs[propertyType];
+            formData = {};
+            for (const fieldId of Object.keys(config.fields)) {
+                const element = document.getElementById(fieldId);
+                if (element && element.value) formData[fieldId] = element.value;
+            }
+            const prompt = buildPrompt();
+            document.getElementById('promptText').textContent = prompt;
+            nextStep();
+        }
+
+        function buildPrompt() {
+            const config = propertyConfigs[propertyType];
+            let prompt = `# MASTER PROMPT: AI VALUACE NEMOVITOSTI PRO BANKOVNÍ ZAJIŠTĚNÍ\n\n`;
+            prompt += `## ROLE A KONTEXT\n`;
+            prompt += `Jsi seniorní bankovní supervizor pro oceňování nemovitostí (Collateral Risk Manager) v České republice. Máš hlubokou znalost:\n`;
+            prompt += `- Zákona č. 151/1997 Sb. o oceňování majetku\n`;
+            prompt += `- Zákona č. 190/2004 Sb. o dluhopisech (§ 29 - zástavní hodnota)\n`;
+            prompt += `- Mezinárodních standardů IVS/EVS\n\n`;
+            prompt += `Tvá povaha je **skeptická, konzervativní a zaměřená na identifikaci rizik**. Při oceňování postupuješ podle principu opatrnosti.\n\n`;
+            
+            prompt += `## CÍL OCENĚNÍ\n`;
+            prompt += `Analyzovat nemovitost a stanovit:\n`;
+            prompt += `1. **Tržní hodnotu** (Market Value) - nejpravděpodobnější cena při prodeji\n`;
+            prompt += `2. **Zástavní hodnotu** (Collateral Value) - konzervativní hodnota pro účely bankovního zajištění (LTV)\n`;
+            prompt += `3. **Identifikaci rizik** (Red Flags) - právní vady, technické problémy, tržní rizika\n\n`;
+
+            prompt += `## TYP NEMOVITOSTI\n`;
+            prompt += `**${config.name}**\n\n`;
+
+            if (selectedInputs.length > 0) {
+                prompt += `## DOSTUPNÉ MATERIÁLY A PODKLADY\n`;
+                selectedInputs.forEach(inputId => {
+                    const input = config.inputs.find(i => i.id === inputId);
+                    if (input) prompt += `- ${input.label}\n`;
+                });
+                prompt += `\n`;
+            }
+
+            prompt += `## ÚDAJE O NEMOVITOSTI\n`;
+            for (const [key, value] of Object.entries(formData)) {
+                const field = config.fields[key];
+                if (field && value) prompt += `- **${field.label}**: ${value}\n`;
+            }
+            prompt += `\n`;
+
+            // Specifické instrukce podle typu
+            if (propertyType === 'land') {
+                prompt += `## METODIKA OCENĚNÍ POZEMKU\n\n`;
+                prompt += `### 1. POROVNÁVACÍ METODA\n`;
+                prompt += `- Najdi srovnatelné pozemky v lokalitě (prodané v posledních 12 měsících)\n`;
+                prompt += `- Aplikuj korekční koeficienty na:\n`;
+                prompt += `  * Velikost pozemku\n`;
+                prompt += `  * Dostupnost inženýrských sítí\n`;
+                prompt += `  * Tvar a svažitost\n`;
+                prompt += `  * Přístup z veřejné komunikace\n`;
+                prompt += `- Výsledek: Cena za m² × Výměra pozemku\n\n`;
+
+                if (formData.developer_projekt && formData.developer_projekt.includes('Ano')) {
+                    prompt += `### 2. REZIDUÁLNÍ METODA (Developerský projekt)\n`;
+                    prompt += `**KRITICKÉ**: Tento pozemek je určen pro developerský projekt. Proveď reverzní kalkulaci:\n\n`;
+                    prompt += `**Krok 1 - Gross Development Value (GDV)**:\n`;
+                    prompt += `- Odhadni prodejní ceny jednotek (byty/domy) na základě aktuálního trhu v lokalitě\n`;
+                    prompt += `- Celková prodejní cena = Počet jednotek × Průměrná cena za jednotku\n`;
+                    if (formData.gdv_ocekavane) {
+                        prompt += `- Uživatel uvádí očekávanou GDV: ${formData.gdv_ocekavane} Kč\n`;
+                        prompt += `- OVĚŘ, zda tato hodnota odpovídá tržním cenám v lokalitě!\n`;
+                    }
+                    prompt += `\n**Krok 2 - Stavební náklady (Hard Costs)**:\n`;
+                    prompt += `- Použij aktuální stavební náklady (2026): minimálně 45.000 Kč/m² pro bytovou výstavbu\n`;
+                    prompt += `- Celkem = HPP (hrubá podlažní plocha) × Jednotkové náklady\n\n`;
+                    prompt += `**Krok 3 - Vedlejší náklady (Soft Costs)**:\n`;
+                    prompt += `- Projektová dokumentace, inženýring, marketing, právní služby\n`;
+                    prompt += `- Standardně 10-15% z Hard Costs\n\n`;
+                    prompt += `**Krok 4 - Finanční náklady**:\n`;
+                    prompt += `- Úroky z úvěru po dobu výstavby\n`;
+                    prompt += `- Při sazbách 5-6% p.a. a době výstavby 18-24 měsíců\n\n`;
+                    prompt += `**Krok 5 - Marže developera (Developer's Profit)**:\n`;
+                    prompt += `- KRITICKÉ: Požadovaný zisk musí být minimálně 15-20% z celkových nákladů\n`;
+                    prompt += `- Pokud je zisk nižší, projekt je **nestabilní** a představuje riziko pro věřitele\n\n`;
+                    prompt += `**Krok 6 - Výpočet reziduální hodnoty pozemku**:\n`;
+                    prompt += `Hodnota pozemku = GDV - (Hard Costs + Soft Costs + Finanční náklady + Marže developera)\n\n`;
+                    prompt += `**STRESS TEST**: Proveď citlivostní analýzu:\n`;
+                    prompt += `- Co se stane, pokud klesne prodejní cena o 10%?\n`;
+                    prompt += `- Co se stane, pokud vzrostou stavební náklady o 15%?\n`;
+                    prompt += `- Je projekt stále rentabilní?\n\n`;
+                }
+
+                prompt += `### 3. ANALÝZA ZASTAVITELNOSTI (Development Potential)\n`;
+                if (formData.kzp || formData.kpp) {
+                    prompt += `Z územního plánu:\n`;
+                    if (formData.kzp) prompt += `- **KZP (Koeficient zastavěné plochy)**: ${formData.kzp}\n`;
+                    if (formData.kpp) prompt += `- **KPP (Koeficient podlažních ploch)**: ${formData.kpp}\n`;
+                    if (formData.vyskova_hladina) prompt += `- **Výšková hladina**: ${formData.vyskova_hladina}\n`;
+                    prompt += `\n**VÝPOČET**:\n`;
+                    if (formData.plocha && formData.kzp) {
+                        prompt += `- Max. zastavěná plocha = ${formData.plocha} m² × ${formData.kzp} = ?\n`;
+                    }
+                    if (formData.plocha && formData.kpp) {
+                        prompt += `- Max. HPP (hrubá podlažní plocha) = ${formData.plocha} m² × ${formData.kpp} = ?\n`;
+                    }
+                } else {
+                    prompt += `**ÚKOL**: Odhadni zastavitelnost podle obvyklých regulativů pro danou lokalitu.\n`;
+                }
+                prompt += `\n`;
+
+                prompt += `## KRITICKÁ KONTROLA - RED FLAGS\n`;
+                prompt += `**PRÁVNÍ SCREENING** (Deal Breakers):\n`;
+                prompt += `1. **Věcná břemena**:\n`;
+                prompt += `   - Služebnost dožití (usufruct) → FATÁLNÍ RIZIKO - nevhodná zástava!\n`;
+                prompt += `   - Právo stavby ve prospěch třetí osoby → VYSOKÉ RIZIKO\n`;
+                prompt += `   - Služebnost inženýrských sítí → Běžné, ale ověř rozsah\n`;
+                prompt += `2. **Přístupová cesta**:\n`;
+                prompt += `   - Je zajištěn přístup z veřejné komunikace?\n`;
+                prompt += `   - Pokud přes soukromý pozemek → musí být věcné břemeno chůze a jízdy!\n`;
+                prompt += `   - "Ústní dohoda" NENÍ dostatečná pro banku\n`;
+                prompt += `3. **Územní podmínky**:\n`;
+                prompt += `   - Je výstavba podmíněna "územní studií" nebo "dohodou o parcelaci"?\n`;
+                prompt += `   - Takové podmínky = časové riziko (může trvat roky)\n`;
+                prompt += `4. **Zástavy a exekuce**:\n`;
+                prompt += `   - Existující zástavy jiných věřitelů?\n`;
+                prompt += `   - Poznámky o zahájení exekuce?\n`;
+                prompt += `\n`;
+            }
+
+            if (propertyType === 'apartment' || propertyType === 'house') {
+                prompt += `## METODIKA OCENĚNÍ\n\n`;
+                prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
+                prompt += `- Najdi 3-5 srovnatelných nemovitostí prodaných v lokalitě (posledních 6-12 měsíců)\n`;
+                prompt += `- Korekce na:\n`;
+                prompt += `  * Stav nemovitosti\n`;
+                prompt += `  * Poloha v rámci lokality\n`;
+                prompt += `  * Podlaží (u bytů)\n`;
+                prompt += `  * Parkování\n`;
+                prompt += `  * Orientace a výhled\n`;
+                prompt += `- **KRITICKÉ**: Pokud jsou zdrojem inzertní ceny, aplikuj Koeficient úpravy (haircut) 10-20%\n`;
+                prompt += `- Výsledek: Průměrná tržní cena za m² × Užitná plocha\n\n`;
+
+                prompt += `### 2. VALIDACE PLOCH\n`;
+                prompt += `**DŮLEŽITÉ**: Rozliš mezi různými typy ploch:\n`;
+                prompt += `- **Užitná plocha**: Plocha, kterou lze reálně užívat (bez zdí)\n`;
+                if (formData.balkon_terasa) {
+                    prompt += `- **Balkony/Terasy**: ${formData.balkon_terasa} m² - započítej pouze 50% nebo vůbec!\n`;
+                }
+                if (formData.sklep) {
+                    prompt += `- **Sklepy**: ${formData.sklep} m² - započítej pouze 20-30%\n`;
+                }
+                prompt += `\nBanky **neakceptují** plnou výměru balkónů a sklepů.\n\n`;
+
+                if (formData.najemne) {
+                    prompt += `### 3. VÝNOSOVÁ METODA (Sekundární)\n`;
+                    prompt += `Nemovitost je pronajímána.\n\n`;
+                    prompt += `**Krok 1 - Nájemné**:\n`;
+                    prompt += `- Smluvní nájemné: ${formData.najemne} Kč/měsíc\n`;
+                    prompt += `- **OVĚŘ** tržní nájemné v lokalitě!\n`;
+                    prompt += `- Použij **nižší** z obou hodnot (princip opatrnosti)\n`;
+                    prompt += `- Roční nájemné = Měsíční × 12\n\n`;
+                    prompt += `**Krok 2 - Provozní náklady (OpEx)**:\n`;
+                    prompt += `- Neměřitelné služby, pojištění, daň z nemovitosti, správa\n`;
+                    prompt += `- Obvykle 10-25% z hrubého nájmu\n`;
+                    prompt += `- NOI (Net Operating Income) = Hrubý příjem - OpEx\n\n`;
+                    prompt += `**Krok 3 - Kapitalizace**:\n`;
+                    prompt += `- Použij kapitalizační míru (Yield) odpovídající lokalitě a typu\n`;
+                    prompt += `- Praha centrum: 4-5%, Periferie: 6-7%, Regiony: 7-9%\n`;
+                    prompt += `- Hodnota = NOI / Kapitalizační míra\n\n`;
+                }
+
+                prompt += `## RED FLAGS - KONTROLA\n`;
+                prompt += `1. **Technický stav**:\n`;
+                if (formData.stav && formData.stav.includes('rekonstrukc')) {
+                    prompt += `   - Stav označen jako "${formData.stav}"\n`;
+                    prompt += `   - **SNIŽ hodnotu** o odhadované náklady na rekonstrukci!\n`;
+                }
+                prompt += `   - Zbývající technická životnost (pokud starší 50 let)\n`;
+                prompt += `2. **Právní vady**:\n`;
+                prompt += `   - Služebnosti, zástavy, exekuce\n`;
+                prompt += `   - Nájemní smlouvy na dobu neurčitou (snižují likviditu)\n`;
+                prompt += `3. **Lokalita**:\n`;
+                prompt += `   - Likvidita trhu (jak rychle se prodá?)\n`;
+                prompt += `   - Výtah (u bytů ve vyšších patrech bez výtahu = riziko)\n\n`;
+            }
+
+            if (propertyType === 'commercial') {
+                prompt += `## METODIKA OCENĚNÍ KOMERČNÍCH NEMOVITOSTÍ\n\n`;
+                prompt += `### 1. VÝNOSOVÁ METODA (DCF - Primární)\n`;
+                prompt += `**KRITICKÉ**: Pro komerční nemovitosti je výnosová metoda dominantní!\n\n`;
+                if (formData.najemne_rocni) {
+                    prompt += `**Krok 1 - Hrubý příjem**:\n`;
+                    prompt += `- Roční nájemné: ${formData.najemne_rocni} Kč\n`;
+                    if (formData.obsazenost) {
+                        prompt += `- Obsazenost: ${formData.obsazenost}%\n`;
+                        prompt += `- Efektivní příjem = ${formData.najemne_rocni} × (${formData.obsazenost}/100)\n`;
+                    }
+                    prompt += `\n**Krok 2 - Provozní náklady (OpEx)**:\n`;
+                    prompt += `- Údržba, pojištění, daně, správa, marketing\n`;
+                    prompt += `- Obvykle 15-30% z hrubého příjmu\n`;
+                    prompt += `- **OVĚŘ** skutečné náklady z podkladů!\n\n`;
+                    prompt += `**Krok 3 - Net Operating Income (NOI)**:\n`;
+                    prompt += `NOI = Efektivní příjem - OpEx\n\n`;
+                    prompt += `**Krok 4 - Kapitalizace**:\n`;
+                    prompt += `- Kapitalizační míra (Yield) podle typu a lokality:\n`;
+                    prompt += `  * Praha Prime Office: < 5%\n`;
+                    prompt += `  * Retail: 6-8%\n`;
+                    prompt += `  * Sklady/Logistika: 6-7%\n`;
+                    prompt += `  * Regionální: +1-2%\n`;
+                    prompt += `- Hodnota = NOI / Yield\n\n`;
+                }
+                prompt += `### 2. POROVNÁVACÍ METODA (Sekundární)\n`;
+                prompt += `- Srovnej s podobnými objekty (typ, lokalita, obsazenost)\n`;
+                prompt += `- Cena za m² pronajímatelné plochy\n\n`;
+
+                prompt += `## RED FLAGS\n`;
+                prompt += `1. **Kvalita nájemníků**:\n`;
+                prompt += `   - Bonita nájemníků (velké firmy vs. malé živnostníky)\n`;
+                prompt += `   - Délka smluv (krátké smlouvy = riziko neobsazenosti)\n`;
+                prompt += `2. **Koncentrace**:\n`;
+                prompt += `   - Jeden dominantní nájemník > 50% příjmů = riziko!\n`;
+                prompt += `3. **Neobsazenost**:\n`;
+                if (formData.obsazenost && parseInt(formData.obsazenost) < 70) {
+                    prompt += `   - **VAROVÁNÍ**: Obsazenost ${formData.obsazenost}% je nízká!\n`;
+                }
+                prompt += `   - Standardní vacancy rate 5-10%\n`;
+                prompt += `4. **Technický stav**:\n`;
+                prompt += `   - Odložené investice (CapEx)\n`;
+                prompt += `   - Životnost technologií (HVAC, výtahy)\n\n`;
+            }
+
+            // Závěrečné instrukce
+            prompt += `## ZÁVĚREČNÝ VÝSTUP\n\n`;
+            prompt += `Strukturuj svou odpověď následovně:\n\n`;
+            prompt += `### 1. SOUHRN NEMOVITOSTI\n`;
+            prompt += `- Typ, lokalita, klíčové parametry\n\n`;
+            
+            prompt += `### 2. TRŽNÍ HODNOTA\n`;
+            prompt += `Pro každou použitou metodu:\n`;
+            prompt += `- Postup výpočtu (krok za krokem)\n`;
+            prompt += `- Použité předpoklady\n`;
+            prompt += `- Výsledná hodnota v Kč\n\n`;
+            
+            prompt += `### 3. POROVNÁNÍ METOD\n`;
+            prompt += `- Tabulka výsledků všech metod\n`;
+            prompt += `- Odůvodnění, která metoda je nejrelevant nější\n`;
+            prompt += `- **Finální tržní hodnota** (s odůvodněním)\n\n`;
+            
+            prompt += `### 4. ZÁSTAVNÍ HODNOTA\n`;
+            prompt += `- Aplikuj bezpečnostní koeficient:\n`;
+            prompt += `  * Byty: 0.80 (80% tržní hodnoty)\n`;
+            prompt += `  * Rodinné domy: 0.70 (70%)\n`;
+            prompt += `  * Pozemky: 0.60 (60%)\n`;
+            prompt += `  * Komerční: 0.65-0.75 (podle typu)\n`;
+            prompt += `- **Zástavní hodnota pro LTV** = Tržní hodnota × Koeficient\n\n`;
+            
+            prompt += `### 5. RED FLAGS & RIZIKA\n`;
+            prompt += `**KRITICKÉ RIZIKA** (Deal Breakers):\n`;
+            prompt += `- Právní vady (služebnosti dožití, exekuce)\n`;
+            prompt += `- Technické problémy (špatný stav, nutná sanace)\n`;
+            prompt += `- Tržní rizika (nízká likvidita, přecenění)\n\n`;
+            
+            prompt += `**DOPORUČENÍ PRO VĚŘITELE**:\n`;
+            prompt += `- Je nemovitost vhodná jako zástava?\n`;
+            prompt += `- Jaké maximální LTV (Loan-to-Value) doporučuješ?\n`;
+            prompt += `- Jaké podmínky by měly být splněny před poskytnutím úvěru?\n\n`;
+            
+            prompt += `### 6. CHYBĚJÍCÍ DOKUMENTY\n`;
+            prompt += `Seznam všech dokumentů, které by měly být doplněny pro kompletní ocenění.\n\n`;
+            
+            prompt += `---\n\n`;
+            prompt += `**DŮLEŽITÉ ZÁSADY**:\n`;
+            prompt += `1. **Princip opatrnosti**: Vždy volte konzervativnější odhad\n`;
+            prompt += `2. **Transparentnost**: Jasně uveď všechny předpoklady\n`;
+            prompt += `3. **Konkrétnost**: Používej konkrétní čísla, ne obecné fráze\n`;
+            prompt += `4. **Red flags první**: Pokud najdeš fatální riziko, uveď ho hned na začátku\n`;
+            prompt += `5. **Všechny částky v CZK**: Používej české koruny jako měnu\n\n`;
+            
+            prompt += `Začni analýzu NYNÍ.`;
+
+            return prompt;
+        }
+
+        function copyPrompt() {
+            const promptText = document.getElementById('promptText').textContent;
+            navigator.clipboard.writeText(promptText).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Zkopírováno!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Chyba při kopírování:', err);
+                alert('Text byl zkopírován do schránky');
+            });
+        }
+
+        function resetGenerator() {
+            currentStep = 1;
+            propertyType = '';
+            selectedInputs = [];
+            formData = {};
+            document.querySelectorAll('.property-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.getElementById('step1Next').disabled = true;
+            updateStepIndicator();
+            showSection(1);
+        }
+
+        updateStepIndicator();
+    </script>
+</body>
+</html>
