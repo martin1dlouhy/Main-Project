@@ -236,6 +236,7 @@
         }
 
         input[type="text"],
+        input[type="number"],
         textarea,
         select {
             width: 100%;
@@ -252,6 +253,7 @@
         }
 
         input[type="text"]:focus,
+        input[type="number"]:focus,
         textarea:focus,
         select:focus {
             outline: none;
@@ -606,14 +608,25 @@
                     dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Kvalita nájemníků, délka smluv, OpEx, CapEx...' }
                 }
             }
-        };
-
         function selectPropertyType(type) {
-            propertyType = type;
-            document.querySelectorAll('.property-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            event.currentTarget.classList.add('selected');
+            const clickedCard = event.currentTarget;
+            
+            // Pokud je už vybraná, odznačíme ji (toggle)
+            if (clickedCard.classList.contains('selected')) {
+                clickedCard.classList.remove('selected');
+                propertyType = null;
+                document.getElementById('step1Next').disabled = true;
+            } else {
+                // Odznačíme všechny ostatní
+                document.querySelectorAll('.property-type-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                // Označíme kliknutou
+                clickedCard.classList.add('selected');
+                propertyType = type;
+                document.getElementById('step1Next').disabled = false;
+            }
+        }
             document.getElementById('step1Next').disabled = false;
         }
 
