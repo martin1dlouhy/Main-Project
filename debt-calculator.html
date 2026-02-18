@@ -598,8 +598,20 @@
                 <small style="color: #64748b; font-size: 12px; margin-top: 5px; display: block;">Volitelné - pokud dojde k porušení</small>
             </div>
 
-            <!-- Empty space -->
             <div class="form-group">
+                <label for="otherFees">Ostatní poplatky</label>
+                <div class="fee-type-selector">
+                    <label>
+                        <input type="radio" name="otherFeesType" value="percent" checked onchange="updateFeeInputs()">
+                        <span>%</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="otherFeesType" value="absolute" onchange="updateFeeInputs()">
+                        <span id="otherFeesCurrency">CZK</span>
+                    </label>
+                </div>
+                <input type="text" id="otherFees" placeholder="0" value="0">
+                <small style="color: #64748b; font-size: 12px; margin-top: 5px; display: block;">Volitelné - správní, notářské a jiné poplatky</small>
             </div>
 
             <div class="form-group full-width">
@@ -733,6 +745,7 @@
             document.getElementById('setupFeeCurrency').textContent = currency;
             document.getElementById('earlyRepaymentFeeCurrency').textContent = currency;
             document.getElementById('contractualPenaltyCurrency').textContent = currency;
+            document.getElementById('otherFeesCurrency').textContent = currency;
             
             // Recalculate if results are visible
             if (document.getElementById('results').classList.contains('show')) {
@@ -745,10 +758,12 @@
             const setupFeeType = document.querySelector('input[name="setupFeeType"]:checked').value;
             const earlyFeeType = document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value;
             const penaltyType = document.querySelector('input[name="contractualPenaltyType"]:checked').value;
+            const otherFeesType = document.querySelector('input[name="otherFeesType"]:checked').value;
             
             const setupFeeInput = document.getElementById('setupFee');
             const earlyFeeInput = document.getElementById('earlyRepaymentFee');
             const penaltyInput = document.getElementById('contractualPenalty');
+            const otherFeesInput = document.getElementById('otherFees');
             
             if (setupFeeType === 'percent') {
                 setupFeeInput.placeholder = '2.0';
@@ -772,6 +787,12 @@
                 penaltyInput.placeholder = '0';
             } else {
                 penaltyInput.placeholder = '0';
+            }
+            
+            if (otherFeesType === 'percent') {
+                otherFeesInput.placeholder = '0';
+            } else {
+                otherFeesInput.placeholder = '0';
             }
         }
 
@@ -801,16 +822,20 @@
                     this.select();
                 });
 
-                if (input.id === 'interestRate' || input.id === 'setupFee' || input.id === 'earlyRepaymentFee') {
+                if (input.id === 'interestRate' || input.id === 'setupFee' || input.id === 'earlyRepaymentFee' || input.id === 'contractualPenalty' || input.id === 'otherFees') {
                     // Special handling for inputs that can be percentages
                     input.addEventListener('input', function(e) {
                         const isSetupFee = this.id === 'setupFee';
                         const isEarlyFee = this.id === 'earlyRepaymentFee';
+                        const isPenalty = this.id === 'contractualPenalty';
+                        const isOtherFees = this.id === 'otherFees';
                         
-                        if (isSetupFee || isEarlyFee) {
-                            const feeType = isSetupFee ? 
-                                document.querySelector('input[name="setupFeeType"]:checked').value :
-                                document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value;
+                        if (isSetupFee || isEarlyFee || isPenalty || isOtherFees) {
+                            let feeType;
+                            if (isSetupFee) feeType = document.querySelector('input[name="setupFeeType"]:checked').value;
+                            else if (isEarlyFee) feeType = document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value;
+                            else if (isPenalty) feeType = document.querySelector('input[name="contractualPenaltyType"]:checked').value;
+                            else feeType = document.querySelector('input[name="otherFeesType"]:checked').value;
                             
                             if (feeType === 'percent') {
                                 // Allow decimal for percentages
@@ -949,10 +974,12 @@
             const setupFeeType = document.querySelector('input[name="setupFeeType"]:checked').value;
             const earlyRepaymentFeeType = document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value;
             const contractualPenaltyType = document.querySelector('input[name="contractualPenaltyType"]:checked').value;
+            const otherFeesType = document.querySelector('input[name="otherFeesType"]:checked').value;
             
             const setupFeeInput = document.getElementById('setupFee').value;
             const earlyRepaymentFeeInput = document.getElementById('earlyRepaymentFee').value;
             const contractualPenaltyInput = document.getElementById('contractualPenalty').value;
+            const otherFeesInput = document.getElementById('otherFees').value;
             
             // Calculate setup fee amount
             let setupFeeAmount;
@@ -980,6 +1007,17 @@
                     contractualPenaltyAmount = loanAmount * (contractualPenaltyPercent / 100);
                 } else {
                     contractualPenaltyAmount = parseFloat(parseFormattedNumber(contractualPenaltyInput));
+                }
+            }
+            
+            // Calculate other fees amount
+            let otherFeesAmount = 0;
+            if (otherFeesInput && otherFeesInput !== '0') {
+                if (otherFeesType === 'percent') {
+                    const otherFeesPercent = parseFloat(otherFeesInput);
+                    otherFeesAmount = loanAmount * (otherFeesPercent / 100);
+                } else {
+                    otherFeesAmount = parseFloat(parseFormattedNumber(otherFeesInput));
                 }
             }
             
@@ -1021,10 +1059,12 @@
                     const paymentDate = new Date(drawdownDate);
                     paymentDate.setMonth(paymentDate.getMonth() + i);
                     
-                    // Last payment includes early repayment fee if applicable
-                    const payment = (i === actualLoanTermMonths && isEarlyRepayment) 
-                        ? monthlyPayment + earlyRepaymentFeeAmount 
-                        : monthlyPayment;
+                    // Last payment includes early repayment fee + contractual penalty + other fees if applicable
+                    let payment = monthlyPayment;
+                    if (i === actualLoanTermMonths) {
+                        if (isEarlyRepayment) payment += earlyRepaymentFeeAmount;
+                        payment += contractualPenaltyAmount + otherFeesAmount;
+                    }
                     
                     cashFlows.push(payment);
                     cashFlowDates.push(paymentDate);
@@ -1048,9 +1088,9 @@
                     cashFlowDates.push(paymentDate);
                 }
 
-                // Final payment: last interest + principal + early repayment fee (only if early repayment)
+                // Final payment: last interest + principal + early repayment fee (only if early repayment) + penalty + other fees
                 const finalFee = isEarlyRepayment ? earlyRepaymentFeeAmount : 0;
-                const finalPayment = periodicInterestPayment + loanAmount + finalFee;
+                const finalPayment = periodicInterestPayment + loanAmount + finalFee + contractualPenaltyAmount + otherFeesAmount;
                 
                 if (cashFlows.length > 1) {
                     cashFlows[cashFlows.length - 1] = finalPayment;
@@ -1066,9 +1106,9 @@
                 cashFlows = [-netDisbursement];
                 cashFlowDates = [drawdownDate];
 
-                // Single payment at maturity: principal + all interest + early repayment fee (if applicable)
+                // Single payment at maturity: principal + all interest + early repayment fee (if applicable) + penalty + other fees
                 const finalFee = isEarlyRepayment ? earlyRepaymentFeeAmount : 0;
-                const finalPayment = loanAmount + totalInterest + finalFee;
+                const finalPayment = loanAmount + totalInterest + finalFee + contractualPenaltyAmount + otherFeesAmount;
                 
                 cashFlows.push(finalPayment);
                 cashFlowDates.push(actualRepaymentDate);
@@ -1078,7 +1118,7 @@
             
             // Total return calculation - only include early repayment fee if there is early repayment
             const earlyFeeForReturn = isEarlyRepayment ? earlyRepaymentFeeAmount : 0;
-            const totalReturnAmount = totalInterest + setupFeeAmount + earlyFeeForReturn;
+            const totalReturnAmount = totalInterest + setupFeeAmount + earlyFeeForReturn + contractualPenaltyAmount + otherFeesAmount;
 
             // Display results
             document.getElementById('ltv').textContent = ltv.toFixed(2) + '%';
@@ -1095,13 +1135,12 @@
                 document.getElementById('monthlyPayment').textContent = 'Bez pravidelných splátek';
             }
             
-            const totalFeesAmount = setupFeeAmount + earlyFeeForReturn + contractualPenaltyAmount;
+            const totalFeesAmount = setupFeeAmount + earlyFeeForReturn + contractualPenaltyAmount + otherFeesAmount;
             document.getElementById('totalFees').textContent = formatCurrency(totalFeesAmount);
             document.getElementById('totalInterest').textContent = formatCurrency(totalInterest);
             
-            // Update total return to include contractual penalty
-            const totalReturnWithPenalty = totalReturnAmount + contractualPenaltyAmount;
-            document.getElementById('totalReturn').textContent = formatCurrency(totalReturnWithPenalty);
+            // Update total return
+            document.getElementById('totalReturn').textContent = formatCurrency(totalReturnAmount);
 
             // Risk assessment
             const riskDiv = document.getElementById('riskAssessment');
@@ -1125,9 +1164,19 @@
             
             // Add early repayment note
             if (isEarlyRepayment) {
-                riskHTML += '<div class="success" style="margin-top: 10px; background: #fff3e0; border-left-color: #ff9800; color: #e65100;"><strong>⏰ Předčasné splacení:</strong> Kalkulace zahrnuje předčasné splacení dne ' + earlyRepaymentDate.toLocaleDateString('cs-CZ') + ' s poplatkem ' + formatCurrency(earlyRepaymentFeeAmount) + '.</div>';
+                riskHTML += '<div class="info-note warning"><strong>Předčasné splacení:</strong> Kalkulace zahrnuje předčasné splacení dne ' + earlyRepaymentDate.toLocaleDateString('cs-CZ') + ' s poplatkem ' + formatCurrency(earlyRepaymentFeeAmount) + '.</div>';
             } else {
                 riskHTML += '<div class="info-note success"><strong>Běžné splacení:</strong> Bez poplatku za předčasné splacení.</div>';
+            }
+            
+            // Add contractual penalty note
+            if (contractualPenaltyAmount > 0) {
+                riskHTML += '<div class="info-note warning"><strong>Smluvní pokuta:</strong> Zahrnuta smluvní pokuta ' + formatCurrency(contractualPenaltyAmount) + ' za porušení povinností.</div>';
+            }
+            
+            // Add other fees note
+            if (otherFeesAmount > 0) {
+                riskHTML += '<div class="info-note warning"><strong>Ostatní poplatky:</strong> Zahrnuty ostatní poplatky ve výši ' + formatCurrency(otherFeesAmount) + '.</div>';
             }
 
             riskDiv.innerHTML = riskHTML;
@@ -1136,11 +1185,13 @@
             // Generate payment schedule
             generatePaymentSchedule(paymentType, loanAmount, interestRate, actualLoanTermMonths, 
                                    drawdownDate, monthlyPayment, interestFrequency, 
-                                   setupFeeAmount, earlyRepaymentFeeAmount, isEarlyRepayment);
+                                   setupFeeAmount, earlyRepaymentFeeAmount, isEarlyRepayment,
+                                   contractualPenaltyAmount, otherFeesAmount);
         }
 
         function generatePaymentSchedule(paymentType, loanAmount, interestRate, loanTermMonths, 
-                                        startDate, payment, interestFrequency, setupFee, earlyFee, isEarlyRepayment) {
+                                        startDate, payment, interestFrequency, setupFee, earlyFee, isEarlyRepayment,
+                                        contractualPenalty, otherFees) {
             const scheduleBody = document.getElementById('scheduleBody');
             scheduleBody.innerHTML = '';
             
@@ -1192,8 +1243,23 @@
                     const interestPayment = periodicInterest;
                     const principalPayment = isLastPayment ? loanAmount : 0;
                     const earlyFeeToApply = (isLastPayment && isEarlyRepayment) ? earlyFee : 0;
-                    const totalPayment = interestPayment + principalPayment + earlyFeeToApply;
+                    const penaltyToApply = isLastPayment ? contractualPenalty : 0;
+                    const otherFeesToApply = isLastPayment ? otherFees : 0;
+                    const totalPayment = interestPayment + principalPayment + earlyFeeToApply + penaltyToApply + otherFeesToApply;
                     const endingBalance = isLastPayment ? 0 : balance;
+                    
+                    totalInterestPaid += interestPayment;
+                    if (isLastPayment) totalPrincipalPaid += principalPayment;
+                    
+                    // Build extra fees display for last payment
+                    let extraFeesDisplay = '';
+                    if (isLastPayment) {
+                        const extras = [];
+                        if (isEarlyRepayment) extras.push(formatCurrency(earlyFee));
+                        if (contractualPenalty > 0) extras.push(formatCurrency(contractualPenalty));
+                        if (otherFees > 0) extras.push(formatCurrency(otherFees));
+                        if (extras.length > 0) extraFeesDisplay = ' + ' + extras.join(' + ');
+                    }
                     
                     totalInterestPaid += interestPayment;
                     if (isLastPayment) totalPrincipalPaid += principalPayment;
@@ -1203,7 +1269,7 @@
                             <td class="text-center">${i}</td>
                             <td>${paymentDate.toLocaleDateString('cs-CZ')}</td>
                             <td class="text-right">${formatCurrency(balance)}</td>
-                            <td class="text-right">${formatCurrency(interestPayment)}${(isLastPayment && isEarlyRepayment) ? ' + ' + formatCurrency(earlyFee) : ''}</td>
+                            <td class="text-right">${formatCurrency(interestPayment)}${extraFeesDisplay}</td>
                             <td class="text-right">${formatCurrency(principalPayment)}</td>
                             <td class="text-right">${formatCurrency(totalPayment)}</td>
                             <td class="text-right">${formatCurrency(endingBalance)}</td>
@@ -1220,17 +1286,24 @@
                 
                 const totalInterest = loanAmount * (interestRate / 100) * (loanTermMonths / 12);
                 const earlyFeeToApply = isEarlyRepayment ? earlyFee : 0;
-                const totalPayment = loanAmount + totalInterest + earlyFeeToApply;
+                const totalPayment = loanAmount + totalInterest + earlyFeeToApply + contractualPenalty + otherFees;
                 
                 totalInterestPaid = totalInterest;
                 totalPrincipalPaid = loanAmount;
+                
+                // Build extra fees display
+                const extras = [];
+                if (isEarlyRepayment) extras.push(formatCurrency(earlyFee));
+                if (contractualPenalty > 0) extras.push(formatCurrency(contractualPenalty));
+                if (otherFees > 0) extras.push(formatCurrency(otherFees));
+                const extraFeesDisplay = extras.length > 0 ? ' + ' + extras.join(' + ') : '';
                 
                 const row = `
                     <tr>
                         <td class="text-center">1</td>
                         <td>${paymentDate.toLocaleDateString('cs-CZ')}</td>
                         <td class="text-right">${formatCurrency(loanAmount)}</td>
-                        <td class="text-right">${formatCurrency(totalInterest)}${isEarlyRepayment ? ' + ' + formatCurrency(earlyFee) : ''}</td>
+                        <td class="text-right">${formatCurrency(totalInterest)}${extraFeesDisplay}</td>
                         <td class="text-right">${formatCurrency(loanAmount)}</td>
                         <td class="text-right">${formatCurrency(totalPayment)}</td>
                         <td class="text-right">${formatCurrency(0)}</td>
@@ -1241,26 +1314,29 @@
             
             // Add fees row
             const earlyFeeForTotal = isEarlyRepayment ? earlyFee : 0;
-            const totalFeesAmount = setupFee + earlyFeeForTotal;
+            const totalFeesAmount = setupFee + earlyFeeForTotal + contractualPenalty + otherFees;
+            
+            let feesBreakdown = 'Poplatek za sjednání: ' + formatCurrency(setupFee);
+            if (isEarlyRepayment) feesBreakdown += ' + Poplatek za předčasné splacení: ' + formatCurrency(earlyFee);
+            if (contractualPenalty > 0) feesBreakdown += ' + Smluvní pokuta: ' + formatCurrency(contractualPenalty);
+            if (otherFees > 0) feesBreakdown += ' + Ostatní poplatky: ' + formatCurrency(otherFees);
             
             const feesRow = `
                 <tr class="fees-summary-row">
                     <td colspan="3" class="text-right"><strong>Poplatky celkem:</strong></td>
                     <td class="text-right" colspan="3">
-                        <span class="fees-breakdown">
-                            Poplatek za sjednání: ${formatCurrency(setupFee)}
-                            ${isEarlyRepayment ? ' + Poplatek za předčasné splacení: ' + formatCurrency(earlyFee) : ''}
-                        </span>
+                        <span class="fees-breakdown">${feesBreakdown}</span>
                     </td>
                     <td class="text-right"><strong>${formatCurrency(totalFeesAmount)}</strong></td>
                 </tr>
             `;
             
             // Add total row
+            const totalExtraFees = earlyFeeForTotal + contractualPenalty + otherFees;
             const totalRow = `
                 <tr class="schedule-total">
                     <td colspan="3" class="text-right"><strong>CELKEM K ÚHRADĚ:</strong></td>
-                    <td class="text-right"><strong>${formatCurrency(totalInterestPaid + earlyFeeForTotal)}</strong></td>
+                    <td class="text-right"><strong>${formatCurrency(totalInterestPaid + totalExtraFees)}</strong></td>
                     <td class="text-right"><strong>${formatCurrency(totalPrincipalPaid)}</strong></td>
                     <td class="text-right"><strong>${formatCurrency(totalInterestPaid + totalPrincipalPaid + totalFeesAmount)}</strong></td>
                     <td class="text-right"><strong>0</strong></td>
