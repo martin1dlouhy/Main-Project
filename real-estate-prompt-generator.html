@@ -949,7 +949,7 @@
             if (propertyType === 'land') {
                 prompt += `## METODIKA OCENĚNÍ POZEMKU\n\n`;
                 prompt += `### 1. POROVNÁVACÍ METODA\n`;
-                prompt += `- Najdi srovnatelné pozemky v lokalitě (prodané v posledních 12 měsících)\n`;
+                prompt += `- Najdi minimálně 5–10 srovnatelných pozemků v lokalitě (ideálně až 20 pro větší statistický vzorek), prodaných v posledních 12 měsících. Pro větší vzorek zahrň i inzerované ceny a poniž je o 5–10 %.\n`;
                 prompt += `- Aplikuj korekční koeficienty na:\n`;
                 prompt += `  * Velikost pozemku\n`;
                 prompt += `  * Dostupnost inženýrských sítí\n`;
@@ -1027,7 +1027,8 @@
             if (propertyType === 'apartment' || propertyType === 'house') {
                 prompt += `## METODIKA OCENĚNÍ\n\n`;
                 prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
-                prompt += `- Najdi 3-5 srovnatelných nemovitostí prodaných v lokalitě (posledních 6-12 měsíců)\n`;
+                prompt += `- Najdi minimálně 5–10 srovnatelných nemovitostí prodaných v lokalitě (ideálně až 20 pro co nejpřesnější statistický vzorek), za posledních 6–24 měsíců\n`;
+                prompt += `- Nejdůležitější jsou realizované prodeje. Pro větší vzorek zahrň i inzerované ceny a poniž je.\n`;
                 prompt += `- Korekce na:\n`;
                 prompt += `  * Stav nemovitosti\n`;
                 prompt += `  * Poloha v rámci lokality\n`;
@@ -1107,8 +1108,9 @@
                     prompt += `- Hodnota = NOI / Yield\n\n`;
                 }
                 prompt += `### 2. POROVNÁVACÍ METODA (Sekundární)\n`;
-                prompt += `- Srovnej s podobnými objekty (typ, lokalita, obsazenost)\n`;
-                prompt += `- Cena za m² pronajímatelné plochy\n\n`;
+                prompt += `- Najdi minimálně 5–10 srovnatelných komerčních objektů (ideálně až 20) — typ, lokalita, obsazenost, stáří\n`;
+                prompt += `- Cena za m² pronajímatelné plochy\n`;
+                prompt += `- Pro komerční objekty je srovnávací metoda méně podstatná než výnosová, nicméně ji stanov pro validaci\n\n`;
 
                 prompt += `## RED FLAGS\n`;
                 prompt += `1. **Kvalita nájemníků**:\n`;
