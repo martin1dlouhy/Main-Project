@@ -791,9 +791,9 @@
             const config = propertyConfigs[propertyType];
             grid.innerHTML = config.inputs.map(input => `
                 <div class="checkbox-item" onclick="toggleInput('${input.id}', this)">
-                    <input type="checkbox" id="${input.id}" onchange="toggleInput('${input.id}', this.parentElement)">
+                    <input type="checkbox" id="input_${input.id}" onchange="toggleInput('${input.id}', this.parentElement)">
                     <span class="icon">${input.icon}</span>
-                    <label for="${input.id}">${input.label}</label>
+                    <label for="input_${input.id}">${input.label}</label>
                 </div>
             `).join('');
         }
