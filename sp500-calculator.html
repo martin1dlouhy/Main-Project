@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S&P 500 Portfolio Breakdown | Investment Tools</title>
+    <script>if(localStorage.getItem("daynight-theme")==="carbon"){document.documentElement.classList.add("carbon");document.body.classList.add("carbon");}</script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8FAFC;
+            --bg-surface: #F1F5F9;
+            --border-color: #E2E8F0;
+            --text-primary: #1E293B;
+            --text-secondary: #64748B;
+            --accent: #38BDF8;
+            --accent-hover: #0EA5E9;
+            --accent-light: rgba(56, 189, 248, 0.1);
+            --success: #22C55E;
+            --warning: #F59E0B;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --transition: all 0.2s ease;
+        }
+
+        html.carbon, body.carbon {
+            --bg-primary: #0F0F0F;
+            --bg-secondary: #171717;
+            --bg-surface: #1F1F1F;
+            --border-color: #2E2E2E;
+            --text-primary: #F5F5F5;
+            --text-secondary: #A3A3A3;
+            --accent: #38BDF8;
+            --accent-hover: #7DD3FC;
+            --accent-light: rgba(56, 189, 248, 0.15);
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            background: var(--bg-primary);
+            border-radius: 24px;
+            box-shadow: var(--shadow-md);
+            max-width: 1200px;
+            width: 100%;
+            padding: 70px 50px 50px;
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-decoration: none;
+            color: var(--accent);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            transition: var(--transition);
+        }
+        .back-btn:hover { background: var(--accent-light); }
+
+        .currency-selector {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            display: flex;
+            gap: 8px;
+            background: var(--bg-surface);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .currency-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+        .currency-btn:hover { background: var(--accent-light); color: var(--accent); }
+        .currency-btn.active { background: var(--accent); color: white; }
+
+        .data-status {
+            position: absolute;
+            top: 68px;
+            right: 40px;
+            text-align: right;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .status-badge.live .status-dot { background: #22C55E; box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+        .status-badge.live .status-label { color: #22C55E; }
+        .status-badge.failed .status-dot { background: #EF4444; box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+        .status-badge.failed .status-label { color: #EF4444; }
+        .status-badge.loading .status-dot { background: var(--text-secondary); animation: pulse 1.2s infinite; }
+        .status-badge.loading .status-label { color: var(--text-secondary); }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .status-date {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        h1 {
+            color: var(--text-primary);
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        label {
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"], select {
+            padding: 16px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            font-size: 17px;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            width: 100%;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            background: var(--bg-primary);
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent);
+        }
+        input[type="text"]::placeholder { color: var(--text-secondary); opacity: 0.5; }
+        select { cursor: pointer; }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            transition: var(--transition);
+        }
+        .summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .summary-card .card-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .summary-card .card-value {
+            color: var(--accent);
+            font-size: 22px;
+            font-weight: 800;
+        }
+        .summary-card .card-sub {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* Sector Breakdown */
+        .sector-section {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+        .sector-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        .sector-bars { display: flex; flex-direction: column; gap: 8px; }
+        .sector-row { display: flex; align-items: center; gap: 12px; }
+        .sector-name { width: 180px; font-size: 13px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sector-bar-bg { flex: 1; height: 24px; background: var(--bg-primary); border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
+        .sector-bar-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; display: flex; align-items: center; padding-left: 8px; }
+        .sector-bar-fill span { font-size: 11px; font-weight: 700; color: white; white-space: nowrap; }
+        .sector-value { width: 80px; text-align: right; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+
+        /* Search & Filter */
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px 12px 40px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 14px;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-family: inherit;
+            transition: var(--transition);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 14px center;
+        }
+        .search-box:focus { outline: none; border-color: var(--accent); background-color: var(--bg-primary); }
+
+        .filter-select {
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 14px;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        /* Holdings Table */
+        .table-container {
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .table-scroll { overflow-x: auto; max-height: 600px; overflow-y: auto; }
+        .holdings-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        .holdings-table thead { position: sticky; top: 0; z-index: 2; }
+        .holdings-table th {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            border-bottom: 2px solid var(--border-color);
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .holdings-table th:hover { color: var(--accent); }
+        .holdings-table th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 11px; }
+        .holdings-table th.sorted .sort-icon { opacity: 1; color: var(--accent); }
+        .holdings-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        .holdings-table tr:hover { background: var(--accent-light); }
+        .holdings-table .rank { color: var(--text-secondary); font-weight: 600; text-align: center; width: 40px; }
+        .holdings-table .ticker { font-weight: 700; color: var(--accent); }
+        .holdings-table .company-name { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .holdings-table .sector-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+        .holdings-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .holdings-table .weight-bar {
+            width: 60px;
+            height: 6px;
+            background: var(--bg-surface);
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        .holdings-table .weight-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+
+        /* Export buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+        .action-buttons button {
+            flex: 1;
+            min-width: 180px;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-2px); }
+        .btn-secondary { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color) !important; }
+        .btn-secondary:hover { border-color: var(--accent) !important; }
+
+        /* Exchange rate note */
+        .rate-note {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .data-info {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-top: 20px;
+            padding: 12px;
+            background: var(--bg-surface);
+            border-radius: 10px;
+        }
+
+        /* Loading */
+        .loading { text-align: center; padding: 40px; color: var(--text-secondary); }
+
+        /* Top Holdings mini cards */
+        .top-holdings { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 30px; }
+        .top-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            transition: var(--transition);
+        }
+        .top-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .top-card .top-rank { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
+        .top-card .top-ticker { font-size: 16px; font-weight: 700; color: var(--accent); margin: 4px 0; }
+        .top-card .top-weight { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+        .top-card .top-value { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+        @media (max-width: 768px) {
+            .container { padding: 60px 20px 30px; }
+            .currency-selector { right: 15px; top: 65px; }
+            .data-status { right: 15px; top: 110px; }
+            .input-section { flex-direction: column; }
+            .summary-grid { grid-template-columns: 1fr 1fr; }
+            .top-holdings { grid-template-columns: repeat(2, 1fr); }
+            .sector-name { width: 100px; }
+            h1 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-btn">&#8592; Zp&#283;t</a>
+
+        <div class="currency-selector">
+            <button class="currency-btn" onclick="setCurrency('USD')">USD</button>
+            <button class="currency-btn" onclick="setCurrency('EUR')">EUR</button>
+            <button class="currency-btn active" onclick="setCurrency('CZK')">CZK</button>
+        </div>
+
+        <div class="data-status" id="dataStatus">
+            <div class="status-badge loading">
+                <span class="status-dot"></span>
+                <span class="status-label">Na&#269;&#237;t&#225;n&#237;...</span>
+            </div>
+            <div class="status-date" id="statusDate"></div>
+        </div>
+
+        <h1>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px; vertical-align: middle;">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            S&amp;P 500 Portfolio Breakdown
+        </h1>
+        <p class="subtitle">Rozklad va&scaron;&#237; investice do S&amp;P 500 na jednotliv&#233; tituly</p>
+
+        <div class="input-section">
+            <div class="form-group">
+                <label>Investovan&#225; &#269;&#225;stka (<span id="amountCurrencyLabel">CZK</span>)</label>
+                <input type="text" id="investmentAmount" placeholder="1 000 000" value="1 000 000" oninput="debounceCalculate()">
+            </div>
+        </div>
+        <div class="rate-note" id="rateNote"></div>
+
+        <div class="summary-grid" id="summaryGrid">
+            <div class="summary-card">
+                <div class="card-label">Investice (USD)</div>
+                <div class="card-value" id="totalUsd">$0</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">Po&#269;et titul&#367;</div>
+                <div class="card-value" id="totalHoldings">0</div>
+                <div class="card-sub">spole&#269;nost&#237; v indexu</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">Top 10 pod&#237;l</div>
+                <div class="card-value" id="top10Pct">0%</div>
+                <div class="card-sub">koncentrace</div>
+            </div>
+            <div class="summary-card">
+                <div class="card-label">Sm&#283;nn&#253; kurz</div>
+                <div class="card-value" id="fxRate">-</div>
+                <div class="card-sub" id="fxSub">USD/CZK</div>
+            </div>
+        </div>
+
+        <div class="top-holdings" id="topHoldings"></div>
+
+        <div class="sector-section">
+            <div class="sector-title">Sektorov&#233; rozlo&#382;en&#237;</div>
+            <div class="sector-bars" id="sectorBars"></div>
+        </div>
+
+        <div class="controls">
+            <input type="text" class="search-box" id="searchBox" placeholder="Hledat ticker nebo n&#225;zev spole&#269;nosti..." oninput="filterTable()">
+            <select class="filter-select" id="sectorFilter" onchange="filterTable()">
+                <option value="">V&scaron;echny sektory</option>
+            </select>
+            <span style="color: var(--text-secondary); font-size: 13px;" id="resultCount"></span>
+        </div>
+
+        <div class="table-container">
+            <div class="table-scroll">
+                <table class="holdings-table" id="holdingsTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('rank')" class="sorted" data-col="rank"># <span class="sort-icon">&#9650;</span></th>
+                            <th onclick="sortTable('ticker')" data-col="ticker">Ticker <span class="sort-icon">&#9650;</span></th>
+                            <th onclick="sortTable('name')" data-col="name">Spole&#269;nost <span class="sort-icon">&#9650;</span></th>
+                            <th onclick="sortTable('sector')" data-col="sector">Sektor <span class="sort-icon">&#9650;</span></th>
+                            <th onclick="sortTable('weight')" data-col="weight">V&#225;ha <span class="sort-icon">&#9650;</span></th>
+                            <th onclick="sortTable('value')" data-col="value">Va&scaron;e hodnota <span class="sort-icon">&#9650;</span></th>
+                            <th onclick="sortTable('shares')" data-col="shares">Ekv. akci&#237; <span class="sort-icon">&#9650;</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="holdingsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn-primary" onclick="exportCSV()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
+                Export CSV
+            </button>
+            <button class="btn-secondary" onclick="printTable()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
+                    <path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                </svg>
+                Tisk
+            </button>
+        </div>
+
+        <div class="data-info" id="dataInfo">
+            Data: Aproximativn&#237; v&#225;hy S&amp;P 500 (market-cap weighted). Sm&#283;nn&#233; kurzy se na&#269;&#237;taj&#237; online.
+        </div>
+    </div>
+
+<script>
+// ============================
+// S&P 500 DATA
+// ============================
+let SP500_DATA = [{"t":"NVDA","n":"Nvidia","s":"Technology","w":7.16,"p":182.81},{"t":"AAPL","n":"Apple Inc.","s":"Technology","w":6.05,"p":255.78},{"t":"MSFT","n":"Microsoft","s":"Technology","w":4.8,"p":401.32},{"t":"AMZN","n":"Amazon","s":"Consumer Discretionary","w":3.44,"p":198.79},{"t":"GOOGL","n":"Alphabet Inc. (Class A)","s":"Communication Services","w":3.08,"p":305.72},{"t":"GOOG","n":"Alphabet Inc. (Class C)","s":"Communication Services","w":2.88,"p":306.02},{"t":"META","n":"Meta Platforms","s":"Communication Services","w":2.61,"p":639.77},{"t":"TSLA","n":"Tesla, Inc.","s":"Consumer Discretionary","w":2.53,"p":417.44},{"t":"AVGO","n":"Broadcom","s":"Technology","w":2.49,"p":325.17},{"t":"BRK.B","n":"Berkshire Hathaway","s":"Financials","w":1.73,"p":497.55},{"t":"WMT","n":"Walmart","s":"Consumer Staples","w":1.72,"p":133.89},{"t":"LLY","n":"Eli Lilly","s":"Health Care","w":1.58,"p":1040.0},{"t":"JPM","n":"JPMorgan Chase","s":"Financials","w":1.32,"p":302.55},{"t":"XOM","n":"ExxonMobil","s":"Energy","w":1.0,"p":148.45},{"t":"V","n":"Visa Inc.","s":"Financials","w":0.97,"p":314.08},{"t":"JNJ","n":"Johnson & Johnson","s":"Health Care","w":0.95,"p":243.45},{"t":"MU","n":"Micron Technology","s":"Technology","w":0.75,"p":411.66},{"t":"MA","n":"Mastercard","s":"Financials","w":0.75,"p":518.36},{"t":"ORCL","n":"Oracle","s":"Technology","w":0.74,"p":160.14},{"t":"COST","n":"Costco","s":"Consumer Staples","w":0.73,"p":1018.48},{"t":"ABBV","n":"AbbVie","s":"Health Care","w":0.66,"p":231.5},{"t":"HD","n":"Home Depot","s":"Consumer Discretionary","w":0.63,"p":391.05},{"t":"BAC","n":"Bank of America","s":"Financials","w":0.61,"p":52.55},{"t":"PG","n":"Procter & Gamble","s":"Consumer Staples","w":0.6,"p":160.07},{"t":"CVX","n":"Chevron","s":"Energy","w":0.59,"p":183.74},{"t":"CAT","n":"Caterpillar","s":"Industrials","w":0.58,"p":774.2},{"t":"KO","n":"Coca-Cola","s":"Consumer Staples","w":0.55,"p":78.68},{"t":"AMD","n":"Advanced Micro Devices","s":"Technology","w":0.54,"p":207.32},{"t":"GE","n":"GE Aerospace","s":"Industrials","w":0.53,"p":315.41},{"t":"NFLX","n":"Netflix","s":"Communication Services","w":0.52,"p":76.87},{"t":"PLTR","n":"Palantir Technologies","s":"Technology","w":0.5,"p":131.41},{"t":"CSCO","n":"Cisco","s":"Technology","w":0.49,"p":76.85},{"t":"MRK","n":"Merck & Co.","s":"Health Care","w":0.49,"p":121.41},{"t":"LRCX","n":"Lam Research","s":"Technology","w":0.47,"p":235.53},{"t":"PM","n":"Philip Morris Intl","s":"Consumer Staples","w":0.47,"p":187.51},{"t":"AMAT","n":"Applied Materials","s":"Technology","w":0.45,"p":354.91},{"t":"GS","n":"Goldman Sachs","s":"Financials","w":0.44,"p":905.14},{"t":"MS","n":"Morgan Stanley","s":"Financials","w":0.44,"p":171.15},{"t":"WFC","n":"Wells Fargo","s":"Financials","w":0.43,"p":86.98},{"t":"RTX","n":"RTX Corporation","s":"Industrials","w":0.43,"p":200.06},{"t":"UNH","n":"UnitedHealth Group","s":"Health Care","w":0.43,"p":293.19},{"t":"IBM","n":"IBM","s":"Technology","w":0.4,"p":262.38},{"t":"TMUS","n":"T-Mobile US","s":"Communication Services","w":0.39,"p":219.5},{"t":"INTC","n":"Intel","s":"Technology","w":0.38,"p":46.79},{"t":"MCD","n":"McDonald's","s":"Consumer Discretionary","w":0.38,"p":327.58},{"t":"AXP","n":"American Express","s":"Financials","w":0.37,"p":337.5},{"t":"PEP","n":"PepsiCo","s":"Consumer Staples","w":0.37,"p":165.94},{"t":"LIN","n":"Linde plc","s":"Materials","w":0.36,"p":481.0},{"t":"GEV","n":"GE Vernova","s":"Industrials","w":0.35,"p":802.13},{"t":"VZ","n":"Verizon","s":"Communication Services","w":0.33,"p":49.01},{"t":"TXN","n":"Texas Instruments","s":"Technology","w":0.33,"p":226.16},{"t":"T","n":"AT&T","s":"Communication Services","w":0.32,"p":28.69},{"t":"AMGN","n":"Amgen","s":"Health Care","w":0.32,"p":369.19},{"t":"ABT","n":"Abbott Laboratories","s":"Health Care","w":0.32,"p":112.68},{"t":"NEE","n":"NextEra Energy","s":"Utilities","w":0.31,"p":93.8},{"t":"C","n":"Citigroup","s":"Financials","w":0.31,"p":110.86},{"t":"GILD","n":"Gilead Sciences","s":"Health Care","w":0.31,"p":154.98},{"t":"KLAC","n":"KLA Corporation","s":"Technology","w":0.31,"p":1464.13},{"t":"BA","n":"Boeing","s":"Industrials","w":0.31,"p":242.96},{"t":"TMO","n":"Thermo Fisher Scientific","s":"Health Care","w":0.31,"p":504.82},{"t":"DIS","n":"Walt Disney","s":"Communication Services","w":0.3,"p":105.45},{"t":"APH","n":"Amphenol","s":"Technology","w":0.29,"p":146.72},{"t":"ANET","n":"Arista Networks","s":"Technology","w":0.29,"p":141.59},{"t":"CRM","n":"Salesforce","s":"Technology","w":0.29,"p":189.72},{"t":"ISRG","n":"Intuitive Surgical","s":"Health Care","w":0.28,"p":485.84},{"t":"TJX","n":"TJX Companies","s":"Consumer Discretionary","w":0.28,"p":154.46},{"t":"SCHW","n":"Charles Schwab","s":"Financials","w":0.27,"p":93.72},{"t":"BLK","n":"BlackRock","s":"Financials","w":0.27,"p":1071.51},{"t":"ADI","n":"Analog Devices","s":"Technology","w":0.27,"p":337.1},{"t":"DE","n":"Deere & Company","s":"Industrials","w":0.26,"p":602.92},{"t":"LOW","n":"Lowe's","s":"Consumer Discretionary","w":0.26,"p":287.39},{"t":"PFE","n":"Pfizer","s":"Health Care","w":0.25,"p":27.58},{"t":"UNP","n":"Union Pacific","s":"Industrials","w":0.25,"p":260.68},{"t":"HON","n":"Honeywell","s":"Industrials","w":0.25,"p":241.38},{"t":"ETN","n":"Eaton Corporation","s":"Industrials","w":0.24,"p":389.25},{"t":"DHR","n":"Danaher","s":"Health Care","w":0.24,"p":212.58},{"t":"LMT","n":"Lockheed Martin","s":"Industrials","w":0.24,"p":652.58},{"t":"QCOM","n":"Qualcomm","s":"Technology","w":0.24,"p":140.7},{"t":"WELL","n":"Welltower","s":"Real Estate","w":0.24,"p":210.72},{"t":"UBER","n":"Uber","s":"Industrials","w":0.23,"p":69.99},{"t":"SYK","n":"Stryker","s":"Health Care","w":0.23,"p":366.05},{"t":"ACN","n":"Accenture","s":"Technology","w":0.22,"p":224.23},{"t":"NEM","n":"Newmont","s":"Materials","w":0.22,"p":125.8},{"t":"COP","n":"ConocoPhillips","s":"Energy","w":0.22,"p":111.43},{"t":"PANW","n":"Palo Alto Networks","s":"Technology","w":0.22,"p":166.95},{"t":"BKNG","n":"Booking Holdings","s":"Consumer Discretionary","w":0.22,"p":4140.6},{"t":"APP","n":"AppLovin","s":"Technology","w":0.21,"p":390.55},{"t":"COF","n":"Capital One","s":"Financials","w":0.21,"p":207.37},{"t":"PLD","n":"Prologis","s":"Real Estate","w":0.21,"p":138.97},{"t":"MDT","n":"Medtronic","s":"Health Care","w":0.21,"p":99.49},{"t":"CB","n":"Chubb Limited","s":"Financials","w":0.2,"p":324.95},{"t":"PH","n":"Parker Hannifin","s":"Industrials","w":0.2,"p":1001.75},{"t":"VRTX","n":"Vertex Pharmaceuticals","s":"Health Care","w":0.2,"p":491.47},{"t":"BMY","n":"Bristol Myers Squibb","s":"Health Care","w":0.2,"p":60.74},{"t":"SPGI","n":"S&P Global","s":"Financials","w":0.2,"p":409.54},{"t":"HCA","n":"HCA Healthcare","s":"Health Care","w":0.19,"p":540.29},{"t":"PGR","n":"Progressive Corp.","s":"Financials","w":0.19,"p":204.53},{"t":"GLW","n":"Corning Inc.","s":"Technology","w":0.18,"p":133.46},{"t":"MCK","n":"McKesson","s":"Health Care","w":0.18,"p":934.75},{"t":"CMCSA","n":"Comcast","s":"Communication Services","w":0.18,"p":31.57},{"t":"MO","n":"Altria","s":"Consumer Staples","w":0.18,"p":67.25},{"t":"NOW","n":"ServiceNow","s":"Technology","w":0.18,"p":107.08},{"t":"INTU","n":"Intuit","s":"Technology","w":0.18,"p":399.4},{"t":"BSX","n":"Boston Scientific","s":"Health Care","w":0.18,"p":74.73},{"t":"CME","n":"CME Group","s":"Financials","w":0.18,"p":303.07},{"t":"ADBE","n":"Adobe","s":"Technology","w":0.17,"p":263.97},{"t":"CRWD","n":"CrowdStrike","s":"Technology","w":0.17,"p":429.64},{"t":"SBUX","n":"Starbucks","s":"Consumer Discretionary","w":0.17,"p":93.79},{"t":"SO","n":"Southern Company","s":"Utilities","w":0.17,"p":94.95},{"t":"CEG","n":"Constellation Energy","s":"Utilities","w":0.17,"p":288.43},{"t":"TT","n":"Trane Technologies","s":"Industrials","w":0.17,"p":465.27},{"t":"BX","n":"Blackstone","s":"Financials","w":0.16,"p":129.86},{"t":"UPS","n":"United Parcel Service","s":"Industrials","w":0.16,"p":119.24},{"t":"HWM","n":"Howmet Aerospace","s":"Industrials","w":0.16,"p":250.21},{"t":"CVS","n":"CVS Health","s":"Health Care","w":0.16,"p":78.48},{"t":"NOC","n":"Northrop Grumman","s":"Industrials","w":0.16,"p":702.57},{"t":"DUK","n":"Duke Energy","s":"Utilities","w":0.16,"p":128.2},{"t":"WDC","n":"Western Digital","s":"Technology","w":0.15,"p":281.58},{"t":"WM","n":"Waste Management","s":"Industrials","w":0.15,"p":234.52},{"t":"GD","n":"General Dynamics","s":"Industrials","w":0.15,"p":347.64},{"t":"EQIX","n":"Equinix","s":"Real Estate","w":0.15,"p":956.19},{"t":"MAR","n":"Marriott International","s":"Consumer Discretionary","w":0.15,"p":353.89},{"t":"NKE","n":"Nike","s":"Consumer Discretionary","w":0.15,"p":63.13},{"t":"STX","n":"Seagate Technology","s":"Technology","w":0.15,"p":425.99},{"t":"PNC","n":"PNC Financial","s":"Financials","w":0.15,"p":229.32},{"t":"SNDK","n":"Sandisk","s":"Technology","w":0.15,"p":626.56},{"t":"SHW","n":"Sherwin-Williams","s":"Materials","w":0.15,"p":368.89},{"t":"KKR","n":"KKR","s":"Financials","w":0.15,"p":101.73},{"t":"MMM","n":"3M","s":"Industrials","w":0.15,"p":171.82},{"t":"FCX","n":"Freeport-McMoRan","s":"Materials","w":0.15,"p":62.84},{"t":"AMT","n":"American Tower","s":"Real Estate","w":0.14,"p":192.1},{"t":"USB","n":"U.S. Bancorp","s":"Financials","w":0.14,"p":57.69},{"t":"WMB","n":"Williams Companies","s":"Energy","w":0.14,"p":72.28},{"t":"FDX","n":"FedEx","s":"Industrials","w":0.14,"p":374.72},{"t":"ITW","n":"Illinois Tool Works","s":"Industrials","w":0.14,"p":299.6},{"t":"ICE","n":"Intercontinental Exchange","s":"Financials","w":0.14,"p":152.28},{"t":"RCL","n":"Royal Caribbean","s":"Consumer Discretionary","w":0.14,"p":319.61},{"t":"ADP","n":"Automatic Data Processing","s":"Industrials","w":0.14,"p":212.11},{"t":"JCI","n":"Johnson Controls","s":"Industrials","w":0.14,"p":139.24},{"t":"REGN","n":"Regeneron Pharmaceuticals","s":"Health Care","w":0.14,"p":803.17},{"t":"ECL","n":"Ecolab","s":"Materials","w":0.14,"p":299.17},{"t":"MRSH","n":"Marsh & McLennan","s":"Financials","w":0.14,"p":174.06},{"t":"CRH","n":"CRH plc","s":"Materials","w":0.14,"p":125.97},{"t":"SNPS","n":"Synopsys","s":"Technology","w":0.13,"p":437.09},{"t":"EMR","n":"Emerson Electric","s":"Industrials","w":0.13,"p":148.13},{"t":"CMI","n":"Cummins","s":"Industrials","w":0.13,"p":601.01},{"t":"CDNS","n":"Cadence Design Systems","s":"Technology","w":0.13,"p":299.46},{"t":"ORLY","n":"O'Reilly Auto Parts","s":"Consumer Discretionary","w":0.13,"p":96.66},{"t":"BK","n":"BNY Mellon","s":"Financials","w":0.13,"p":117.74},{"t":"MDLZ","n":"Mondelez International","s":"Consumer Staples","w":0.13,"p":62.59},{"t":"MNST","n":"Monster Beverage","s":"Consumer Staples","w":0.13,"p":81.48},{"t":"PWR","n":"Quanta Services","s":"Industrials","w":0.13,"p":524.08},{"t":"CL","n":"Colgate-Palmolive","s":"Consumer Staples","w":0.13,"p":96.67},{"t":"DELL","n":"Dell Technologies","s":"Technology","w":0.13,"p":117.49},{"t":"CTAS","n":"Cintas","s":"Industrials","w":0.12,"p":193.44},{"t":"CI","n":"Cigna","s":"Health Care","w":0.12,"p":291.44},{"t":"ELV","n":"Elevance Health","s":"Health Care","w":0.12,"p":346.8},{"t":"MSI","n":"Motorola Solutions","s":"Technology","w":0.12,"p":461.76},{"t":"MCO","n":"Moody's","s":"Financials","w":0.12,"p":426.44},{"t":"CSX","n":"CSX Corporation","s":"Industrials","w":0.12,"p":40.87},{"t":"SLB","n":"Schlumberger","s":"Energy","w":0.12,"p":50.39},{"t":"GM","n":"General Motors","s":"Consumer Discretionary","w":0.12,"p":81.08},{"t":"ABNB","n":"Airbnb","s":"Consumer Discretionary","w":0.12,"p":121.35},{"t":"TDG","n":"TransDigm Group","s":"Industrials","w":0.12,"p":1286.67},{"t":"APO","n":"Apollo Global Management","s":"Financials","w":0.12,"p":125.07},{"t":"HLT","n":"Hilton Worldwide","s":"Consumer Discretionary","w":0.12,"p":314.62},{"t":"KMI","n":"Kinder Morgan","s":"Energy","w":0.12,"p":32.32},{"t":"NSC","n":"Norfolk Southern","s":"Industrials","w":0.11,"p":314.94},{"t":"AEP","n":"American Electric Power","s":"Utilities","w":0.11,"p":129.94},{"t":"COR","n":"Cencora","s":"Health Care","w":0.11,"p":360.83},{"t":"WBD","n":"Warner Bros. Discovery","s":"Communication Services","w":0.11,"p":27.99},{"t":"TEL","n":"TE Connectivity","s":"Technology","w":0.11,"p":236.19},{"t":"DASH","n":"DoorDash","s":"Consumer Discretionary","w":0.11,"p":160.34},{"t":"RSG","n":"Republic Services","s":"Industrials","w":0.11,"p":223.17},{"t":"AON","n":"Aon","s":"Financials","w":0.11,"p":321.7},{"t":"HOOD","n":"Robinhood Markets","s":"Financials","w":0.11,"p":75.97},{"t":"PCAR","n":"Paccar","s":"Industrials","w":0.11,"p":127.0},{"t":"TFC","n":"Truist Financial","s":"Financials","w":0.11,"p":51.9},{"t":"EOG","n":"EOG Resources","s":"Energy","w":0.11,"p":120.73},{"t":"LHX","n":"L3Harris","s":"Industrials","w":0.1,"p":345.5},{"t":"PSX","n":"Phillips 66","s":"Energy","w":0.1,"p":159.77},{"t":"SPG","n":"Simon Property Group","s":"Real Estate","w":0.1,"p":196.83},{"t":"AZO","n":"AutoZone","s":"Consumer Discretionary","w":0.1,"p":3858.16},{"t":"FTNT","n":"Fortinet","s":"Technology","w":0.1,"p":85.56},{"t":"TRV","n":"Travelers Companies","s":"Financials","w":0.1,"p":294.21},{"t":"ROST","n":"Ross Stores","s":"Consumer Discretionary","w":0.1,"p":196.54},{"t":"APD","n":"Air Products","s":"Materials","w":0.1,"p":279.74},{"t":"DLR","n":"Digital Realty","s":"Real Estate","w":0.1,"p":180.97},{"t":"SRE","n":"Sempra","s":"Utilities","w":0.1,"p":94.78},{"t":"NXPI","n":"NXP Semiconductors","s":"Technology","w":0.1,"p":244.43},{"t":"VLO","n":"Valero Energy","s":"Energy","w":0.1,"p":200.17},{"t":"BKR","n":"Baker Hughes","s":"Energy","w":0.1,"p":61.2},{"t":"O","n":"Realty Income","s":"Real Estate","w":0.1,"p":65.66},{"t":"MPC","n":"Marathon Petroleum","s":"Energy","w":0.1,"p":203.26},{"t":"AFL","n":"Aflac","s":"Financials","w":0.1,"p":114.91},{"t":"VST","n":"Vistra Corp.","s":"Utilities","w":0.09,"p":171.49},{"t":"MPWR","n":"Monolithic Power Systems","s":"Technology","w":0.09,"p":1171.47},{"t":"D","n":"Dominion Energy","s":"Utilities","w":0.09,"p":66.51},{"t":"F","n":"Ford Motor","s":"Consumer Discretionary","w":0.09,"p":14.12},{"t":"URI","n":"United Rentals","s":"Industrials","w":0.09,"p":869.57},{"t":"CARR","n":"Carrier Global","s":"Industrials","w":0.09,"p":65.4},{"t":"OKE","n":"ONEOK","s":"Energy","w":0.09,"p":86.11},{"t":"ALL","n":"Allstate","s":"Financials","w":0.09,"p":207.51},{"t":"GWW","n":"W. W. Grainger","s":"Industrials","w":0.09,"p":1131.42},{"t":"AJG","n":"Arthur J. Gallagher","s":"Financials","w":0.09,"p":208.45},{"t":"ZTS","n":"Zoetis","s":"Health Care","w":0.09,"p":126.65},{"t":"FAST","n":"Fastenal","s":"Industrials","w":0.09,"p":46.41},{"t":"AME","n":"Ametek","s":"Industrials","w":0.09,"p":229.76},{"t":"PSA","n":"Public Storage","s":"Real Estate","w":0.08,"p":300.35},{"t":"TGT","n":"Target","s":"Consumer Discretionary","w":0.08,"p":115.76},{"t":"CAH","n":"Cardinal Health","s":"Health Care","w":0.08,"p":220.79},{"t":"MET","n":"MetLife","s":"Financials","w":0.08,"p":77.31},{"t":"CTVA","n":"Corteva","s":"Materials","w":0.08,"p":75.03},{"t":"IDXX","n":"IDEXX Laboratories","s":"Health Care","w":0.08,"p":629.35},{"t":"EA","n":"Electronic Arts","s":"Communication Services","w":0.08,"p":200.62},{"t":"BDX","n":"Becton Dickinson","s":"Health Care","w":0.08,"p":175.89},{"t":"TER","n":"Teradyne","s":"Technology","w":0.08,"p":314.66},{"t":"ADSK","n":"Autodesk","s":"Technology","w":0.08,"p":231.22},{"t":"EXC","n":"Exelon","s":"Utilities","w":0.08,"p":48.48},{"t":"DHI","n":"D.R. Horton","s":"Consumer Discretionary","w":0.08,"p":167.78},{"t":"CVNA","n":"Carvana","s":"Consumer Discretionary","w":0.08,"p":342.87},{"t":"XEL","n":"Xcel Energy","s":"Utilities","w":0.08,"p":81.59},{"t":"FANG","n":"Diamondback Energy","s":"Energy","w":0.08,"p":169.14},{"t":"TRGP","n":"Targa Resources","s":"Energy","w":0.08,"p":223.89},{"t":"FITB","n":"Fifth Third Bancorp","s":"Financials","w":0.08,"p":52.86},{"t":"ETR","n":"Entergy","s":"Utilities","w":0.08,"p":105.07},{"t":"CMG","n":"Chipotle Mexican Grill","s":"Consumer Discretionary","w":0.08,"p":36.3},{"t":"FIX","n":"Comfort Systems USA","s":"Industrials","w":0.08,"p":1337.95},{"t":"OXY","n":"Occidental Petroleum","s":"Energy","w":0.07,"p":46.07},{"t":"NDAQ","n":"Nasdaq, Inc.","s":"Financials","w":0.07,"p":79.47},{"t":"HSY","n":"Hershey","s":"Consumer Staples","w":0.07,"p":222.58},{"t":"KR","n":"Kroger","s":"Consumer Staples","w":0.07,"p":71.25},{"t":"DAL","n":"Delta Air Lines","s":"Industrials","w":0.07,"p":69.0},{"t":"YUM","n":"Yum! Brands","s":"Consumer Discretionary","w":0.07,"p":160.57},{"t":"ROK","n":"Rockwell Automation","s":"Industrials","w":0.07,"p":394.37},{"t":"COIN","n":"Coinbase Global","s":"Financials","w":0.07,"p":164.32},{"t":"EW","n":"Edwards Lifesciences","s":"Health Care","w":0.07,"p":75.87},{"t":"CCL","n":"Carnival","s":"Consumer Discretionary","w":0.07,"p":31.77},{"t":"DDOG","n":"Datadog","s":"Technology","w":0.07,"p":125.2},{"t":"WAB","n":"Wabtec","s":"Industrials","w":0.07,"p":256.06},{"t":"SYY","n":"Sysco","s":"Consumer Staples","w":0.07,"p":90.56},{"t":"VMC","n":"Vulcan Materials","s":"Materials","w":0.07,"p":327.65},{"t":"AMP","n":"Ameriprise Financial","s":"Financials","w":0.07,"p":473.67},{"t":"PEG","n":"Public Service Enterprise","s":"Utilities","w":0.07,"p":86.37},{"t":"CIEN","n":"Ciena Corporation","s":"Technology","w":0.07,"p":303.92},{"t":"MCHP","n":"Microchip Technology","s":"Technology","w":0.07,"p":78.56},{"t":"CBRE","n":"CBRE Group","s":"Real Estate","w":0.07,"p":142.31},{"t":"AIG","n":"American Intl Group","s":"Financials","w":0.07,"p":78.27},{"t":"NUE","n":"Nucor","s":"Materials","w":0.07,"p":183.23},{"t":"GRMN","n":"Garmin","s":"Consumer Discretionary","w":0.07,"p":214.74},{"t":"ED","n":"Consolidated Edison","s":"Utilities","w":0.07,"p":113.72},{"t":"MLM","n":"Martin Marietta Materials","s":"Materials","w":0.07,"p":678.86},{"t":"VTR","n":"Ventas","s":"Real Estate","w":0.07,"p":85.24},{"t":"ODFL","n":"Old Dominion Freight","s":"Industrials","w":0.07,"p":193.21},{"t":"KDP","n":"Keurig Dr Pepper","s":"Consumer Staples","w":0.07,"p":29.69},{"t":"KEYS","n":"Keysight Technologies","s":"Technology","w":0.06,"p":233.51},{"t":"PCG","n":"PG&E Corporation","s":"Utilities","w":0.06,"p":18.16},{"t":"CCI","n":"Crown Castle","s":"Real Estate","w":0.06,"p":90.38},{"t":"EL","n":"Estee Lauder","s":"Consumer Staples","w":0.06,"p":108.24},{"t":"HIG","n":"Hartford","s":"Financials","w":0.06,"p":141.25},{"t":"MSCI","n":"MSCI Inc.","s":"Financials","w":0.06,"p":526.06},{"t":"IR","n":"Ingersoll Rand","s":"Industrials","w":0.06,"p":98.52},{"t":"LVS","n":"Las Vegas Sands","s":"Consumer Discretionary","w":0.06,"p":57.15},{"t":"WDAY","n":"Workday","s":"Technology","w":0.06,"p":144.42},{"t":"WEC","n":"WEC Energy Group","s":"Utilities","w":0.06,"p":115.79},{"t":"EBAY","n":"eBay","s":"Consumer Discretionary","w":0.06,"p":82.38},{"t":"NRG","n":"NRG Energy","s":"Utilities","w":0.06,"p":172.35},{"t":"PYPL","n":"PayPal","s":"Financials","w":0.06,"p":40.29},{"t":"RMD","n":"ResMed","s":"Health Care","w":0.06,"p":252.55},{"t":"LYV","n":"Live Nation","s":"Communication Services","w":0.06,"p":158.27},{"t":"EQT","n":"EQT Corporation","s":"Energy","w":0.06,"p":58.7},{"t":"GEHC","n":"GE HealthCare","s":"Health Care","w":0.06,"p":80.34},{"t":"PRU","n":"Prudential Financial","s":"Financials","w":0.06,"p":104.61},{"t":"KMB","n":"Kimberly-Clark","s":"Consumer Staples","w":0.06,"p":109.41},{"t":"CPRT","n":"Copart","s":"Industrials","w":0.06,"p":37.49},{"t":"TTWO","n":"Take-Two Interactive","s":"Communication Services","w":0.06,"p":193.67},{"t":"EME","n":"EMCOR Group","s":"Industrials","w":0.06,"p":800.82},{"t":"KVUE","n":"Kenvue","s":"Consumer Staples","w":0.06,"p":18.7},{"t":"STT","n":"State Street","s":"Financials","w":0.06,"p":127.97},{"t":"A","n":"Agilent Technologies","s":"Health Care","w":0.06,"p":125.81},{"t":"UAL","n":"United Airlines","s":"Industrials","w":0.06,"p":109.29},{"t":"ACGL","n":"Arch Capital Group","s":"Financials","w":0.06,"p":98.38},{"t":"MTB","n":"M&T Bank","s":"Financials","w":0.06,"p":228.71},{"t":"HBAN","n":"Huntington Bancshares","s":"Financials","w":0.06,"p":17.26},{"t":"OTIS","n":"Otis Worldwide","s":"Industrials","w":0.06,"p":89.83},{"t":"ROP","n":"Roper Technologies","s":"Technology","w":0.06,"p":321.41},{"t":"AXON","n":"Axon Enterprise","s":"Industrials","w":0.06,"p":429.67},{"t":"PAYX","n":"Paychex","s":"Industrials","w":0.05,"p":94.38},{"t":"DG","n":"Dollar General","s":"Consumer Discretionary","w":0.05,"p":153.84},{"t":"ADM","n":"Archer Daniels Midland","s":"Consumer Staples","w":0.05,"p":69.51},{"t":"IBKR","n":"Interactive Brokers","s":"Financials","w":0.05,"p":74.75},{"t":"IRM","n":"Iron Mountain","s":"Real Estate","w":0.05,"p":109.83},{"t":"FISV","n":"Fiserv","s":"Financials","w":0.05,"p":59.36},{"t":"FICO","n":"Fair Isaac","s":"Technology","w":0.05,"p":1344.74},{"t":"CTSH","n":"Cognizant","s":"Technology","w":0.05,"p":66.55},{"t":"DOV","n":"Dover Corporation","s":"Industrials","w":0.05,"p":231.63},{"t":"WAT","n":"Waters Corporation","s":"Health Care","w":0.05,"p":323.37},{"t":"VICI","n":"VICI Properties","s":"Real Estate","w":0.05,"p":29.3},{"t":"RJF","n":"Raymond James","s":"Financials","w":0.05,"p":158.68},{"t":"XYL","n":"Xylem","s":"Industrials","w":0.05,"p":128.09},{"t":"TPR","n":"Tapestry","s":"Consumer Discretionary","w":0.05,"p":153.8},{"t":"EXR","n":"Extra Space Storage","s":"Real Estate","w":0.05,"p":146.36},{"t":"TDY","n":"Teledyne Technologies","s":"Industrials","w":0.05,"p":660.29},{"t":"AEE","n":"Ameren","s":"Utilities","w":0.05,"p":110.97},{"t":"ULTA","n":"Ulta Beauty","s":"Consumer Discretionary","w":0.05,"p":683.4},{"t":"CHTR","n":"Charter Communications","s":"Communication Services","w":0.05,"p":239.09},{"t":"XYZ","n":"Block Inc.","s":"Financials","w":0.05,"p":49.8},{"t":"LEN","n":"Lennar","s":"Consumer Discretionary","w":0.05,"p":122.28},{"t":"HPE","n":"Hewlett Packard Enterprise","s":"Technology","w":0.05,"p":22.69},{"t":"DTE","n":"DTE Energy","s":"Utilities","w":0.05,"p":144.94},{"t":"TPL","n":"Texas Pacific Land","s":"Energy","w":0.05,"p":432.31},{"t":"ATO","n":"Atmos Energy","s":"Utilities","w":0.05,"p":179.25},{"t":"ARES","n":"Ares Management","s":"Financials","w":0.05,"p":133.88},{"t":"PPG","n":"PPG Industries","s":"Materials","w":0.05,"p":131.34},{"t":"KHC","n":"Kraft Heinz","s":"Consumer Staples","w":0.05,"p":24.8},{"t":"TSCO","n":"Tractor Supply","s":"Consumer Discretionary","w":0.05,"p":55.03},{"t":"FE","n":"FirstEnergy","s":"Utilities","w":0.05,"p":50.1},{"t":"BIIB","n":"Biogen","s":"Health Care","w":0.05,"p":196.52},{"t":"CBOE","n":"Cboe Global Markets","s":"Financials","w":0.05,"p":275.11},{"t":"ON","n":"ON Semiconductor","s":"Technology","w":0.05,"p":72.21},{"t":"HAL","n":"Halliburton","s":"Energy","w":0.05,"p":33.96},{"t":"IQV","n":"IQVIA","s":"Health Care","w":0.05,"p":166.94},{"t":"STLD","n":"Steel Dynamics","s":"Materials","w":0.05,"p":191.68},{"t":"PPL","n":"PPL Corporation","s":"Utilities","w":0.05,"p":37.82},{"t":"CFG","n":"Citizens Financial","s":"Financials","w":0.05,"p":65.1},{"t":"ROL","n":"Rollins","s":"Industrials","w":0.05,"p":58.06},{"t":"HUBB","n":"Hubbell","s":"Industrials","w":0.04,"p":524.12},{"t":"CNP","n":"CenterPoint Energy","s":"Utilities","w":0.04,"p":42.52},{"t":"DVN","n":"Devon Energy","s":"Energy","w":0.04,"p":44.66},{"t":"MTD","n":"Mettler Toledo","s":"Health Care","w":0.04,"p":1360.95},{"t":"ES","n":"Eversource Energy","s":"Utilities","w":0.04,"p":73.36},{"t":"EIX","n":"Edison International","s":"Utilities","w":0.04,"p":71.46},{"t":"PHM","n":"PulteGroup","s":"Consumer Discretionary","w":0.04,"p":142.56},{"t":"WTW","n":"Willis Towers Watson","s":"Financials","w":0.04,"p":287.74},{"t":"DXCM","n":"Dexcom","s":"Health Care","w":0.04,"p":70.02},{"t":"NTRS","n":"Northern Trust","s":"Financials","w":0.04,"p":146.38},{"t":"SW","n":"Smurfit WestRock","s":"Materials","w":0.04,"p":51.56},{"t":"JBL","n":"Jabil","s":"Technology","w":0.04,"p":254.58},{"t":"WRB","n":"W. R. Berkley","s":"Financials","w":0.04,"p":69.7},{"t":"EXPE","n":"Expedia Group","s":"Consumer Discretionary","w":0.04,"p":212.67},{"t":"AWK","n":"American Water Works","s":"Utilities","w":0.04,"p":133.5},{"t":"IP","n":"International Paper","s":"Materials","w":0.04,"p":49.1},{"t":"STZ","n":"Constellation Brands","s":"Consumer Staples","w":0.04,"p":149.3},{"t":"RF","n":"Regions Financial","s":"Financials","w":0.04,"p":29.74},{"t":"GIS","n":"General Mills","s":"Consumer Staples","w":0.04,"p":48.34},{"t":"WSM","n":"Williams-Sonoma","s":"Consumer Discretionary","w":0.04,"p":214.57},{"t":"CINF","n":"Cincinnati Financial","s":"Financials","w":0.04,"p":162.77},{"t":"VRSK","n":"Verisk Analytics","s":"Industrials","w":0.04,"p":181.21},{"t":"LUV","n":"Southwest Airlines","s":"Industrials","w":0.04,"p":51.11},{"t":"DLTR","n":"Dollar Tree","s":"Consumer Discretionary","w":0.04,"p":126.06},{"t":"AVB","n":"AvalonBay Communities","s":"Real Estate","w":0.04,"p":176.19},{"t":"SYF","n":"Synchrony Financial","s":"Financials","w":0.04,"p":71.38},{"t":"EXE","n":"Expand Energy","s":"Energy","w":0.04,"p":104.05},{"t":"STE","n":"Steris","s":"Health Care","w":0.04,"p":248.35},{"t":"DRI","n":"Darden Restaurants","s":"Consumer Discretionary","w":0.04,"p":211.5},{"t":"EQR","n":"Equity Residential","s":"Real Estate","w":0.04,"p":63.86},{"t":"FIS","n":"Fidelity Natl Info","s":"Financials","w":0.04,"p":46.8},{"t":"FSLR","n":"First Solar","s":"Technology","w":0.04,"p":225.65},{"t":"CHD","n":"Church & Dwight","s":"Consumer Staples","w":0.04,"p":101.45},{"t":"KEY","n":"KeyCorp","s":"Financials","w":0.04,"p":21.7},{"t":"CTRA","n":"Coterra","s":"Energy","w":0.04,"p":31.37},{"t":"BG","n":"Bunge Global","s":"Consumer Staples","w":0.04,"p":122.53},{"t":"CPAY","n":"Corpay","s":"Financials","w":0.04,"p":337.12},{"t":"CMS","n":"CMS Energy","s":"Utilities","w":0.04,"p":76.74},{"t":"LH","n":"LabCorp","s":"Health Care","w":0.04,"p":282.63},{"t":"Q","n":"Qnity Electronics","s":"Technology","w":0.04,"p":111.69},{"t":"DOW","n":"Dow Inc.","s":"Materials","w":0.04,"p":32.49},{"t":"BRO","n":"Brown & Brown","s":"Financials","w":0.04,"p":68.47},{"t":"EFX","n":"Equifax","s":"Industrials","w":0.04,"p":192.8},{"t":"AMCR","n":"Amcor","s":"Materials","w":0.04,"p":50.09},{"t":"VLTO","n":"Veralto","s":"Industrials","w":0.04,"p":92.54},{"t":"DGX","n":"Quest Diagnostics","s":"Health Care","w":0.04,"p":206.87},{"t":"LDOS","n":"Leidos","s":"Industrials","w":0.04,"p":176.3},{"t":"TSN","n":"Tyson Foods","s":"Consumer Staples","w":0.04,"p":63.94},{"t":"L","n":"Loews","s":"Financials","w":0.04,"p":108.78},{"t":"RL","n":"Ralph Lauren","s":"Consumer Discretionary","w":0.04,"p":369.18},{"t":"PKG","n":"Packaging Corp. of America","s":"Materials","w":0.04,"p":246.31},{"t":"HUM","n":"Humana","s":"Health Care","w":0.04,"p":184.1},{"t":"NI","n":"NiSource","s":"Utilities","w":0.04,"p":46.36},{"t":"OMC","n":"Omnicom Group","s":"Communication Services","w":0.03,"p":69.0},{"t":"SBAC","n":"SBA Communications","s":"Real Estate","w":0.03,"p":200.77},{"t":"IFF","n":"Intl Flavors & Fragrances","s":"Materials","w":0.03,"p":83.0},{"t":"JBHT","n":"J.B. Hunt","s":"Industrials","w":0.03,"p":221.76},{"t":"NVR","n":"NVR Inc.","s":"Consumer Discretionary","w":0.03,"p":7507.43},{"t":"CHRW","n":"C.H. Robinson","s":"Industrials","w":0.03,"p":176.01},{"t":"LULU","n":"Lululemon Athletica","s":"Consumer Discretionary","w":0.03,"p":176.42},{"t":"DD","n":"DuPont","s":"Materials","w":0.03,"p":50.22},{"t":"TROW","n":"T. Rowe Price","s":"Financials","w":0.03,"p":93.76},{"t":"GPC","n":"Genuine Parts","s":"Consumer Discretionary","w":0.03,"p":147.16},{"t":"NTAP","n":"NetApp","s":"Technology","w":0.03,"p":102.42},{"t":"BR","n":"Broadridge Financial","s":"Industrials","w":0.03,"p":173.7},{"t":"INCY","n":"Incyte","s":"Health Care","w":0.03,"p":101.1},{"t":"VRSN","n":"Verisign","s":"Technology","w":0.03,"p":219.03},{"t":"SNA","n":"Snap-on","s":"Industrials","w":0.03,"p":384.61},{"t":"CNC","n":"Centene","s":"Health Care","w":0.03,"p":40.58},{"t":"LII","n":"Lennox International","s":"Industrials","w":0.03,"p":566.65},{"t":"PFG","n":"Principal Financial","s":"Financials","w":0.03,"p":90.39},{"t":"EXPD","n":"Expeditors International","s":"Industrials","w":0.03,"p":146.5},{"t":"ALB","n":"Albemarle","s":"Materials","w":0.03,"p":166.35},{"t":"WY","n":"Weyerhaeuser","s":"Real Estate","w":0.03,"p":26.75},{"t":"MKC","n":"McCormick & Company","s":"Consumer Staples","w":0.03,"p":71.49},{"t":"GPN","n":"Global Payments","s":"Financials","w":0.03,"p":68.48},{"t":"ZBH","n":"Zimmer Biomet","s":"Health Care","w":0.03,"p":96.45},{"t":"CSGP","n":"CoStar Group","s":"Real Estate","w":0.03,"p":44.99},{"t":"EVRG","n":"Evergy","s":"Utilities","w":0.03,"p":82.69},{"t":"PTC","n":"PTC Inc.","s":"Technology","w":0.03,"p":156.77},{"t":"LYB","n":"LyondellBasell","s":"Materials","w":0.03,"p":57.61},{"t":"LNT","n":"Alliant Energy","s":"Utilities","w":0.03,"p":71.19},{"t":"SMCI","n":"Supermicro","s":"Technology","w":0.03,"p":30.54},{"t":"VTRS","n":"Viatris","s":"Health Care","w":0.03,"p":15.77},{"t":"APTV","n":"Aptiv","s":"Consumer Discretionary","w":0.03,"p":85.2},{"t":"WST","n":"West Pharmaceutical","s":"Health Care","w":0.03,"p":250.49},{"t":"BALL","n":"Ball Corporation","s":"Materials","w":0.03,"p":67.29},{"t":"FTV","n":"Fortive","s":"Industrials","w":0.03,"p":56.9},{"t":"HPQ","n":"HP Inc.","s":"Technology","w":0.03,"p":19.26},{"t":"TXT","n":"Textron","s":"Industrials","w":0.03,"p":98.09},{"t":"PODD","n":"Insulet","s":"Health Care","w":0.03,"p":242.74},{"t":"HOLX","n":"Hologic","s":"Health Care","w":0.03,"p":75.04},{"t":"NDSN","n":"Nordson","s":"Industrials","w":0.03,"p":298.19},{"t":"PNR","n":"Pentair","s":"Industrials","w":0.03,"p":101.37},{"t":"INVH","n":"Invitation Homes","s":"Real Estate","w":0.03,"p":26.99},{"t":"CDW","n":"CDW","s":"Technology","w":0.03,"p":126.86},{"t":"MRNA","n":"Moderna","s":"Health Care","w":0.03,"p":42.23},{"t":"HII","n":"Huntington Ingalls","s":"Industrials","w":0.03,"p":418.78},{"t":"DECK","n":"Deckers Brands","s":"Consumer Discretionary","w":0.03,"p":115.73},{"t":"TKO","n":"TKO Group Holdings","s":"Communication Services","w":0.03,"p":206.75},{"t":"COO","n":"Cooper Companies","s":"Health Care","w":0.03,"p":82.99},{"t":"ESS","n":"Essex Property Trust","s":"Real Estate","w":0.03,"p":251.16},{"t":"AKAM","n":"Akamai Technologies","s":"Technology","w":0.03,"p":111.76},{"t":"MAA","n":"Mid-America Apartment","s":"Real Estate","w":0.03,"p":135.55},{"t":"TRMB","n":"Trimble","s":"Technology","w":0.03,"p":66.4},{"t":"IEX","n":"IDEX Corporation","s":"Industrials","w":0.03,"p":210.41},{"t":"J","n":"Jacobs Solutions","s":"Industrials","w":0.03,"p":132.79},{"t":"MAS","n":"Masco","s":"Industrials","w":0.03,"p":76.19},{"t":"FFIV","n":"F5 Inc.","s":"Technology","w":0.02,"p":273.93},{"t":"ALLE","n":"Allegion","s":"Industrials","w":0.02,"p":179.5},{"t":"KIM","n":"Kimco Realty","s":"Real Estate","w":0.02,"p":22.71},{"t":"CLX","n":"Clorox","s":"Consumer Staples","w":0.02,"p":125.94},{"t":"AVY","n":"Avery Dennison","s":"Materials","w":0.02,"p":195.8},{"t":"CF","n":"CF Industries","s":"Materials","w":0.02,"p":94.66},{"t":"UHS","n":"Universal Health Services","s":"Health Care","w":0.02,"p":234.81},{"t":"ERIE","n":"Erie Indemnity","s":"Financials","w":0.02,"p":279.11},{"t":"HAS","n":"Hasbro","s":"Consumer Discretionary","w":0.02,"p":102.45},{"t":"GEN","n":"Gen Digital","s":"Technology","w":0.02,"p":23.72},{"t":"SWK","n":"Stanley Black & Decker","s":"Industrials","w":0.02,"p":91.06},{"t":"BEN","n":"Franklin Resources","s":"Financials","w":0.02,"p":27.03},{"t":"REG","n":"Regency Centers","s":"Real Estate","w":0.02,"p":76.18},{"t":"BF.B","n":"Brown-Forman","s":"Consumer Staples","w":0.02,"p":29.95},{"t":"BBY","n":"Best Buy","s":"Consumer Discretionary","w":0.02,"p":65.8},{"t":"EG","n":"Everest Group","s":"Financials","w":0.02,"p":338.03},{"t":"HST","n":"Host Hotels & Resorts","s":"Real Estate","w":0.02,"p":19.89},{"t":"ALGN","n":"Align Technology","s":"Health Care","w":0.02,"p":186.77},{"t":"GNRC","n":"Generac","s":"Industrials","w":0.02,"p":224.45},{"t":"SOLV","n":"Solventum","s":"Health Care","w":0.02,"p":75.55},{"t":"HRL","n":"Hormel Foods","s":"Consumer Staples","w":0.02,"p":23.78},{"t":"TYL","n":"Tyler Technologies","s":"Technology","w":0.02,"p":303.94},{"t":"ZBRA","n":"Zebra Technologies","s":"Technology","w":0.02,"p":264.62},{"t":"BLDR","n":"Builders FirstSource","s":"Industrials","w":0.02,"p":114.73},{"t":"DPZ","n":"Domino's Pizza","s":"Consumer Discretionary","w":0.02,"p":375.5},{"t":"UDR","n":"UDR Inc.","s":"Real Estate","w":0.02,"p":38.09},{"t":"TTD","n":"The Trade Desk","s":"Technology","w":0.02,"p":25.81},{"t":"GDDY","n":"GoDaddy","s":"Technology","w":0.02,"p":89.12},{"t":"PNW","n":"Pinnacle West","s":"Utilities","w":0.02,"p":99.39},{"t":"SJM","n":"J.M. Smucker","s":"Consumer Staples","w":0.02,"p":110.53},{"t":"WYNN","n":"Wynn Resorts","s":"Consumer Discretionary","w":0.02,"p":113.39},{"t":"IVZ","n":"Invesco","s":"Financials","w":0.02,"p":26.52},{"t":"DOC","n":"Healthpeak Properties","s":"Real Estate","w":0.02,"p":16.7},{"t":"AES","n":"AES Corporation","s":"Utilities","w":0.02,"p":16.28},{"t":"FOX","n":"Fox Corp. (Class B)","s":"Communication Services","w":0.02,"p":51.56},{"t":"CPT","n":"Camden Property Trust","s":"Real Estate","w":0.02,"p":108.53},{"t":"GL","n":"Globe Life","s":"Financials","w":0.02,"p":144.25},{"t":"PSKY","n":"Paramount Skydance","s":"Communication Services","w":0.02,"p":10.32},{"t":"FOXA","n":"Fox Corp. (Class A)","s":"Communication Services","w":0.02,"p":56.35},{"t":"JKHY","n":"Jack Henry & Associates","s":"Technology","w":0.02,"p":156.69},{"t":"IT","n":"Gartner","s":"Technology","w":0.02,"p":158.58},{"t":"AOS","n":"A. O. Smith","s":"Industrials","w":0.02,"p":80.46},{"t":"AIZ","n":"Assurant","s":"Financials","w":0.02,"p":217.48},{"t":"RVTY","n":"Revvity","s":"Health Care","w":0.02,"p":96.03},{"t":"TAP","n":"Molson Coors","s":"Consumer Staples","w":0.02,"p":53.22},{"t":"BAX","n":"Baxter International","s":"Health Care","w":0.02,"p":19.79},{"t":"DVA","n":"DaVita","s":"Health Care","w":0.02,"p":148.95},{"t":"APA","n":"APA Corporation","s":"Energy","w":0.02,"p":27.92},{"t":"POOL","n":"Pool Corporation","s":"Consumer Discretionary","w":0.02,"p":265.83},{"t":"NCLH","n":"Norwegian Cruise Line","s":"Consumer Discretionary","w":0.02,"p":21.49},{"t":"BXP","n":"BXP Inc.","s":"Real Estate","w":0.02,"p":61.49},{"t":"CAG","n":"Conagra Brands","s":"Consumer Staples","w":0.02,"p":19.76},{"t":"MOS","n":"Mosaic Company","s":"Materials","w":0.02,"p":29.65},{"t":"TECH","n":"Bio-Techne","s":"Health Care","w":0.02,"p":59.93},{"t":"SWKS","n":"Skyworks Solutions","s":"Technology","w":0.02,"p":62.1},{"t":"HSIC","n":"Henry Schein","s":"Health Care","w":0.01,"p":78.19},{"t":"EPAM","n":"EPAM Systems","s":"Technology","w":0.01,"p":166.37},{"t":"ARE","n":"Alexandria Real Estate","s":"Real Estate","w":0.01,"p":52.49},{"t":"FRT","n":"Federal Realty","s":"Real Estate","w":0.01,"p":104.8},{"t":"CPB","n":"Campbell Soup","s":"Consumer Staples","w":0.01,"p":29.49},{"t":"MGM","n":"MGM Resorts","s":"Consumer Discretionary","w":0.01,"p":34.14},{"t":"NWSA","n":"News Corp (Class A)","s":"Communication Services","w":0.01,"p":22.72},{"t":"CRL","n":"Charles River Laboratories","s":"Health Care","w":0.01,"p":161.35},{"t":"FDS","n":"FactSet","s":"Technology","w":0.01,"p":205.79},{"t":"MTCH","n":"Match Group","s":"Communication Services","w":0.01,"p":30.5},{"t":"MOH","n":"Molina Healthcare","s":"Health Care","w":0.01,"p":135.35},{"t":"LW","n":"Lamb Weston","s":"Consumer Staples","w":0.01,"p":49.82},{"t":"PAYC","n":"Paycom","s":"Technology","w":0.01,"p":125.31},{"t":"NWS","n":"News Corp (Class B)","s":"Communication Services","w":0.01,"p":26.0}];
+
+// ============================
+// SECTOR MAP (for API data that doesn't include sectors)
+// ============================
+const SECTOR_MAP = {"NVDA":"Technology","AAPL":"Technology","MSFT":"Technology","AMZN":"Consumer Discretionary","GOOGL":"Communication Services","GOOG":"Communication Services","META":"Communication Services","TSLA":"Consumer Discretionary","AVGO":"Technology","BRK.B":"Financials","WMT":"Consumer Staples","LLY":"Health Care","JPM":"Financials","XOM":"Energy","V":"Financials","JNJ":"Health Care","MU":"Technology","MA":"Financials","ORCL":"Technology","COST":"Consumer Staples","ABBV":"Health Care","HD":"Consumer Discretionary","BAC":"Financials","PG":"Consumer Staples","CVX":"Energy","CAT":"Industrials","KO":"Consumer Staples","AMD":"Technology","GE":"Industrials","NFLX":"Communication Services","PLTR":"Technology","CSCO":"Technology","MRK":"Health Care","LRCX":"Technology","PM":"Consumer Staples","AMAT":"Technology","GS":"Financials","MS":"Financials","WFC":"Financials","RTX":"Industrials","UNH":"Health Care","IBM":"Technology","TMUS":"Communication Services","INTC":"Technology","MCD":"Consumer Discretionary","AXP":"Financials","PEP":"Consumer Staples","LIN":"Materials","GEV":"Industrials","VZ":"Communication Services","TXN":"Technology","T":"Communication Services","AMGN":"Health Care","ABT":"Health Care","NEE":"Utilities","C":"Financials","GILD":"Health Care","KLAC":"Technology","BA":"Industrials","TMO":"Health Care","DIS":"Communication Services","APH":"Technology","ANET":"Technology","CRM":"Technology","ISRG":"Health Care","TJX":"Consumer Discretionary","SCHW":"Financials","BLK":"Financials","ADI":"Technology","DE":"Industrials","LOW":"Consumer Discretionary","PFE":"Health Care","UNP":"Industrials","HON":"Industrials","ETN":"Industrials","DHR":"Health Care","LMT":"Industrials","QCOM":"Technology","WELL":"Real Estate","UBER":"Industrials","SYK":"Health Care","ACN":"Technology","NEM":"Materials","COP":"Energy","PANW":"Technology","BKNG":"Consumer Discretionary","APP":"Technology","COF":"Financials","PLD":"Real Estate","MDT":"Health Care","CB":"Financials","PH":"Industrials","VRTX":"Health Care","BMY":"Health Care","SPGI":"Financials","HCA":"Health Care","PGR":"Financials","GLW":"Technology","MCK":"Health Care","CMCSA":"Communication Services","MO":"Consumer Staples","NOW":"Technology","INTU":"Technology","BSX":"Health Care","CME":"Financials","ADBE":"Technology","CRWD":"Technology","SBUX":"Consumer Discretionary","SO":"Utilities","CEG":"Utilities","TT":"Industrials","BX":"Financials","UPS":"Industrials","HWM":"Industrials","CVS":"Health Care","NOC":"Industrials","DUK":"Utilities","WDC":"Technology","WM":"Industrials","GD":"Industrials","EQIX":"Real Estate","MAR":"Consumer Discretionary","NKE":"Consumer Discretionary","STX":"Technology","PNC":"Financials","SNDK":"Technology","SHW":"Materials","KKR":"Financials","MMM":"Industrials","FCX":"Materials","AMT":"Real Estate","USB":"Financials","WMB":"Energy","FDX":"Industrials","ITW":"Industrials","ICE":"Financials","RCL":"Consumer Discretionary","ADP":"Industrials","JCI":"Industrials","REGN":"Health Care","ECL":"Materials","MRSH":"Financials","CRH":"Materials","SNPS":"Technology","EMR":"Industrials","CMI":"Industrials","CDNS":"Technology","ORLY":"Consumer Discretionary","BK":"Financials","MDLZ":"Consumer Staples","MNST":"Consumer Staples","PWR":"Industrials","CL":"Consumer Staples","DELL":"Technology","CTAS":"Industrials","CI":"Health Care","ELV":"Health Care","MSI":"Technology","MCO":"Financials","CSX":"Industrials","SLB":"Energy","GM":"Consumer Discretionary","ABNB":"Consumer Discretionary","TDG":"Industrials","APO":"Financials","HLT":"Consumer Discretionary","KMI":"Energy","NSC":"Industrials","AEP":"Utilities","COR":"Health Care","WBD":"Communication Services","TEL":"Technology","DASH":"Consumer Discretionary","RSG":"Industrials","AON":"Financials","HOOD":"Financials","PCAR":"Industrials","TFC":"Financials","EOG":"Energy","LHX":"Industrials","PSX":"Energy","SPG":"Real Estate","AZO":"Consumer Discretionary","FTNT":"Technology","TRV":"Financials","ROST":"Consumer Discretionary","APD":"Materials","DLR":"Real Estate","SRE":"Utilities","NXPI":"Technology","VLO":"Energy","BKR":"Energy","O":"Real Estate","MPC":"Energy","AFL":"Financials","VST":"Utilities","MPWR":"Technology","D":"Utilities","F":"Consumer Discretionary","URI":"Industrials","CARR":"Industrials","OKE":"Energy","ALL":"Financials","GWW":"Industrials","AJG":"Financials","ZTS":"Health Care","FAST":"Industrials","AME":"Industrials","PSA":"Real Estate","TGT":"Consumer Discretionary","CAH":"Health Care","MET":"Financials","CTVA":"Materials","IDXX":"Health Care","EA":"Communication Services","BDX":"Health Care","TER":"Technology","ADSK":"Technology","EXC":"Utilities","DHI":"Consumer Discretionary","CVNA":"Consumer Discretionary","XEL":"Utilities","FANG":"Energy","TRGP":"Energy","FITB":"Financials","ETR":"Utilities","CMG":"Consumer Discretionary","FIX":"Industrials","OXY":"Energy","NDAQ":"Financials","HSY":"Consumer Staples","KR":"Consumer Staples","DAL":"Industrials","YUM":"Consumer Discretionary","ROK":"Industrials","COIN":"Financials","EW":"Health Care","CCL":"Consumer Discretionary","DDOG":"Technology","WAB":"Industrials","SYY":"Consumer Staples","VMC":"Materials","AMP":"Financials","PEG":"Utilities","CIEN":"Technology","MCHP":"Technology","CBRE":"Real Estate","AIG":"Financials","NUE":"Materials","GRMN":"Consumer Discretionary","ED":"Utilities","MLM":"Materials","VTR":"Real Estate","ODFL":"Industrials","KDP":"Consumer Staples","KEYS":"Technology","PCG":"Utilities","CCI":"Real Estate","EL":"Consumer Staples","HIG":"Financials","MSCI":"Financials","IR":"Industrials","LVS":"Consumer Discretionary","WDAY":"Technology","WEC":"Utilities","EBAY":"Consumer Discretionary","NRG":"Utilities","PYPL":"Financials","RMD":"Health Care","LYV":"Communication Services","EQT":"Energy","GEHC":"Health Care","PRU":"Financials","KMB":"Consumer Staples","CPRT":"Industrials","TTWO":"Communication Services","EME":"Industrials","KVUE":"Consumer Staples","STT":"Financials","A":"Health Care","UAL":"Industrials","ACGL":"Financials","MTB":"Financials","HBAN":"Financials","OTIS":"Industrials","ROP":"Technology","AXON":"Industrials","PAYX":"Industrials","DG":"Consumer Discretionary","ADM":"Consumer Staples","IBKR":"Financials","IRM":"Real Estate","FISV":"Financials","FICO":"Technology","CTSH":"Technology","DOV":"Industrials","WAT":"Health Care","VICI":"Real Estate","RJF":"Financials","XYL":"Industrials","TPR":"Consumer Discretionary","EXR":"Real Estate","TDY":"Industrials","AEE":"Utilities","ULTA":"Consumer Discretionary","CHTR":"Communication Services","XYZ":"Financials","LEN":"Consumer Discretionary","HPE":"Technology","DTE":"Utilities","TPL":"Energy","ATO":"Utilities","ARES":"Financials","PPG":"Materials","KHC":"Consumer Staples","TSCO":"Consumer Discretionary","FE":"Utilities","BIIB":"Health Care","CBOE":"Financials","ON":"Technology","HAL":"Energy","IQV":"Health Care","STLD":"Materials","PPL":"Utilities","CFG":"Financials","ROL":"Industrials","HUBB":"Industrials","CNP":"Utilities","DVN":"Energy","MTD":"Health Care","ES":"Utilities","EIX":"Utilities","PHM":"Consumer Discretionary","WTW":"Financials","DXCM":"Health Care","NTRS":"Financials","SW":"Materials","JBL":"Technology","WRB":"Financials","EXPE":"Consumer Discretionary","AWK":"Utilities","IP":"Materials","STZ":"Consumer Staples","RF":"Financials","GIS":"Consumer Staples","WSM":"Consumer Discretionary","CINF":"Financials","VRSK":"Industrials","LUV":"Industrials","DLTR":"Consumer Discretionary","AVB":"Real Estate","SYF":"Financials","EXE":"Energy","STE":"Health Care","DRI":"Consumer Discretionary","EQR":"Real Estate","FIS":"Financials","FSLR":"Technology","CHD":"Consumer Staples","KEY":"Financials","CTRA":"Energy","BG":"Consumer Staples","CPAY":"Financials","CMS":"Utilities","LH":"Health Care","Q":"Technology","DOW":"Materials","BRO":"Financials","EFX":"Industrials","AMCR":"Materials","VLTO":"Industrials","DGX":"Health Care","LDOS":"Industrials","TSN":"Consumer Staples","L":"Financials","RL":"Consumer Discretionary","PKG":"Materials","HUM":"Health Care","NI":"Utilities","OMC":"Communication Services","SBAC":"Real Estate","IFF":"Materials","JBHT":"Industrials","NVR":"Consumer Discretionary","CHRW":"Industrials","LULU":"Consumer Discretionary","DD":"Materials","TROW":"Financials","GPC":"Consumer Discretionary","NTAP":"Technology","BR":"Industrials","INCY":"Health Care","VRSN":"Technology","SNA":"Industrials","CNC":"Health Care","LII":"Industrials","PFG":"Financials","EXPD":"Industrials","ALB":"Materials","WY":"Real Estate","MKC":"Consumer Staples","GPN":"Financials","ZBH":"Health Care","CSGP":"Real Estate","EVRG":"Utilities","PTC":"Technology","LYB":"Materials","LNT":"Utilities","SMCI":"Technology","VTRS":"Health Care","APTV":"Consumer Discretionary","WST":"Health Care","BALL":"Materials","FTV":"Industrials","HPQ":"Technology","TXT":"Industrials","PODD":"Health Care","HOLX":"Health Care","NDSN":"Industrials","PNR":"Industrials","INVH":"Real Estate","CDW":"Technology","MRNA":"Health Care","HII":"Industrials","DECK":"Consumer Discretionary","TKO":"Communication Services","COO":"Health Care","ESS":"Real Estate","AKAM":"Technology","MAA":"Real Estate","TRMB":"Technology","IEX":"Industrials","J":"Industrials","MAS":"Industrials","FFIV":"Technology","ALLE":"Industrials","KIM":"Real Estate","CLX":"Consumer Staples","AVY":"Materials","CF":"Materials","UHS":"Health Care","ERIE":"Financials","HAS":"Consumer Discretionary","GEN":"Technology","SWK":"Industrials","BEN":"Financials","REG":"Real Estate","BF.B":"Consumer Staples","BBY":"Consumer Discretionary","EG":"Financials","HST":"Real Estate","ALGN":"Health Care","GNRC":"Industrials","SOLV":"Health Care","HRL":"Consumer Staples","TYL":"Technology","ZBRA":"Technology","BLDR":"Industrials","DPZ":"Consumer Discretionary","UDR":"Real Estate","TTD":"Technology","GDDY":"Technology","PNW":"Utilities","SJM":"Consumer Staples","WYNN":"Consumer Discretionary","IVZ":"Financials","DOC":"Real Estate","AES":"Utilities","FOX":"Communication Services","CPT":"Real Estate","GL":"Financials","PSKY":"Communication Services","FOXA":"Communication Services","JKHY":"Technology","IT":"Technology","AOS":"Industrials","AIZ":"Financials","RVTY":"Health Care","TAP":"Consumer Staples","BAX":"Health Care","DVA":"Health Care","APA":"Energy","POOL":"Consumer Discretionary","NCLH":"Consumer Discretionary","BXP":"Real Estate","CAG":"Consumer Staples","MOS":"Materials","TECH":"Health Care","SWKS":"Technology","HSIC":"Health Care","EPAM":"Technology","ARE":"Real Estate","FRT":"Real Estate","CPB":"Consumer Staples","MGM":"Consumer Discretionary","NWSA":"Communication Services","CRL":"Health Care","FDS":"Technology","MTCH":"Communication Services","MOH":"Health Care","LW":"Consumer Staples","PAYC":"Technology","NWS":"Communication Services"};
+
+// ============================
+// STATE
+// ============================
+let currentCurrency = 'CZK';
+let investmentUsd = 0;
+let rates = { USD: 1, EUR: 0.92, CZK: 23.5 };
+let sortCol = 'rank';
+let sortAsc = true;
+let debounceTimer = null;
+let sp500Source = 'embedded';
+let sp500Updated = null;
+
+// ============================
+// LOAD S&P 500 DATA FROM API
+// ============================
+async function loadSP500Data() {
+    try {
+        const res = await fetch('/api/sp500', { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error('API HTTP ' + res.status);
+        const json = await res.json();
+        if (!json.data || json.data.length < 400) throw new Error('Insufficient data');
+
+        // Map API data and add sectors from SECTOR_MAP
+        SP500_DATA = json.data.map(d => ({
+            t: d.t,
+            n: d.n,
+            s: SECTOR_MAP[d.t] || 'Other',
+            w: d.w,
+            p: d.p
+        }));
+
+        sp500Source = 'api';
+        sp500Updated = json.updated;
+        console.log('S&P 500: loaded ' + json.count + ' companies from API (' + json.updated + ')');
+    } catch (e) {
+        sp500Source = 'embedded';
+        sp500Updated = null;
+        console.log('S&P 500: using embedded fallback (' + e.message + ')');
+    }
+}
+
+// ============================
+// EXCHANGE RATES
+// ============================
+async function fetchRates() {
+    try {
+        const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        const data = await res.json();
+        rates.EUR = data.rates.EUR || 0.92;
+        rates.CZK = data.rates.CZK || 23.5;
+    } catch (e) {
+        console.log('Using fallback exchange rates');
+    }
+}
+
+function updateDataInfo() {
+    const badge = document.querySelector('.status-badge');
+    const dateEl = document.getElementById('statusDate');
+    let src;
+    if (sp500Source === 'api' && sp500Updated) {
+        const d = new Date(sp500Updated);
+        badge.className = 'status-badge live';
+        badge.querySelector('.status-label').textContent = 'Live';
+        dateEl.textContent = d.toLocaleDateString('cs-CZ') + ' ' +
+            d.toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'});
+        src = 'Data: ' + SP500_DATA.length + ' titulů S&P 500 dle slickcharts.com';
+    } else {
+        badge.className = 'status-badge failed';
+        badge.querySelector('.status-label').textContent = 'Failed';
+        dateEl.textContent = 'Záložní data';
+        src = 'Data: ' + SP500_DATA.length + ' titulů S&P 500 \u2014 embedded fallback';
+    }
+    src += ' \u00b7 Kurzy: 1 USD = ' + rates.CZK.toFixed(2) + ' CZK | 1 USD = ' + rates.EUR.toFixed(4) + ' EUR';
+    document.getElementById('dataInfo').innerHTML = src;
+}
+
+// ============================
+// CURRENCY
+// ============================
+function setCurrency(c) {
+    currentCurrency = c;
+    document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('amountCurrencyLabel').textContent = c;
+    calculate();
+}
+
+// ============================
+// FORMATTING
+// ============================
+function fmt(n, decimals = 0) {
+    return n.toLocaleString('cs-CZ', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function fmtUsd(n) {
+    if (n >= 1000000) return '$' + (n / 1000000).toFixed(2) + 'M';
+    if (n >= 1000) return '$' + fmt(Math.round(n));
+    return '$' + n.toFixed(2);
+}
+
+function parseAmount(str) {
+    return parseFloat(str.replace(/[^0-9.,\-]/g, '').replace(/\s/g, '').replace(',', '.')) || 0;
+}
+
+// ============================
+// CALCULATE
+// ============================
+function debounceCalculate() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(calculate, 300);
+}
+
+function calculate() {
+    const rawAmount = parseAmount(document.getElementById('investmentAmount').value);
+
+    // Convert to USD
+    if (currentCurrency === 'USD') {
+        investmentUsd = rawAmount;
+    } else if (currentCurrency === 'EUR') {
+        investmentUsd = rawAmount / rates.EUR;
+    } else {
+        investmentUsd = rawAmount / rates.CZK;
+    }
+
+    // Summary
+    document.getElementById('totalUsd').textContent = fmtUsd(investmentUsd);
+    document.getElementById('totalHoldings').textContent = SP500_DATA.length;
+
+    const top10w = SP500_DATA.slice(0, 10).reduce((s, d) => s + d.w, 0);
+    document.getElementById('top10Pct').textContent = top10w.toFixed(1) + '%';
+
+    if (currentCurrency === 'CZK') {
+        document.getElementById('fxRate').textContent = fmt(rates.CZK, 2);
+        document.getElementById('fxSub').textContent = 'CZK/USD';
+    } else if (currentCurrency === 'EUR') {
+        document.getElementById('fxRate').textContent = rates.EUR.toFixed(4);
+        document.getElementById('fxSub').textContent = 'EUR/USD';
+    } else {
+        document.getElementById('fxRate').textContent = '1.00';
+        document.getElementById('fxSub').textContent = 'USD';
+    }
+
+    renderTopHoldings();
+    renderSectors();
+    renderTable();
+}
+
+// ============================
+// TOP 10 HOLDINGS
+// ============================
+function renderTopHoldings() {
+    const el = document.getElementById('topHoldings');
+    const top10 = SP500_DATA.slice(0, 10);
+    el.innerHTML = top10.map((d, i) => {
+        const val = investmentUsd * d.w / 100;
+        return '<div class="top-card">' +
+            '<div class="top-rank">#' + (i + 1) + '</div>' +
+            '<div class="top-ticker">' + d.t + '</div>' +
+            '<div class="top-weight">' + d.w.toFixed(2) + '%</div>' +
+            '<div class="top-value">' + fmtUsd(val) + '</div>' +
+        '</div>';
+    }).join('');
+}
+
+// ============================
+// SECTORS
+// ============================
+const SECTOR_COLORS = {
+    'Technology': '#3B82F6',
+    'Health Care': '#22C55E',
+    'Financials': '#8B5CF6',
+    'Consumer Discretionary': '#F59E0B',
+    'Communication Services': '#EF4444',
+    'Industrials': '#6366F1',
+    'Consumer Staples': '#14B8A6',
+    'Energy': '#F97316',
+    'Utilities': '#06B6D4',
+    'Materials': '#84CC16',
+    'Real Estate': '#EC4899'
+};
+
+function renderSectors() {
+    const sectorMap = {};
+    SP500_DATA.forEach(d => {
+        sectorMap[d.s] = (sectorMap[d.s] || 0) + d.w;
+    });
+
+    const sectors = Object.entries(sectorMap).sort((a, b) => b[1] - a[1]);
+    const maxW = sectors[0][1];
+
+    document.getElementById('sectorBars').innerHTML = sectors.map(([name, w]) => {
+        const color = SECTOR_COLORS[name] || '#64748B';
+        const val = investmentUsd * w / 100;
+        const pct = (w / maxW * 100);
+        return '<div class="sector-row">' +
+            '<div class="sector-name">' + name + '</div>' +
+            '<div class="sector-bar-bg"><div class="sector-bar-fill" style="width:' + pct + '%;background:' + color + '"><span>' + w.toFixed(1) + '%</span></div></div>' +
+            '<div class="sector-value">' + fmtUsd(val) + '</div>' +
+        '</div>';
+    }).join('');
+
+    // Populate filter
+    const sel = document.getElementById('sectorFilter');
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">V\u0161echny sektory</option>' +
+        sectors.map(([name]) => '<option value="' + name + '">' + name + '</option>').join('');
+    sel.value = currentVal;
+}
+
+// ============================
+// TABLE
+// ============================
+function getDisplayData() {
+    let data = SP500_DATA.map((d, i) => ({
+        ...d,
+        origRank: i + 1,
+        val: investmentUsd * d.w / 100,
+        shares: d.p > 0 ? (investmentUsd * d.w / 100) / d.p : 0
+    }));
+
+    // Filter
+    const search = document.getElementById('searchBox').value.toLowerCase();
+    const sector = document.getElementById('sectorFilter').value;
+    if (search) {
+        data = data.filter(d => d.t.toLowerCase().includes(search) || d.n.toLowerCase().includes(search));
+    }
+    if (sector) {
+        data = data.filter(d => d.s === sector);
+    }
+
+    // Sort
+    data.sort((a, b) => {
+        let va, vb;
+        switch (sortCol) {
+            case 'rank': va = a.origRank; vb = b.origRank; break;
+            case 'ticker': va = a.t; vb = b.t; break;
+            case 'name': va = a.n; vb = b.n; break;
+            case 'sector': va = a.s; vb = b.s; break;
+            case 'weight': va = a.w; vb = b.w; break;
+            case 'value': va = a.val; vb = b.val; break;
+            case 'shares': va = a.shares; vb = b.shares; break;
+            default: va = a.origRank; vb = b.origRank;
+        }
+        if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+        return sortAsc ? va - vb : vb - va;
+    });
+
+    return data;
+}
+
+function renderTable() {
+    const data = getDisplayData();
+    const maxW = SP500_DATA[0].w;
+
+    document.getElementById('resultCount').textContent = data.length + ' z ' + SP500_DATA.length + ' titul\u016f';
+
+    document.getElementById('holdingsBody').innerHTML = data.map(d => {
+        const barW = (d.w / maxW * 100).toFixed(1);
+        return '<tr>' +
+            '<td class="rank">' + d.origRank + '</td>' +
+            '<td class="ticker">' + d.t + '</td>' +
+            '<td class="company-name" title="' + d.n + '">' + d.n + '</td>' +
+            '<td><span class="sector-badge">' + d.s + '</span></td>' +
+            '<td class="num"><span class="weight-bar"><span class="weight-bar-fill" style="width:' + barW + '%"></span></span>' + d.w.toFixed(2) + '%</td>' +
+            '<td class="num">' + fmtUsd(d.val) + '</td>' +
+            '<td class="num">' + d.shares.toFixed(2) + '</td>' +
+        '</tr>';
+    }).join('');
+}
+
+function filterTable() { renderTable(); }
+
+function sortTable(col) {
+    if (sortCol === col) {
+        sortAsc = !sortAsc;
+    } else {
+        sortCol = col;
+        sortAsc = col === 'rank' || col === 'ticker' || col === 'name' || col === 'sector';
+    }
+
+    // Update header styles
+    document.querySelectorAll('.holdings-table th').forEach(th => {
+        th.classList.remove('sorted');
+        if (th.dataset.col === col) {
+            th.classList.add('sorted');
+            th.querySelector('.sort-icon').textContent = sortAsc ? '\u25B2' : '\u25BC';
+        }
+    });
+
+    renderTable();
+}
+
+// ============================
+// EXPORT
+// ============================
+function exportCSV() {
+    const data = getDisplayData();
+    let csv = '\uFEFF"Rank","Ticker","Company","Sector","Weight %","Value (USD)","Equiv. Shares","Stock Price (USD)"\n';
+    data.forEach(d => {
+        csv += '"' + d.origRank + '","' + d.t + '","' + d.n.replace(/"/g, '""') + '","' + d.s + '",' +
+            d.w.toFixed(4) + ',' + d.val.toFixed(2) + ',' + d.shares.toFixed(4) + ',' + d.p + '\n';
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sp500_portfolio_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function printTable() { window.print(); }
+
+// ============================
+// INIT
+// ============================
+(async function() {
+    await Promise.all([loadSP500Data(), fetchRates()]);
+    updateDataInfo();
+    calculate();
+})();
+</script>
+</body>
+</html>
