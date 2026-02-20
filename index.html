@@ -4,7 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Investment Tools | Martin Dlouhý</title>
-    <script>if(localStorage.getItem("daynight-theme")==="carbon"){document.documentElement.classList.add("carbon");}</script>
+    <script>
+if(localStorage.getItem("daynight-theme")==="carbon"){document.documentElement.classList.add("carbon");}
+function setTheme(t){
+  if(t==="carbon"){document.documentElement.classList.add("carbon");document.body.classList.add("carbon");localStorage.setItem("daynight-theme","carbon");}
+  else{document.documentElement.classList.remove("carbon");document.body.classList.remove("carbon");localStorage.setItem("daynight-theme","snow");}
+  document.querySelectorAll(".theme-btn-snow").forEach(function(b){b.classList.toggle("active",t==="snow");});
+  document.querySelectorAll(".theme-btn-carbon").forEach(function(b){b.classList.toggle("active",t==="carbon");});
+}
+document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getItem("daynight-theme")==="carbon"?"carbon":"snow";if(t==="carbon"){document.body.classList.add("carbon");}setTheme(t);});
+</script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
