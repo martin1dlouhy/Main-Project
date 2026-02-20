@@ -650,6 +650,26 @@ function parseAmount(str) {
 // CALCULATE
 // ============================
 function debounceCalculate() {
+    // Auto-format with thousand separators (spaces)
+    const input = document.getElementById('investmentAmount');
+    const cursorPos = input.selectionStart;
+    const oldVal = input.value;
+    const oldLen = oldVal.length;
+
+    // Strip non-digits (keep comma/dot for decimals)
+    const digits = oldVal.replace(/[^\d.,]/g, '');
+    const parts = digits.split(/[.,]/);
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const formatted = parts.length > 1 ? intPart + ',' + parts[1] : intPart;
+
+    if (formatted !== oldVal) {
+        input.value = formatted;
+        // Adjust cursor position based on length change
+        const newLen = formatted.length;
+        const diff = newLen - oldLen;
+        input.setSelectionRange(cursorPos + diff, cursorPos + diff);
+    }
+
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(calculate, 300);
 }
