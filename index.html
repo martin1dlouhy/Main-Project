@@ -15,11 +15,26 @@
                 <div class="nav-left">
                     <a href="index.html" class="logo">
                         <div class="logo-icon">
-                            <svg viewBox="0 0 24 24" fill="white">
-                                <path d="M12 2L14 8L20 10L14 12L12 18L10 12L4 10L10 8L12 2Z"/>
-                                <rect x="8" y="19" width="2" height="2" opacity="0.7"/>
-                                <rect x="11" y="17" width="2" height="4" opacity="0.85"/>
-                                <rect x="14" y="15" width="2" height="6"/>
+                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="logoBar1" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.5"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.25"/>
+                                    </linearGradient>
+                                    <linearGradient id="logoBar2" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.75"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.45"/>
+                                    </linearGradient>
+                                    <linearGradient id="logoBar3" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.7"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="4" y="20" width="6" height="8" rx="1.5" fill="url(#logoBar1)"/>
+                                <rect x="13" y="13" width="6" height="15" rx="1.5" fill="url(#logoBar2)"/>
+                                <rect x="22" y="4" width="6" height="24" rx="1.5" fill="url(#logoBar3)"/>
+                                <path d="M6 18L15 10L21 14L28 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+                                <circle cx="28" cy="4" r="2" fill="white" opacity="0.8"/>
                             </svg>
                         </div>
                         <span>Investment Tools</span>
@@ -99,10 +114,32 @@
                 <div class="apps-grid">
                     <a href="debt-calculator.html" class="app-card">
                         <div class="app-card-header">
-                            <div class="app-icon green">
-                                <svg viewBox="0 0 24 24" fill="white">
-                                    <text x="12" y="18" font-size="16" text-anchor="middle" font-weight="bold">$</text>
-                                </svg>
+                            <div class="app-icon lightblue">
+                                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="calcBody" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white"/>
+                                        <stop offset="100%" stop-color="#e0eaff"/>
+                                    </linearGradient>
+                                    <linearGradient id="calcScreen" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#0c2d4a"/>
+                                        <stop offset="100%" stop-color="#163a5c"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="5" y="2" width="22" height="28" rx="3.5" fill="url(#calcBody)" stroke="#1e3a5f" stroke-width="1"/>
+                                <rect x="6" y="3" width="20" height="26" rx="2.8" fill="none" stroke="white" stroke-width="0.5" stroke-opacity="0.3"/>
+                                <rect x="8" y="5.5" width="16" height="7" rx="2" fill="url(#calcScreen)" stroke="#1e3a5f" stroke-width="0.6"/>
+                                <text x="21.5" y="10.8" font-size="5.5" font-family="monospace" text-anchor="end" fill="#7dd3fc" font-weight="600">12.5%</text>
+                                <rect x="8" y="15" width="4" height="3" rx="0.8" fill="white" stroke="#1e3a5f" stroke-width="0.5" opacity="0.95"/>
+                                <rect x="14" y="15" width="4" height="3" rx="0.8" fill="white" stroke="#1e3a5f" stroke-width="0.5" opacity="0.95"/>
+                                <rect x="20" y="15" width="4" height="3" rx="0.8" fill="#7dd3fc" stroke="#1e3a5f" stroke-width="0.5" opacity="0.9"/>
+                                <rect x="8" y="19.5" width="4" height="3" rx="0.8" fill="white" stroke="#1e3a5f" stroke-width="0.5" opacity="0.9"/>
+                                <rect x="14" y="19.5" width="4" height="3" rx="0.8" fill="white" stroke="#1e3a5f" stroke-width="0.5" opacity="0.9"/>
+                                <rect x="20" y="19.5" width="4" height="3" rx="0.8" fill="#7dd3fc" stroke="#1e3a5f" stroke-width="0.5" opacity="0.85"/>
+                                <rect x="8" y="24" width="4" height="3" rx="0.8" fill="white" stroke="#1e3a5f" stroke-width="0.5" opacity="0.85"/>
+                                <rect x="14" y="24" width="10" height="3" rx="0.8" fill="#38bdf8" stroke="#1e3a5f" stroke-width="0.5"/>
+                                <rect x="5" y="2" width="22" height="13" rx="3.5" fill="white" opacity="0.08"/>
+                            </svg>
                             </div>
                             <span class="app-badge live">● Live</span>
                         </div>
@@ -117,12 +154,27 @@
                     <a href="real-estate-prompt-generator.html" class="app-card">
                         <div class="app-card-header">
                             <div class="app-icon blue">
-                                <svg viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1.5">
-                                    <path d="M7 8 L17 8 L17 18 L13 18 L13 21 L11 18 L7 18 Z"/>
-                                    <line x1="9" y1="11" x2="15" y2="11" stroke-width="1"/>
-                                    <line x1="9" y1="13" x2="13" y2="13" stroke-width="1"/>
-                                    <line x1="9" y1="15" x2="14" y2="15" stroke-width="1"/>
-                                </svg>
+                                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="rDoc" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.9"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.4"/>
+                                    </linearGradient>
+                                    <linearGradient id="rFold" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.6"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.2"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="5" y="3" width="16" height="22" rx="2.5" fill="url(#rDoc)"/>
+                                <path d="M21 3v5.5a1 1 0 001 1h4" fill="none" stroke="white" stroke-opacity="0.5" stroke-width="1"/>
+                                <path d="M21 3l5 5.5v16.5a2 2 0 01-2 2H5" fill="url(#rFold)" opacity="0.3"/>
+                                <line x1="9" y1="11" x2="17" y2="11" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.35"/>
+                                <line x1="9" y1="14.5" x2="15" y2="14.5" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.35"/>
+                                <line x1="9" y1="18" x2="16" y2="18" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.35"/>
+                                <circle cx="24" cy="8" r="6" fill="white" fill-opacity="0.15"/>
+                                <path d="M24 4l1 2.5 2.5 0.5-2 1.8 0.5 2.5L24 9.8 21.8 11.3l0.5-2.5-2-1.8 2.5-0.5z" fill="white" opacity="0.95"/>
+                                <path d="M17 24l0.5 1.2 1.2 0.3-1 0.9 0.3 1.3-1-0.6-1.1 0.6 0.2-1.3-0.9-0.9 1.2-0.3z" fill="white" opacity="0.5"/>
+                            </svg>
                             </div>
                             <span class="app-badge live">● Live</span>
                         </div>
@@ -133,13 +185,22 @@
                             <span class="tag">Valuace</span>
                         </div>
                     </a>
-
                     <a href="sp500-calculator.html" class="app-card">
                         <div class="app-card-header">
-                            <div class="app-icon purple">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                                </svg>
+                            <div class="app-icon teal">
+                                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="spArea" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.3"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0"/>
+                                    </linearGradient>
+                                </defs>
+                                <path d="M2 20L7 18L11 22L16 8L20 16L24 12L30 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M2 20L7 18L11 22L16 8L20 16L24 12L30 14V28H2z" fill="url(#spArea)"/>
+                                <circle cx="16" cy="8" r="3" fill="white" fill-opacity="0.3" stroke="white" stroke-width="1.2"/>
+                                <circle cx="16" cy="8" r="1.2" fill="white" opacity="0.9"/>
+                                <line x1="2" y1="28" x2="30" y2="28" stroke="white" stroke-width="0.8" opacity="0.2"/>
+                            </svg>
                             </div>
                             <span class="app-badge live">● Live</span>
                         </div>
@@ -151,16 +212,32 @@
                         </div>
                     </a>
 
+
+
                     <div class="app-card disabled">
                         <div class="app-card-header">
                             <div class="app-icon purple">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                                    <polyline points="4,18 8,12 12,14 16,8 20,10"/>
-                                    <circle cx="8" cy="12" r="2" fill="white"/>
-                                    <circle cx="12" cy="14" r="2" fill="white"/>
-                                    <circle cx="16" cy="8" r="2" fill="white"/>
-                                    <circle cx="20" cy="10" r="2" fill="white"/>
-                                </svg>
+                                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="iLine" x1="0" y1="0" x2="1" y2="0">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.3"/>
+                                        <stop offset="100%" stop-color="white"/>
+                                    </linearGradient>
+                                    <linearGradient id="iArea" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.25"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0"/>
+                                    </linearGradient>
+                                </defs>
+                                <path d="M4 26L10 18L16 21L22 11L28 6" stroke="url(#iLine)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M4 26L10 18L16 21L22 11L28 6V26H4z" fill="url(#iArea)"/>
+                                <circle cx="10" cy="18" r="2.5" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.2"/>
+                                <circle cx="16" cy="21" r="2.5" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.2"/>
+                                <circle cx="22" cy="11" r="2.5" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.2"/>
+                                <circle cx="28" cy="6" r="3" fill="white" fill-opacity="0.9" stroke="white" stroke-width="1"/>
+                                <text x="28" y="8.5" font-size="5" text-anchor="middle" fill="currentColor" opacity="0.6" font-weight="700">%</text>
+                                <line x1="4" y1="28" x2="28" y2="28" stroke="white" stroke-width="0.8" opacity="0.2"/>
+                                <line x1="4" y1="4" x2="4" y2="28" stroke="white" stroke-width="0.8" opacity="0.2"/>
+                            </svg>
                             </div>
                             <span class="app-badge">Coming Soon</span>
                         </div>
@@ -175,13 +252,35 @@
                     <div class="app-card disabled">
                         <div class="app-card-header">
                             <div class="app-icon orange">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-                                    <rect x="6" y="8" width="12" height="10"/>
-                                    <rect x="9" y="4" width="6" height="4" fill="white"/>
-                                    <line x1="9" y1="12" x2="11" y2="12"/>
-                                    <line x1="13" y1="12" x2="15" y2="12"/>
-                                    <rect x="11" y="15" width="2" height="3" fill="white"/>
-                                </svg>
+                                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="eBld1" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.65"/>
+                                    </linearGradient>
+                                    <linearGradient id="eBld2" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.7"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.35"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="3" y="12" width="11" height="17" rx="1.5" fill="url(#eBld2)"/>
+                                <rect x="5.5" y="15" width="2.5" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
+                                <rect x="5.5" y="19.5" width="2.5" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
+                                <rect x="5.5" y="24" width="2.5" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
+                                <rect x="9.5" y="15" width="2.5" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
+                                <rect x="9.5" y="19.5" width="2.5" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
+                                <rect x="14" y="5" width="13" height="24" rx="1.5" fill="url(#eBld1)"/>
+                                <rect x="16.5" y="8" width="3" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
+                                <rect x="16.5" y="12.5" width="3" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
+                                <rect x="16.5" y="17" width="3" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
+                                <rect x="16.5" y="21.5" width="3" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
+                                <rect x="21.5" y="8" width="3" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
+                                <rect x="21.5" y="12.5" width="3" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
+                                <rect x="21.5" y="17" width="3" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
+                                <rect x="21.5" y="21.5" width="3" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
+                                <rect x="19" y="25" width="4" height="4" rx="0.8" fill="white" opacity="0.3"/>
+                                <rect x="14" y="3" width="13" height="2.5" rx="1" fill="white" opacity="0.15"/>
+                            </svg>
                             </div>
                             <span class="app-badge">Coming Soon</span>
                         </div>
@@ -201,25 +300,49 @@
                 
                 <div class="features-grid">
                     <div class="feature-card">
-                        <div class="feature-icon">⚡</div>
+                        <div class="feature-icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:56px;height:56px">
+                            <defs><linearGradient id="fsBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0.04"/></linearGradient></defs>
+                            <circle cx="32" cy="32" r="30" fill="url(#fsBg)" stroke="var(--accent)" stroke-width="1" stroke-opacity="0.15"/>
+                            <path d="M34 16L20 36h12l-2 12 14-20H32l2-12z" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M34 16L20 36h12l-2 12 14-20H32l2-12z" fill="var(--accent)" opacity="0.1"/>
+                        </svg></div>
                         <h3 class="feature-title">Rychlé & Přesné</h3>
                         <p class="feature-desc">Okamžité výpočty s profesionální přesností</p>
                     </div>
                     
                     <div class="feature-card">
-                        <div class="feature-icon">🔒</div>
+                        <div class="feature-icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:56px;height:56px">
+                            <defs><linearGradient id="ftBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0.04"/></linearGradient></defs>
+                            <circle cx="32" cy="32" r="30" fill="url(#ftBg)" stroke="var(--accent)" stroke-width="1" stroke-opacity="0.15"/>
+                            <path d="M32 14l-11 5v8c0 9 4.7 17.4 11 20 6.3-2.6 11-11 11-20v-8l-11-5z" fill="var(--accent)" opacity="0.1" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+                            <path d="M27 33l3.5 3.5L37 29" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg></div>
                         <h3 class="feature-title">Bezpečné</h3>
                         <p class="feature-desc">Všechny výpočty probíhají lokálně ve vašem prohlížeči</p>
                     </div>
                     
                     <div class="feature-card">
-                        <div class="feature-icon">📱</div>
+                        <div class="feature-icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:56px;height:56px">
+                            <defs><linearGradient id="frBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0.04"/></linearGradient></defs>
+                            <circle cx="32" cy="32" r="30" fill="url(#frBg)" stroke="var(--accent)" stroke-width="1" stroke-opacity="0.15"/>
+                            <rect x="16" y="17" width="20" height="14" rx="2" stroke="var(--accent)" stroke-width="2" fill="var(--accent)" fill-opacity="0.08"/>
+                            <line x1="22" y1="31" x2="30" y2="31" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+                            <rect x="39" y="20" width="10" height="18" rx="2" stroke="var(--accent)" stroke-width="2" fill="var(--accent)" fill-opacity="0.08"/>
+                            <circle cx="44" cy="35" r="1" fill="var(--accent)" opacity="0.5"/>
+                        </svg></div>
                         <h3 class="feature-title">Responzivní</h3>
                         <p class="feature-desc">Funguje perfektně na PC, tabletu i mobilu</p>
                     </div>
                     
                     <div class="feature-card">
-                        <div class="feature-icon">💾</div>
+                        <div class="feature-icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:56px;height:56px">
+                            <defs><linearGradient id="feBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.12"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0.04"/></linearGradient></defs>
+                            <circle cx="32" cy="32" r="30" fill="url(#feBg)" stroke="var(--accent)" stroke-width="1" stroke-opacity="0.15"/>
+                            <path d="M22 20h12l6 6v14a2 2 0 01-2 2H22a2 2 0 01-2-2V22a2 2 0 012-2z" stroke="var(--accent)" stroke-width="2" fill="var(--accent)" fill-opacity="0.08" stroke-linejoin="round"/>
+                            <path d="M34 20v6h6" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M37 35l4 4m0-4l-4 4" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M41 43h5" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+                        </svg></div>
                         <h3 class="feature-title">Export dat</h3>
                         <p class="feature-desc">PDF a Excel export pro všechny kalkulace</p>
                     </div>
@@ -256,4 +379,4 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2026 Martin Dlouh�
+                <p>&copy; 2026 Martin Dlouh�
