@@ -618,7 +618,7 @@
 
             <div class="form-group">
                 <label for="loanTerm">Doba splatnosti (měsíce)</label>
-                <input type="text" id="loanTerm" placeholder="36" value="36" onchange="updateRepaymentDate()">
+                <input type="text" id="loanTerm" placeholder="36" value="36" onchange="updateRepaymentDate(); calculate();">
             </div>
 
             <!-- DATES SECTION -->
@@ -2210,6 +2210,7 @@
             setCurrency(data.currency);
             closeLoadModal();
             updatePaymentTypeInfo();
+            updateRepaymentDate();
             calculate();
             showToast('Výpočet byl načten');
         }
@@ -2292,6 +2293,8 @@
 
                 setCurrency(data.curr);
                 updatePaymentTypeInfo();
+                updateRepaymentDate();
+                calculate();
                 showToast('Parametry načteny z URL');
             } catch (e) {
                 console.log('Failed to import from URL');
