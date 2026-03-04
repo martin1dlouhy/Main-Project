@@ -32,15 +32,16 @@ Tento dokument popisuje design systém pro všechny aplikace Investment Tools.
 --accent: #38BDF8          /* Accent barva (světle modrá) */
 ```
 
-**Dark Mode (Carbon Edition):**
+**Dark Mode (Carbon — Navy Edition):**
 ```css
---bg-primary: #0F0F0F      /* Hlavní pozadí */
---bg-secondary: #171717    /* Sekundární pozadí */
---bg-surface: #1F1F1F      /* Plochy, inputy */
---border-color: #2E2E2E    /* Bordery */
---text-primary: #F5F5F5    /* Hlavní text */
---text-secondary: #A3A3A3  /* Sekundární text */
+--bg-primary: #0B1120      /* Hlavní pozadí (navy-dark) */
+--bg-secondary: #111827    /* Sekundární pozadí */
+--bg-surface: #1E293B      /* Plochy, inputy */
+--border-color: #1E293B    /* Bordery */
+--text-primary: #F1F5F9    /* Hlavní text */
+--text-secondary: #94A3B8  /* Sekundární text */
 --accent: #38BDF8          /* Accent barva (stejná) */
+--accent-glow: rgba(56, 189, 248, 0.2)  /* Glow efekt */
 ```
 
 ### 2. Typografie
@@ -243,6 +244,6 @@ Nemusíte nic dělat! Stačí použít CSS proměnné (`var(--bg-primary)` atd.)
 
 ---
 
-**Design System Version:** 1.0  
-**Last Updated:** 14. února 2026  
+**Design System Version:** 2.0
+**Last Updated:** 4. března 2026
 **Maintainer:** Martin Dlouhý
