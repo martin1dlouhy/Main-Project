@@ -269,6 +269,115 @@
             margin-top: 4px;
         }
         
+        /* Saved calculations sidebar */
+        .saved-sidebar {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .saved-sidebar.hidden { display: none; }
+
+        .saved-sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s ease;
+        }
+        .saved-sidebar-header:hover {
+            background: var(--accent-light, rgba(56,189,248,0.05));
+        }
+
+        .saved-sidebar-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text-primary);
+        }
+        .saved-sidebar-count {
+            background: var(--accent);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+        .saved-sidebar-chevron {
+            color: var(--text-secondary);
+            transition: transform 0.3s ease;
+            font-size: 14px;
+        }
+        .saved-sidebar.open .saved-sidebar-chevron {
+            transform: rotate(180deg);
+        }
+
+        .saved-sidebar-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, padding 0.35s ease;
+            padding: 0 20px;
+        }
+        .saved-sidebar.open .saved-sidebar-body {
+            max-height: 400px;
+            padding: 0 20px 16px 20px;
+        }
+
+        .sidebar-calc-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .sidebar-calc-item:hover {
+            border-color: var(--accent);
+            background: var(--accent-light, rgba(56,189,248,0.08));
+        }
+        .sidebar-calc-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+        .sidebar-calc-meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .sidebar-calc-info { flex: 1; }
+
+        .sidebar-show-all {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 6px;
+            background: none;
+            border: 1px dashed var(--border-color);
+            border-radius: 10px;
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+        .sidebar-show-all:hover {
+            background: var(--accent-light, rgba(56,189,248,0.08));
+            border-color: var(--accent);
+        }
+
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr; }
             .result-grid { grid-template-columns: 1fr; }
@@ -477,6 +586,19 @@
             Kalkulačka dluhového financování
         </h1>
         <p class="subtitle">Financování se zástavou nemovitosti</p>
+
+        <!-- Saved calculations sidebar -->
+        <div class="saved-sidebar hidden" id="savedSidebar">
+            <div class="saved-sidebar-header" onclick="toggleSavedSidebar()">
+                <div class="saved-sidebar-title">
+                    <span>📂</span>
+                    <span>Uložené výpočty</span>
+                    <span class="saved-sidebar-count" id="sidebarCount">0</span>
+                </div>
+                <span class="saved-sidebar-chevron">▼</span>
+            </div>
+            <div class="saved-sidebar-body" id="sidebarBody"></div>
+        </div>
 
         <div class="form-grid">
             <div class="form-group">
@@ -943,6 +1065,9 @@
 
             // Import from URL if present
             importFromURL();
+
+            // Render saved calculations sidebar
+            renderSavedSidebar();
 
             // Close modals when clicking outside
             document.getElementById('saveModal').addEventListener('click', function(e) {
@@ -1853,6 +1978,83 @@
             document.getElementById('comparisonTable').innerHTML = html;
         }
 
+        // SAVED SIDEBAR FUNCTIONS
+        let sidebarOpen = false;
+
+        function toggleSavedSidebar() {
+            const sidebar = document.getElementById('savedSidebar');
+            sidebarOpen = !sidebarOpen;
+            sidebar.classList.toggle('open', sidebarOpen);
+        }
+
+        function renderSavedSidebar() {
+            const sidebar = document.getElementById('savedSidebar');
+            const body = document.getElementById('sidebarBody');
+            const countEl = document.getElementById('sidebarCount');
+            body.innerHTML = '';
+
+            let items = [];
+            try {
+                for (let key in localStorage) {
+                    if (key.startsWith('debtcalc-')) {
+                        try {
+                            const data = JSON.parse(localStorage.getItem(key));
+                            items.push({ key, data });
+                        } catch (e) { /* skip corrupted */ }
+                    }
+                }
+            } catch (e) {
+                console.error('Sidebar localStorage error:', e);
+            }
+
+            // Sort by timestamp descending (newest first)
+            items.sort((a, b) => new Date(b.data.timestamp) - new Date(a.data.timestamp));
+
+            const totalCount = items.length;
+            countEl.textContent = totalCount;
+
+            if (totalCount === 0) {
+                sidebar.classList.add('hidden');
+                return;
+            }
+
+            sidebar.classList.remove('hidden');
+
+            // Show max 5
+            const displayItems = items.slice(0, 5);
+            displayItems.forEach(item => {
+                const date = new Date(item.data.timestamp).toLocaleDateString('cs-CZ');
+                const currency = item.data.currency || 'CZK';
+                const loanVal = item.data.form?.loanAmount || '';
+
+                const el = document.createElement('div');
+                el.className = 'sidebar-calc-item';
+                el.onclick = function() { loadCalculation(item.key); sidebarOpen = false; sidebar.classList.remove('open'); };
+
+                const info = document.createElement('div');
+                info.className = 'sidebar-calc-info';
+                const nameEl = document.createElement('div');
+                nameEl.className = 'sidebar-calc-name';
+                nameEl.textContent = item.data.name;
+                const metaEl = document.createElement('div');
+                metaEl.className = 'sidebar-calc-meta';
+                metaEl.textContent = date + ' · ' + loanVal + ' ' + currency;
+                info.appendChild(nameEl);
+                info.appendChild(metaEl);
+                el.appendChild(info);
+                body.appendChild(el);
+            });
+
+            // "Show all" button if more than 5
+            if (totalCount > 5) {
+                const btn = document.createElement('button');
+                btn.className = 'sidebar-show-all';
+                btn.textContent = 'Zobrazit vše (' + totalCount + ')';
+                btn.onclick = function(e) { e.stopPropagation(); showLoadModal(); };
+                body.appendChild(btn);
+            }
+        }
+
         // PHASE 3: SAVE/LOAD FUNCTIONS
         function showSaveModal() {
             document.getElementById('saveModal').classList.add('show');
@@ -1901,6 +2103,7 @@
                 closeSaveModal();
                 document.getElementById('saveName').value = '';
                 showToast('Výpočet byl uložen');
+                renderSavedSidebar();
             } catch (e) {
                 console.error('localStorage save error:', e);
                 showToast('Chyba při ukládání — úložiště může být plné');
@@ -1920,13 +2123,26 @@
 
                             const item = document.createElement('li');
                             item.className = 'saved-item';
-                            item.innerHTML = `
-                                <div class="saved-item-info" onclick="loadCalculation('${key}')">
-                                    <div class="saved-item-name">${data.name}</div>
-                                    <div class="saved-item-date">${date}</div>
-                                </div>
-                                <button class="saved-item-delete" onclick="deleteSavedCalculation('${key}', event)">×</button>
-                            `;
+
+                            const infoDiv = document.createElement('div');
+                            infoDiv.className = 'saved-item-info';
+                            infoDiv.onclick = function() { loadCalculation(key); };
+                            const nameDiv = document.createElement('div');
+                            nameDiv.className = 'saved-item-name';
+                            nameDiv.textContent = data.name;
+                            const dateDiv = document.createElement('div');
+                            dateDiv.className = 'saved-item-date';
+                            dateDiv.textContent = date;
+                            infoDiv.appendChild(nameDiv);
+                            infoDiv.appendChild(dateDiv);
+
+                            const delBtn = document.createElement('button');
+                            delBtn.className = 'saved-item-delete';
+                            delBtn.textContent = '×';
+                            delBtn.onclick = function(e) { deleteSavedCalculation(key, e); };
+
+                            item.appendChild(infoDiv);
+                            item.appendChild(delBtn);
                             savedList.appendChild(item);
                         } catch (parseErr) {
                             console.warn('Corrupted saved calculation:', key, parseErr);
@@ -2008,6 +2224,7 @@
                     showToast('Chyba při mazání výpočtu');
                 }
                 showLoadModal();
+                renderSavedSidebar();
             }
         }
 
