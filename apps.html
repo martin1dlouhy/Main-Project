@@ -99,6 +99,27 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
             </div>
         </nav>
 
+        <!-- Category Picker Styles -->
+        <style>
+            .cat-picker{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2rem}
+            .cat-card{background:var(--bg-primary);border:2px solid var(--border-color);border-radius:16px;padding:2.5rem 2rem;cursor:pointer;transition:all 0.3s ease;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1rem}
+            .cat-card:hover{border-color:var(--accent);box-shadow:0 8px 24px var(--accent-glow);transform:translateY(-2px)}
+            .cat-card-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center}
+            .cat-card-icon svg{width:28px;height:28px}
+            .cat-card h2{font-size:1.375rem;font-weight:700;color:var(--text-primary);margin:0}
+            .cat-card p{font-size:0.9375rem;color:var(--text-secondary);margin:0;line-height:1.5}
+            .cat-card .cat-count{font-size:0.8125rem;font-weight:600;color:var(--accent);background:var(--accent-light,rgba(56,189,248,0.1));padding:0.25rem 0.75rem;border-radius:20px;margin-top:0.25rem}
+            .cat-tabs{display:flex;gap:0;border-bottom:2px solid var(--border-color);margin-bottom:1.5rem;margin-top:1rem}
+            .cat-tab{padding:0.875rem 1.75rem;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--text-secondary);font-size:1rem;font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:0.5rem}
+            .cat-tab:hover{color:var(--text-primary)}
+            .cat-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+            .cat-tab svg{width:18px;height:18px;opacity:0.7}
+            .cat-tab.active svg{opacity:1}
+            .category-section{display:none}
+            .category-section.active{display:block}
+            @media(max-width:640px){.cat-picker{grid-template-columns:1fr}.cat-card{padding:1.5rem}}
+        </style>
+
         <!-- Main Content -->
         <main class="main-content">
             <div class="page-header">
@@ -106,7 +127,42 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                 <p class="page-subtitle">Profesionální nástroje pro investice a finance</p>
             </div>
 
+            <!-- Category Picker -->
+            <div id="category-picker" class="cat-picker">
+                <div class="cat-card" onclick="showCategory('osobni')">
+                    <div class="cat-card-icon" style="background:var(--accent-light,rgba(56,189,248,0.1));color:var(--accent);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <h2>Osobní</h2>
+                    <p>Investiční nástroje a kalkulačky</p>
+                    <span class="cat-count">5 aplikací</span>
+                </div>
+                <div class="cat-card" onclick="showCategory('pracovni')">
+                    <div class="cat-card-icon" style="background:rgba(236,72,153,0.1);color:#EC4899;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                    </div>
+                    <h2>Pracovní</h2>
+                    <p>Nástroje pro správu portfolia a business</p>
+                    <span class="cat-count">1 aplikace</span>
+                </div>
+            </div>
+
+            <!-- Category Tabs (hidden initially, shown after selection) -->
+            <div id="category-tabs" style="display:none">
+                <div class="cat-tabs">
+                    <button class="cat-tab" data-cat="osobni" onclick="showCategory('osobni')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Osobní
+                    </button>
+                    <button class="cat-tab" data-cat="pracovni" onclick="showCategory('pracovni')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                        Pracovní
+                    </button>
+                </div>
+            </div>
+
             <!-- Section: Osobní -->
+            <div id="section-osobni" class="category-section">
             <div style="margin-bottom: 0.75rem; margin-top: 1rem;">
                 <h2 style="font-size: 1.375rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.75rem;">
                     <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--accent-light);color:var(--accent);">
@@ -331,9 +387,11 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                     </div>
                 </div>
             </div>
+            </div><!-- /section-osobni -->
 
             <!-- Section: Pracovní -->
-            <div style="margin-bottom: 0.75rem; margin-top: 3rem; padding-top: 2.5rem; border-top: 1px solid var(--border-color);">
+            <div id="section-pracovni" class="category-section">
+            <div style="margin-bottom: 0.75rem; margin-top: 1rem;">
                 <h2 style="font-size: 1.375rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.75rem;">
                     <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(236,72,153,0.1);color:#EC4899;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
@@ -383,7 +441,34 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                     </div>
                 </a>
             </div>
+            </div><!-- /section-pracovni -->
         </main>
+
+        <!-- Category Switch Script -->
+        <script>
+        function showCategory(cat) {
+            // Hide picker, show tabs
+            document.getElementById('category-picker').style.display = 'none';
+            document.getElementById('category-tabs').style.display = 'block';
+            // Toggle tabs active state
+            document.querySelectorAll('.cat-tab').forEach(function(t) {
+                t.classList.toggle('active', t.dataset.cat === cat);
+            });
+            // Toggle sections
+            document.querySelectorAll('.category-section').forEach(function(s) { s.classList.remove('active'); });
+            var section = document.getElementById('section-' + cat);
+            if (section) section.classList.add('active');
+            // Update URL hash
+            history.replaceState(null, '', '#' + cat);
+        }
+        // On load: check hash
+        (function() {
+            var hash = window.location.hash.replace('#', '');
+            if (hash === 'osobni' || hash === 'pracovni') {
+                showCategory(hash);
+            }
+        })();
+        </script>
 
         <!-- Footer -->
         <footer class="footer">
