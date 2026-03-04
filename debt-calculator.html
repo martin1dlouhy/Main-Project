@@ -771,8 +771,10 @@
             // Update button states
             document.querySelectorAll('.currency-btn').forEach(btn => {
                 btn.classList.remove('active');
+                if (btn.textContent.trim() === currency) {
+                    btn.classList.add('active');
+                }
             });
-            event.target.classList.add('active');
             
             // Update currency labels in all relevant fields
             document.getElementById('propertyValueCurrency').textContent = currency;
@@ -844,9 +846,11 @@
 
         // Add formatting to all number inputs
         function setupNumberFormatting() {
-            const textInputs = document.querySelectorAll('input[type="text"]');
-            
+            const textInputs = document.querySelectorAll('.container input[type="text"]');
+
             textInputs.forEach(input => {
+                // Skip non-numeric inputs (e.g. save name in modal)
+                if (input.id === 'saveName') return;
                 // Auto-select all text on focus
                 input.addEventListener('focus', function() {
                     this.select();
@@ -1192,8 +1196,12 @@
 
             if (paymentType === 'annuity') {
                 const monthlyRate = interestRate / 100 / 12;
-                monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, actualLoanTermMonths)) /
-                                       (Math.pow(1 + monthlyRate, actualLoanTermMonths) - 1);
+                if (monthlyRate === 0) {
+                    monthlyPayment = loanAmount / actualLoanTermMonths;
+                } else {
+                    monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, actualLoanTermMonths)) /
+                                           (Math.pow(1 + monthlyRate, actualLoanTermMonths) - 1);
+                }
                 const totalPayment = monthlyPayment * actualLoanTermMonths;
                 totalInterest = totalPayment - loanAmount;
 
@@ -1270,11 +1278,16 @@
             const loanAmount = parseFloat(parseFormattedNumber(document.getElementById('loanAmount').value));
             const interestRate = parseFloat(document.getElementById('interestRate').value);
             const loanTerm = parseInt(parseFormattedNumber(document.getElementById('loanTerm').value));
-            
-            const setupFeeType = document.querySelector('input[name="setupFeeType"]:checked').value;
-            const earlyRepaymentFeeType = document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value;
-            const contractualPenaltyType = document.querySelector('input[name="contractualPenaltyType"]:checked').value;
-            const otherFeesType = document.querySelector('input[name="otherFeesType"]:checked').value;
+
+            if (!propertyValue || !loanAmount || isNaN(interestRate) || !loanTerm) {
+                alert('Prosím vyplňte všechna povinná pole');
+                return;
+            }
+
+            const setupFeeType = (document.querySelector('input[name="setupFeeType"]:checked') || {value: 'percent'}).value;
+            const earlyRepaymentFeeType = (document.querySelector('input[name="earlyRepaymentFeeType"]:checked') || {value: 'percent'}).value;
+            const contractualPenaltyType = (document.querySelector('input[name="contractualPenaltyType"]:checked') || {value: 'percent'}).value;
+            const otherFeesType = (document.querySelector('input[name="otherFeesType"]:checked') || {value: 'percent'}).value;
             
             const setupFeeInput = document.getElementById('setupFee').value;
             const earlyRepaymentFeeInput = document.getElementById('earlyRepaymentFee').value;
@@ -1329,11 +1342,6 @@
             const paymentType = document.getElementById('paymentType').value;
             const interestFrequency = parseInt(document.getElementById('interestFrequency').value);
 
-            if (!propertyValue || !loanAmount || !interestRate || !loanTerm) {
-                alert('Prosím vyplňte všechna povinná pole');
-                return;
-            }
-
             // Determine actual repayment date (early or normal)
             const actualRepaymentDate = earlyRepaymentDate || repaymentDate;
             const isEarlyRepayment = earlyRepaymentDate !== null;
@@ -1346,9 +1354,12 @@
 
             if (paymentType === 'annuity') {
                 const monthlyRate = interestRate / 100 / 12;
-                monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, actualLoanTermMonths)) / 
-                                       (Math.pow(1 + monthlyRate, actualLoanTermMonths) - 1);
-                
+                if (monthlyRate === 0) {
+                    monthlyPayment = loanAmount / actualLoanTermMonths;
+                } else {
+                    monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, actualLoanTermMonths)) /
+                                           (Math.pow(1 + monthlyRate, actualLoanTermMonths) - 1);
+                }
                 const totalPayment = monthlyPayment * actualLoanTermMonths;
                 totalInterest = totalPayment - loanAmount;
 
@@ -1884,36 +1895,50 @@
                 scenarios
             };
 
-            const key = 'debtcalc-' + Date.now();
-            localStorage.setItem(key, JSON.stringify(data));
-            closeSaveModal();
-            document.getElementById('saveName').value = '';
-            showToast('Výpočet byl uložen');
+            try {
+                const key = 'debtcalc-' + Date.now();
+                localStorage.setItem(key, JSON.stringify(data));
+                closeSaveModal();
+                document.getElementById('saveName').value = '';
+                showToast('Výpočet byl uložen');
+            } catch (e) {
+                console.error('localStorage save error:', e);
+                showToast('Chyba při ukládání — úložiště může být plné');
+            }
         }
 
         function showLoadModal() {
             const savedList = document.getElementById('savedList');
             savedList.innerHTML = '';
 
-            for (let key in localStorage) {
-                if (key.startsWith('debtcalc-')) {
-                    const data = JSON.parse(localStorage.getItem(key));
-                    const date = new Date(data.timestamp).toLocaleDateString('cs-CZ');
+            try {
+                for (let key in localStorage) {
+                    if (key.startsWith('debtcalc-')) {
+                        try {
+                            const data = JSON.parse(localStorage.getItem(key));
+                            const date = new Date(data.timestamp).toLocaleDateString('cs-CZ');
 
-                    const item = document.createElement('li');
-                    item.className = 'saved-item';
-                    item.innerHTML = `
-                        <div class="saved-item-info" onclick="loadCalculation('${key}')">
-                            <div class="saved-item-name">${data.name}</div>
-                            <div class="saved-item-date">${date}</div>
-                        </div>
-                        <button class="saved-item-delete" onclick="deleteSavedCalculation('${key}', event)">×</button>
-                    `;
-                    savedList.appendChild(item);
+                            const item = document.createElement('li');
+                            item.className = 'saved-item';
+                            item.innerHTML = `
+                                <div class="saved-item-info" onclick="loadCalculation('${key}')">
+                                    <div class="saved-item-name">${data.name}</div>
+                                    <div class="saved-item-date">${date}</div>
+                                </div>
+                                <button class="saved-item-delete" onclick="deleteSavedCalculation('${key}', event)">×</button>
+                            `;
+                            savedList.appendChild(item);
+                        } catch (parseErr) {
+                            console.warn('Corrupted saved calculation:', key, parseErr);
+                        }
+                    }
                 }
+            } catch (e) {
+                console.error('localStorage read error:', e);
+                savedList.innerHTML = '<p style="color: var(--text-secondary);">Nelze načíst uložené výpočty</p>';
             }
 
-            if (savedList.children.length === 0) {
+            if (savedList.children.length === 0 && !savedList.innerHTML.includes('Nelze')) {
                 savedList.innerHTML = '<p style="color: var(--text-secondary);">Žádné uložené výpočty</p>';
             }
 
@@ -1925,7 +1950,18 @@
         }
 
         function loadCalculation(key) {
-            const data = JSON.parse(localStorage.getItem(key));
+            let data;
+            try {
+                data = JSON.parse(localStorage.getItem(key));
+            } catch (e) {
+                console.error('loadCalculation parse error:', e);
+                showToast('Chyba při načítání výpočtu');
+                return;
+            }
+            if (!data || !data.form) {
+                showToast('Poškozená uložená data');
+                return;
+            }
 
             // Restore form values
             document.getElementById('propertyValue').value = data.form.propertyValue;
@@ -1941,11 +1977,15 @@
             document.getElementById('paymentType').value = data.form.paymentType;
             document.getElementById('interestFrequency').value = data.form.interestFrequency;
 
-            // Restore fee type selectors
-            document.querySelector(`input[name="setupFeeType"][value="${data.form.setupFeeType}"]`).checked = true;
-            document.querySelector(`input[name="earlyRepaymentFeeType"][value="${data.form.earlyRepaymentFeeType}"]`).checked = true;
-            document.querySelector(`input[name="contractualPenaltyType"][value="${data.form.contractualPenaltyType}"]`).checked = true;
-            document.querySelector(`input[name="otherFeesType"][value="${data.form.otherFeesType}"]`).checked = true;
+            // Restore fee type selectors (with null safety)
+            const sftEl = document.querySelector(`input[name="setupFeeType"][value="${data.form.setupFeeType}"]`);
+            if (sftEl) sftEl.checked = true;
+            const erftEl = document.querySelector(`input[name="earlyRepaymentFeeType"][value="${data.form.earlyRepaymentFeeType}"]`);
+            if (erftEl) erftEl.checked = true;
+            const cptEl = document.querySelector(`input[name="contractualPenaltyType"][value="${data.form.contractualPenaltyType}"]`);
+            if (cptEl) cptEl.checked = true;
+            const oftEl = document.querySelector(`input[name="otherFeesType"][value="${data.form.otherFeesType}"]`);
+            if (oftEl) oftEl.checked = true;
 
             // Restore scenarios
             scenarios = data.scenarios || [];
@@ -1961,7 +2001,12 @@
         function deleteSavedCalculation(key, event) {
             event.stopPropagation();
             if (confirm('Opravdu chcete smazat tento výpočet?')) {
-                localStorage.removeItem(key);
+                try {
+                    localStorage.removeItem(key);
+                } catch (e) {
+                    console.error('localStorage delete error:', e);
+                    showToast('Chyba při mazání výpočtu');
+                }
                 showLoadModal();
             }
         }
@@ -2047,17 +2092,27 @@
 
         function printSchedule() {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
 
             try {
                 // Get data
                 const drawdownDate = document.getElementById('drawdownDate').value;
                 const drawdownFormatted = drawdownDate ? new Date(drawdownDate).toLocaleDateString('cs-CZ') : 'N/A';
+                const repaymentDate = document.getElementById('repaymentDate').value;
+                const repaymentFormatted = repaymentDate ? new Date(repaymentDate).toLocaleDateString('cs-CZ') : 'N/A';
                 const currency = currentCurrency;
                 const propertyValue = document.getElementById('propertyValue').value;
                 const loanAmount = document.getElementById('loanAmount').value;
                 const interestRate = document.getElementById('interestRate').value;
                 const loanTerm = document.getElementById('loanTerm').value;
+                const paymentType = document.getElementById('paymentType');
+                const paymentTypeText = paymentType.options[paymentType.selectedIndex].text;
+
+                const setupFee = document.getElementById('setupFee').value || '0';
+                const setupFeeType = document.querySelector('input[name="setupFeeType"]:checked')?.value || 'percent';
+                const earlyRepaymentFee = document.getElementById('earlyRepaymentFee').value || '0';
+                const earlyRepaymentFeeType = document.querySelector('input[name="earlyRepaymentFeeType"]:checked')?.value || 'percent';
+                const earlyRepaymentDate = document.getElementById('earlyRepaymentDate').value;
+                const earlyRepaymentFormatted = earlyRepaymentDate ? new Date(earlyRepaymentDate).toLocaleDateString('cs-CZ') : '';
 
                 const ltv = document.getElementById('ltv')?.textContent || 'N/A';
                 const irr = document.getElementById('irr')?.textContent || 'N/A';
@@ -2066,8 +2121,21 @@
                 const totalInt = document.getElementById('totalInterest')?.textContent || 'N/A';
                 const totalReturn = document.getElementById('totalReturn')?.textContent || 'N/A';
 
-                // PAGE 1: Results and parameters
-                // Create PDF content div (light mode always)
+                // Get risk assessment HTML
+                const riskDiv = document.getElementById('riskAssessment');
+                let riskHTML = '';
+                if (riskDiv) {
+                    const notes = riskDiv.querySelectorAll('.info-note');
+                    notes.forEach(note => {
+                        let cssClass = 'pdf-risk-info';
+                        if (note.classList.contains('success')) cssClass = 'pdf-risk-success';
+                        else if (note.classList.contains('warning')) cssClass = 'pdf-risk-warning';
+                        else if (note.style.borderLeftColor === 'rgb(239, 68, 68)' || note.querySelector('strong')?.textContent.includes('Vysoké')) cssClass = 'pdf-risk-danger';
+                        riskHTML += `<div class="pdf-risk-note ${cssClass}">${note.textContent.trim()}</div>`;
+                    });
+                }
+
+                // PAGE 1: Parameters + Results + Risk Assessment
                 const page1 = document.createElement('div');
                 page1.className = 'pdf-layout';
                 page1.innerHTML = `
@@ -2080,27 +2148,44 @@
                         <div class="pdf-section-title">Základní údaje</div>
                         <div class="pdf-params-grid">
                             <div class="pdf-param">
-                                <span class="pdf-param-label">Hodnota nemovitosti</span>
+                                <span class="pdf-param-label">Hodnota nemovitosti: </span>
                                 <span class="pdf-param-value">${propertyValue} ${currency}</span>
                             </div>
                             <div class="pdf-param">
-                                <span class="pdf-param-label">Výše úvěru</span>
+                                <span class="pdf-param-label">Výše úvěru: </span>
                                 <span class="pdf-param-value">${loanAmount} ${currency}</span>
                             </div>
                             <div class="pdf-param">
-                                <span class="pdf-param-label">Úroková sazba</span>
+                                <span class="pdf-param-label">Úroková sazba: </span>
                                 <span class="pdf-param-value">${interestRate}% p.a.</span>
                             </div>
                             <div class="pdf-param">
-                                <span class="pdf-param-label">Doba splatnosti</span>
+                                <span class="pdf-param-label">Doba splatnosti: </span>
                                 <span class="pdf-param-value">${loanTerm} měsíců</span>
                             </div>
                             <div class="pdf-param">
-                                <span class="pdf-param-label">Datum čerpání</span>
+                                <span class="pdf-param-label">Datum čerpání: </span>
                                 <span class="pdf-param-value">${drawdownFormatted}</span>
                             </div>
                             <div class="pdf-param">
-                                <span class="pdf-param-label">Měna</span>
+                                <span class="pdf-param-label">Datum splatnosti: </span>
+                                <span class="pdf-param-value">${repaymentFormatted}</span>
+                            </div>
+                            <div class="pdf-param">
+                                <span class="pdf-param-label">Typ splácení: </span>
+                                <span class="pdf-param-value">${paymentTypeText}</span>
+                            </div>
+                            <div class="pdf-param">
+                                <span class="pdf-param-label">Poplatek za sjednání: </span>
+                                <span class="pdf-param-value">${setupFee}${setupFeeType === 'percent' ? '%' : ' ' + currency}</span>
+                            </div>
+                            ${earlyRepaymentFormatted ? `
+                            <div class="pdf-param">
+                                <span class="pdf-param-label">Předčasné splacení: </span>
+                                <span class="pdf-param-value">${earlyRepaymentFormatted} (poplatek ${earlyRepaymentFee}${earlyRepaymentFeeType === 'percent' ? '%' : ' ' + currency})</span>
+                            </div>` : ''}
+                            <div class="pdf-param">
+                                <span class="pdf-param-label">Měna: </span>
                                 <span class="pdf-param-value">${currency}</span>
                             </div>
                         </div>
@@ -2118,7 +2203,7 @@
                                 <div class="pdf-result-value">${irr}</div>
                             </div>
                             <div class="pdf-result-card">
-                                <div class="pdf-result-label">Měsíční/Pravidelná splátka</div>
+                                <div class="pdf-result-label">Pravidelná splátka</div>
                                 <div class="pdf-result-value">${monthlyPay}</div>
                             </div>
                             <div class="pdf-result-card">
@@ -2136,102 +2221,94 @@
                         </div>
                     </div>
 
+                    ${riskHTML ? `
+                    <div class="pdf-section">
+                        <div class="pdf-section-title">Hodnocení rizika</div>
+                        ${riskHTML}
+                    </div>` : ''}
+
                     <div class="pdf-footer">
-                        Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')} v ${new Date().toLocaleTimeString('cs-CZ')}
+                        Investment Tools | Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')} v ${new Date().toLocaleTimeString('cs-CZ')}
                     </div>
                 `;
 
                 document.body.appendChild(page1);
 
-                // Capture page 1
+                // Helper to cleanup all PDF layout elements
+                function cleanupPdfElements() {
+                    document.querySelectorAll('.pdf-layout').forEach(el => {
+                        if (el.parentNode) el.parentNode.removeChild(el);
+                    });
+                }
+
+                // Capture page 1 with html2canvas
                 html2canvas(page1, { scale: 2, useCORS: true }).then(canvas1 => {
                     const imgData1 = canvas1.toDataURL('image/png');
                     const imgWidth = 210;
-                    const pageHeight = 297;
-                    const imgHeight = (canvas1.height * imgWidth) / canvas1.width;
+                    const imgHeight1 = (canvas1.height * imgWidth) / canvas1.width;
 
-                    doc.addImage(imgData1, 'PNG', 0, 0, imgWidth, imgHeight);
+                    const doc = new jsPDF();
+                    doc.addImage(imgData1, 'PNG', 0, 0, imgWidth, imgHeight1);
 
-                    // PAGE 2+: Schedule table
-                    const scheduleTable = document.getElementById('scheduleTable');
-                    if (scheduleTable) {
-                        const tableRows = scheduleTable.querySelectorAll('tbody tr');
-                        const rowsPerPage = 30;
-                        let pageNum = 1;
+                    // PAGE 2: Chart visualization
+                    const chartCanvas = document.getElementById('paymentChart');
+                    if (chartCanvas && paymentChart) {
+                        const page2 = document.createElement('div');
+                        page2.className = 'pdf-layout';
 
-                        for (let i = 0; i < tableRows.length; i += rowsPerPage) {
-                            if (i > 0) doc.addPage();
+                        // Get chart as image
+                        const chartImg = chartCanvas.toDataURL('image/png');
 
-                            const page = document.createElement('div');
-                            page.className = 'pdf-layout';
+                        page2.innerHTML = `
+                            <div class="pdf-header">
+                                <h1>Vizualizace splácení</h1>
+                                <p>${loanAmount} ${currency} | ${interestRate}% p.a. | ${loanTerm} měsíců</p>
+                            </div>
+                            <div style="margin: 20px 0;">
+                                <img src="${chartImg}" style="width: 100%; height: auto; border-radius: 8px;" />
+                            </div>
+                            <div class="pdf-footer">
+                                Investment Tools | Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')} v ${new Date().toLocaleTimeString('cs-CZ')}
+                            </div>
+                        `;
 
-                            const headerRow = scheduleTable.querySelector('thead tr');
-                            let tableHTML = '<table class="pdf-schedule-table"><thead><tr>';
+                        document.body.appendChild(page2);
 
-                            headerRow.querySelectorAll('th').forEach(th => {
-                                tableHTML += `<th>${th.textContent}</th>`;
-                            });
+                        html2canvas(page2, { scale: 2, useCORS: true }).then(canvas2 => {
+                            doc.addPage();
+                            const imgData2 = canvas2.toDataURL('image/png');
+                            const imgHeight2 = (canvas2.height * imgWidth) / canvas2.width;
+                            doc.addImage(imgData2, 'PNG', 0, 0, imgWidth, imgHeight2);
 
-                            tableHTML += '</tr></thead><tbody>';
-
-                            const endRow = Math.min(i + rowsPerPage, tableRows.length);
-                            for (let j = i; j < endRow; j++) {
-                                const row = tableRows[j];
-                                tableHTML += '<tr>';
-                                row.querySelectorAll('td').forEach(td => {
-                                    tableHTML += `<td>${td.textContent}</td>`;
-                                });
-                                tableHTML += '</tr>';
-                            }
-
-                            tableHTML += '</tbody></table>';
-
-                            page.innerHTML = `
-                                <div style="padding: 20px;">
-                                    <h2 style="text-align: center; margin-bottom: 20px; color: #1E293B;">Splátkový kalendář (strana ${pageNum})</h2>
-                                    ${tableHTML}
-                                    <div class="pdf-footer">Strana ${pageNum} | Vygenerováno: ${new Date().toLocaleDateString('cs-CZ')}</div>
-                                </div>
-                            `;
-
-                            document.body.appendChild(page);
-
-                            html2canvas(page, { scale: 2, useCORS: true }).then(canvas => {
-                                const imgData = canvas.toDataURL('image/png');
-                                const imgHeight2 = (canvas.height * imgWidth) / canvas.width;
-                                doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight2);
-
-                                if (pageNum === Math.ceil(tableRows.length / rowsPerPage)) {
-                                    // All pages captured
-                                    const filename = 'debt-calc-' + drawdownFormatted.replace(/\./g, '-') + '.pdf';
-                                    doc.save(filename);
-
-                                    // Cleanup
-                                    document.body.removeChild(page1);
-                                    document.querySelectorAll('.pdf-layout').forEach(el => {
-                                        if (el.parentNode) document.body.removeChild(el);
-                                    });
-                                }
-
-                                pageNum++;
-                            });
-                        }
-
-                        if (tableRows.length === 0) {
+                            // Save and cleanup
                             const filename = 'debt-calc-' + drawdownFormatted.replace(/\./g, '-') + '.pdf';
                             doc.save(filename);
-                            document.body.removeChild(page1);
-                        }
+                            cleanupPdfElements();
+                        }).catch(err => {
+                            console.error('html2canvas page2 error:', err);
+                            // Save at least page 1
+                            const filename = 'debt-calc-' + drawdownFormatted.replace(/\./g, '-') + '.pdf';
+                            doc.save(filename);
+                            cleanupPdfElements();
+                        });
                     } else {
+                        // No chart - save just page 1
                         const filename = 'debt-calc-' + drawdownFormatted.replace(/\./g, '-') + '.pdf';
                         doc.save(filename);
-                        document.body.removeChild(page1);
+                        cleanupPdfElements();
                     }
+                }).catch(err => {
+                    console.error('html2canvas page1 error:', err);
+                    cleanupPdfElements();
+                    printScheduleLegacy();
                 });
 
             } catch (error) {
                 console.error('PDF generation error:', error);
-                // Fallback to legacy version
+                // Cleanup any orphaned PDF layout elements
+                document.querySelectorAll('.pdf-layout').forEach(el => {
+                    if (el.parentNode) el.parentNode.removeChild(el);
+                });
                 printScheduleLegacy();
             }
         }
