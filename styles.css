@@ -693,3 +693,201 @@ button {
 .feature-icon svg {
     flex-shrink: 0;
 }
+
+/* ========================================
+   Shared App Styles
+   Used by: debt-calculator, sp500-calculator,
+   real-estate-prompt-generator, and future apps
+   ======================================== */
+
+/* ===== App Container ===== */
+.container {
+    background: var(--bg-primary);
+    border-radius: 24px;
+    box-shadow: var(--shadow-md);
+    max-width: 1000px;
+    width: 100%;
+    padding: 70px 50px 50px;
+    position: relative;
+    margin: 20px 0;
+}
+
+/* ===== Back Button ===== */
+.back-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    text-decoration: none;
+    color: var(--accent);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    transition: var(--transition);
+}
+
+.back-btn:hover {
+    background: var(--accent-light);
+}
+
+/* ===== Currency Selector ===== */
+.currency-selector {
+    position: absolute;
+    top: 20px;
+    right: 40px;
+    display: flex;
+    gap: 8px;
+    background: var(--bg-surface);
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.currency-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.currency-btn:hover {
+    background: var(--accent-light);
+    color: var(--accent);
+}
+
+.currency-btn.active {
+    background: var(--accent);
+    color: white;
+}
+
+/* ===== App Headings ===== */
+.container h1 {
+    color: var(--text-primary);
+    font-size: 32px;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* ===== App Form Styles ===== */
+.container .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.container label {
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.container input[type="text"],
+.container input[type="date"],
+.container select {
+    padding: 16px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    font-size: 17px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-weight: 500;
+    box-shadow: var(--shadow);
+    width: 100%;
+    font-family: inherit;
+    transition: var(--transition);
+}
+
+.container input[type="text"]:focus,
+.container input[type="date"]:focus,
+.container select:focus {
+    outline: none;
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent);
+}
+
+.container input[type="text"]::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.container select {
+    cursor: pointer;
+}
+
+/* ===== App Action Buttons ===== */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+}
+
+.action-buttons button {
+    flex: 1;
+    min-width: 180px;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.action-btn.primary {
+    background: var(--accent);
+    color: white;
+}
+
+.action-btn.primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+}
+
+.action-btn {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.action-btn:hover {
+    background: var(--bg-primary);
+    border-color: var(--accent);
+}
+
+/* ===== App Responsive ===== */
+@media (max-width: 768px) {
+    .container {
+        padding: 60px 20px 30px;
+    }
+
+    .currency-selector {
+        right: 15px;
+        top: 65px;
+    }
+
+    .container h1 {
+        font-size: 24px;
+    }
+}
