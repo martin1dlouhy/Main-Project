@@ -1668,7 +1668,9 @@
                 if (propertyType === 'land') {
                     prompt += `## METODIKA OCENĚNÍ POZEMKU\n\n`;
                     prompt += `### 1. POROVNÁVACÍ METODA\n`;
-                    prompt += `- Najdi minimálně 5–10 srovnatelných pozemků v lokalitě (ideálně až 20 pro větší statistický vzorek), prodaných v posledních 12 měsících. Pro větší vzorek zahrň i inzerované ceny a poniž je o 5–10 %.\n`;
+                    prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data. Preferuj data ne starší než 6 měsíců.\n\n`;
+                    prompt += `- Najdi minimálně 5–10 srovnatelných pozemků v lokalitě (ideálně až 20), prodaných v posledních 12 měsících.\n`;
+                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod na realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti. Celkový haircut = cca 15%.\n`;
                     prompt += `- Aplikuj korekční koeficienty na:\n`;
                     prompt += `  * Velikost pozemku\n`;
                     prompt += `  * Dostupnost inženýrských sítí\n`;
@@ -1746,16 +1748,13 @@
                 if (propertyType === 'apartment' || propertyType === 'house') {
                     prompt += `## METODIKA OCENĚNÍ\n\n`;
                     prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
-                    prompt += `- Najdi minimálně 5–10 srovnatelných nemovitostí prodaných v lokalitě (ideálně až 20 pro co nejpřesnější statistický vzorek), za posledních 6–24 měsíců\n`;
-                    prompt += `- Nejdůležitější jsou realizované prodeje. Pro větší vzorek zahrň i inzerované ceny a poniž je.\n`;
-                    prompt += `- Korekce na:\n`;
-                    prompt += `  * Stav nemovitosti\n`;
-                    prompt += `  * Poloha v rámci lokality\n`;
-                    prompt += `  * Podlaží (u bytů)\n`;
-                    prompt += `  * Parkování\n`;
-                    prompt += `  * Orientace a výhled\n`;
-                    prompt += `- **KRITICKÉ**: Pokud jsou zdrojem inzertní ceny, aplikuj Koeficient úpravy (haircut) 10-20%\n`;
-                    prompt += `- Výsledek: Průměrná tržní cena za m² × Užitná plocha\n\n`;
+                    prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data — aktivně hledej aktuální nabídky a realizované prodeje v dané lokalitě. Preferuj data ne starší než 6 měsíců.\n\n`;
+                    prompt += `- Najdi minimálně 5–10 srovnatelných nemovitostí prodaných v lokalitě (ideálně až 20), za posledních 6–24 měsíců\n`;
+                    prompt += `- Nejdůležitější jsou realizované prodeje. Pro větší vzorek zahrň i inzerované ceny.\n`;
+                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
+                    prompt += `- Korekce na: stav nemovitosti, poloha v rámci lokality, podlaží (u bytů), parkování, orientace a výhled\n`;
+                    prompt += `- Statistická analýza: průměr, medián, směrodatná odchylka. Vážený průměr s důrazem na realizované prodeje.\n`;
+                    prompt += `- Výsledek: Výsledná cena za m² × Užitná plocha\n\n`;
 
                     prompt += `### 2. VALIDACE PLOCH\n`;
                     prompt += `**DŮLEŽITÉ**: Rozliš mezi různými typy ploch:\n`;
@@ -1828,7 +1827,9 @@
                         prompt += `- Hodnota = NOI / Yield\n\n`;
                     }
                     prompt += `### 2. POROVNÁVACÍ METODA (Sekundární)\n`;
+                    prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů. Nepoužívej pouze svá tréninková data.\n\n`;
                     prompt += `- Najdi minimálně 5–10 srovnatelných komerčních objektů (ideálně až 20) — typ, lokalita, obsazenost, stáří\n`;
+                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
                     prompt += `- Cena za m² pronajímatelné plochy\n`;
                     prompt += `- Pro komerční objekty je srovnávací metoda méně podstatná než výnosová, nicméně ji stanov pro validaci\n\n`;
 
@@ -1850,9 +1851,11 @@
 
                 if (propertyType === 'mixed_use') {
                     prompt += `## METODIKA OCENĚNÍ POLYFUNKČNÍHO DOMU\n\n`;
-                    prompt += `**DŮLEŽITÉ**: Polyfunkční dům vyžaduje kombinovaný přístup – odděleně ocenit bytovou a komerční část.\n\n`;
+                    prompt += `**DŮLEŽITÉ**: Polyfunkční dům vyžaduje kombinovaný přístup – odděleně ocenit bytovou a komerční část.\n`;
+                    prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data.\n\n`;
                     prompt += `### 1. BYTOVÁ ČÁST - POROVNÁVACÍ METODA\n`;
                     prompt += `- Najdi minimálně 5–10 srovnatelných bytů v lokalitě (ideálně až 20)\n`;
+                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
                     prompt += `- Aplikuj korekce na stav, podlaží, parkování, orientaci\n`;
                     if (formData.plocha_bytova) prompt += `- Bytová plocha: ${formData.plocha_bytova} m²\n`;
                     if (formData.pocet_bytu) prompt += `- Počet bytů: ${formData.pocet_bytu}\n`;
@@ -1877,8 +1880,10 @@
 
                 if (propertyType === 'recreation') {
                     prompt += `## METODIKA OCENĚNÍ REKREAČNÍHO OBJEKTU\n\n`;
+                    prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů. Nepoužívej pouze svá tréninková data.\n\n`;
                     prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
                     prompt += `- Najdi minimálně 5–10 srovnatelných rekreačních objektů v lokalitě (ideálně až 20)\n`;
+                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
                     prompt += `- **KLÍČOVÉ KOREKČNÍ FAKTORY**:\n`;
                     prompt += `  * Sezónnost: ${formData.sezonnost || 'N/A'}\n`;
                     prompt += `  * Přístupnost: ${formData.pristup || 'N/A'}\n`;

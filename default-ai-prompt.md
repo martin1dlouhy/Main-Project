@@ -33,7 +33,7 @@ Analyzovat nemovitost a stanovit:
 3. Analýza zastavitelnosti (KZP, KPP z územního plánu)
 
 **PRO BYTY A DOMY:**
-1. Porovnávací metoda (primární) - vyhledej minimálně 5–10 srovnatelných nemovitostí (ideálně až 20) pro co nejpřesnější statistický vzorek. Nejdůležitější jsou realizované prodeje za poslední 2 roky. Pro větší množství a přesnější statistický vzorek berme i inzerované ceny, které poniž. Důvodem je, že realizované ceny jsou obvykle nižší, než inzerované. Tyto pravidla platí pro porovnávací metodu jako celek u všech typů nemovitostí.
+1. Porovnávací metoda (primární) - vyhledej minimálně 5–10 srovnatelných nemovitostí (ideálně až 20) pro co nejpřesnější statistický vzorek. Nejdůležitější jsou realizované prodeje za poslední 2 roky. Pro větší množství a přesnější statistický vzorek berme i inzerované ceny, které uprav následovně: Srážka č. 1 (-10 %) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5 %) = koeficient opatrnosti pro zástavní financování. Celkový haircut na inzerované ceny = cca 15 %. Tyto pravidla platí pro porovnávací metodu jako celek u všech typů nemovitostí.
 2. Výnosová metoda (pokud je pronajímáno) - pokud nemáš informace, zda je pronajímáno, vypočti možný nájem, opotřebení obsazenost a stanov cenu na základě výnosové metody. Tyto pravidla platí pro výnosovou metodu jako celek u všech typů nemovitostí.
 3. Nákladová metoda (sekundární)
 
@@ -65,36 +65,14 @@ Analyzovat nemovitost a stanovit:
 2. **Použité předpoklady** (kde jsi vzal data, jak jsi je upravil)
 3. **Výslednou hodnotu v Kč**
 
-### Příklad výpočtu (porovnávací metoda - minimálně 5–10 srovnatelných nemovitostí):
-```
-Krok 1: Nalezené srovnatelné nemovitosti (čím více, tím přesnější odhad)
-- Nemovitost A: 85.000 Kč/m², 70 m², prodáno 11/2025 (realizovaný prodej)
-- Nemovitost B: 92.000 Kč/m², 68 m², prodáno 01/2026 (realizovaný prodej)
-- Nemovitost C: 88.000 Kč/m², 75 m², prodáno 12/2025 (realizovaný prodej)
-- Nemovitost D: 90.500 Kč/m², 72 m², prodáno 09/2025 (realizovaný prodej)
-- Nemovitost E: 86.000 Kč/m², 65 m², prodáno 10/2025 (realizovaný prodej)
-- Nemovitost F: 95.000 Kč/m², 78 m², inzerováno 02/2026 (inzerát → ponížit -5%)
-- Nemovitost G: 93.000 Kč/m², 70 m², inzerováno 01/2026 (inzerát → ponížit -5%)
-- Nemovitost H: 91.000 Kč/m², 74 m², inzerováno 12/2025 (inzerát → ponížit -5%)
+### Postup porovnávací metody:
+1. **Krok 1** - Vyhledej srovnatelné nemovitosti (min. 5–10, ideálně až 20). Použij aktuální online zdroje: sreality.cz, bezrealitky.cz, cenové mapy, realitní portály. U každé uveď cenu/m², plochu, datum a zdroj (realizovaný prodej vs. inzerát).
+2. **Krok 2** - Korekce: lokalita, stav, dispozice, podlaží, parkování, orientace, vybavení. U inzerovaných cen aplikuj srážku 10 % (převod na realizační cenu) + 5 % (koeficient opatrnosti) = celkem cca 15 %.
+3. **Krok 3** - Statistická analýza: průměr, medián, směrodatná odchylka. Použij vážený průměr s důrazem na realizované prodeje.
+4. **Krok 4** - Tržní hodnota = Výsledná cena za m² × Užitná plocha.
 
-Krok 2: Korekce (lokalita, stav, dispozice, vybavení)
-- Nemovitost A: +5% (horší stav, lepší lokalita) = 89.250 Kč/m²
-- Nemovitost B: -3% (horší poloha) = 89.240 Kč/m²
-- Nemovitost C: bez korekce = 88.000 Kč/m²
-- Nemovitost D: +2% (menší balkon) = 92.310 Kč/m²
-- Nemovitost E: +4% (nižší patro) = 89.440 Kč/m²
-- Nemovitost F: 95.000 × 0.95 = 90.250 Kč/m², -2% (novější) = 88.445 Kč/m²
-- Nemovitost G: 93.000 × 0.95 = 88.350 Kč/m², bez korekce = 88.350 Kč/m²
-- Nemovitost H: 91.000 × 0.95 = 86.450 Kč/m², +1% (bez výtahu) = 87.315 Kč/m²
-
-Krok 3: Statistická analýza
-- Průměr = 89.044 Kč/m²
-- Medián = 88.845 Kč/m²
-- Směrodatná odchylka = 1.488 Kč/m² (nízká = konzistentní data)
-- Použitá hodnota = 88.900 Kč/m² (vážený průměr s důrazem na realizované prodeje)
-
-Krok 4: Tržní hodnota = 88.900 × 72 m² = 6.400.800 Kč ≈ 6.400.000 Kč
-```
+### Zdroje dat
+**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů. Nepoužívej pouze svá tréninková data — aktivně hledej aktuální nabídky a realizované prodeje v dané lokalitě. Preferuj data ne starší než 6 měsíců.
 
 ## ZÁVĚREČNÝ VÝSTUP
 
