@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Dashboard | Investment Tools</title>
+    <script>
+if(localStorage.getItem("daynight-theme")==="carbon"){document.documentElement.classList.add("carbon");}
+function setTheme(t){
+  if(t==="carbon"){document.documentElement.classList.add("carbon");document.body.classList.add("carbon");localStorage.setItem("daynight-theme","carbon");}
+  else{document.documentElement.classList.remove("carbon");document.body.classList.remove("carbon");localStorage.setItem("daynight-theme","snow");}
+  document.querySelectorAll(".theme-btn-snow").forEach(function(b){b.classList.toggle("active",t==="snow");});
+  document.querySelectorAll(".theme-btn-carbon").forEach(function(b){b.classList.toggle("active",t==="carbon");});
+}
+document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getItem("daynight-theme")==="carbon"?"carbon":"snow";if(t==="carbon"){document.body.classList.add("carbon");}setTheme(t);});
+</script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        /* ===== DASHBOARD STYLES ===== */
+
+        .app-header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.5rem 2rem;
+            margin: -2rem -2rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .app-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .app-subtitle {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Tabs */
+        .dashboard-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 0.875rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.9375rem;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: var(--transition);
+        }
+
+        .kpi-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .kpi-label {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .kpi-label svg {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+        }
+
+        .kpi-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .kpi-change {
+            font-size: 0.8125rem;
+            margin-top: 0.375rem;
+        }
+
+        .kpi-change.positive { color: var(--success); }
+        .kpi-change.negative { color: var(--danger); }
+        .kpi-change.neutral { color: var(--text-secondary); }
+
+        /* Chart Sections */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .chart-card-full {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-height: 350px;
+        }
+
+        .chart-container canvas {
+            width: 100% !important;
+            max-height: 350px;
+        }
+
+        /* Data Tables */
+        .data-table-wrapper {
+            overflow-x: auto;
+            margin-top: 0.5rem;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .data-table thead th {
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.8125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .data-table thead th:hover {
+            color: var(--accent);
+        }
+
+        .data-table tbody td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .data-table tbody tr:hover {
+            background: var(--accent-light);
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Risk/Liquidity Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.625rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-low { background: rgba(34,197,94,0.15); color: #22C55E; }
+        .badge-medium { background: rgba(245,158,11,0.15); color: #F59E0B; }
+        .badge-high { background: rgba(239,68,68,0.15); color: #EF4444; }
+        .badge-active { background: rgba(56,189,248,0.15); color: #38BDF8; }
+        .badge-completed { background: rgba(34,197,94,0.15); color: #22C55E; }
+        .badge-default { background: rgba(239,68,68,0.15); color: #EF4444; }
+
+        /* Company Cards */
+        .company-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .company-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: var(--transition);
+        }
+
+        .company-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .company-name {
+            font-size: 1.0625rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .company-country {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .company-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .company-metric-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .company-metric-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        /* Heatmap */
+        .heatmap-cell {
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.8125rem;
+        }
+
+        .heat-0 { background: rgba(34,197,94,0.05); color: var(--text-secondary); }
+        .heat-1 { background: rgba(34,197,94,0.2); color: #22C55E; }
+        .heat-2 { background: rgba(245,158,11,0.2); color: #F59E0B; }
+        .heat-3 { background: rgba(239,68,68,0.15); color: #EF4444; }
+        .heat-4 { background: rgba(239,68,68,0.3); color: #EF4444; }
+
+        /* Geo bars */
+        .geo-bar-container {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-surface);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .geo-bar {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Data Entry Section — dash- prefix to avoid global conflicts */
+        .dash-form-section {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .dash-section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dash-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .dash-form-group { margin-bottom: 1rem; }
+
+        .dash-form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .dash-form-input, .dash-form-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            transition: var(--transition);
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .dash-form-input:focus, .dash-form-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--bg-primary);
+        }
+
+        /* Action Buttons — scoped to avoid global .action-buttons button conflict */
+        .dash-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .dash-actions .btn {
+            flex: none;
+            min-width: auto;
+        }
+
+        /* Inline table actions */
+        .table-action-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        .table-action-btn:hover {
+            color: var(--danger);
+            background: rgba(239,68,68,0.1);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            opacity: 0.3;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            font-size: 0.9375rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Modal overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Currency selector — prefixed to avoid global .currency-selector conflict */
+        .dash-currency {
+            display: flex;
+            gap: 0.5rem;
+            position: static;
+            background: none;
+            padding: 0;
+            border: none;
+            border-radius: 0;
+        }
+
+        .dash-currency .currency-btn {
+            padding: 0.375rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            min-width: auto;
+            flex: none;
+        }
+
+        .dash-currency .currency-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .dash-currency .currency-btn:hover:not(.active) {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Import area */
+        .import-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 1rem;
+        }
+
+        .import-area:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        .import-area svg {
+            width: 40px;
+            height: 40px;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .app-header {
+                margin: -1.5rem -1.5rem 1.5rem;
+                padding: 1.5rem;
+            }
+            .app-title { font-size: 1.5rem; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .charts-row { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 640px) {
+            .kpi-grid { grid-template-columns: 1fr; }
+            .company-grid { grid-template-columns: 1fr; }
+            .header-actions { width: 100%; }
+            .header-actions .btn { flex: 1; min-width: 0; }
+            .dashboard-tabs { gap: 0; }
+            .tab-btn { padding: 0.75rem 1rem; font-size: 0.8125rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ===== NAVIGATION ===== -->
+        <nav class="top-nav">
+            <div class="nav-container">
+                <div class="nav-left">
+                    <a href="index.html" class="logo">
+                        <div class="logo-icon">
+                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="logoBar1" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.5"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.25"/>
+                                    </linearGradient>
+                                    <linearGradient id="logoBar2" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.75"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.45"/>
+                                    </linearGradient>
+                                    <linearGradient id="logoBar3" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.7"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="4" y="20" width="6" height="8" rx="1.5" fill="url(#logoBar1)"/>
+                                <rect x="13" y="13" width="6" height="15" rx="1.5" fill="url(#logoBar2)"/>
+                                <rect x="22" y="4" width="6" height="24" rx="1.5" fill="url(#logoBar3)"/>
+                                <path d="M6 18L15 10L21 14L28 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+                                <circle cx="28" cy="4" r="2" fill="white" opacity="0.8"/>
+                            </svg>
+                        </div>
+                        <span>Investment Tools</span>
+                    </a>
+                    <div class="nav-menu">
+                        <div class="nav-item">
+                            <a href="index.html" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                    <polyline points="9 22 9 12 15 12 15 22"/>
+                                </svg>
+                                Domů
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="apps.html" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/>
+                                    <rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="14" y="14" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/>
+                                </svg>
+                                Aplikace
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-right">
+                    <div class="theme-toggle">
+                        <button class="theme-btn theme-btn-snow active" onclick="setTheme('snow')" title="Light Mode">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="5"/>
+                                <line x1="12" y1="1" x2="12" y2="3"/>
+                                <line x1="12" y1="21" x2="12" y2="23"/>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                                <line x1="1" y1="12" x2="3" y2="12"/>
+                                <line x1="21" y1="12" x2="23" y2="12"/>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                            </svg>
+                        </button>
+                        <button class="theme-btn theme-btn-carbon" onclick="setTheme('carbon')" title="Dark Mode">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- ===== MAIN CONTENT ===== -->
+        <main class="main-content">
+            <!-- Header -->
+            <div class="app-header">
+                <div>
+                    <h1 class="app-title">Portfolio Dashboard</h1>
+                    <p class="app-subtitle">Přehled celého investičního portfolia — aktiva, výnosy, likvidita, riziko</p>
+                </div>
+                <div class="header-actions">
+                    <div class="dash-currency">
+                        <button class="currency-btn" onclick="setBaseCurrency('CZK')">CZK</button>
+                        <button class="currency-btn active" onclick="setBaseCurrency('EUR')">EUR</button>
+                        <button class="currency-btn" onclick="setBaseCurrency('USD')">USD</button>
+                    </div>
+                    <button class="btn btn-export" onclick="exportJSON()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export JSON
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="dashboard-tabs">
+                <button class="tab-btn active" onclick="switchTab('overview')">Přehled</button>
+                <button class="tab-btn" onclick="switchTab('assets')">Aktiva</button>
+                <button class="tab-btn" onclick="switchTab('companies')">Firmy</button>
+                <button class="tab-btn" onclick="switchTab('lending')">Lending</button>
+                <button class="tab-btn" onclick="switchTab('data')">Správa dat</button>
+            </div>
+
+            <!-- ===== TAB: OVERVIEW ===== -->
+            <div id="tab-overview" class="tab-content active">
+                <!-- KPI Cards -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            Celková hodnota
+                        </div>
+                        <div class="kpi-value" id="kpi-total">—</div>
+                        <div class="kpi-change neutral" id="kpi-total-sub">Žádná data</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                            Průměrný výnos
+                        </div>
+                        <div class="kpi-value" id="kpi-yield">—</div>
+                        <div class="kpi-change neutral" id="kpi-yield-sub">Vážený průměr</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            Skóre likvidity
+                        </div>
+                        <div class="kpi-value" id="kpi-liquidity">—</div>
+                        <div class="kpi-change neutral" id="kpi-liquidity-sub">0–100</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            Skóre rizika
+                        </div>
+                        <div class="kpi-value" id="kpi-risk">—</div>
+                        <div class="kpi-change neutral" id="kpi-risk-sub">Nízké / Střední / Vysoké</div>
+                    </div>
+                </div>
+
+                <!-- Charts Row: Allocation + Yield -->
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <div class="chart-title">Alokace aktiv</div>
+                        <div class="chart-container">
+                            <canvas id="allocationChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Srovnání výnosů dle třídy aktiv</div>
+                        <div class="chart-container">
+                            <canvas id="yieldChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Geographic Distribution -->
+                <div class="chart-card-full">
+                    <div class="chart-title">Geografické rozložení</div>
+                    <div class="data-table-wrapper">
+                        <table class="data-table" id="geoTable">
+                            <thead>
+                                <tr>
+                                    <th>Země</th>
+                                    <th>Hodnota</th>
+                                    <th>% portfolia</th>
+                                    <th>Koncentrace</th>
+                                    <th>Ø Výnos</th>
+                                    <th>Počet investic</th>
+                                </tr>
+                            </thead>
+                            <tbody id="geoTableBody">
+                                <tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:2rem;">Přidejte aktiva pro zobrazení geografie</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Liquidity Heatmap -->
+                <div class="chart-card-full">
+                    <div class="chart-title">Hodnocení likvidity</div>
+                    <div class="data-table-wrapper">
+                        <table class="data-table" id="liquidityTable">
+                            <thead>
+                                <tr>
+                                    <th>Třída aktiv</th>
+                                    <th>Okamžitá</th>
+                                    <th>≤ 1 měsíc</th>
+                                    <th>≤ 3 měsíce</th>
+                                    <th>≤ 12 měsíců</th>
+                                    <th>1+ rok</th>
+                                    <th>Celkem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="liquidityTableBody">
+                                <tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:2rem;">Přidejte aktiva pro zobrazení likvidity</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Risk Assessment -->
+                <div class="chart-card-full">
+                    <div class="chart-title">Hodnocení rizika</div>
+                    <div class="data-table-wrapper">
+                        <table class="data-table" id="riskTable">
+                            <thead>
+                                <tr>
+                                    <th>Třída aktiv</th>
+                                    <th>Hodnota</th>
+                                    <th>Default risk</th>
+                                    <th>Tržní riziko</th>
+                                    <th>Koncentrace</th>
+                                    <th>Celkové riziko</th>
+                                </tr>
+                            </thead>
+                            <tbody id="riskTableBody">
+                                <tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:2rem;">Přidejte aktiva pro zobrazení rizika</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TAB: ASSETS ===== -->
+            <div id="tab-assets" class="tab-content">
+                <div class="chart-card-full">
+                    <div class="chart-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        Všechna aktiva
+                        <button class="btn btn-primary" onclick="openAddAssetModal()" style="font-size:0.8125rem;padding:0.5rem 1rem;">+ Přidat aktivum</button>
+                    </div>
+                    <div class="data-table-wrapper">
+                        <table class="data-table" id="assetsTable">
+                            <thead>
+                                <tr>
+                                    <th>Popis</th>
+                                    <th>Třída</th>
+                                    <th>Hodnota</th>
+                                    <th>Výnos %</th>
+                                    <th>Země</th>
+                                    <th>Firma</th>
+                                    <th>Likvidita</th>
+                                    <th>Riziko</th>
+                                    <th>Splatnost</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="assetsTableBody">
+                                <tr><td colspan="10" style="text-align:center;color:var(--text-secondary);padding:2rem;">Zatím žádná aktiva. Klikněte „+ Přidat aktivum" nebo importujte JSON.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TAB: COMPANIES ===== -->
+            <div id="tab-companies" class="tab-content">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                    <h2 style="font-size:1.125rem;font-weight:600;color:var(--text-primary);margin:0;">Přehled firem</h2>
+                    <button class="btn btn-primary" onclick="openAddCompanyModal()" style="font-size:0.8125rem;padding:0.5rem 1rem;">+ Přidat firmu</button>
+                </div>
+                <div class="company-grid" id="companyGrid">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                        <h3>Žádné firmy</h3>
+                        <p>Přidejte firmy pro sledování výnosu na kapitál.</p>
+                        <button class="btn btn-primary" onclick="openAddCompanyModal()">+ Přidat firmu</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TAB: LENDING ===== -->
+            <div id="tab-lending" class="tab-content">
+                <div class="chart-card-full">
+                    <div class="chart-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        Lending portfolio — dealy
+                        <button class="btn btn-primary" onclick="openAddDealModal()" style="font-size:0.8125rem;padding:0.5rem 1rem;">+ Přidat deal</button>
+                    </div>
+                    <div class="data-table-wrapper">
+                        <table class="data-table" id="dealsTable">
+                            <thead>
+                                <tr>
+                                    <th>Popis</th>
+                                    <th>Částka</th>
+                                    <th>Výnos %</th>
+                                    <th>Splatnost</th>
+                                    <th>Zajištění</th>
+                                    <th>Hodnota zajištění</th>
+                                    <th>LTV</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="dealsTableBody">
+                                <tr><td colspan="9" style="text-align:center;color:var(--text-secondary);padding:2rem;">Zatím žádné dealy. Klikněte „+ Přidat deal".</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== TAB: DATA MANAGEMENT ===== -->
+            <div id="tab-data" class="tab-content">
+                <!-- Import -->
+                <div class="dash-form-section">
+                    <h2 class="dash-section-title">Import dat</h2>
+                    <div class="import-area" onclick="document.getElementById('jsonFileInput').click()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <p style="color:var(--text-primary);font-weight:600;">Klikněte pro nahrání JSON souboru</p>
+                        <p style="font-size:0.8125rem;">Podporovaný formát: .json</p>
+                    </div>
+                    <input type="file" id="jsonFileInput" accept=".json" style="display:none" onchange="importJSON(event)">
+                </div>
+
+                <!-- Export -->
+                <div class="dash-form-section">
+                    <h2 class="dash-section-title">Export dat</h2>
+                    <p style="font-size:0.9375rem;color:var(--text-secondary);margin-bottom:1rem;">Stáhněte kompletní data portfolia jako JSON pro zálohu nebo přenos.</p>
+                    <div class="dash-actions" style="margin-top:0;">
+                        <button class="btn btn-primary" onclick="exportJSON()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export JSON
+                        </button>
+                        <button class="btn btn-export" onclick="loadDemoData()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            Načíst demo data
+                        </button>
+                        <button class="btn btn-export" onclick="clearAllData()" style="color:var(--danger);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            Smazat vše
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Exchange Rates -->
+                <div class="dash-form-section">
+                    <h2 class="dash-section-title">Kurzovní lístek (k EUR)</h2>
+                    <div class="dash-form-grid" id="exchangeRatesGrid">
+                        <!-- filled by JS -->
+                    </div>
+                    <div class="dash-actions" style="margin-top:0.5rem;">
+                        <button class="btn btn-primary" onclick="saveExchangeRates()" style="font-size:0.8125rem;padding:0.5rem 1rem;">Uložit kurzy</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ===== MODALS ===== -->
+
+        <!-- Add Asset Modal -->
+        <div class="modal-overlay" id="assetModal">
+            <div class="modal">
+                <h3>Přidat aktivum</h3>
+                <div class="dash-form-grid">
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Popis *</label>
+                        <input type="text" class="dash-form-input" id="assetDesc" placeholder="Např. Půjčka XY s.r.o.">
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Třída aktiv *</label>
+                        <select class="dash-form-select" id="assetClass">
+                            <option value="Private Debt">Private Debt</option>
+                            <option value="Real Estate">Nemovitosti</option>
+                            <option value="Stocks">Akcie</option>
+                            <option value="Bonds">Dluhopisy</option>
+                            <option value="Company Equity">Equity firmy</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Hodnota *</label>
+                        <input type="number" class="dash-form-input" id="assetAmount" placeholder="0" min="0" step="1000">
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Měna</label>
+                        <select class="dash-form-select" id="assetCurrency">
+                            <option value="EUR">EUR</option>
+                            <option value="CZK">CZK</option>
+                            <option value="USD">USD</option>
+                            <option value="PLN">PLN</option>
+                            <option value="BGN">BGN</option>
+                            <option value="MKD">MKD</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Výnos p.a. (%)</label>
+                        <input type="number" class="dash-form-input" id="assetYield" placeholder="0" min="0" max="100" step="0.1">
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Země</label>
+                        <select class="dash-form-select" id="assetCountry">
+                            <option value="CZ">Česká republika</option>
+                            <option value="SK">Slovensko</option>
+                            <option value="PL">Polsko</option>
+                            <option value="BG">Bulharsko</option>
+                            <option value="MK">Makedonie</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Firma</label>
+                        <select class="dash-form-select" id="assetCompany">
+                            <option value="">— Žádná —</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Likvidita</label>
+                        <select class="dash-form-select" id="assetLiquidity">
+                            <option value="immediate">Okamžitá</option>
+                            <option value="1mo">≤ 1 měsíc</option>
+                            <option value="3mo">≤ 3 měsíce</option>
+                            <option value="12mo" selected>≤ 12 měsíců</option>
+                            <option value="1yr+">1+ rok</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Riziko</label>
+                        <select class="dash-form-select" id="assetRisk">
+                            <option value="low">Nízké</option>
+                            <option value="medium" selected>Střední</option>
+                            <option value="high">Vysoké</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Splatnost</label>
+                        <input type="date" class="dash-form-input" id="assetMaturity">
+                    </div>
+                </div>
+                <div class="dash-actions">
+                    <button class="btn btn-primary" onclick="saveAsset()" style="flex:1;">Uložit</button>
+                    <button class="btn btn-export" onclick="closeModal('assetModal')">Zrušit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Company Modal -->
+        <div class="modal-overlay" id="companyModal">
+            <div class="modal">
+                <h3>Přidat firmu</h3>
+                <div class="dash-form-grid">
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Název firmy *</label>
+                        <input type="text" class="dash-form-input" id="companyName" placeholder="Např. ProfiLend s.r.o.">
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Země *</label>
+                        <select class="dash-form-select" id="companyCountry">
+                            <option value="CZ">Česká republika</option>
+                            <option value="SK">Slovensko</option>
+                            <option value="PL">Polsko</option>
+                            <option value="BG">Bulharsko</option>
+                            <option value="MK">Makedonie</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Nasazený kapitál</label>
+                        <input type="number" class="dash-form-input" id="companyCapital" placeholder="0" min="0" step="1000">
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Měna</label>
+                        <select class="dash-form-select" id="companyCurrency">
+                            <option value="EUR">EUR</option>
+                            <option value="CZK">CZK</option>
+                            <option value="USD">USD</option>
+                            <option value="PLN">PLN</option>
+                            <option value="BGN">BGN</option>
+                            <option value="MKD">MKD</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Status</label>
+                        <select class="dash-form-select" id="companyStatus">
+                            <option value="active">Aktivní</option>
+                            <option value="dormant">Neaktivní</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="dash-actions">
+                    <button class="btn btn-primary" onclick="saveCompany()" style="flex:1;">Uložit</button>
+                    <button class="btn btn-export" onclick="closeModal('companyModal')">Zrušit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Deal Modal -->
+        <div class="modal-overlay" id="dealModal">
+            <div class="modal">
+                <h3>Přidat deal</h3>
+                <div class="dash-form-grid">
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Popis *</label>
+                        <input type="text" class="dash-form-input" id="dealDesc" placeholder="Např. Senior loan ABC">
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Částka *</label>
+                        <input type="number" class="dash-form-input" id="dealAmount" placeholder="0" min="0" step="1000">
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Měna</label>
+                        <select class="dash-form-select" id="dealCurrency">
+                            <option value="EUR">EUR</option>
+                            <option value="CZK">CZK</option>
+                            <option value="USD">USD</option>
+                            <option value="PLN">PLN</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Výnos p.a. (%)</label>
+                        <input type="number" class="dash-form-input" id="dealYield" placeholder="0" min="0" max="100" step="0.1">
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Splatnost</label>
+                        <input type="date" class="dash-form-input" id="dealMaturity">
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Typ zajištění</label>
+                        <select class="dash-form-select" id="dealCollateralType">
+                            <option value="Real Estate">Nemovitost</option>
+                            <option value="Movable">Movitá věc</option>
+                            <option value="Guarantee">Ručení</option>
+                            <option value="None">Bez zajištění</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Hodnota zajištění</label>
+                        <input type="number" class="dash-form-input" id="dealCollateralValue" placeholder="0" min="0" step="1000">
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Status</label>
+                        <select class="dash-form-select" id="dealStatus">
+                            <option value="active">Aktivní</option>
+                            <option value="completed">Dokončený</option>
+                            <option value="default">Default</option>
+                        </select>
+                    </div>
+                    <div class="dash-form-group">
+                        <label class="dash-form-label">Země</label>
+                        <select class="dash-form-select" id="dealCountry">
+                            <option value="CZ">Česká republika</option>
+                            <option value="SK">Slovensko</option>
+                            <option value="PL">Polsko</option>
+                            <option value="BG">Bulharsko</option>
+                            <option value="MK">Makedonie</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="dash-actions">
+                    <button class="btn btn-primary" onclick="saveDeal()" style="flex:1;">Uložit</button>
+                    <button class="btn btn-export" onclick="closeModal('dealModal')">Zrušit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== FOOTER ===== -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Investment Tools</h4>
+                    <p>Profesionální nástroje pro správu investic a financí.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Navigace</h4>
+                    <ul>
+                        <li><a href="index.html">Domů</a></li>
+                        <li><a href="apps.html">Aplikace</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Kontakt</h4>
+                    <p>Email: <a href="mailto:martin@dlouhy.com">martin@dlouhy.com</a></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Martin Dlouhý. All rights reserved.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ===== SCRIPTS ===== -->
+    <script src="script.js"></script>
+    <script>
+    // ============================================================
+    //  PORTFOLIO DASHBOARD — State & Engine
+    // ============================================================
+
+    const COUNTRY_NAMES = { CZ:'Česko', SK:'Slovensko', PL:'Polsko', BG:'Bulharsko', MK:'Makedonie' };
+    const CLASS_COLORS = {
+        'Private Debt': '#38BDF8',
+        'Real Estate': '#06B6D4',
+        'Stocks': '#10B981',
+        'Bonds': '#F59E0B',
+        'Company Equity': '#EC4899'
+    };
+    const CLASS_LABELS = {
+        'Private Debt': 'Private Debt',
+        'Real Estate': 'Nemovitosti',
+        'Stocks': 'Akcie',
+        'Bonds': 'Dluhopisy',
+        'Company Equity': 'Equity firem'
+    };
+    const LIQUIDITY_BUCKETS = ['immediate','1mo','3mo','12mo','1yr+'];
+    const LIQUIDITY_LABELS = { immediate:'Okamžitá', '1mo':'≤ 1 měs.', '3mo':'≤ 3 měs.', '12mo':'≤ 12 měs.', '1yr+':'1+ rok' };
+    const LIQUIDITY_SCORES = { immediate:100, '1mo':80, '3mo':60, '12mo':40, '1yr+':20 };
+    const RISK_WEIGHTS = { low:1, medium:2, high:3 };
+
+    // State
+    let state = loadState();
+    let baseCurrency = 'EUR';
+    let allocationChart = null;
+    let yieldChart = null;
+
+    function defaultState() {
+        return {
+            exchangeRates: { EUR:1, CZK:0.04, USD:0.92, PLN:0.23, BGN:0.51, MKD:0.016 },
+            companies: [],
+            assets: [],
+            deals: []
+        };
+    }
+
+    function loadState() {
+        try {
+            const s = localStorage.getItem('portfolio-dashboard-data');
+            if (s) return JSON.parse(s);
+        } catch(e) {}
+        return defaultState();
+    }
+
+    function saveState() {
+        localStorage.setItem('portfolio-dashboard-data', JSON.stringify(state));
+    }
+
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2,5); }
+
+    // ============================================================
+    //  Currency
+    // ============================================================
+
+    function toBase(amount, currency) {
+        if (currency === 'EUR') return amount;
+        const rate = state.exchangeRates[currency] || 1;
+        return amount * rate; // rate = how many EUR per 1 unit
+    }
+
+    function fromBase(amountEUR) {
+        if (baseCurrency === 'EUR') return amountEUR;
+        const rate = state.exchangeRates[baseCurrency] || 1;
+        return amountEUR / rate;
+    }
+
+    function formatCurrency(val) {
+        if (Math.abs(val) >= 1e9) return (val/1e9).toFixed(2) + ' mld';
+        if (Math.abs(val) >= 1e6) return (val/1e6).toFixed(2) + ' mil';
+        if (Math.abs(val) >= 1e3) return (val/1e3).toFixed(1) + ' tis';
+        return val.toFixed(0);
+    }
+
+    function formatFull(val) {
+        return new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 0 }).format(Math.round(val));
+    }
+
+    function setBaseCurrency(c) {
+        baseCurrency = c;
+        document.querySelectorAll('.currency-btn').forEach(b => b.classList.toggle('active', b.textContent.trim() === c));
+        renderAll();
+    }
+
+    // ============================================================
+    //  Calculations
+    // ============================================================
+
+    function calcTotalEUR() {
+        return state.assets.reduce((s,a) => s + toBase(a.amount, a.currency), 0);
+    }
+
+    function calcWeightedYield() {
+        let wSum = 0, tSum = 0;
+        state.assets.forEach(a => {
+            const v = toBase(a.amount, a.currency);
+            wSum += v * (a.yieldPercent || 0);
+            tSum += v;
+        });
+        return tSum > 0 ? wSum / tSum : 0;
+    }
+
+    function calcLiquidityScore() {
+        let wSum = 0, tSum = 0;
+        state.assets.forEach(a => {
+            const v = toBase(a.amount, a.currency);
+            wSum += v * (LIQUIDITY_SCORES[a.liquidityBucket] || 40);
+            tSum += v;
+        });
+        return tSum > 0 ? wSum / tSum : 0;
+    }
+
+    function calcRiskScore() {
+        let wSum = 0, tSum = 0;
+        state.assets.forEach(a => {
+            const v = toBase(a.amount, a.currency);
+            wSum += v * (RISK_WEIGHTS[a.riskLevel] || 2);
+            tSum += v;
+        });
+        return tSum > 0 ? wSum / tSum : 0;
+    }
+
+    function riskLabel(score) {
+        if (score <= 1.5) return { text: 'Nízké', cls: 'positive' };
+        if (score <= 2.3) return { text: 'Střední', cls: 'neutral' };
+        return { text: 'Vysoké', cls: 'negative' };
+    }
+
+    function groupByClass() {
+        const g = {};
+        state.assets.forEach(a => {
+            if (!g[a.assetClass]) g[a.assetClass] = { totalEUR: 0, wYield: 0 };
+            const v = toBase(a.amount, a.currency);
+            g[a.assetClass].totalEUR += v;
+            g[a.assetClass].wYield += v * (a.yieldPercent || 0);
+        });
+        Object.keys(g).forEach(k => {
+            g[k].avgYield = g[k].totalEUR > 0 ? g[k].wYield / g[k].totalEUR : 0;
+        });
+        return g;
+    }
+
+    function groupByCountry() {
+        const g = {};
+        state.assets.forEach(a => {
+            if (!g[a.country]) g[a.country] = { totalEUR: 0, wYield: 0, count: 0 };
+            const v = toBase(a.amount, a.currency);
+            g[a.country].totalEUR += v;
+            g[a.country].wYield += v * (a.yieldPercent || 0);
+            g[a.country].count++;
+        });
+        Object.keys(g).forEach(k => {
+            g[k].avgYield = g[k].totalEUR > 0 ? g[k].wYield / g[k].totalEUR : 0;
+        });
+        return g;
+    }
+
+    // ============================================================
+    //  Rendering
+    // ============================================================
+
+    function renderAll() {
+        renderKPIs();
+        renderAllocationChart();
+        renderYieldChart();
+        renderGeoTable();
+        renderLiquidityTable();
+        renderRiskTable();
+        renderAssetsTable();
+        renderCompanyGrid();
+        renderDealsTable();
+    }
+
+    // KPIs
+    function renderKPIs() {
+        const totalEUR = calcTotalEUR();
+        const totalDisp = fromBase(totalEUR);
+        document.getElementById('kpi-total').textContent = formatCurrency(totalDisp) + ' ' + baseCurrency;
+        document.getElementById('kpi-total-sub').textContent = state.assets.length + ' aktiv ve ' + (new Set(state.assets.map(a=>a.country))).size + ' zemích';
+        document.getElementById('kpi-total-sub').className = 'kpi-change neutral';
+
+        const wy = calcWeightedYield();
+        document.getElementById('kpi-yield').textContent = wy.toFixed(2) + ' %';
+        document.getElementById('kpi-yield-sub').textContent = 'Vážený průměr p.a.';
+        document.getElementById('kpi-yield-sub').className = 'kpi-change ' + (wy > 0 ? 'positive' : 'neutral');
+
+        const liq = calcLiquidityScore();
+        document.getElementById('kpi-liquidity').textContent = Math.round(liq);
+        document.getElementById('kpi-liquidity-sub').textContent = liq >= 60 ? 'Dobrá likvidita' : liq >= 40 ? 'Průměrná' : 'Nízká likvidita';
+        document.getElementById('kpi-liquidity-sub').className = 'kpi-change ' + (liq >= 60 ? 'positive' : liq >= 40 ? 'neutral' : 'negative');
+
+        const risk = calcRiskScore();
+        const rl = riskLabel(risk);
+        document.getElementById('kpi-risk').textContent = rl.text;
+        document.getElementById('kpi-risk-sub').textContent = 'Skóre: ' + risk.toFixed(2) + ' / 3';
+        document.getElementById('kpi-risk-sub').className = 'kpi-change ' + rl.cls;
+    }
+
+    // Charts
+    function getChartTextColor() {
+        return document.documentElement.classList.contains('carbon') ? '#94A3B8' : '#64748B';
+    }
+
+    function renderAllocationChart() {
+        const byClass = groupByClass();
+        const labels = Object.keys(byClass).map(k => CLASS_LABELS[k] || k);
+        const data = Object.values(byClass).map(v => fromBase(v.totalEUR));
+        const colors = Object.keys(byClass).map(k => CLASS_COLORS[k] || '#94A3B8');
+
+        if (allocationChart) allocationChart.destroy();
+        const ctx = document.getElementById('allocationChart').getContext('2d');
+        allocationChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{ data: data, backgroundColor: colors, borderWidth: 0, hoverOffset: 8 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: getChartTextColor(), padding: 12, usePointStyle: true, pointStyleWidth: 12, font: { family: 'DM Sans', size: 13 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const total = ctx.dataset.data.reduce((a,b) => a+b, 0);
+                                const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                                return ctx.label + ': ' + formatCurrency(ctx.raw) + ' ' + baseCurrency + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderYieldChart() {
+        const byClass = groupByClass();
+        const labels = Object.keys(byClass).map(k => CLASS_LABELS[k] || k);
+        const data = Object.values(byClass).map(v => v.avgYield);
+        const colors = Object.keys(byClass).map(k => CLASS_COLORS[k] || '#94A3B8');
+
+        if (yieldChart) yieldChart.destroy();
+        const ctx = document.getElementById('yieldChart').getContext('2d');
+        yieldChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{ data: data, backgroundColor: colors, borderRadius: 6, barThickness: 28 }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: { label: ctx => ctx.raw.toFixed(2) + ' % p.a.' }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(148,163,184,0.1)' },
+                        ticks: { color: getChartTextColor(), font: { family: 'DM Sans', size: 12 }, callback: v => v + '%' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: getChartTextColor(), font: { family: 'DM Sans', size: 13 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Geo table
+    function renderGeoTable() {
+        const byCountry = groupByCountry();
+        const totalEUR = calcTotalEUR();
+        const tbody = document.getElementById('geoTableBody');
+
+        if (Object.keys(byCountry).length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:2rem;">Přidejte aktiva pro zobrazení geografie</td></tr>';
+            return;
+        }
+
+        const sorted = Object.entries(byCountry).sort((a,b) => b[1].totalEUR - a[1].totalEUR);
+        tbody.innerHTML = sorted.map(([code, d]) => {
+            const pct = totalEUR > 0 ? (d.totalEUR / totalEUR * 100) : 0;
+            return `<tr>
+                <td><strong>${COUNTRY_NAMES[code] || code}</strong></td>
+                <td>${formatCurrency(fromBase(d.totalEUR))} ${baseCurrency}</td>
+                <td>${pct.toFixed(1)} %</td>
+                <td><div class="geo-bar-container"><div class="geo-bar" style="width:${pct}%"></div></div></td>
+                <td>${d.avgYield.toFixed(2)} %</td>
+                <td>${d.count}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // Liquidity heatmap
+    function renderLiquidityTable() {
+        const byClass = {};
+        state.assets.forEach(a => {
+            if (!byClass[a.assetClass]) byClass[a.assetClass] = {};
+            if (!byClass[a.assetClass][a.liquidityBucket]) byClass[a.assetClass][a.liquidityBucket] = 0;
+            byClass[a.assetClass][a.liquidityBucket] += toBase(a.amount, a.currency);
+        });
+
+        const tbody = document.getElementById('liquidityTableBody');
+        if (Object.keys(byClass).length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:2rem;">Přidejte aktiva pro zobrazení likvidity</td></tr>';
+            return;
+        }
+
+        const totalEUR = calcTotalEUR();
+        let html = '';
+        Object.entries(byClass).forEach(([cls, buckets]) => {
+            const classTotal = Object.values(buckets).reduce((s,v)=>s+v,0);
+            html += '<tr>';
+            html += `<td><strong>${CLASS_LABELS[cls] || cls}</strong></td>`;
+            LIQUIDITY_BUCKETS.forEach(b => {
+                const val = buckets[b] || 0;
+                const pct = totalEUR > 0 ? (val / totalEUR * 100) : 0;
+                const heat = pct === 0 ? 0 : pct < 5 ? 1 : pct < 15 ? 2 : pct < 30 ? 3 : 4;
+                html += `<td class="heatmap-cell heat-${heat}">${val > 0 ? formatCurrency(fromBase(val)) : '—'}</td>`;
+            });
+            html += `<td><strong>${formatCurrency(fromBase(classTotal))} ${baseCurrency}</strong></td>`;
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+    }
+
+    // Risk table
+    function renderRiskTable() {
+        const byClass = {};
+        state.assets.forEach(a => {
+            if (!byClass[a.assetClass]) byClass[a.assetClass] = { totalEUR: 0, wRisk: 0, count: 0 };
+            const v = toBase(a.amount, a.currency);
+            byClass[a.assetClass].totalEUR += v;
+            byClass[a.assetClass].wRisk += v * (RISK_WEIGHTS[a.riskLevel] || 2);
+            byClass[a.assetClass].count++;
+        });
+
+        const tbody = document.getElementById('riskTableBody');
+        const totalEUR = calcTotalEUR();
+
+        if (Object.keys(byClass).length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:2rem;">Přidejte aktiva pro zobrazení rizika</td></tr>';
+            return;
+        }
+
+        let html = '';
+        Object.entries(byClass).sort((a,b) => b[1].totalEUR - a[1].totalEUR).forEach(([cls, d]) => {
+            const avgRisk = d.totalEUR > 0 ? d.wRisk / d.totalEUR : 0;
+            const concentration = totalEUR > 0 ? (d.totalEUR / totalEUR * 100) : 0;
+            const rl = riskLabel(avgRisk);
+            const defaultRisk = cls === 'Private Debt' ? 'Střední' : cls === 'Stocks' ? 'Vysoké' : 'Nízké';
+            const marketRisk = cls === 'Stocks' ? 'Vysoké' : cls === 'Bonds' ? 'Střední' : 'Nízké';
+            const drBadge = defaultRisk === 'Vysoké' ? 'high' : defaultRisk === 'Střední' ? 'medium' : 'low';
+            const mrBadge = marketRisk === 'Vysoké' ? 'high' : marketRisk === 'Střední' ? 'medium' : 'low';
+            const concBadge = concentration > 40 ? 'high' : concentration > 25 ? 'medium' : 'low';
+
+            html += `<tr>
+                <td><strong>${CLASS_LABELS[cls] || cls}</strong></td>
+                <td>${formatCurrency(fromBase(d.totalEUR))} ${baseCurrency}</td>
+                <td><span class="badge badge-${drBadge}">${defaultRisk}</span></td>
+                <td><span class="badge badge-${mrBadge}">${marketRisk}</span></td>
+                <td><span class="badge badge-${concBadge}">${concentration.toFixed(1)}%</span></td>
+                <td><span class="badge badge-${rl.text === 'Nízké' ? 'low' : rl.text === 'Střední' ? 'medium' : 'high'}">${rl.text}</span></td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    // Assets table
+    function renderAssetsTable() {
+        const tbody = document.getElementById('assetsTableBody');
+        if (state.assets.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-secondary);padding:2rem;">Zatím žádná aktiva. Klikněte „+ Přidat aktivum" nebo importujte JSON.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = state.assets.map(a => {
+            const comp = state.companies.find(c => c.id === a.companyId);
+            const riskBadge = a.riskLevel === 'high' ? 'high' : a.riskLevel === 'medium' ? 'medium' : 'low';
+            return `<tr>
+                <td><strong>${a.description}</strong></td>
+                <td>${CLASS_LABELS[a.assetClass] || a.assetClass}</td>
+                <td>${formatFull(a.amount)} ${a.currency}</td>
+                <td>${(a.yieldPercent || 0).toFixed(2)}%</td>
+                <td>${COUNTRY_NAMES[a.country] || a.country}</td>
+                <td>${comp ? comp.name : '—'}</td>
+                <td>${LIQUIDITY_LABELS[a.liquidityBucket] || a.liquidityBucket}</td>
+                <td><span class="badge badge-${riskBadge}">${a.riskLevel === 'low' ? 'Nízké' : a.riskLevel === 'high' ? 'Vysoké' : 'Střední'}</span></td>
+                <td>${a.maturityDate || '—'}</td>
+                <td><button class="table-action-btn" onclick="deleteAsset('${a.id}')" title="Smazat">✕</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    // Company cards
+    function renderCompanyGrid() {
+        const grid = document.getElementById('companyGrid');
+        if (state.companies.length === 0) {
+            grid.innerHTML = `<div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                <h3>Žádné firmy</h3>
+                <p>Přidejte firmy pro sledování výnosu na kapitál.</p>
+                <button class="btn btn-primary" onclick="openAddCompanyModal()">+ Přidat firmu</button>
+            </div>`;
+            return;
+        }
+
+        grid.innerHTML = state.companies.map(c => {
+            const capitalEUR = toBase(c.capitalDeployed || 0, c.currency || 'EUR');
+            const compAssets = state.assets.filter(a => a.companyId === c.id);
+            const compTotalEUR = compAssets.reduce((s,a) => s + toBase(a.amount, a.currency), 0);
+            const compYieldW = compAssets.reduce((s,a) => s + toBase(a.amount, a.currency) * (a.yieldPercent || 0), 0);
+            const avgYield = compTotalEUR > 0 ? compYieldW / compTotalEUR : 0;
+            const roc = capitalEUR > 0 ? (compTotalEUR * avgYield / 100 / capitalEUR * 100) : 0;
+
+            return `<div class="company-card">
+                <div style="display:flex;justify-content:space-between;align-items:start;">
+                    <div>
+                        <div class="company-name">${c.name}</div>
+                        <div class="company-country">${COUNTRY_NAMES[c.country] || c.country} · <span class="badge badge-${c.status === 'active' ? 'active' : 'medium'}">${c.status === 'active' ? 'Aktivní' : 'Neaktivní'}</span></div>
+                    </div>
+                    <button class="table-action-btn" onclick="deleteCompany('${c.id}')" title="Smazat">✕</button>
+                </div>
+                <div class="company-metrics">
+                    <div>
+                        <div class="company-metric-label">RoC</div>
+                        <div class="company-metric-value">${roc.toFixed(1)}%</div>
+                    </div>
+                    <div>
+                        <div class="company-metric-label">Nasazený kapitál</div>
+                        <div class="company-metric-value" style="font-size:0.9375rem;color:var(--text-primary);">${formatCurrency(fromBase(capitalEUR))} ${baseCurrency}</div>
+                    </div>
+                    <div>
+                        <div class="company-metric-label">Aktiva</div>
+                        <div class="company-metric-value" style="font-size:0.9375rem;color:var(--text-primary);">${formatCurrency(fromBase(compTotalEUR))} ${baseCurrency}</div>
+                    </div>
+                    <div>
+                        <div class="company-metric-label">Počet investic</div>
+                        <div class="company-metric-value" style="font-size:0.9375rem;color:var(--text-primary);">${compAssets.length}</div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // Deals table
+    function renderDealsTable() {
+        const tbody = document.getElementById('dealsTableBody');
+        if (state.deals.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-secondary);padding:2rem;">Zatím žádné dealy. Klikněte „+ Přidat deal".</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = state.deals.map(d => {
+            const ltv = d.collateralValue > 0 ? (d.amount / d.collateralValue * 100) : 0;
+            const statusBadge = d.status === 'active' ? 'active' : d.status === 'completed' ? 'completed' : 'default';
+            const statusLabel = d.status === 'active' ? 'Aktivní' : d.status === 'completed' ? 'Dokončený' : 'Default';
+            return `<tr>
+                <td><strong>${d.description}</strong></td>
+                <td>${formatFull(d.amount)} ${d.currency}</td>
+                <td>${(d.yieldPercent || 0).toFixed(2)}%</td>
+                <td>${d.maturityDate || '—'}</td>
+                <td>${d.collateralType}</td>
+                <td>${d.collateralValue > 0 ? formatFull(d.collateralValue) + ' ' + d.currency : '—'}</td>
+                <td>${ltv > 0 ? ltv.toFixed(1) + '%' : '—'}</td>
+                <td><span class="badge badge-${statusBadge}">${statusLabel}</span></td>
+                <td><button class="table-action-btn" onclick="deleteDeal('${d.id}')" title="Smazat">✕</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ============================================================
+    //  Tabs
+    // ============================================================
+
+    function switchTab(name) {
+        document.querySelectorAll('.tab-btn').forEach((b,i) => {
+            const tabs = ['overview','assets','companies','lending','data'];
+            b.classList.toggle('active', tabs[i] === name);
+        });
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        if (name === 'overview') { renderAllocationChart(); renderYieldChart(); }
+    }
+
+    // ============================================================
+    //  Modals
+    // ============================================================
+
+    function openAddAssetModal() {
+        // populate company select
+        const sel = document.getElementById('assetCompany');
+        sel.innerHTML = '<option value="">— Žádná —</option>' +
+            state.companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        document.getElementById('assetModal').classList.add('show');
+    }
+
+    function openAddCompanyModal() { document.getElementById('companyModal').classList.add('show'); }
+    function openAddDealModal() { document.getElementById('dealModal').classList.add('show'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+    // ============================================================
+    //  CRUD
+    // ============================================================
+
+    function saveAsset() {
+        const desc = document.getElementById('assetDesc').value.trim();
+        const amount = parseFloat(document.getElementById('assetAmount').value);
+        if (!desc || isNaN(amount) || amount <= 0) { alert('Vyplňte popis a hodnotu.'); return; }
+
+        state.assets.push({
+            id: uid(),
+            description: desc,
+            assetClass: document.getElementById('assetClass').value,
+            amount: amount,
+            currency: document.getElementById('assetCurrency').value,
+            yieldPercent: parseFloat(document.getElementById('assetYield').value) || 0,
+            country: document.getElementById('assetCountry').value,
+            companyId: document.getElementById('assetCompany').value || null,
+            liquidityBucket: document.getElementById('assetLiquidity').value,
+            riskLevel: document.getElementById('assetRisk').value,
+            maturityDate: document.getElementById('assetMaturity').value || null
+        });
+
+        saveState();
+        closeModal('assetModal');
+        // reset form
+        document.getElementById('assetDesc').value = '';
+        document.getElementById('assetAmount').value = '';
+        document.getElementById('assetYield').value = '';
+        document.getElementById('assetMaturity').value = '';
+        renderAll();
+    }
+
+    function deleteAsset(id) {
+        state.assets = state.assets.filter(a => a.id !== id);
+        saveState();
+        renderAll();
+    }
+
+    function saveCompany() {
+        const name = document.getElementById('companyName').value.trim();
+        if (!name) { alert('Vyplňte název firmy.'); return; }
+
+        state.companies.push({
+            id: uid(),
+            name: name,
+            country: document.getElementById('companyCountry').value,
+            capitalDeployed: parseFloat(document.getElementById('companyCapital').value) || 0,
+            currency: document.getElementById('companyCurrency').value,
+            status: document.getElementById('companyStatus').value
+        });
+
+        saveState();
+        closeModal('companyModal');
+        document.getElementById('companyName').value = '';
+        document.getElementById('companyCapital').value = '';
+        renderAll();
+    }
+
+    function deleteCompany(id) {
+        state.companies = state.companies.filter(c => c.id !== id);
+        state.assets.forEach(a => { if (a.companyId === id) a.companyId = null; });
+        saveState();
+        renderAll();
+    }
+
+    function saveDeal() {
+        const desc = document.getElementById('dealDesc').value.trim();
+        const amount = parseFloat(document.getElementById('dealAmount').value);
+        if (!desc || isNaN(amount) || amount <= 0) { alert('Vyplňte popis a částku.'); return; }
+
+        state.deals.push({
+            id: uid(),
+            description: desc,
+            amount: amount,
+            currency: document.getElementById('dealCurrency').value,
+            yieldPercent: parseFloat(document.getElementById('dealYield').value) || 0,
+            maturityDate: document.getElementById('dealMaturity').value || null,
+            collateralType: document.getElementById('dealCollateralType').value,
+            collateralValue: parseFloat(document.getElementById('dealCollateralValue').value) || 0,
+            status: document.getElementById('dealStatus').value,
+            country: document.getElementById('dealCountry').value
+        });
+
+        saveState();
+        closeModal('dealModal');
+        document.getElementById('dealDesc').value = '';
+        document.getElementById('dealAmount').value = '';
+        document.getElementById('dealYield').value = '';
+        document.getElementById('dealMaturity').value = '';
+        document.getElementById('dealCollateralValue').value = '';
+        renderAll();
+    }
+
+    function deleteDeal(id) {
+        state.deals = state.deals.filter(d => d.id !== id);
+        saveState();
+        renderAll();
+    }
+
+    // ============================================================
+    //  Import / Export
+    // ============================================================
+
+    function exportJSON() {
+        const data = JSON.stringify(state, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'portfolio-data-' + new Date().toISOString().slice(0,10) + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.assets && Array.isArray(imported.assets)) {
+                    state = { ...defaultState(), ...imported };
+                    // ensure all assets have IDs
+                    state.assets.forEach(a => { if (!a.id) a.id = uid(); });
+                    state.companies.forEach(c => { if (!c.id) c.id = uid(); });
+                    state.deals.forEach(d => { if (!d.id) d.id = uid(); });
+                    saveState();
+                    renderAll();
+                    alert('Data úspěšně importována! (' + state.assets.length + ' aktiv, ' + state.companies.length + ' firem, ' + state.deals.length + ' dealů)');
+                } else {
+                    alert('Neplatný formát JSON. Očekává se objekt s polem "assets".');
+                }
+            } catch(err) {
+                alert('Chyba při čtení JSON: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    function clearAllData() {
+        if (!confirm('Opravdu chcete smazat všechna data portfolia?')) return;
+        state = defaultState();
+        saveState();
+        renderAll();
+    }
+
+    // ============================================================
+    //  Exchange Rates
+    // ============================================================
+
+    function renderExchangeRates() {
+        const grid = document.getElementById('exchangeRatesGrid');
+        grid.innerHTML = Object.entries(state.exchangeRates).filter(([k]) => k !== 'EUR').map(([code, rate]) => `
+            <div class="dash-form-group">
+                <label class="dash-form-label">1 ${code} = ? EUR</label>
+                <input type="number" class="dash-form-input" id="rate-${code}" value="${rate}" step="0.001" min="0">
+            </div>
+        `).join('');
+    }
+
+    function saveExchangeRates() {
+        Object.keys(state.exchangeRates).forEach(code => {
+            if (code === 'EUR') return;
+            const input = document.getElementById('rate-' + code);
+            if (input) state.exchangeRates[code] = parseFloat(input.value) || 0;
+        });
+        saveState();
+        renderAll();
+        alert('Kurzy uloženy.');
+    }
+
+    // ============================================================
+    //  Demo Data
+    // ============================================================
+
+    function loadDemoData() {
+        if (state.assets.length > 0 && !confirm('Toto přepíše aktuální data. Pokračovat?')) return;
+
+        state = {
+            exchangeRates: { EUR:1, CZK:0.04, USD:0.92, PLN:0.23, BGN:0.51, MKD:0.016 },
+            companies: [
+                { id:'c1', name:'ProfiLend CZ s.r.o.', country:'CZ', capitalDeployed:50000000, currency:'CZK', status:'active' },
+                { id:'c2', name:'ProfiLend SK s.r.o.', country:'SK', capitalDeployed:2000000, currency:'EUR', status:'active' },
+                { id:'c3', name:'ProfiLend PL Sp. z o.o.', country:'PL', capitalDeployed:8000000, currency:'PLN', status:'active' },
+                { id:'c4', name:'ProfiLend BG EOOD', country:'BG', capitalDeployed:1000000, currency:'EUR', status:'active' }
+            ],
+            assets: [
+                { id:'a1', description:'Senior Loan — Developerský projekt Praha', assetClass:'Private Debt', amount:25000000, currency:'CZK', yieldPercent:9.5, country:'CZ', companyId:'c1', liquidityBucket:'12mo', riskLevel:'medium', maturityDate:'2027-06-30' },
+                { id:'a2', description:'Mezzanine — Rezidenční Brno', assetClass:'Private Debt', amount:15000000, currency:'CZK', yieldPercent:12.0, country:'CZ', companyId:'c1', liquidityBucket:'1yr+', riskLevel:'high', maturityDate:'2027-12-31' },
+                { id:'a3', description:'Senior Loan — Komerční Bratislava', assetClass:'Private Debt', amount:1500000, currency:'EUR', yieldPercent:8.5, country:'SK', companyId:'c2', liquidityBucket:'12mo', riskLevel:'medium', maturityDate:'2027-03-15' },
+                { id:'a4', description:'Bridge Loan — Varšava retail', assetClass:'Private Debt', amount:5000000, currency:'PLN', yieldPercent:11.0, country:'PL', companyId:'c3', liquidityBucket:'3mo', riskLevel:'medium', maturityDate:'2026-09-30' },
+                { id:'a5', description:'Senior Loan — Sofia logistika', assetClass:'Private Debt', amount:800000, currency:'EUR', yieldPercent:10.0, country:'BG', companyId:'c4', liquidityBucket:'12mo', riskLevel:'medium', maturityDate:'2027-08-15' },
+                { id:'a6', description:'Bytový dům Praha 5', assetClass:'Real Estate', amount:45000000, currency:'CZK', yieldPercent:5.2, country:'CZ', companyId:'c1', liquidityBucket:'1yr+', riskLevel:'low', maturityDate:null },
+                { id:'a7', description:'Komerční objekt Ostrava', assetClass:'Real Estate', amount:22000000, currency:'CZK', yieldPercent:6.8, country:'CZ', companyId:'c1', liquidityBucket:'1yr+', riskLevel:'low', maturityDate:null },
+                { id:'a8', description:'ETF portfolio — globální akcie', assetClass:'Stocks', amount:500000, currency:'EUR', yieldPercent:3.5, country:'CZ', companyId:null, liquidityBucket:'immediate', riskLevel:'medium', maturityDate:null },
+                { id:'a9', description:'Korporátní dluhopisy CZ', assetClass:'Bonds', amount:300000, currency:'EUR', yieldPercent:4.8, country:'CZ', companyId:null, liquidityBucket:'3mo', riskLevel:'low', maturityDate:'2028-01-15' },
+                { id:'a10', description:'Equity podíl — ProfiLend CZ', assetClass:'Company Equity', amount:10000000, currency:'CZK', yieldPercent:15.0, country:'CZ', companyId:'c1', liquidityBucket:'1yr+', riskLevel:'high', maturityDate:null },
+                { id:'a11', description:'Senior Loan — Skopje residenční', assetClass:'Private Debt', amount:300000, currency:'EUR', yieldPercent:13.0, country:'MK', companyId:null, liquidityBucket:'12mo', riskLevel:'high', maturityDate:'2027-04-30' }
+            ],
+            deals: [
+                { id:'d1', description:'Senior Loan — Developer Praha', amount:25000000, currency:'CZK', yieldPercent:9.5, maturityDate:'2027-06-30', collateralType:'Real Estate', collateralValue:38000000, status:'active', country:'CZ' },
+                { id:'d2', description:'Mezzanine — Rezidenční Brno', amount:15000000, currency:'CZK', yieldPercent:12.0, maturityDate:'2027-12-31', collateralType:'Real Estate', collateralValue:22000000, status:'active', country:'CZ' },
+                { id:'d3', description:'Senior Loan — Komerční Bratislava', amount:1500000, currency:'EUR', yieldPercent:8.5, maturityDate:'2027-03-15', collateralType:'Real Estate', collateralValue:2200000, status:'active', country:'SK' },
+                { id:'d4', description:'Bridge Loan — Varšava retail', amount:5000000, currency:'PLN', yieldPercent:11.0, maturityDate:'2026-09-30', collateralType:'Real Estate', collateralValue:7500000, status:'active', country:'PL' },
+                { id:'d5', description:'Senior Loan — Sofia logistika', amount:800000, currency:'EUR', yieldPercent:10.0, maturityDate:'2027-08-15', collateralType:'Real Estate', collateralValue:1200000, status:'active', country:'BG' },
+                { id:'d6', description:'Senior Loan — Skopje residenční', amount:300000, currency:'EUR', yieldPercent:13.0, maturityDate:'2027-04-30', collateralType:'Real Estate', collateralValue:500000, status:'active', country:'MK' }
+            ]
+        };
+
+        saveState();
+        renderAll();
+        renderExchangeRates();
+        alert('Demo data načtena.');
+    }
+
+    // ============================================================
+    //  Theme Observer — update chart colors on theme change
+    // ============================================================
+
+    const themeObserver = new MutationObserver(() => {
+        if (allocationChart || yieldChart) {
+            renderAllocationChart();
+            renderYieldChart();
+        }
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    // ============================================================
+    //  Init
+    // ============================================================
+
+    renderAll();
+    renderExchangeRates();
+    </script>
+</body>
+</html>
