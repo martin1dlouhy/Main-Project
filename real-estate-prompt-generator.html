@@ -327,6 +327,79 @@
             box-shadow: var(--shadow-md);
         }
 
+        /* Custom select arrow */
+        .container select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2338BDF8' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            background-size: 12px;
+            padding-right: 44px;
+            cursor: pointer;
+        }
+
+        .container select option {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            padding: 8px;
+        }
+
+        /* Custom number input spinners */
+        .container input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .container input[type="number"]::-webkit-outer-spin-button,
+        .container input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Number input wrapper with custom buttons */
+        .number-input-wrapper {
+            position: relative;
+        }
+
+        .number-input-wrapper input[type="number"] {
+            padding-right: 44px;
+        }
+
+        .number-input-wrapper .number-controls {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .number-input-wrapper .number-controls button {
+            width: 28px;
+            height: 20px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--accent);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            transition: var(--transition);
+            padding: 0;
+            line-height: 1;
+        }
+
+        .number-input-wrapper .number-controls button:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
         input.error, textarea.error, select.error {
             border-color: var(--danger);
         }
@@ -1100,6 +1173,7 @@
                 ],
                 fields: {
                     adresa: { type: 'text', label: 'Přesná adresa', placeholder: 'např. Pařížská 123, Praha 1' },
+                    typ_vlastnictvi: { type: 'select', label: 'Typ vlastnictví', options: ['Osobní vlastnictví (OV)', 'Družstevní vlastnictví (DV)'], required: true },
                     uzitna_plocha: { type: 'number', label: 'Užitná plocha (m²)', placeholder: 'např. 75', min: 1 },
                     podlazi: { type: 'text', label: 'Podlaží', placeholder: 'např. 3. patro z 5' },
                     stav: { type: 'select', label: 'Stav bytu', options: ['Výborný', 'Velmi dobrý', 'Dobrý', 'Průměrný', 'Před rekonstrukcí', 'Nutná rekonstrukce'] },
@@ -1432,7 +1506,10 @@
                 } else if (field.type === 'number') {
                     const minAttr = field.min !== undefined ? ` min="${field.min}"` : '';
                     const maxAttr = field.max !== undefined ? ` max="${field.max}"` : '';
+                    html += `<div class="number-input-wrapper">`;
                     html += `<input type="number" id="${fieldId}" placeholder="${field.placeholder || ''}"${minAttr}${maxAttr} onchange="formDataUpdated()" onkeyup="updatePreview()">`;
+                    html += `<div class="number-controls"><button type="button" onclick="stepNumber('${fieldId}', 1)" aria-label="Zvýšit">▲</button><button type="button" onclick="stepNumber('${fieldId}', -1)" aria-label="Snížit">▼</button></div>`;
+                    html += `</div>`;
                 } else {
                     html += `<input type="text" id="${fieldId}" placeholder="${field.placeholder || ''}" onchange="formDataUpdated()" onkeyup="updatePreview()">`;
                 }
@@ -1451,7 +1528,10 @@
                     <div class="collapsible-content hidden">
                         <div class="safety-coefficient-input">
                             <label for="safety_coef">${config.name}</label>
-                            <input type="number" id="safety_coef" min="0" max="1" step="0.01" value="${safetyCoefficients[propertyType]}" onchange="updateSafetyCoefficient()">
+                            <div class="number-input-wrapper">
+                                <input type="number" id="safety_coef" min="0" max="1" step="0.01" value="${safetyCoefficients[propertyType]}" onchange="updateSafetyCoefficient()">
+                                <div class="number-controls"><button type="button" onclick="stepNumber('safety_coef', 1)" aria-label="Zvýšit">▲</button><button type="button" onclick="stepNumber('safety_coef', -1)" aria-label="Snížit">▼</button></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1479,6 +1559,21 @@
                 safetyCoefficients[propertyType] = parseFloat(el.value);
                 saveState();
             }
+        }
+
+        function stepNumber(fieldId, direction) {
+            const input = document.getElementById(fieldId);
+            if (!input) return;
+            const step = parseFloat(input.step) || 1;
+            const min = input.min !== '' ? parseFloat(input.min) : -Infinity;
+            const max = input.max !== '' ? parseFloat(input.max) : Infinity;
+            let val = parseFloat(input.value) || 0;
+            val += step * direction;
+            if (val < min) val = min;
+            if (val > max) val = max;
+            input.value = val;
+            formDataUpdated();
+            updatePreview();
         }
 
         function formDataUpdated() {
@@ -1534,7 +1629,7 @@
                         formData[fieldId] = value;
                     }
 
-                    const isRequired = (fieldId === 'adresa' || fieldId === 'uzitna_plocha' || fieldId === 'plocha' || fieldId === 'plocha_pozemku' || fieldId === 'parcelni_cislo' || fieldId === 'stav');
+                    const isRequired = (fieldId === 'adresa' || fieldId === 'uzitna_plocha' || fieldId === 'plocha' || fieldId === 'plocha_pozemku' || fieldId === 'parcelni_cislo' || fieldId === 'stav' || fieldId === 'typ_vlastnictvi');
                     if (isRequired && value === '') {
                         missingFields.push(config.fields[fieldId].label);
                     }
@@ -1746,6 +1841,14 @@
                 }
 
                 if (propertyType === 'apartment' || propertyType === 'house') {
+                    if (formData.typ_vlastnictvi && formData.typ_vlastnictvi.includes('Družstevní')) {
+                        prompt += `## ⚠️ DRUŽSTEVNÍ VLASTNICTVÍ\n`;
+                        prompt += `**KRITICKÉ**: Nemovitost je v družstevním vlastnictví. Toto má zásadní dopad na zástavní hodnotu:\n`;
+                        prompt += `- Družstevní byty mají omezenou obchodovatelnost\n`;
+                        prompt += `- Mnoho bank nepřijímá družstevní byty jako zástavu nebo požaduje vyšší LTV korekci\n`;
+                        prompt += `- Při porovnávací metodě srovnávej POUZE s jinými družstevními byty\n`;
+                        prompt += `- Aplikuj dodatečnou srážku 10-15% oproti osobnímu vlastnictví\n\n`;
+                    }
                     prompt += `## METODIKA OCENĚNÍ\n\n`;
                     prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
                     prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data — aktivně hledej aktuální nabídky a realizované prodeje v dané lokalitě. Preferuj data ne starší než 6 měsíců.\n\n`;
