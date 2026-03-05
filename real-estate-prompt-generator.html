@@ -1479,7 +1479,7 @@
                 if (fieldId === 'najemne' && !selectedInputs.includes('najemni_smlouva') && !selectedInputs.includes('najemni_smlouvy')) continue;
 
                 html += '<div class="form-group">';
-                const isRequired = fieldId.includes('adresa') || fieldId.includes('plocha') || fieldId.includes('parcelni') || fieldId === 'stav';
+                const isRequired = fieldId.includes('adresa') || fieldId.includes('plocha') || fieldId.includes('parcelni') || fieldId === 'stav' || fieldId === 'typ_vlastnictvi';
 
                 let label = field.label;
                 const tooltipFields = ['kzp', 'kpp', 'gdv_ocekavane', 'najemne_rocni', 'noi', 'obsazenost_komercni'];
