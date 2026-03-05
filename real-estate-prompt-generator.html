@@ -722,10 +722,6 @@
                 align-items: flex-start;
             }
 
-            .language-toggle {
-                width: 100%;
-                justify-content: center;
-            }
 
             .property-type-grid {
                 grid-template-columns: 1fr;
@@ -786,10 +782,6 @@
                 </svg>
                 Zpět
             </a>
-            <div class="language-toggle">
-                <button class="active" data-lang="cs" onclick="setLanguage('cs')">CZ</button>
-                <button data-lang="en" onclick="setLanguage('en')">EN</button>
-            </div>
         </div>
 
         <h1>R-E Prompt Generator</h1>
@@ -937,6 +929,14 @@
 
                 <div class="info-box">
                     <strong>Návod:</strong> Zkopírujte tento prompt a vložte ho do ChatGPT, Claude nebo Gemini. AI vám poskytne profesionální ocenění včetně zástavní hodnoty pro dluhové financování.
+                </div>
+
+                <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+                    <span style="color: var(--text-secondary); font-weight: 600;">Jazyk promptu:</span>
+                    <div class="language-toggle">
+                        <button class="active" data-lang="cs" onclick="setLanguage('cs')">CZ</button>
+                        <button data-lang="en" onclick="setLanguage('en')">EN</button>
+                    </div>
                 </div>
 
                 <div class="prompt-output" id="promptText"></div>
@@ -1215,16 +1215,39 @@
         function loadState() {
             const saved = localStorage.getItem('prompt-gen-state');
             if (saved) {
-                const state = JSON.parse(saved);
+                let state;
+                try {
+                    state = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Corrupted saved state, resetting:', e);
+                    localStorage.removeItem('prompt-gen-state');
+                    return;
+                }
                 propertyType = state.propertyType || '';
                 selectedInputs = state.selectedInputs || [];
                 formData = state.formData || {};
                 currentStep = state.currentStep || 1;
                 currentLanguage = state.language || 'cs';
-                document.querySelector(`[data-lang="${currentLanguage}"]`).classList.add('active');
+                const langBtn = document.querySelector(`[data-lang="${currentLanguage}"]`);
+                if (langBtn) langBtn.classList.add('active');
                 document.querySelectorAll('[data-lang]').forEach(b => {
                     if (b.dataset.lang !== currentLanguage) b.classList.remove('active');
                 });
+                // Restore property type selection UI
+                if (propertyType) {
+                    document.querySelectorAll('.property-type-card').forEach(card => {
+                        if (card.getAttribute('onclick') && card.getAttribute('onclick').includes("'" + propertyType + "'")) {
+                            card.classList.add('selected');
+                        }
+                    });
+                    document.getElementById('step1Next').disabled = false;
+                }
+                // Restore visited steps
+                for (let i = 1; i <= currentStep; i++) {
+                    if (!visitedSteps.includes(i)) visitedSteps.push(i);
+                }
+                // Show correct section
+                showSection(currentStep);
             }
         }
 
@@ -1244,9 +1267,22 @@
             document.querySelectorAll('[data-lang]').forEach(b => b.classList.remove('active'));
             document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
             saveState();
+            // Re-build prompt in new language if we're on step 4
+            if (currentStep === 4 && propertyType) {
+                try {
+                    const prompt = buildPrompt();
+                    document.getElementById('promptText').textContent = prompt;
+                } catch (e) {
+                    console.warn('Language switch prompt rebuild error:', e);
+                }
+            }
         }
 
         function selectPropertyType(type) {
+            if (propertyType !== type) {
+                formData = {};
+                selectedInputs = [];
+            }
             propertyType = type;
             document.querySelectorAll('.property-type-card').forEach(card => {
                 card.classList.remove('selected');
@@ -2051,7 +2087,8 @@
                 document.querySelectorAll('.property-type-card').forEach(card => {
                     card.classList.remove('selected');
                 });
-                document.querySelector(`[onclick="selectPropertyType('${item.type}')"]`).classList.add('selected');
+                const selectedCard = document.querySelector(`[onclick="selectPropertyType('${item.type}')"]`);
+                if (selectedCard) selectedCard.classList.add('selected');
                 document.getElementById('promptText').textContent = item.prompt;
                 currentStep = 4;
                 updateStepIndicator();
