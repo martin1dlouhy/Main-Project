@@ -88,9 +88,10 @@ Pro každou použitou metodu:
 - Výsledná hodnota v Kč
 
 ### 3. POROVNÁNÍ METOD
-- Tabulka výsledků všech metod
-- Odůvodnění, která metoda je nejrelevantnější
-- **Finální tržní hodnota** (s odůvodněním)
+- Tabulka výsledků všech použitých metod (primární i sekundární)
+- **PRAVIDLO**: Finální tržní hodnotu stanov výhradně na základě **primární metody** pro daný typ nemovitosti (viz METODIKA OCENĚNÍ). Sekundární metody slouží pouze jako kontrolní validace — uveď jejich výsledky, ale neprůměruj je s primární metodou.
+- Pokud sekundární metoda ukazuje výrazně odlišný výsledek (odchylka > 20 %), uveď důvod odchylky.
+- **Finální tržní hodnota** = výsledek primární metody (s odůvodněním)
 
 ### 4. ZÁSTAVNÍ HODNOTA
 - Aplikuj bezpečnostní koeficient:

@@ -1920,9 +1920,10 @@
                 prompt += `- Výsledná hodnota v Kč\n\n`;
 
                 prompt += `### 3. POROVNÁNÍ METOD\n`;
-                prompt += `- Tabulka výsledků všech metod\n`;
-                prompt += `- Odůvodnění, která metoda je nejrelevantnější\n`;
-                prompt += `- **Finální tržní hodnota** (s odůvodněním)\n\n`;
+                prompt += `- Tabulka výsledků všech použitých metod (primární i sekundární)\n`;
+                prompt += `- **PRAVIDLO**: Finální tržní hodnotu stanov výhradně na základě **primární metody** pro daný typ nemovitosti. Sekundární metody slouží pouze jako kontrolní validace — uveď jejich výsledky, ale neprůměruj je s primární metodou.\n`;
+                prompt += `- Pokud sekundární metoda ukazuje výrazně odlišný výsledek (odchylka > 20%), uveď důvod odchylky.\n`;
+                prompt += `- **Finální tržní hodnota** = výsledek primární metody (s odůvodněním)\n\n`;
 
                 prompt += `### 4. ZÁSTAVNÍ HODNOTA\n`;
                 prompt += `- Bezpečnostní koeficient: **${safetyCoefficients[propertyType]}**\n`;
