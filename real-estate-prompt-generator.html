@@ -434,6 +434,11 @@
             accent-color: var(--accent);
         }
 
+        .checkbox-item label,
+        .checkbox-item .icon {
+            pointer-events: none;
+        }
+
         .checkbox-item label {
             margin: 0;
             font-size: 15px;
@@ -931,7 +936,7 @@
                     <strong>Návod:</strong> Zkopírujte tento prompt a vložte ho do ChatGPT, Claude nebo Gemini. AI vám poskytne profesionální ocenění včetně zástavní hodnoty pro dluhové financování.
                 </div>
 
-                <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+                <div style="margin-top: 30px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
                     <span style="color: var(--text-secondary); font-weight: 600;">Jazyk promptu:</span>
                     <div class="language-toggle">
                         <button class="active" data-lang="cs" onclick="setLanguage('cs')">CZ</button>
