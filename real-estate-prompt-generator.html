@@ -1184,6 +1184,172 @@
             font-size: 14px;
             margin-bottom: 8px;
         }
+
+        /* AI Summary Cards */
+        .ai-summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .ai-summary-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            transition: var(--transition);
+        }
+
+        .ai-summary-card:hover {
+            border-color: var(--accent);
+        }
+
+        .ai-summary-card h4 {
+            font-size: 16px;
+            color: var(--accent);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .ai-summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .ai-summary-row:last-child {
+            border-bottom: none;
+        }
+
+        .ai-summary-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
+
+        .ai-summary-value {
+            font-size: 14px;
+            color: var(--text-primary);
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .ai-summary-value.highlight {
+            color: var(--accent);
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .ai-summary-risk {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-top: 12px;
+            padding: 10px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+        }
+
+        .ai-summary-risk strong {
+            color: var(--text-primary);
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .ai-summary-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        .ai-summary-badge.vhodna {
+            background: rgba(52, 211, 153, 0.15);
+            color: #34D399;
+        }
+
+        .ai-summary-badge.podminene {
+            background: rgba(251, 191, 36, 0.15);
+            color: #FBBF24;
+        }
+
+        .ai-summary-badge.nevhodna {
+            background: rgba(248, 113, 113, 0.15);
+            color: #F87171;
+        }
+
+        /* Final verdict card */
+        .final-verdict {
+            background: var(--bg-surface);
+            border: 2px solid var(--accent);
+            border-radius: 14px;
+            padding: 24px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .final-verdict h4 {
+            color: var(--accent);
+            font-size: 16px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .final-verdict-values {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .final-verdict-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .final-verdict-item .fv-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .final-verdict-item .fv-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .final-verdict-item .fv-value.accent {
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .ai-summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .final-verdict-values {
+                gap: 20px;
+            }
+
+            .final-verdict-item .fv-value {
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1479,6 +1645,11 @@
             <div class="comparison-table-wrapper" id="comparisonTableWrapper" style="display:none;">
                 <h3 style="margin-bottom: 16px;">Srovnávací tabulka</h3>
                 <table class="comparison-table" id="comparisonTable"></table>
+            </div>
+
+            <div id="aiSummarySection" style="display:none;">
+                <h3 style="margin: 30px 0 16px;">Shrnutí AI analýz</h3>
+                <div class="ai-summary-grid" id="aiSummaryGrid"></div>
             </div>
 
             <div class="btn-group buttons">
@@ -2903,6 +3074,137 @@
 
             html += '</tbody>';
             document.getElementById('comparisonTable').innerHTML = html;
+            renderAISummary();
+        }
+
+        function renderAISummary() {
+            const section = document.getElementById('aiSummarySection');
+            const grid = document.getElementById('aiSummaryGrid');
+            const sources = ['chatgpt', 'claude', 'gemini'];
+            const labels = { chatgpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini' };
+
+            const hasData = sources.some(s => aiParsedData[s]);
+            if (!hasData) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+
+            const fmt = (n) => {
+                if (!n && n !== 0) return '—';
+                return new Intl.NumberFormat('cs-CZ').format(Math.round(n)) + ' Kč';
+            };
+
+            const getBadgeClass = (hodnoceni) => {
+                if (!hodnoceni) return '';
+                const h = hodnoceni.toLowerCase();
+                if (h.includes('nevhodn')) return 'nevhodna';
+                if (h.includes('podmín')) return 'podminene';
+                if (h.includes('vhodn')) return 'vhodna';
+                return '';
+            };
+
+            let cardsHtml = '';
+
+            sources.forEach(src => {
+                const data = aiParsedData[src];
+                if (!data) {
+                    cardsHtml += `
+                        <div class="ai-summary-card" style="opacity: 0.4;">
+                            <h4>${labels[src]}</h4>
+                            <p style="color: var(--text-secondary); font-size: 14px;">Žádná data</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const badgeClass = getBadgeClass(data.hodnoceni);
+
+                cardsHtml += `
+                    <div class="ai-summary-card">
+                        <h4>${labels[src]}</h4>
+                        <div class="ai-summary-row">
+                            <span class="ai-summary-label">Tržní hodnota</span>
+                            <span class="ai-summary-value highlight">${fmt(data.trzniHodnota)}</span>
+                        </div>
+                        <div class="ai-summary-row">
+                            <span class="ai-summary-label">Zástavní hodnota</span>
+                            <span class="ai-summary-value highlight">${fmt(data.zastavniHodnota)}</span>
+                        </div>
+                        ${data.koeficient ? `
+                        <div class="ai-summary-row">
+                            <span class="ai-summary-label">Bezp. koeficient</span>
+                            <span class="ai-summary-value">${data.koeficient}</span>
+                        </div>` : ''}
+                        ${data.ltv ? `
+                        <div class="ai-summary-row">
+                            <span class="ai-summary-label">LTV doporučení</span>
+                            <span class="ai-summary-value">${data.ltv}%</span>
+                        </div>` : ''}
+                        ${data.metoda ? `
+                        <div class="ai-summary-row">
+                            <span class="ai-summary-label">Primární metoda</span>
+                            <span class="ai-summary-value">${data.metoda}</span>
+                        </div>` : ''}
+                        ${data.riziko1 ? `
+                        <div class="ai-summary-risk">
+                            <strong>Hlavní riziko</strong>
+                            ${data.riziko1}
+                        </div>` : ''}
+                        ${data.riziko2 ? `
+                        <div class="ai-summary-risk">
+                            <strong>Sekundární riziko</strong>
+                            ${data.riziko2}
+                        </div>` : ''}
+                        ${data.hodnoceni ? `
+                        <div style="text-align: center;">
+                            <span class="ai-summary-badge ${badgeClass}">${data.hodnoceni}</span>
+                        </div>` : ''}
+                    </div>
+                `;
+            });
+
+            // Final verdict with averages
+            const trzniValues = sources.map(s => aiParsedData[s]?.trzniHodnota).filter(v => v);
+            const zastavniValues = sources.map(s => aiParsedData[s]?.zastavniHodnota).filter(v => v);
+
+            let verdictHtml = '';
+            if (trzniValues.length >= 2) {
+                const avgTrzni = trzniValues.reduce((a, b) => a + b, 0) / trzniValues.length;
+                const avgZastavni = zastavniValues.length > 0 ? zastavniValues.reduce((a, b) => a + b, 0) / zastavniValues.length : null;
+                const minTrzni = Math.min(...trzniValues);
+                const maxTrzni = Math.max(...trzniValues);
+                const spread = maxTrzni - minTrzni;
+                const spreadPct = ((spread / avgTrzni) * 100).toFixed(1);
+
+                verdictHtml = `
+                    <div class="final-verdict">
+                        <h4>Finální shrnutí</h4>
+                        <div class="final-verdict-values">
+                            <div class="final-verdict-item">
+                                <span class="fv-label">Prům. tržní hodnota</span>
+                                <span class="fv-value accent">${fmt(avgTrzni)}</span>
+                            </div>
+                            ${avgZastavni ? `
+                            <div class="final-verdict-item">
+                                <span class="fv-label">Prům. zástavní hodnota</span>
+                                <span class="fv-value accent">${fmt(avgZastavni)}</span>
+                            </div>` : ''}
+                            <div class="final-verdict-item">
+                                <span class="fv-label">Rozpětí odhadů</span>
+                                <span class="fv-value">${fmt(minTrzni)} — ${fmt(maxTrzni)}</span>
+                            </div>
+                            <div class="final-verdict-item">
+                                <span class="fv-label">Odchylka</span>
+                                <span class="fv-value">${spreadPct} %</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            grid.innerHTML = cardsHtml + verdictHtml;
         }
 
         function exportComparisonMD() {
@@ -3132,53 +3434,18 @@
             showSection(5);
             populatePropertySummary();
 
-            // Restore AI outputs
+            // Restore AI raw outputs into textareas
             if (item.aiRawOutputs) {
                 document.getElementById('aiOutputChatGPT').value = item.aiRawOutputs.chatgpt || '';
                 document.getElementById('aiOutputClaude').value = item.aiRawOutputs.claude || '';
                 document.getElementById('aiOutputGemini').value = item.aiRawOutputs.gemini || '';
             }
 
-            // Restore parsed data
-            if (item.aiParsedData) {
-                aiParsedData = item.aiParsedData;
-            } else {
-                // Re-parse from raw outputs
-                parseAIOutput('chatgpt');
-                parseAIOutput('claude');
-                parseAIOutput('gemini');
-            }
-
-            // Update parse statuses
-            const sources = ['chatgpt', 'claude', 'gemini'];
-            sources.forEach(src => {
-                const key = src.charAt(0).toUpperCase() + src.slice(1);
-                const statusEl = document.getElementById('status' + key);
-                const manualEl = document.getElementById('manual' + key);
-                const textareaEl = document.getElementById('aiOutput' + key);
-
-                if (textareaEl.value.trim() && aiParsedData[src]) {
-                    if (aiParsedData[src].manual) {
-                        statusEl.className = 'parse-status error';
-                        statusEl.textContent = '⚠ Hodnoty zadány ručně';
-                        manualEl.style.display = 'block';
-                        document.getElementById('manualTrzni' + key).value = aiParsedData[src].trzniHodnota || '';
-                        document.getElementById('manualZastavni' + key).value = aiParsedData[src].zastavniHodnota || '';
-                    } else {
-                        statusEl.className = 'parse-status success';
-                        statusEl.textContent = '✓ Strukturovaný blok úspěšně zpracován';
-                        manualEl.style.display = 'none';
-                    }
-                } else if (textareaEl.value.trim()) {
-                    statusEl.className = 'parse-status error';
-                    statusEl.textContent = '⚠ Strukturovaný blok nenalezen — zadejte hodnoty ručně:';
-                    manualEl.style.display = 'block';
-                } else {
-                    statusEl.className = 'parse-status waiting';
-                    statusEl.textContent = 'Čeká na vložení výstupu...';
-                    manualEl.style.display = 'none';
-                }
-            });
+            // Always re-parse from textareas to ensure consistent state & statuses
+            aiParsedData = { chatgpt: null, claude: null, gemini: null };
+            parseAIOutput('chatgpt');
+            parseAIOutput('claude');
+            parseAIOutput('gemini');
 
             updateComparisonTable();
             saveState();
@@ -3219,6 +3486,7 @@
             const step5Textareas = document.querySelectorAll('#step5 textarea');
             step5Textareas.forEach(ta => ta.value = '');
             document.getElementById('comparisonTableWrapper').style.display = 'none';
+            document.getElementById('aiSummarySection').style.display = 'none';
             document.querySelectorAll('.property-type-card').forEach(card => {
                 card.classList.remove('selected');
             });
