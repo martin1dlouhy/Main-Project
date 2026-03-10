@@ -782,6 +782,152 @@
             background: var(--danger);
         }
 
+        /* Saved Valuations Panel */
+        .saved-valuations-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .saved-valuations-panel h3 {
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .valuation-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 14px;
+            background: var(--bg-primary);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: var(--transition);
+            border: 1px solid transparent;
+        }
+
+        .valuation-item:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        .valuation-item-info {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .valuation-item-name {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .valuation-item-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 4px;
+        }
+
+        .valuation-item-values {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .valuation-value-badge {
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: var(--accent-light);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .valuation-item-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        /* Save Valuation Dialog */
+        .save-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .save-dialog-overlay.show {
+            display: flex;
+            animation: fadeIn 0.2s;
+        }
+
+        .save-dialog {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .save-dialog h3 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .save-dialog label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .save-dialog input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: inherit;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            transition: var(--transition);
+        }
+
+        .save-dialog input[type="text"]:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .save-dialog .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .container {
@@ -855,6 +1001,25 @@
 
             .ai-comparison-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .saved-valuations-panel {
+                max-height: 400px;
+                padding: 15px;
+            }
+
+            .valuation-item {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .valuation-item-buttons {
+                flex-direction: row;
+                width: 100%;
+            }
+
+            .valuation-item-buttons .history-item-btn {
+                flex: 1;
             }
         }
 
@@ -1094,6 +1259,7 @@
             </div>
 
             <div id="historyContainer"></div>
+            <div id="savedValuationsContainer"></div>
 
             <div class="buttons">
                 <button class="btn btn-primary" onclick="nextStep()" id="step1Next" disabled>
@@ -1316,6 +1482,15 @@
             </div>
 
             <div class="btn-group buttons">
+                <button class="btn btn-primary" onclick="openSaveValuationDialog()" id="btnSaveValuation">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px;">
+                        <path d="M3 3v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6l-4-4H4a1 1 0 0 0-1 1z" stroke-width="1.5"/>
+                        <path d="M9 2v4h4" stroke-width="1.5"/>
+                        <path d="M6 10h4" stroke-width="1.5" stroke-linecap="round"/>
+                        <path d="M8 8v4" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Uložit ocenění
+                </button>
                 <button class="btn btn-primary" onclick="exportComparisonMD()">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px;">
                         <path d="M4 2h8v12H4z" stroke-width="1.5"/>
@@ -1340,6 +1515,19 @@
                     Zpět
                 </button>
                 <button class="btn btn-secondary" onclick="resetGenerator()">Nová valuace</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Valuation Dialog -->
+    <div class="save-dialog-overlay" id="saveValuationDialog">
+        <div class="save-dialog">
+            <h3>Uložit ocenění</h3>
+            <label for="valuationNameInput">Název ocenění</label>
+            <input type="text" id="valuationNameInput" placeholder="např. Pozemek Brno-Řečkovice, 03/2026" autofocus>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="closeSaveValuationDialog()">Zrušit</button>
+                <button class="btn btn-primary" onclick="confirmSaveValuation()">Uložit</button>
             </div>
         </div>
     </div>
@@ -1551,7 +1739,7 @@
         // Initialize
         loadState();
         updateStepIndicator();
-        renderHistoryPanel();
+        renderHistoryPanel(); renderSavedValuationsPanel();
 
         function loadState() {
             const saved = localStorage.getItem('prompt-gen-state');
@@ -1692,6 +1880,7 @@
                 section.classList.remove('active');
             });
             document.getElementById('step' + step).classList.add('active');
+            if (step === 1) { renderHistoryPanel(); renderSavedValuationsPanel(); }
             if (step === 2) populateInputsGrid();
             if (step === 5) populatePropertySummary();
         }
@@ -2433,7 +2622,7 @@
             });
             if (history.length > 20) history.pop();
             localStorage.setItem('prompt-history', JSON.stringify(history));
-            renderHistoryPanel();
+            renderHistoryPanel(); renderSavedValuationsPanel();
         }
 
         function renderHistoryPanel() {
@@ -2493,7 +2682,7 @@
             let history = JSON.parse(localStorage.getItem('prompt-history') || '[]');
             history = history.filter(h => h.id !== id);
             localStorage.setItem('prompt-history', JSON.stringify(history));
-            renderHistoryPanel();
+            renderHistoryPanel(); renderSavedValuationsPanel();
             showToast('Valuace smazána');
         }
 
@@ -2763,6 +2952,263 @@
             window.print();
         }
 
+        // ===== SAVED VALUATIONS =====
+
+        function openSaveValuationDialog() {
+            if (!propertyType) {
+                showToast('Nejprve vyberte typ nemovitosti');
+                return;
+            }
+            // Check if there's any data to save
+            const sources = ['chatgpt', 'claude', 'gemini'];
+            const hasData = sources.some(s => aiParsedData[s]);
+            if (!hasData) {
+                showToast('Nejprve vložte alespoň jeden AI výstup');
+                return;
+            }
+
+            const dialog = document.getElementById('saveValuationDialog');
+            const input = document.getElementById('valuationNameInput');
+
+            // Auto-suggest name based on property info
+            const config = propertyConfigs[propertyType];
+            const typeName = config?.name || propertyType;
+            const address = formData.adresa || '';
+            const dateStr = new Date().toLocaleDateString('cs-CZ', { month: '2-digit', year: 'numeric' });
+            input.value = address ? `${typeName} — ${address}, ${dateStr}` : `${typeName}, ${dateStr}`;
+
+            dialog.classList.add('show');
+            setTimeout(() => input.select(), 100);
+        }
+
+        function closeSaveValuationDialog() {
+            document.getElementById('saveValuationDialog').classList.remove('show');
+        }
+
+        function confirmSaveValuation() {
+            const name = document.getElementById('valuationNameInput').value.trim();
+            if (!name) {
+                showToast('Zadejte název ocenění');
+                return;
+            }
+
+            const config = propertyConfigs[propertyType];
+            const sources = ['chatgpt', 'claude', 'gemini'];
+
+            // Calculate averages
+            const trzniValues = sources.map(s => aiParsedData[s]?.trzniHodnota).filter(v => v);
+            const zastavniValues = sources.map(s => aiParsedData[s]?.zastavniHodnota).filter(v => v);
+            const avgTrzni = trzniValues.length > 0 ? trzniValues.reduce((a, b) => a + b, 0) / trzniValues.length : null;
+            const avgZastavni = zastavniValues.length > 0 ? zastavniValues.reduce((a, b) => a + b, 0) / zastavniValues.length : null;
+
+            const valuation = {
+                id: Date.now(),
+                name: name,
+                date: new Date().toLocaleString('cs-CZ'),
+                propertyType: propertyType,
+                propertyTypeName: config?.name || propertyType,
+                formData: { ...formData },
+                selectedInputs: [...selectedInputs],
+                aiParsedData: JSON.parse(JSON.stringify(aiParsedData)),
+                aiRawOutputs: {
+                    chatgpt: document.getElementById('aiOutputChatGPT').value,
+                    claude: document.getElementById('aiOutputClaude').value,
+                    gemini: document.getElementById('aiOutputGemini').value
+                },
+                prompt: document.getElementById('promptText').textContent,
+                avgTrzni: avgTrzni,
+                avgZastavni: avgZastavni
+            };
+
+            try {
+                const saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                saved.unshift(valuation);
+                if (saved.length > 50) saved.pop();
+                localStorage.setItem('saved-valuations', JSON.stringify(saved));
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    showToast('Úložiště je plné — smažte staré ocenění');
+                } else {
+                    showToast('Chyba při ukládání');
+                }
+                console.error('Save valuation error:', e);
+                return;
+            }
+
+            closeSaveValuationDialog();
+            showToast('Ocenění uloženo');
+        }
+
+        function renderSavedValuationsPanel() {
+            const container = document.getElementById('savedValuationsContainer');
+            if (!container) return;
+            if (currentStep !== 1) { container.innerHTML = ''; return; }
+
+            try {
+                var saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+            } catch (e) {
+                container.innerHTML = '';
+                return;
+            }
+
+            if (saved.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const fmt = (n) => {
+                if (!n && n !== 0) return '—';
+                return new Intl.NumberFormat('cs-CZ').format(Math.round(n)) + ' Kč';
+            };
+
+            let html = `
+                <div class="saved-valuations-panel">
+                    <h3>
+                        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5">
+                            <path d="M3 3v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6l-4-4H4a1 1 0 0 0-1 1z"/>
+                            <path d="M9 2v4h4"/>
+                        </svg>
+                        Uložená ocenění (${saved.length})
+                    </h3>
+            `;
+
+            saved.forEach(item => {
+                html += `
+                    <div class="valuation-item">
+                        <div class="valuation-item-info">
+                            <div class="valuation-item-name">${item.name}</div>
+                            <div class="valuation-item-meta">
+                                <span>${item.propertyTypeName || item.propertyType}</span>
+                                <span>${item.date}</span>
+                            </div>
+                            <div class="valuation-item-values">
+                                ${item.avgTrzni ? `<span class="valuation-value-badge">Tržní: ${fmt(item.avgTrzni)}</span>` : ''}
+                                ${item.avgZastavni ? `<span class="valuation-value-badge">Zástavní: ${fmt(item.avgZastavni)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="valuation-item-buttons">
+                            <button class="history-item-btn" onclick="loadSavedValuation(${item.id})">Načíst</button>
+                            <button class="history-item-btn delete" onclick="deleteSavedValuation(${item.id})">Smazat</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function loadSavedValuation(id) {
+            try {
+                var saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+            } catch (e) {
+                console.error('Failed to load saved valuations:', e);
+                showToast('Chyba při načítání ocenění');
+                return;
+            }
+
+            const item = saved.find(v => v.id === id);
+            if (!item) return;
+
+            // Restore property type
+            propertyType = item.propertyType;
+            document.querySelectorAll('.property-type-card').forEach(card => card.classList.remove('selected'));
+            const selectedCard = document.querySelector(`[onclick="selectPropertyType('${item.propertyType}')"]`);
+            if (selectedCard) selectedCard.classList.add('selected');
+
+            // Restore form data with type validation
+            formData = (item.formData && typeof item.formData === 'object' && !Array.isArray(item.formData)) ? item.formData : {};
+            selectedInputs = Array.isArray(item.selectedInputs) ? item.selectedInputs : [];
+
+            // Restore prompt
+            if (item.prompt) {
+                document.getElementById('promptText').textContent = item.prompt;
+            }
+
+            // Navigate to Step 5
+            currentStep = 5;
+            visitedSteps = [1, 2, 3, 4, 5];
+            updateStepIndicator();
+            showSection(5);
+            populatePropertySummary();
+
+            // Restore AI outputs
+            if (item.aiRawOutputs) {
+                document.getElementById('aiOutputChatGPT').value = item.aiRawOutputs.chatgpt || '';
+                document.getElementById('aiOutputClaude').value = item.aiRawOutputs.claude || '';
+                document.getElementById('aiOutputGemini').value = item.aiRawOutputs.gemini || '';
+            }
+
+            // Restore parsed data
+            if (item.aiParsedData) {
+                aiParsedData = item.aiParsedData;
+            } else {
+                // Re-parse from raw outputs
+                parseAIOutput('chatgpt');
+                parseAIOutput('claude');
+                parseAIOutput('gemini');
+            }
+
+            // Update parse statuses
+            const sources = ['chatgpt', 'claude', 'gemini'];
+            sources.forEach(src => {
+                const key = src.charAt(0).toUpperCase() + src.slice(1);
+                const statusEl = document.getElementById('status' + key);
+                const manualEl = document.getElementById('manual' + key);
+                const textareaEl = document.getElementById('aiOutput' + key);
+
+                if (textareaEl.value.trim() && aiParsedData[src]) {
+                    if (aiParsedData[src].manual) {
+                        statusEl.className = 'parse-status error';
+                        statusEl.textContent = '⚠ Hodnoty zadány ručně';
+                        manualEl.style.display = 'block';
+                        document.getElementById('manualTrzni' + key).value = aiParsedData[src].trzniHodnota || '';
+                        document.getElementById('manualZastavni' + key).value = aiParsedData[src].zastavniHodnota || '';
+                    } else {
+                        statusEl.className = 'parse-status success';
+                        statusEl.textContent = '✓ Strukturovaný blok úspěšně zpracován';
+                        manualEl.style.display = 'none';
+                    }
+                } else if (textareaEl.value.trim()) {
+                    statusEl.className = 'parse-status error';
+                    statusEl.textContent = '⚠ Strukturovaný blok nenalezen — zadejte hodnoty ručně:';
+                    manualEl.style.display = 'block';
+                } else {
+                    statusEl.className = 'parse-status waiting';
+                    statusEl.textContent = 'Čeká na vložení výstupu...';
+                    manualEl.style.display = 'none';
+                }
+            });
+
+            updateComparisonTable();
+            saveState();
+            showToast('Ocenění „' + item.name + '" načteno');
+        }
+
+        function deleteSavedValuation(id) {
+            try {
+                let saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                saved = saved.filter(v => v.id !== id);
+                localStorage.setItem('saved-valuations', JSON.stringify(saved));
+            } catch (e) { return; }
+            renderSavedValuationsPanel();
+            showToast('Ocenění smazáno');
+        }
+
+        // Close save dialog on overlay click
+        document.getElementById('saveValuationDialog').addEventListener('click', function(e) {
+            if (e.target === this) closeSaveValuationDialog();
+        });
+
+        // Close save dialog on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeSaveValuationDialog();
+            if (e.key === 'Enter' && document.getElementById('saveValuationDialog').classList.contains('show')) {
+                e.preventDefault();
+                confirmSaveValuation();
+            }
+        });
+
         function resetGenerator() {
             currentStep = 1;
             propertyType = '';
@@ -2780,7 +3226,7 @@
             updateStepIndicator();
             showSection(1);
             localStorage.removeItem('prompt-gen-state');
-            renderHistoryPanel();
+            renderHistoryPanel(); renderSavedValuationsPanel();
         }
 
         // Auto-save form on input
