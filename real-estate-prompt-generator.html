@@ -1350,6 +1350,54 @@
                 font-size: 20px;
             }
         }
+
+        /* Data Sync Bar */
+        .data-sync-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-top: 20px;
+        }
+
+        .sync-bar-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .sync-bar-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 8px 14px !important;
+            font-size: 13px !important;
+            border-radius: 8px !important;
+        }
+
+        @media (max-width: 768px) {
+            .data-sync-bar {
+                flex-direction: column;
+                gap: 12px;
+                align-items: stretch;
+            }
+
+            .sync-bar-buttons {
+                justify-content: stretch;
+            }
+
+            .sync-bar-buttons .btn {
+                flex: 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1426,6 +1474,33 @@
 
             <div id="historyContainer"></div>
             <div id="savedValuationsContainer"></div>
+
+            <div class="data-sync-bar" id="dataSyncBar" style="display:none;">
+                <div class="sync-bar-info">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5">
+                        <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                        <path d="M14 2v4h-4M2 14v-4h4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Synchronizace dat</span>
+                </div>
+                <div class="sync-bar-buttons">
+                    <button class="btn btn-secondary btn-sm" onclick="exportAllData()">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 4px;">
+                            <path d="M8 2v8M4 7l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 12v2h12v-2"/>
+                        </svg>
+                        Exportovat
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importFileInput').click()">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 4px;">
+                            <path d="M8 10V2M4 5l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 12v2h12v-2"/>
+                        </svg>
+                        Importovat
+                    </button>
+                    <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importAllData(event)">
+                </div>
+            </div>
 
             <div class="buttons">
                 <button class="btn btn-primary" onclick="nextStep()" id="step1Next" disabled>
@@ -1910,7 +1985,7 @@
         // Initialize
         loadState();
         updateStepIndicator();
-        renderHistoryPanel(); renderSavedValuationsPanel();
+        renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
 
         function loadState() {
             const saved = localStorage.getItem('prompt-gen-state');
@@ -2051,7 +2126,7 @@
                 section.classList.remove('active');
             });
             document.getElementById('step' + step).classList.add('active');
-            if (step === 1) { renderHistoryPanel(); renderSavedValuationsPanel(); }
+            if (step === 1) { renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility(); }
             if (step === 2) populateInputsGrid();
             if (step === 5) populatePropertySummary();
         }
@@ -2793,7 +2868,7 @@
             });
             if (history.length > 20) history.pop();
             localStorage.setItem('prompt-history', JSON.stringify(history));
-            renderHistoryPanel(); renderSavedValuationsPanel();
+            renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
         }
 
         function renderHistoryPanel() {
@@ -2853,7 +2928,7 @@
             let history = JSON.parse(localStorage.getItem('prompt-history') || '[]');
             history = history.filter(h => h.id !== id);
             localStorage.setItem('prompt-history', JSON.stringify(history));
-            renderHistoryPanel(); renderSavedValuationsPanel();
+            renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
             showToast('Valuace smazána');
         }
 
@@ -3476,6 +3551,113 @@
             }
         });
 
+        // ===== DATA EXPORT / IMPORT =====
+
+        function updateSyncBarVisibility() {
+            const bar = document.getElementById('dataSyncBar');
+            if (!bar) return;
+            try {
+                const valuations = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                const history = JSON.parse(localStorage.getItem('prompt-history') || '[]');
+                bar.style.display = (valuations.length > 0 || history.length > 0) ? 'flex' : 'none';
+            } catch (e) {
+                bar.style.display = 'none';
+            }
+        }
+
+        function exportAllData() {
+            try {
+                const exportData = {
+                    version: 1,
+                    app: 're-prompt-generator',
+                    exportDate: new Date().toISOString(),
+                    data: {
+                        savedValuations: JSON.parse(localStorage.getItem('saved-valuations') || '[]'),
+                        promptHistory: JSON.parse(localStorage.getItem('prompt-history') || '[]')
+                    }
+                };
+
+                const json = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `re-valuace-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Data exportována — uložte soubor do OneDrive');
+            } catch (e) {
+                console.error('Export error:', e);
+                showToast('Chyba při exportu');
+            }
+        }
+
+        function importAllData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+
+                    // Validate structure
+                    if (!imported.data || imported.app !== 're-prompt-generator') {
+                        showToast('Neplatný soubor — nejedná se o data z R-E Generatoru');
+                        return;
+                    }
+
+                    // Merge saved valuations (avoid duplicates by ID)
+                    const existingValuations = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                    const importedValuations = imported.data.savedValuations || [];
+                    const existingIds = new Set(existingValuations.map(v => v.id));
+                    let newCount = 0;
+
+                    importedValuations.forEach(v => {
+                        if (!existingIds.has(v.id)) {
+                            existingValuations.push(v);
+                            newCount++;
+                        }
+                    });
+
+                    // Sort by ID descending (newest first)
+                    existingValuations.sort((a, b) => b.id - a.id);
+                    localStorage.setItem('saved-valuations', JSON.stringify(existingValuations));
+
+                    // Merge prompt history
+                    const existingHistory = JSON.parse(localStorage.getItem('prompt-history') || '[]');
+                    const importedHistory = imported.data.promptHistory || [];
+                    const existingHistIds = new Set(existingHistory.map(h => h.id));
+                    let newHistCount = 0;
+
+                    importedHistory.forEach(h => {
+                        if (!existingHistIds.has(h.id)) {
+                            existingHistory.push(h);
+                            newHistCount++;
+                        }
+                    });
+
+                    existingHistory.sort((a, b) => b.id - a.id);
+                    if (existingHistory.length > 20) existingHistory.length = 20;
+                    localStorage.setItem('prompt-history', JSON.stringify(existingHistory));
+
+                    renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
+
+                    const total = newCount + newHistCount;
+                    if (total > 0) {
+                        showToast(`Importováno: ${newCount} ocenění, ${newHistCount} promptů`);
+                    } else {
+                        showToast('Všechna data již existují — nic nového k importu');
+                    }
+                } catch (err) {
+                    console.error('Import error:', err);
+                    showToast('Chyba při importu — neplatný formát souboru');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
         function resetGenerator() {
             currentStep = 1;
             propertyType = '';
@@ -3494,7 +3676,7 @@
             updateStepIndicator();
             showSection(1);
             localStorage.removeItem('prompt-gen-state');
-            renderHistoryPanel(); renderSavedValuationsPanel();
+            renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
         }
 
         // Auto-save form on input

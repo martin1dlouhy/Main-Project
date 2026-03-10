@@ -562,6 +562,51 @@
         .pdf-schedule-table tr:nth-child(even) { background: #F8FAFC; }
         .pdf-schedule-table .total-row { font-weight: 700; background: #F1F5F9; border-top: 2px solid #38BDF8; }
         .pdf-footer { text-align: center; font-size: 11px; color: #94A3B8; margin-top: 20px; padding-top: 15px; border-top: 1px solid #E2E8F0; }
+
+        /* Data Sync Bar */
+        .data-sync-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-bottom: 20px;
+        }
+        .data-sync-bar.hidden { display: none !important; }
+        .sync-bar-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .sync-bar-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-sync {
+            padding: 8px 14px;
+            font-size: 13px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: var(--transition);
+        }
+        .btn-sync:hover { border-color: var(--accent); color: var(--accent); }
+        @media (max-width: 768px) {
+            .data-sync-bar { flex-direction: column; gap: 12px; align-items: stretch; }
+            .sync-bar-buttons .btn-sync { flex: 1; justify-content: center; }
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -598,6 +643,33 @@
                 <span class="saved-sidebar-chevron">▼</span>
             </div>
             <div class="saved-sidebar-body" id="sidebarBody"></div>
+        </div>
+
+        <div class="data-sync-bar hidden" id="debtSyncBar">
+            <div class="sync-bar-info">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5">
+                    <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                    <path d="M14 2v4h-4M2 14v-4h4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Synchronizace dat</span>
+            </div>
+            <div class="sync-bar-buttons">
+                <button class="btn-sync" onclick="exportDebtData()">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M8 2v8M4 7l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12v2h12v-2"/>
+                    </svg>
+                    Exportovat
+                </button>
+                <button class="btn-sync" onclick="document.getElementById('debtImportFile').click()">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M8 10V2M4 5l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12v2h12v-2"/>
+                    </svg>
+                    Importovat
+                </button>
+                <input type="file" id="debtImportFile" accept=".json" style="display:none" onchange="importDebtData(event)">
+            </div>
         </div>
 
         <div class="form-grid">
@@ -1067,7 +1139,7 @@
             importFromURL();
 
             // Render saved calculations sidebar
-            renderSavedSidebar();
+            renderSavedSidebar(); if(typeof updateDebtSyncBar==='function') updateDebtSyncBar();
 
             // Close modals when clicking outside
             document.getElementById('saveModal').addEventListener('click', function(e) {
@@ -2103,7 +2175,7 @@
                 closeSaveModal();
                 document.getElementById('saveName').value = '';
                 showToast('Výpočet byl uložen');
-                renderSavedSidebar();
+                renderSavedSidebar(); if(typeof updateDebtSyncBar==='function') updateDebtSyncBar();
             } catch (e) {
                 console.error('localStorage save error:', e);
                 showToast('Chyba při ukládání — úložiště může být plné');
@@ -2225,7 +2297,7 @@
                     showToast('Chyba při mazání výpočtu');
                 }
                 showLoadModal();
-                renderSavedSidebar();
+                renderSavedSidebar(); if(typeof updateDebtSyncBar==='function') updateDebtSyncBar();
             }
         }
 
@@ -2703,6 +2775,99 @@
                 }
             });
         });
+
+        // ===== DATA EXPORT / IMPORT =====
+
+        function updateDebtSyncBar() {
+            const bar = document.getElementById('debtSyncBar');
+            if (!bar) return;
+            let hasData = false;
+            try {
+                for (let key in localStorage) {
+                    if (key.startsWith('debtcalc-')) { hasData = true; break; }
+                }
+            } catch (e) {}
+            bar.classList.toggle('hidden', !hasData);
+        }
+
+        function exportDebtData() {
+            try {
+                const items = [];
+                for (let key in localStorage) {
+                    if (key.startsWith('debtcalc-')) {
+                        try {
+                            items.push({ key, data: JSON.parse(localStorage.getItem(key)) });
+                        } catch (e) {}
+                    }
+                }
+
+                const exportData = {
+                    version: 1,
+                    app: 'debt-calculator',
+                    exportDate: new Date().toISOString(),
+                    items: items
+                };
+
+                const json = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `debt-calc-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Data exportována — uložte soubor do OneDrive');
+            } catch (e) {
+                console.error('Export error:', e);
+                showToast('Chyba při exportu');
+            }
+        }
+
+        function importDebtData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+
+                    if (!imported.items || imported.app !== 'debt-calculator') {
+                        showToast('Neplatný soubor — nejedná se o data z Dluhové kalkulačky');
+                        return;
+                    }
+
+                    let newCount = 0;
+                    imported.items.forEach(item => {
+                        if (item.key && item.data && !localStorage.getItem(item.key)) {
+                            try {
+                                localStorage.setItem(item.key, JSON.stringify(item.data));
+                                newCount++;
+                            } catch (err) {
+                                if (err.name === 'QuotaExceededError') {
+                                    showToast('Úložiště je plné');
+                                }
+                            }
+                        }
+                    });
+
+                    renderSavedSidebar(); if(typeof updateDebtSyncBar==='function') updateDebtSyncBar();
+
+                    if (newCount > 0) {
+                        showToast(`Importováno ${newCount} výpočtů`);
+                    } else {
+                        showToast('Všechna data již existují');
+                    }
+                } catch (err) {
+                    console.error('Import error:', err);
+                    showToast('Chyba při importu — neplatný formát');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        updateDebtSyncBar();
     </script>
 </body>
 </html>
