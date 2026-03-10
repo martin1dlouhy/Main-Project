@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Dashboard v3 — Preview</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{--bg-primary:#FFFFFF;--bg-secondary:#F8FAFC;--bg-surface:#F1F5F9;--border-color:#E2E8F0;--text-primary:#1E293B;--text-secondary:#64748B;--accent:#38BDF8;--accent-hover:#0EA5E9;--accent-light:rgba(56,189,248,0.1);--accent-glow:rgba(56,189,248,0.12);--success:#22C55E;--warning:#F59E0B;--danger:#EF4444;--shadow:0 1px 3px rgba(0,0,0,0.05);--shadow-md:0 4px 12px rgba(0,0,0,0.08);--transition:all 0.3s ease}
+        html.carbon,body.carbon{--bg-primary:#0B1120;--bg-secondary:#111827;--bg-surface:#1E293B;--border-color:#2D3A4F;--text-primary:#F1F5F9;--text-secondary:#B0BEC5;--accent:#38BDF8;--accent-hover:#7DD3FC;--accent-light:rgba(56,189,248,0.15);--accent-glow:rgba(56,189,248,0.2);--shadow:0 1px 3px rgba(0,0,0,0.4);--shadow-md:0 4px 16px rgba(0,0,0,0.3)}
+        html{background:var(--bg-secondary);scroll-behavior:smooth}
+        body{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg-secondary);color:var(--text-primary);min-height:100vh;line-height:1.6;transition:var(--transition)}
+        a{text-decoration:none;color:inherit}button{font-family:inherit;cursor:pointer;border:none;background:none}
+
+        /* Nav */
+        .top-nav{background:var(--bg-primary);border-bottom:1px solid var(--border-color);position:sticky;top:0;z-index:100;transition:var(--transition)}
+        .nav-container{max-width:1440px;margin:0 auto;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px}
+        .nav-left{display:flex;align-items:center;gap:3rem}
+        .logo{font-size:1.25rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:0.5rem;transition:var(--transition)}
+        .logo:hover{color:var(--accent)}
+        .logo-icon{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+        .logo-icon svg{width:16px;height:16px}
+        .nav-menu{display:flex;align-items:center;gap:0.25rem}
+        .nav-link{display:flex;align-items:center;gap:0.375rem;padding:0.5rem 0.875rem;color:var(--text-secondary);font-size:0.9375rem;font-weight:500;border-radius:6px;transition:var(--transition)}
+        .nav-link:hover{color:var(--text-primary)}
+        .nav-link svg{width:18px;height:18px;opacity:0.7}
+        .nav-right{display:flex;align-items:center;gap:1rem}
+        .theme-toggle{display:flex;align-items:center;gap:0.5rem;padding:0.375rem;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border-color)}
+        .theme-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;color:var(--text-secondary);transition:var(--transition)}
+        .theme-btn:hover{color:var(--text-primary)}
+        .theme-btn.active{background:var(--bg-primary);color:var(--accent);box-shadow:var(--shadow)}
+        .theme-btn svg{width:18px;height:18px}
+
+        .app-container{min-height:100vh;display:flex;flex-direction:column}
+        .main-content{flex:1;padding:2rem;max-width:1440px;margin:0 auto;width:100%}
+
+        /* Buttons */
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.75rem 1.5rem;font-size:0.9375rem;font-weight:600;border-radius:10px;transition:var(--transition);cursor:pointer}
+        .btn-sm{padding:0.5rem 1rem;font-size:0.8125rem;border-radius:8px}
+        .btn-primary{background:linear-gradient(135deg,var(--accent),#0EA5E9);color:white;border:none;box-shadow:0 2px 8px var(--accent-glow)}
+        .btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px var(--accent-glow)}
+        .btn-export{background:var(--bg-surface);color:var(--text-primary);border:1px solid var(--border-color);padding:0.5rem 1rem;font-size:0.8125rem;font-weight:600;border-radius:8px;display:inline-flex;align-items:center;gap:0.5rem;transition:var(--transition)}
+        .btn-export:hover{border-color:var(--accent);color:var(--accent)}
+
+        /* Header */
+        .app-header{background:var(--bg-primary);border-bottom:1px solid var(--border-color);padding:1.5rem 2rem;margin:-2rem -2rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+        .app-title{font-size:1.75rem;font-weight:700;color:var(--text-primary);margin:0}
+        .app-subtitle{font-size:0.9375rem;color:var(--text-secondary);margin-top:0.5rem}
+        .header-actions{display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center}
+
+        /* Tabs */
+        .dashboard-tabs{display:flex;gap:0;border-bottom:1px solid var(--border-color);margin-bottom:2rem;overflow-x:auto}
+        .tab-btn{padding:0.875rem 1.5rem;background:none;border:none;border-bottom:2px solid transparent;color:var(--text-secondary);font-size:0.9375rem;font-weight:500;font-family:inherit;cursor:pointer;transition:var(--transition);white-space:nowrap}
+        .tab-btn:hover{color:var(--text-primary)}
+        .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+        .tab-content{display:none}.tab-content.active{display:block}
+
+        /* KPI */
+        .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;margin-bottom:2rem}
+        .kpi-card{background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;padding:1.25rem;transition:var(--transition)}
+        .kpi-card:hover{box-shadow:var(--shadow-md)}
+        .kpi-label{font-size:0.8125rem;color:var(--text-secondary);margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem}
+        .kpi-label svg{width:16px;height:16px;opacity:0.7}
+        .kpi-value{font-size:1.75rem;font-weight:700;color:var(--text-primary);line-height:1.2}
+        .kpi-sub{font-size:0.8125rem;margin-top:0.375rem}
+        .kpi-sub.pos{color:var(--success)}.kpi-sub.neg{color:var(--danger)}.kpi-sub.neu{color:var(--text-secondary)}
+
+        /* Charts */
+        .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+        .card{background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+        .card-title{font-size:1.125rem;font-weight:600;color:var(--text-primary);margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center}
+        .chart-container{position:relative;width:100%;max-height:350px}
+        .chart-container canvas{width:100%!important;max-height:350px}
+
+        /* Tables */
+        .tw{overflow-x:auto;margin-top:0.5rem}
+        .dt{width:100%;border-collapse:collapse;font-size:0.875rem}
+        .dt thead th{background:var(--bg-surface);color:var(--text-secondary);font-weight:600;font-size:0.8125rem;text-transform:uppercase;letter-spacing:0.03em;padding:0.75rem 1rem;text-align:left;border-bottom:1px solid var(--border-color);white-space:nowrap;cursor:default}
+        .dt tbody td{padding:0.75rem 1rem;border-bottom:1px solid var(--border-color);color:var(--text-primary);white-space:nowrap}
+        .dt tbody tr:hover{background:var(--accent-light)}
+
+        /* Firm rows */
+        .firm-row{cursor:pointer;transition:var(--transition)}
+        .firm-row:hover{background:var(--accent-light)!important}
+        .firm-row td:first-child{font-weight:700;position:relative;padding-left:2rem!important}
+        .firm-row td:first-child .chevron{position:absolute;left:0.75rem;top:50%;transform:translateY(-50%) rotate(0deg);transition:transform 0.2s;width:14px;height:14px;color:var(--text-secondary)}
+        .firm-row.expanded td:first-child .chevron{transform:translateY(-50%) rotate(90deg)}
+        .project-row td{padding-left:2.75rem!important;font-size:0.8125rem;color:var(--text-secondary)}
+        .project-row td:first-child{position:relative}
+        .project-row td:first-child::before{content:'';position:absolute;left:1.5rem;top:50%;width:0.75rem;height:1px;background:var(--border-color)}
+        .project-row{transition:all 0.2s}
+        .project-row.hidden{display:none}
+
+        /* Badges */
+        .badge{display:inline-block;padding:0.25rem 0.625rem;border-radius:6px;font-size:0.75rem;font-weight:600}
+        .badge-low{background:rgba(34,197,94,0.15);color:#22C55E}
+        .badge-medium{background:rgba(245,158,11,0.15);color:#F59E0B}
+        .badge-high{background:rgba(239,68,68,0.15);color:#EF4444}
+        .badge-active{background:rgba(56,189,248,0.15);color:#38BDF8}
+        .badge-completed{background:rgba(34,197,94,0.15);color:#22C55E}
+
+        /* Geo bars */
+        .geo-bar-c{width:100%;height:8px;background:var(--bg-surface);border-radius:4px;overflow:hidden}
+        .geo-bar{height:100%;background:var(--accent);border-radius:4px;transition:width 0.5s ease}
+
+        /* Section divider */
+        .section-divider{display:flex;align-items:center;gap:0.75rem;margin:2.5rem 0 1.5rem;padding-bottom:0.75rem;border-bottom:2px solid var(--border-color)}
+        .section-divider-icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px}
+        .section-divider h2{font-size:1.25rem;font-weight:700;color:var(--text-primary)}
+        .section-divider .section-sub{font-size:0.8125rem;color:var(--text-secondary);font-weight:400;margin-left:auto}
+
+        /* Country header */
+        .country-header{display:flex;align-items:center;gap:0.75rem;padding:1rem 0 0.5rem;margin-top:1.5rem}
+        .country-header:first-child{margin-top:0}
+        .country-flag{font-size:1.5rem}
+        .country-header h3{font-size:1rem;font-weight:700;color:var(--text-primary)}
+        .country-header .country-total{margin-left:auto;font-size:0.875rem;color:var(--text-secondary)}
+
+        /* Currency selector */
+        .dash-currency{display:flex;gap:0.5rem}
+        .dash-currency .cb{padding:0.375rem 0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-surface);color:var(--text-secondary);font-size:0.8125rem;font-weight:600;cursor:pointer;transition:var(--transition);font-family:inherit}
+        .dash-currency .cb.active{background:var(--accent);color:white;border-color:var(--accent)}
+        .dash-currency .cb:hover:not(.active){border-color:var(--accent);color:var(--accent)}
+
+        /* Risk matrix */
+        .risk-matrix{width:100%;border-collapse:collapse;font-size:0.8125rem}
+        .risk-matrix th{background:var(--bg-surface);padding:0.625rem 0.75rem;text-align:center;font-weight:600;color:var(--text-secondary);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;border-bottom:1px solid var(--border-color)}
+        .risk-matrix th:first-child{text-align:left}
+        .risk-matrix td{padding:0.625rem 0.75rem;text-align:center;border-bottom:1px solid var(--border-color);font-weight:500}
+        .risk-matrix td:first-child{text-align:left;font-weight:600;color:var(--text-primary)}
+        .rm-low{color:#22C55E}.rm-med{color:#F59E0B}.rm-high{color:#EF4444}
+
+        /* Expand all btn */
+        .expand-all-btn{font-size:0.8125rem;color:var(--accent);font-weight:600;cursor:pointer;padding:0.25rem 0.75rem;border:1px solid var(--accent);border-radius:6px;background:transparent;transition:var(--transition)}
+        .expand-all-btn:hover{background:var(--accent-light)}
+
+        /* Toast */
+        .toast{position:fixed;bottom:2rem;right:2rem;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:10px;padding:0.75rem 1.5rem;box-shadow:var(--shadow-md);font-size:0.875rem;font-weight:500;z-index:9999;opacity:0;transform:translateY(1rem);transition:all 0.3s;pointer-events:none}
+        .toast.show{opacity:1;transform:translateY(0)}
+
+        /* Footer */
+        .footer{background:var(--bg-primary);border-top:1px solid var(--border-color);padding:2rem 2rem 1.5rem;margin-top:3rem}
+        .footer-content{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:2rem;margin-bottom:1.5rem}
+        .footer-section h4{font-size:0.875rem;font-weight:600;margin-bottom:0.75rem;color:var(--text-primary);text-transform:uppercase;letter-spacing:0.5px}
+        .footer-section p,.footer-section a{font-size:0.875rem;color:var(--text-secondary);line-height:1.8}
+        .footer-section ul{list-style:none}.footer-section li{margin-bottom:0.5rem}
+        .footer-section a:hover{color:var(--accent)}
+        .footer-bottom{max-width:1440px;margin:0 auto;padding-top:1.5rem;border-top:1px solid var(--border-color);text-align:center}
+        .footer-bottom p{font-size:0.8125rem;color:var(--text-secondary);opacity:0.8}
+
+        @media(max-width:968px){.app-header{margin:-1.5rem -1.5rem 1.5rem;padding:1.5rem}.kpi-grid{grid-template-columns:repeat(2,1fr)}.charts-row{grid-template-columns:1fr}}
+        @media(max-width:640px){.kpi-grid{grid-template-columns:1fr}.nav-menu{display:none}.app-header{flex-direction:column;align-items:flex-start}}
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <nav class="top-nav"><div class="nav-container">
+            <div class="nav-left">
+                <a href="#" class="logo"><div class="logo-icon"><svg viewBox="0 0 32 32" fill="none"><rect x="4" y="20" width="6" height="8" rx="1.5" fill="white" opacity="0.5"/><rect x="13" y="13" width="6" height="15" rx="1.5" fill="white" opacity="0.75"/><rect x="22" y="4" width="6" height="24" rx="1.5" fill="white"/><path d="M6 18L15 10L21 14L28 4" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/><circle cx="28" cy="4" r="2" fill="white" opacity="0.8"/></svg></div><span>Investment Tools</span></a>
+                <div class="nav-menu">
+                    <div><a href="#" class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Domů</a></div>
+                    <div><a href="#" class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Aplikace</a></div>
+                </div>
+            </div>
+            <div class="nav-right"><div class="theme-toggle">
+                <button class="theme-btn theme-btn-snow active" onclick="toggleTheme('snow')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+                <button class="theme-btn theme-btn-carbon" onclick="toggleTheme('carbon')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+            </div></div>
+        </div></nav>
+
+        <main class="main-content">
+            <div class="app-header">
+                <div>
+                    <h1 class="app-title">Portfolio Dashboard</h1>
+                    <p class="app-subtitle">Kompletní přehled portfolia — firemní i osobní investice</p>
+                </div>
+                <div class="header-actions">
+                    <div class="dash-currency">
+                        <button class="cb" onclick="setCurrency('CZK')">CZK</button>
+                        <button class="cb active" onclick="setCurrency('EUR')">EUR</button>
+                        <button class="cb" onclick="setCurrency('USD')">USD</button>
+                    </div>
+                    <button class="btn-export" onclick="exportJSON()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export JSON
+                    </button>
+                </div>
+            </div>
+
+            <div class="dashboard-tabs">
+                <button class="tab-btn active" onclick="switchTab('overview')">Přehled</button>
+                <button class="tab-btn" onclick="switchTab('firms')">Firmy</button>
+                <button class="tab-btn" onclick="switchTab('personal')">Osobní</button>
+                <button class="tab-btn" onclick="switchTab('risk')">Rizika</button>
+                <button class="tab-btn" onclick="switchTab('data')">Správa dat</button>
+            </div>
+
+            <!-- ===== PŘEHLED ===== -->
+            <div id="tab-overview" class="tab-content active">
+                <div class="kpi-grid" id="kpi-grid"></div>
+                <div class="charts-row">
+                    <div class="card" style="margin-bottom:0"><div class="card-title">Alokace dle typu aktiv</div><div class="chart-container"><canvas id="allocChart"></canvas></div></div>
+                    <div class="card" style="margin-bottom:0"><div class="card-title">IRR dle země</div><div class="chart-container"><canvas id="irrCountryChart"></canvas></div></div>
+                </div>
+                <div class="card"><div class="card-title">Geografické rozložení</div><div class="tw"><table class="dt" id="geoTable"></table></div></div>
+                <div class="charts-row">
+                    <div class="card" style="margin-bottom:0"><div class="card-title">Likvidita portfolia</div><div class="tw"><table class="dt" id="liqTable"></table></div></div>
+                    <div class="card" style="margin-bottom:0"><div class="card-title">Rizikový profil dle třídy aktiv</div><div class="tw"><table class="dt" id="riskTable"></table></div></div>
+                </div>
+            </div>
+
+            <!-- ===== FIRMY ===== -->
+            <div id="tab-firms" class="tab-content">
+                <div class="section-divider">
+                    <div class="section-divider-icon" style="background:rgba(56,189,248,0.1);color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
+                    <h2>Firemní portfolio</h2>
+                    <span class="section-sub" id="firms-summary"></span>
+                </div>
+                <div id="firms-container"></div>
+            </div>
+
+            <!-- ===== OSOBNÍ ===== -->
+            <div id="tab-personal" class="tab-content">
+                <div class="section-divider">
+                    <div class="section-divider-icon" style="background:rgba(236,72,153,0.1);color:#EC4899"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                    <h2>Osobní investice</h2>
+                    <span class="section-sub" id="personal-summary"></span>
+                </div>
+                <div class="card" id="personal-card"></div>
+            </div>
+
+            <!-- ===== RIZIKA ===== -->
+            <div id="tab-risk" class="tab-content">
+                <div class="section-divider">
+                    <div class="section-divider-icon" style="background:rgba(239,68,68,0.1);color:#EF4444"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+                    <h2>Riziková matice</h2>
+                    <span class="section-sub">Agregované rizikové metriky</span>
+                </div>
+                <div class="card" id="risk-matrix-card"></div>
+                <div class="charts-row">
+                    <div class="card" style="margin-bottom:0"><div class="card-title">Koncentrace dle země</div><div class="chart-container"><canvas id="concChart"></canvas></div></div>
+                    <div class="card" style="margin-bottom:0"><div class="card-title">Koncentrace dle typu aktiv</div><div class="chart-container"><canvas id="concAssetChart"></canvas></div></div>
+                </div>
+                <div class="card"><div class="card-title">Přehled zajištění (collateral)</div><div class="tw"><table class="dt" id="collateralTable"></table></div></div>
+            </div>
+
+            <!-- ===== SPRÁVA DAT ===== -->
+            <div id="tab-data" class="tab-content">
+                <div class="card">
+                    <div class="card-title">Správa dat</div>
+                    <p style="color:var(--text-secondary);margin-bottom:1.5rem;">Import a export dat portfolia ve formátu JSON. Načtěte demo data pro ukázku funkčnosti.</p>
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:2rem">
+                        <label class="btn btn-primary btn-sm" style="cursor:pointer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            Import JSON
+                            <input type="file" accept=".json" style="display:none" onchange="importJSON(event)">
+                        </label>
+                        <button class="btn-export" onclick="exportJSON()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export JSON
+                        </button>
+                        <button class="btn-export" onclick="loadDemoData()">Načíst demo data</button>
+                        <button class="btn-export" style="border-color:var(--danger);color:var(--danger)" onclick="if(confirm('Opravdu smazat všechna data?')){DATA={firms:[],personal:[]};renderAll();showToast('Data smazána')}">Smazat vše</button>
+                    </div>
+                    <div class="card-title">Statistika dat</div>
+                    <div id="data-stats" style="color:var(--text-secondary);font-size:0.875rem"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Raw JSON (pouze čtení)</div>
+                    <pre id="raw-json" style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:8px;padding:1rem;overflow:auto;max-height:400px;font-size:0.75rem;color:var(--text-secondary);white-space:pre-wrap;word-break:break-all"></pre>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section"><h4>Investment Tools</h4><p>Profesionální nástroje pro správu investic a financí.</p></div>
+                <div class="footer-section"><h4>Navigace</h4><ul><li><a href="#">Domů</a></li><li><a href="#">Aplikace</a></li></ul></div>
+            </div>
+            <div class="footer-bottom"><p>&copy; 2026 Investment Tools. All rights reserved.</p></div>
+        </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+<script>
+/* ===== CURRENCY ===== */
+const RATES = { EUR: 1, CZK: 25.2, USD: 1.08 };
+let CUR = 'EUR';
+
+function setCurrency(c) {
+    CUR = c;
+    document.querySelectorAll('.dash-currency .cb').forEach(b => b.classList.toggle('active', b.textContent.trim() === c));
+    renderAll();
+}
+
+function fmtVal(eurVal) {
+    const v = eurVal * RATES[CUR];
+    if (v >= 1e6) return (v / 1e6).toFixed(2) + ' mil ' + CUR;
+    if (v >= 1e3) return Math.round(v / 1e3) + ' tis ' + CUR;
+    return Math.round(v) + ' ' + CUR;
+}
+
+function fmtValShort(eurVal) {
+    const v = eurVal * RATES[CUR];
+    if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+    if (v >= 1e3) return (v / 1e3).toFixed(0) + 'k';
+    return Math.round(v).toString();
+}
+
+/* ===== DATA MODEL ===== */
+let DATA = { firms: [], personal: [] };
+
+function getDemoData() {
+    return {
+        firms: [
+            // === CZ ===
+            { name:'ProfiLend CZ s.r.o.', country:'CZ', projects:[
+                {name:'Senior Loan — Developer Praha 5',type:'Private Debt (zajištěný)',amount:800000,irr:9.5,collateral:'Nemovitost (LTV 65%)',maturity:'06/2027',status:'Aktivní'},
+                {name:'Mezzanine — Rezidenční Brno',type:'Private Debt (zajištěný)',amount:600000,irr:12.0,collateral:'Nemovitost (LTV 78%)',maturity:'12/2027',status:'Aktivní'},
+                {name:'Bridge Loan — Retail Ostrava',type:'Private Debt (zajištěný)',amount:400000,irr:11.0,collateral:'Nemovitost (LTV 70%)',maturity:'09/2026',status:'Aktivní'},
+                {name:'Korporátní dluhopisy ABC',type:'Dluhopisy',amount:200000,irr:5.2,collateral:'—',maturity:'01/2028',status:'Aktivní'},
+                {name:'Cash deposit (provozní)',type:'Hotovost',amount:150000,irr:3.8,collateral:'—',maturity:'—',status:'Likvidní'}
+            ]},
+            { name:'RE Invest CZ a.s.', country:'CZ', projects:[
+                {name:'Bytový dům Praha 5',type:'Nemovitosti',amount:680000,irr:5.8,collateral:'Vlastní nemovitost',maturity:'—',status:'Pronájem'},
+                {name:'Komerční objekt Brno',type:'Nemovitosti',amount:420000,irr:7.1,collateral:'Vlastní nemovitost',maturity:'—',status:'Pronájem'},
+                {name:'Garáže Plzeň',type:'Nemovitosti',amount:180000,irr:6.5,collateral:'Vlastní nemovitost',maturity:'—',status:'Pronájem'}
+            ]},
+            { name:'Lending Partner CZ s.r.o.', country:'CZ', projects:[
+                {name:'Consumer loans — batch Q1',type:'Private Debt (nezajištěný)',amount:350000,irr:14.0,collateral:'Směnky',maturity:'03/2027',status:'Aktivní'},
+                {name:'Consumer loans — batch Q3',type:'Private Debt (nezajištěný)',amount:280000,irr:11.5,collateral:'Směnky',maturity:'09/2027',status:'Aktivní'},
+                {name:'SME micro loans',type:'Private Debt (nezajištěný)',amount:170000,irr:13.2,collateral:'Ručení',maturity:'06/2027',status:'Aktivní'}
+            ]},
+            { name:'Capital Growth CZ a.s.', country:'CZ', projects:[
+                {name:'Equity fond — tech startupy',type:'Equity',amount:200000,irr:0,collateral:'—',maturity:'—',status:'Aktivní'},
+                {name:'Venture — fintech seed',type:'Equity',amount:120000,irr:0,collateral:'—',maturity:'—',status:'Aktivní'},
+                {name:'Akciový fond CEE',type:'Akcie / ETF',amount:150000,irr:7.2,collateral:'—',maturity:'—',status:'Aktivní'}
+            ]},
+            { name:'Czech Property Fund s.r.o.', country:'CZ', projects:[
+                {name:'Logistický areál D1',type:'Nemovitosti',amount:320000,irr:8.1,collateral:'Vlastní nemovitost',maturity:'—',status:'Pronájem'},
+                {name:'Retail park Liberec',type:'Nemovitosti',amount:200000,irr:7.4,collateral:'Vlastní nemovitost',maturity:'—',status:'Development'}
+            ]},
+            { name:'Pragma Finance CZ s.r.o.', country:'CZ', projects:[
+                {name:'Senior Loan — Hotel Karlovy Vary',type:'Private Debt (zajištěný)',amount:250000,irr:8.5,collateral:'Nemovitost (LTV 62%)',maturity:'03/2028',status:'Aktivní'},
+                {name:'Bridge — Developer Olomouc',type:'Private Debt (zajištěný)',amount:180000,irr:10.5,collateral:'Nemovitost (LTV 72%)',maturity:'12/2026',status:'Aktivní'}
+            ]},
+            { name:'Nova Credit CZ s.r.o.', country:'CZ', projects:[
+                {name:'Auto loans portfolio',type:'Private Debt (nezajištěný)',amount:160000,irr:9.8,collateral:'Zástavní právo k vozidlům',maturity:'06/2027',status:'Aktivní'},
+                {name:'Factoring — SME batch',type:'Private Debt (zajištěný)',amount:120000,irr:8.0,collateral:'Pohledávky',maturity:'03/2027',status:'Aktivní'}
+            ]},
+            { name:'Debt Solutions CZ s.r.o.', country:'CZ', projects:[
+                {name:'Distressed debt portfolio',type:'Private Debt (nezajištěný)',amount:100000,irr:18.5,collateral:'—',maturity:'12/2027',status:'Aktivní'}
+            ]},
+            // === PL ===
+            { name:'ProfiLend PL Sp. z o.o.', country:'PL', projects:[
+                {name:'Bridge Loan — Varšava retail',type:'Private Debt (zajištěný)',amount:550000,irr:11.0,collateral:'Nemovitost (LTV 67%)',maturity:'09/2026',status:'Aktivní'},
+                {name:'Senior Loan — Kraków logistika',type:'Private Debt (zajištěný)',amount:480000,irr:12.0,collateral:'Nemovitost (LTV 60%)',maturity:'03/2027',status:'Aktivní'},
+                {name:'Mezzanine — Gdaňsk rezidenční',type:'Private Debt (zajištěný)',amount:320000,irr:13.5,collateral:'Nemovitost (LTV 75%)',maturity:'06/2027',status:'Aktivní'}
+            ]},
+            { name:'Warsaw Capital Sp. z o.o.', country:'PL', projects:[
+                {name:'Development — Wrocław apartments',type:'Private Debt (zajištěný)',amount:420000,irr:10.5,collateral:'Nemovitost (LTV 72%)',maturity:'06/2027',status:'Aktivní'},
+                {name:'SME Loan — výrobní firma',type:'Private Debt (nezajištěný)',amount:280000,irr:11.5,collateral:'Ručení + zástava',maturity:'12/2026',status:'Aktivní'}
+            ]},
+            { name:'Kraków Lending Sp. z o.o.', country:'PL', projects:[
+                {name:'Consumer micro — batch A',type:'Private Debt (nezajištěný)',amount:180000,irr:15.0,collateral:'Směnky',maturity:'03/2027',status:'Aktivní'},
+                {name:'Consumer micro — batch B',type:'Private Debt (nezajištěný)',amount:150000,irr:14.2,collateral:'Směnky',maturity:'06/2027',status:'Aktivní'}
+            ]},
+            { name:'PL Property Holdings', country:'PL', projects:[
+                {name:'Komerční budova Varšava',type:'Nemovitosti',amount:220000,irr:6.8,collateral:'Vlastní nemovitost',maturity:'—',status:'Pronájem'}
+            ]},
+            // === SK ===
+            { name:'ProfiLend SK s.r.o.', country:'SK', projects:[
+                {name:'Senior Loan — Komerční Bratislava',type:'Private Debt (zajištěný)',amount:450000,irr:8.5,collateral:'Nemovitost (LTV 68%)',maturity:'03/2027',status:'Aktivní'},
+                {name:'Development — Košice retail park',type:'Private Debt (zajištěný)',amount:320000,irr:9.2,collateral:'Nemovitost (LTV 75%)',maturity:'09/2027',status:'Aktivní'},
+                {name:'Bridge — Žilina industrial',type:'Private Debt (zajištěný)',amount:200000,irr:10.0,collateral:'Nemovitost (LTV 70%)',maturity:'06/2027',status:'Aktivní'}
+            ]},
+            { name:'Bratislava Property s.r.o.', country:'SK', projects:[
+                {name:'Rezidenční komplex Petržalka',type:'Nemovitosti',amount:280000,irr:6.2,collateral:'Vlastní nemovitost',maturity:'—',status:'Pronájem'},
+                {name:'Kancelářský objekt Ružinov',type:'Nemovitosti',amount:180000,irr:7.0,collateral:'Vlastní nemovitost',maturity:'—',status:'Pronájem'}
+            ]},
+            { name:'Tatra Finance s.r.o.', country:'SK', projects:[
+                {name:'SME lending Slovensko',type:'Private Debt (nezajištěný)',amount:130000,irr:12.0,collateral:'Ručení',maturity:'09/2027',status:'Aktivní'},
+                {name:'Factoring — exportéři',type:'Private Debt (zajištěný)',amount:90000,irr:7.5,collateral:'Pohledávky',maturity:'03/2027',status:'Aktivní'}
+            ]},
+            // === BG ===
+            { name:'ProfiLend BG EOOD', country:'BG', projects:[
+                {name:'Senior Loan — Sofia office',type:'Private Debt (zajištěný)',amount:380000,irr:11.5,collateral:'Nemovitost (LTV 65%)',maturity:'06/2027',status:'Aktivní'},
+                {name:'Bridge — Plovdiv retail',type:'Private Debt (zajištěný)',amount:250000,irr:12.0,collateral:'Nemovitost (LTV 70%)',maturity:'12/2026',status:'Aktivní'},
+                {name:'Mezzanine — Varna resort',type:'Private Debt (zajištěný)',amount:200000,irr:13.5,collateral:'Nemovitost (LTV 80%)',maturity:'09/2027',status:'Aktivní'}
+            ]},
+            { name:'Sofia Invest EOOD', country:'BG', projects:[
+                {name:'Rezidenční Sofia — Vitosha',type:'Nemovitosti',amount:200000,irr:8.5,collateral:'Vlastní nemovitost',maturity:'—',status:'Pronájem'},
+                {name:'Retail — Burgas centrum',type:'Nemovitosti',amount:140000,irr:9.0,collateral:'Vlastní nemovitost',maturity:'—',status:'Pronájem'}
+            ]},
+            { name:'Black Sea Capital OOD', country:'BG', projects:[
+                {name:'SME Lending — batch 2025',type:'Private Debt (nezajištěný)',amount:130000,irr:16.0,collateral:'Směnky',maturity:'06/2027',status:'Aktivní'}
+            ]},
+            // === MK ===
+            { name:'ProfiLend MK DOO', country:'MK', projects:[
+                {name:'Senior Loan — Skopje commercial',type:'Private Debt (zajištěný)',amount:320000,irr:13.0,collateral:'Nemovitost (LTV 60%)',maturity:'06/2027',status:'Aktivní'},
+                {name:'Bridge — Bitola retail',type:'Private Debt (zajištěný)',amount:220000,irr:14.5,collateral:'Nemovitost (LTV 65%)',maturity:'12/2026',status:'Aktivní'}
+            ]},
+            { name:'Skopje Capital DOO', country:'MK', projects:[
+                {name:'Mixed-use development Tetovo',type:'Private Debt (zajištěný)',amount:160000,irr:15.0,collateral:'Nemovitost (LTV 70%)',maturity:'09/2027',status:'Aktivní'}
+            ]}
+        ],
+        personal: [
+            {name:'ETF portfolio — globální akcie',type:'Akcie / ETF',amount:500000,irr:3.5,liquidity:'Okamžitá',risk:'Střední'},
+            {name:'Korporátní dluhopisy',type:'Dluhopisy',amount:300000,irr:4.8,liquidity:'≤ 3 měs.',risk:'Nízké'},
+            {name:'Spořicí účet CZK',type:'Hotovost',amount:250000,irr:4.2,liquidity:'Okamžitá',risk:'Nízké'},
+            {name:'P2P lending platforma',type:'Private Debt (nezajištěný)',amount:100000,irr:9.0,liquidity:'≤ 12 měs.',risk:'Střední'},
+            {name:'Crypto (BTC/ETH)',type:'Alternativní',amount:100000,irr:null,liquidity:'Okamžitá',risk:'Vysoké'}
+        ]
+    };
+}
+
+/* ===== COMPUTED DATA ===== */
+function computeStats() {
+    const countries = {};
+    const COUNTRY_NAMES = {CZ:'Česká republika',PL:'Polsko',SK:'Slovensko',BG:'Bulharsko',MK:'Makedonie'};
+    const FLAGS = {CZ:'🇨🇿',PL:'🇵🇱',SK:'🇸🇰',BG:'🇧🇬',MK:'🇲🇰'};
+    let totalFirmAmount = 0, totalFirmWeightedIRR = 0, totalProjects = 0, totalFirms = DATA.firms.length;
+
+    DATA.firms.forEach(f => {
+        const cc = f.country;
+        if (!countries[cc]) countries[cc] = {name:COUNTRY_NAMES[cc]||cc,flag:FLAGS[cc]||'',firms:0,projects:0,amount:0,weightedIrr:0,firmList:[]};
+        countries[cc].firms++;
+        let firmAmount = 0, firmWeightedIRR = 0;
+        f.projects.forEach(p => {
+            firmAmount += p.amount;
+            if (p.irr > 0) firmWeightedIRR += p.amount * p.irr;
+            totalProjects++;
+            countries[cc].projects++;
+        });
+        const firmIRR = firmAmount > 0 && firmWeightedIRR > 0 ? firmWeightedIRR / firmAmount : 0;
+        countries[cc].amount += firmAmount;
+        countries[cc].weightedIrr += firmWeightedIRR;
+        totalFirmAmount += firmAmount;
+        totalFirmWeightedIRR += firmWeightedIRR;
+        countries[cc].firmList.push({...f, totalAmount: firmAmount, irr: firmIRR});
+    });
+
+    Object.values(countries).forEach(c => { c.irr = c.amount > 0 ? c.weightedIrr / c.amount : 0; });
+
+    let totalPersonalAmount = 0, personalWeightedIRR = 0;
+    DATA.personal.forEach(p => {
+        totalPersonalAmount += p.amount;
+        if (p.irr > 0) personalWeightedIRR += p.amount * p.irr;
+    });
+    const personalIRR = totalPersonalAmount > 0 ? personalWeightedIRR / totalPersonalAmount : 0;
+
+    const totalPortfolio = totalFirmAmount + totalPersonalAmount;
+    const portfolioIRR = totalPortfolio > 0 ? (totalFirmWeightedIRR + personalWeightedIRR) / totalPortfolio : 0;
+    const firmIRR = totalFirmAmount > 0 ? totalFirmWeightedIRR / totalFirmAmount : 0;
+
+    // Asset type aggregation
+    const assetTypes = {};
+    DATA.firms.forEach(f => f.projects.forEach(p => {
+        if (!assetTypes[p.type]) assetTypes[p.type] = 0;
+        assetTypes[p.type] += p.amount;
+    }));
+    DATA.personal.forEach(p => {
+        if (!assetTypes[p.type]) assetTypes[p.type] = 0;
+        assetTypes[p.type] += p.amount;
+    });
+
+    // Collateral aggregation
+    const collaterals = {};
+    DATA.firms.forEach(f => f.projects.forEach(p => {
+        const col = p.collateral || '—';
+        if (!collaterals[col]) collaterals[col] = {count:0,amount:0};
+        collaterals[col].count++;
+        collaterals[col].amount += p.amount;
+    }));
+
+    return { countries, totalFirmAmount, totalPersonalAmount, totalPortfolio, portfolioIRR, firmIRR, personalIRR, totalFirms, totalProjects, assetTypes, collaterals };
+}
+
+/* ===== RENDER ALL ===== */
+function renderAll() {
+    const S = computeStats();
+    renderKPIs(S);
+    renderGeoTable(S);
+    renderLiqTable(S);
+    renderRiskTable(S);
+    renderFirmsTab(S);
+    renderPersonalTab(S);
+    renderRiskTab(S);
+    renderDataTab(S);
+    renderCharts(S);
+}
+
+/* ===== KPI ===== */
+function renderKPIs(S) {
+    document.getElementById('kpi-grid').innerHTML = `
+        <div class="kpi-card">
+            <div class="kpi-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Celkové portfolio</div>
+            <div class="kpi-value">${fmtVal(S.totalPortfolio)}</div>
+            <div class="kpi-sub neu">${S.totalFirms} firem + osobní | ${Object.keys(S.countries).length} zemí</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Vážený IRR portfolia</div>
+            <div class="kpi-value" style="color:var(--success)">${S.portfolioIRR.toFixed(2)} %</div>
+            <div class="kpi-sub pos">Firemní: ${S.firmIRR.toFixed(1)}% | Osobní: ${S.personalIRR.toFixed(1)}%</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Firemní prostředky</div>
+            <div class="kpi-value">${fmtVal(S.totalFirmAmount)}</div>
+            <div class="kpi-sub neu">${(S.totalFirmAmount/S.totalPortfolio*100).toFixed(1)}% portfolia | ${S.totalProjects} projektů</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Osobní prostředky</div>
+            <div class="kpi-value">${fmtVal(S.totalPersonalAmount)}</div>
+            <div class="kpi-sub neu">${(S.totalPersonalAmount/S.totalPortfolio*100).toFixed(1)}% portfolia | ${DATA.personal.length} investic</div>
+        </div>`;
+}
+
+/* ===== GEO TABLE ===== */
+function renderGeoTable(S) {
+    const sorted = Object.entries(S.countries).sort((a,b) => b[1].amount - a[1].amount);
+    let html = '<thead><tr><th>Země</th><th>Firem</th><th>Projektů</th><th>Investováno</th><th>% portfolia</th><th>Koncentrace</th><th>Ø IRR</th></tr></thead><tbody>';
+    sorted.forEach(([cc, c]) => {
+        const pct = (c.amount / S.totalFirmAmount * 100).toFixed(1);
+        html += `<tr><td><strong>${c.flag} ${c.name}</strong></td><td>${c.firms}</td><td>${c.projects}</td><td>${fmtVal(c.amount)}</td><td>${pct}%</td><td><div class="geo-bar-c"><div class="geo-bar" style="width:${pct}%"></div></div></td><td style="color:var(--success);font-weight:600">${c.irr.toFixed(1)}%</td></tr>`;
+    });
+    html += '</tbody>';
+    document.getElementById('geoTable').innerHTML = html;
+}
+
+/* ===== LIQUIDITY TABLE ===== */
+function renderLiqTable(S) {
+    // Estimate liquidity from data
+    const buckets = {'Okamžitá':0,'≤ 3 měsíce':0,'≤ 12 měsíců':0,'1+ rok':0};
+    DATA.firms.forEach(f => f.projects.forEach(p => {
+        if (p.type === 'Hotovost' || p.status === 'Likvidní') buckets['Okamžitá'] += p.amount;
+        else if (p.maturity === '—') buckets['1+ rok'] += p.amount;
+        else {
+            const parts = p.maturity.split('/');
+            if (parts.length === 2) {
+                const matDate = new Date(parseInt(parts[1]), parseInt(parts[0])-1);
+                const months = (matDate - new Date()) / (1000*60*60*24*30);
+                if (months <= 3) buckets['≤ 3 měsíce'] += p.amount;
+                else if (months <= 12) buckets['≤ 12 měsíců'] += p.amount;
+                else buckets['1+ rok'] += p.amount;
+            } else buckets['1+ rok'] += p.amount;
+        }
+    }));
+    DATA.personal.forEach(p => {
+        if (p.liquidity === 'Okamžitá') buckets['Okamžitá'] += p.amount;
+        else if (p.liquidity === '≤ 3 měs.') buckets['≤ 3 měsíce'] += p.amount;
+        else if (p.liquidity === '≤ 12 měs.') buckets['≤ 12 měsíců'] += p.amount;
+        else buckets['1+ rok'] += p.amount;
+    });
+    const total = Object.values(buckets).reduce((a,b)=>a+b,0);
+    const hm = ['h1','h1','h2','h3'];
+    let html = '<thead><tr><th>Bucket</th><th>Hodnota</th><th>% portfolia</th></tr></thead><tbody>';
+    Object.entries(buckets).forEach(([k,v],i) => {
+        html += `<tr><td>${k}</td><td class="hm ${hm[i]}" style="font-weight:600;text-align:center">${fmtVal(v)}</td><td>${(v/total*100).toFixed(1)}%</td></tr>`;
+    });
+    html += '</tbody>';
+    document.getElementById('liqTable').innerHTML = html;
+}
+
+/* ===== RISK TABLE ===== */
+function renderRiskTable(S) {
+    const RISK_MAP = {
+        'Private Debt (zajištěný)':'Nízké','Private Debt (nezajištěný)':'Střední','Nemovitosti':'Nízké',
+        'Akcie / ETF':'Střední','Dluhopisy':'Nízké','Equity':'Vysoké','Hotovost':'Nízké','Alternativní':'Vysoké'
+    };
+    const BADGE_MAP = {'Nízké':'badge-low','Střední':'badge-medium','Vysoké':'badge-high'};
+    const sorted = Object.entries(S.assetTypes).sort((a,b)=>b[1]-a[1]);
+    let html = '<thead><tr><th>Třída aktiv</th><th>Expozice</th><th>% portfolia</th><th>Riziko</th></tr></thead><tbody>';
+    sorted.forEach(([type, amount]) => {
+        const risk = RISK_MAP[type] || 'Střední';
+        html += `<tr><td>${type}</td><td>${fmtVal(amount)}</td><td>${(amount/S.totalPortfolio*100).toFixed(1)}%</td><td><span class="badge ${BADGE_MAP[risk]}">${risk}</span></td></tr>`;
+    });
+    html += '</tbody>';
+    document.getElementById('riskTable').innerHTML = html;
+}
+
+/* ===== FIRMS TAB ===== */
+function renderFirmsTab(S) {
+    const order = ['CZ','PL','SK','BG','MK'];
+    let totalFirms = 0, totalProjects = 0, totalAmount = 0;
+    DATA.firms.forEach(f => { totalFirms++; f.projects.forEach(p => { totalProjects++; totalAmount += p.amount; }); });
+    document.getElementById('firms-summary').textContent = `${totalFirms} firem | ${totalProjects} projektů | ${fmtVal(totalAmount)}`;
+
+    let html = '';
+    order.forEach(cc => {
+        const c = S.countries[cc];
+        if (!c) return;
+        html += `<div class="country-header"><span class="country-flag">${c.flag}</span><h3>${c.name}</h3><span class="country-total">${c.firms} firem | ${fmtVal(c.amount)} | Ø IRR ${c.irr.toFixed(1)}%</span>
+            <button class="expand-all-btn" onclick="toggleCountry('${cc}',this)">Rozbalit vše</button></div>`;
+        html += '<div class="card"><div class="tw"><table class="dt"><thead><tr><th>Firma / Projekt</th><th>Typ</th><th>Investováno</th><th>IRR</th><th>Zajištění</th><th>Splatnost</th><th>Status</th></tr></thead><tbody>';
+        c.firmList.forEach((f, fi) => {
+            const fid = `${cc}-${fi}`;
+            const statusBadge = '<span class="badge badge-active">Aktivní</span>';
+            html += `<tr class="firm-row" data-fid="${fid}" onclick="toggleFirm('${fid}')"><td><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>${f.name}</td><td></td><td><strong>${fmtVal(f.totalAmount)}</strong></td><td style="color:var(--success);font-weight:700">${f.irr > 0 ? f.irr.toFixed(1)+'%' : '—'}</td><td></td><td></td><td>${statusBadge}</td></tr>`;
+            f.projects.forEach(p => {
+                const sBadge = p.status === 'Likvidní' ? 'badge-completed' : p.status === 'Pronájem' ? 'badge-completed' : p.status === 'Development' ? 'badge-medium' : 'badge-active';
+                html += `<tr class="project-row hidden" data-firm="${fid}"><td>${p.name}</td><td>${p.type}</td><td>${fmtVal(p.amount)}</td><td>${p.irr > 0 ? p.irr.toFixed(1)+'%' : '—'}</td><td>${p.collateral}</td><td>${p.maturity}</td><td><span class="badge ${sBadge}">${p.status}</span></td></tr>`;
+            });
+        });
+        html += '</tbody></table></div></div>';
+    });
+    document.getElementById('firms-container').innerHTML = html;
+}
+
+function toggleFirm(fid) {
+    const rows = document.querySelectorAll(`tr[data-firm="${fid}"]`);
+    const firmRow = document.querySelector(`tr[data-fid="${fid}"]`);
+    const expanded = firmRow.classList.toggle('expanded');
+    rows.forEach(r => r.classList.toggle('hidden', !expanded));
+}
+
+function toggleCountry(cc, btn) {
+    const allFirmRows = document.querySelectorAll(`tr.firm-row[data-fid^="${cc}-"]`);
+    const anyExpanded = [...allFirmRows].some(r => r.classList.contains('expanded'));
+    allFirmRows.forEach(r => {
+        const fid = r.dataset.fid;
+        const rows = document.querySelectorAll(`tr[data-firm="${fid}"]`);
+        if (anyExpanded) {
+            r.classList.remove('expanded');
+            rows.forEach(pr => pr.classList.add('hidden'));
+        } else {
+            r.classList.add('expanded');
+            rows.forEach(pr => pr.classList.remove('hidden'));
+        }
+    });
+    btn.textContent = anyExpanded ? 'Rozbalit vše' : 'Sbalit vše';
+}
+
+/* ===== PERSONAL TAB ===== */
+function renderPersonalTab(S) {
+    let total = 0;
+    DATA.personal.forEach(p => total += p.amount);
+    document.getElementById('personal-summary').textContent = `${fmtVal(total)} | Ø IRR ${S.personalIRR.toFixed(1)}%`;
+    const BADGE_MAP = {'Nízké':'badge-low','Střední':'badge-medium','Vysoké':'badge-high'};
+    let html = '<div class="tw"><table class="dt"><thead><tr><th>Investice</th><th>Typ</th><th>Hodnota</th><th>IRR / Výnos</th><th>Likvidita</th><th>Riziko</th></tr></thead><tbody>';
+    DATA.personal.forEach(p => {
+        html += `<tr><td><strong>${p.name}</strong></td><td>${p.type}</td><td>${fmtVal(p.amount)}</td><td style="color:${p.irr ? 'var(--success)' : 'var(--text-secondary)'};font-weight:600">${p.irr ? p.irr.toFixed(1)+'%' : '—'}</td><td>${p.liquidity}</td><td><span class="badge ${BADGE_MAP[p.risk]||'badge-medium'}">${p.risk}</span></td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('personal-card').innerHTML = html;
+}
+
+/* ===== RISK TAB ===== */
+function renderRiskTab(S) {
+    const types = ['Private Debt (zajištěný)','Private Debt (nezajištěný)','Nemovitosti','Akcie / ETF','Dluhopisy','Equity','Hotovost'];
+    const riskData = {
+        'Private Debt (zajištěný)':  {defaultRisk:'1-3%', marketRisk:'Nízké', duration:'12-24 měs.', concentration:'—', cls:'rm-low'},
+        'Private Debt (nezajištěný)':{defaultRisk:'5-10%', marketRisk:'Střední', duration:'6-18 měs.', concentration:'—', cls:'rm-med'},
+        'Nemovitosti':               {defaultRisk:'<1%', marketRisk:'Nízké-Střední', duration:'Dlouhodobé', concentration:'—', cls:'rm-low'},
+        'Akcie / ETF':               {defaultRisk:'N/A', marketRisk:'Střední-Vysoké', duration:'—', concentration:'—', cls:'rm-med'},
+        'Dluhopisy':                  {defaultRisk:'2-5%', marketRisk:'Nízké', duration:'24-36 měs.', concentration:'—', cls:'rm-low'},
+        'Equity':                     {defaultRisk:'20-40%', marketRisk:'Vysoké', duration:'5+ let', concentration:'—', cls:'rm-high'},
+        'Hotovost':                   {defaultRisk:'0%', marketRisk:'Žádné', duration:'—', concentration:'—', cls:'rm-low'}
+    };
+
+    let html = '<div class="card-title">Riziková matice dle třídy aktiv</div><div class="tw"><table class="risk-matrix"><thead><tr><th>Třída aktiv</th><th>Expozice</th><th>% portfolia</th><th>Default risk</th><th>Tržní riziko</th><th>Typická durace</th></tr></thead><tbody>';
+    types.forEach(t => {
+        const amt = S.assetTypes[t] || 0;
+        if (amt === 0) return;
+        const r = riskData[t] || {defaultRisk:'—',marketRisk:'—',duration:'—',cls:'rm-med'};
+        const pct = (amt / S.totalPortfolio * 100).toFixed(1);
+        // concentration = this type's % of total
+        html += `<tr><td>${t}</td><td>${fmtVal(amt)}</td><td>${pct}%</td><td class="${r.cls}">${r.defaultRisk}</td><td class="${r.cls}">${r.marketRisk}</td><td>${r.duration}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('risk-matrix-card').innerHTML = html;
+
+    // Collateral table
+    const sorted = Object.entries(S.collaterals).sort((a,b) => b[1].amount - a[1].amount);
+    let chtm = '<thead><tr><th>Typ zajištění</th><th>Počet projektů</th><th>Celková expozice</th><th>% firemních</th></tr></thead><tbody>';
+    sorted.forEach(([col, d]) => {
+        chtm += `<tr><td><strong>${col}</strong></td><td>${d.count}</td><td>${fmtVal(d.amount)}</td><td>${(d.amount/S.totalFirmAmount*100).toFixed(1)}%</td></tr>`;
+    });
+    chtm += '</tbody>';
+    document.getElementById('collateralTable').innerHTML = chtm;
+}
+
+/* ===== DATA TAB ===== */
+function renderDataTab(S) {
+    document.getElementById('data-stats').innerHTML = `Firem: <strong>${S.totalFirms}</strong> | Projektů: <strong>${S.totalProjects}</strong> | Osobní investic: <strong>${DATA.personal.length}</strong> | Celkové portfolio: <strong>${fmtVal(S.totalPortfolio)}</strong> | Zemí: <strong>${Object.keys(S.countries).length}</strong>`;
+    document.getElementById('raw-json').textContent = JSON.stringify(DATA, null, 2);
+}
+
+/* ===== CHARTS ===== */
+let c1=null, c2=null, c3=null, c4=null;
+function renderCharts(S) {
+    if (!S) S = computeStats();
+    const tc = document.documentElement.classList.contains('carbon') ? '#B0BEC5' : '#64748B';
+    const gridC = document.documentElement.classList.contains('carbon') ? 'rgba(148,163,184,0.08)' : 'rgba(148,163,184,0.15)';
+
+    // Allocation donut
+    if (c1) c1.destroy();
+    const allocLabels = Object.keys(S.assetTypes);
+    const allocData = Object.values(S.assetTypes);
+    const allocColors = ['#38BDF8','#7DD3FC','#06B6D4','#10B981','#F59E0B','#EC4899','#94A3B8','#8B5CF6'];
+    const el1 = document.getElementById('allocChart');
+    if (el1) c1 = new Chart(el1.getContext('2d'), {
+        type:'doughnut',
+        data:{labels:allocLabels, datasets:[{data:allocData, backgroundColor:allocColors.slice(0,allocLabels.length), borderWidth:0, hoverOffset:8}]},
+        options:{responsive:true, maintainAspectRatio:true, cutout:'60%',
+            plugins:{legend:{position:'right',labels:{color:tc,padding:8,usePointStyle:true,pointStyleWidth:10,font:{family:'DM Sans',size:11}}},
+                tooltip:{callbacks:{label:ctx=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return ctx.label+': '+fmtVal(ctx.raw)+' ('+(ctx.raw/t*100).toFixed(1)+'%)'}}}}}
+    });
+
+    // IRR by country bar
+    if (c2) c2.destroy();
+    const countryEntries = Object.entries(S.countries).sort((a,b) => b[1].irr - a[1].irr);
+    const irrLabels = countryEntries.map(([,c])=>c.name);
+    const irrData = countryEntries.map(([,c])=>parseFloat(c.irr.toFixed(1)));
+    irrLabels.push('Osobní');
+    irrData.push(parseFloat(S.personalIRR.toFixed(1)));
+    const barColors = ['#EC4899','#F59E0B','#06B6D4','#38BDF8','#10B981','#94A3B8'];
+    const el2 = document.getElementById('irrCountryChart');
+    if (el2) c2 = new Chart(el2.getContext('2d'), {
+        type:'bar',
+        data:{labels:irrLabels, datasets:[{data:irrData, backgroundColor:barColors.slice(0,irrLabels.length), borderRadius:6, barThickness:22}]},
+        options:{indexAxis:'y', responsive:true, maintainAspectRatio:true,
+            plugins:{legend:{display:false}, tooltip:{callbacks:{label:ctx=>ctx.raw.toFixed(1)+' % IRR'}}},
+            scales:{x:{beginAtZero:true,grid:{color:gridC},ticks:{color:tc,font:{family:'DM Sans',size:12},callback:v=>v+'%'}},y:{grid:{display:false},ticks:{color:tc,font:{family:'DM Sans',size:12}}}}}
+    });
+
+    // Concentration by country (Risk tab)
+    if (c3) c3.destroy();
+    const el3 = document.getElementById('concChart');
+    if (el3 && el3.offsetParent !== null) {
+        const cLabels = Object.entries(S.countries).sort((a,b)=>b[1].amount-a[1].amount).map(([,c])=>c.name);
+        const cData = Object.entries(S.countries).sort((a,b)=>b[1].amount-a[1].amount).map(([,c])=>(c.amount/S.totalFirmAmount*100).toFixed(1));
+        c3 = new Chart(el3.getContext('2d'), {
+            type:'pie',
+            data:{labels:cLabels, datasets:[{data:cData, backgroundColor:['#38BDF8','#F59E0B','#10B981','#06B6D4','#EC4899'], borderWidth:0}]},
+            options:{responsive:true, maintainAspectRatio:true,
+                plugins:{legend:{position:'right',labels:{color:tc,padding:8,usePointStyle:true,font:{family:'DM Sans',size:11}}},
+                    tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.raw+'%'}}}}
+        });
+    }
+
+    // Concentration by asset type (Risk tab)
+    if (c4) c4.destroy();
+    const el4 = document.getElementById('concAssetChart');
+    if (el4 && el4.offsetParent !== null) {
+        const aLabels = Object.entries(S.assetTypes).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
+        const aData = Object.entries(S.assetTypes).sort((a,b)=>b[1]-a[1]).map(([,v])=>(v/S.totalPortfolio*100).toFixed(1));
+        c4 = new Chart(el4.getContext('2d'), {
+            type:'pie',
+            data:{labels:aLabels, datasets:[{data:aData, backgroundColor:allocColors.slice(0,aLabels.length), borderWidth:0}]},
+            options:{responsive:true, maintainAspectRatio:true,
+                plugins:{legend:{position:'right',labels:{color:tc,padding:8,usePointStyle:true,font:{family:'DM Sans',size:11}}},
+                    tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.raw+'%'}}}}
+        });
+    }
+}
+
+/* ===== THEME ===== */
+function toggleTheme(t) {
+    if (t==='carbon'){document.documentElement.classList.add('carbon');document.body.classList.add('carbon')}
+    else{document.documentElement.classList.remove('carbon');document.body.classList.remove('carbon')}
+    document.querySelectorAll('.theme-btn-snow').forEach(b=>b.classList.toggle('active',t==='snow'));
+    document.querySelectorAll('.theme-btn-carbon').forEach(b=>b.classList.toggle('active',t==='carbon'));
+    renderAll();
+}
+
+/* ===== TABS ===== */
+function switchTab(name) {
+    const tabs=['overview','firms','personal','risk','data'];
+    document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===name));
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.getElementById('tab-'+name).classList.add('active');
+    if (name==='overview'||name==='risk') setTimeout(()=>renderCharts(), 50);
+}
+
+/* ===== DATA MANAGEMENT ===== */
+function exportJSON() {
+    const blob = new Blob([JSON.stringify(DATA, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'portfolio-data.json';
+    a.click();
+    showToast('Data exportována jako portfolio-data.json');
+}
+
+function importJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (imported.firms && imported.personal) {
+                DATA = imported;
+                renderAll();
+                showToast('Data úspěšně importována (' + DATA.firms.length + ' firem)');
+            } else {
+                showToast('Neplatný formát JSON — chybí "firms" nebo "personal"');
+            }
+        } catch(err) { showToast('Chyba při čtení JSON: ' + err.message); }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function loadDemoData() {
+    DATA = getDemoData();
+    renderAll();
+    showToast('Demo data načtena — ' + DATA.firms.length + ' firem, ' + DATA.personal.length + ' osobních investic');
+}
+
+/* ===== TOAST ===== */
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ===== INIT ===== */
+loadDemoData();
+</script>
+</body>
+</html>
