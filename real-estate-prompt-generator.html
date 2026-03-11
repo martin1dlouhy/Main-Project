@@ -1445,6 +1445,453 @@
                 flex: 1;
             }
         }
+
+        /* ===== C1: DUPLICATE VALUATION BUTTON ===== */
+        /* Already styled with .history-item-btn class */
+
+        /* ===== C2: COMPARE VALUATIONS ===== */
+        .compare-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-primary);
+            cursor: pointer;
+            margin-right: 8px;
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+
+        .compare-checkbox:hover {
+            border-color: var(--accent);
+        }
+
+        .compare-checkbox:checked {
+            background: var(--accent);
+            border-color: var(--accent);
+            position: relative;
+        }
+
+        .compare-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .valuation-item-with-checkbox {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .compare-floating-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border-color);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            z-index: 100;
+            animation: slideUp 0.3s ease;
+        }
+
+        .compare-floating-bar.hidden {
+            display: none;
+        }
+
+        .compare-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9998;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .compare-dialog-overlay.show {
+            display: flex;
+            animation: fadeIn 0.2s;
+        }
+
+        .compare-dialog {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 1200px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .compare-dialog h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .compare-dialog .btn {
+            margin-top: 20px;
+        }
+
+        .compare-side-by-side {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .compare-side-by-side .compare-section {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .compare-side-by-side .compare-section h3 {
+            color: var(--accent);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .compare-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .compare-row:last-child {
+            border-bottom: none;
+        }
+
+        .compare-row-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .compare-row-value {
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: right;
+        }
+
+        @media (max-width: 1024px) {
+            .compare-side-by-side {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== C3: VALUATION NOTES ===== */
+        .valuation-notes {
+            margin-top: 8px;
+            padding: 10px;
+            background: var(--accent-light);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent);
+            font-size: 13px;
+            color: var(--text-primary);
+            line-height: 1.5;
+            max-height: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        .valuation-notes-edit {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            transition: var(--transition);
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .valuation-notes-edit:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .valuation-notes-btn {
+            font-size: 12px;
+            padding: 4px 8px;
+            margin-top: 6px;
+            display: inline-block;
+        }
+
+        /* ===== C4: PDF EXPORT ===== */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .container {
+                max-width: 100%;
+                padding: 20px;
+            }
+
+            .top-nav, .step-indicator-wrapper, .buttons, .prompt-output,
+            .ai-source-card, .save-dialog-overlay, .modal-overlay,
+            .saved-valuations-panel, .compare-floating-bar, .compare-dialog-overlay,
+            .btn-group, .search-filter-bar, .toast {
+                display: none !important;
+            }
+
+            .comparison-table-wrapper {
+                page-break-inside: avoid;
+                box-shadow: none;
+                border: none;
+                padding: 0;
+            }
+
+            .comparison-table {
+                width: 100%;
+            }
+
+            .comparison-table th {
+                background: #f0f0f0;
+                color: #000;
+            }
+
+            .comparison-table td {
+                color: #000;
+            }
+
+            .ai-summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ai-summary-card {
+                page-break-inside: avoid;
+                background: white;
+                border: 1px solid #ccc;
+            }
+
+            .final-verdict {
+                page-break-inside: avoid;
+                border: 2px solid #38BDF8;
+            }
+
+            h1, h2, h3, h4 {
+                color: #000;
+            }
+
+            p, span, div {
+                color: #000;
+            }
+
+            .valuation-chart {
+                background: white;
+                border: 1px solid #ccc;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .chart-container {
+                background: #f9f9f9;
+            }
+
+            .chart-bar {
+                background: #38BDF8 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .chart-bar-value {
+                color: #38BDF8;
+            }
+        }
+
+        /* ===== C5: VALUATION CHART ===== */
+        .valuation-chart {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 24px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+
+        .valuation-chart h3 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .chart-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 30px;
+            height: 280px;
+            padding: 20px;
+            background: var(--bg-primary);
+            border-radius: 10px;
+        }
+
+        .chart-bar-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            max-width: 180px;
+        }
+
+        .chart-bar {
+            width: 100%;
+            background: linear-gradient(180deg, var(--accent) 0%, rgba(56, 189, 248, 0.5) 100%);
+            border-radius: 8px 8px 0 0;
+            transition: opacity 0.3s;
+            min-height: 20px;
+            position: relative;
+        }
+
+        .chart-bar:hover {
+            opacity: 0.8;
+        }
+
+        .chart-bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: 700;
+            color: var(--accent);
+            white-space: nowrap;
+            font-size: 13px;
+        }
+
+        .chart-label {
+            margin-top: 10px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .chart-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .chart-legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            background: var(--accent);
+        }
+
+        /* ===== C6: SEARCH AND FILTER ===== */
+        .search-filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .search-filter-bar input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        .search-filter-bar input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .search-filter-bar input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .search-filter-bar select {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .search-filter-bar select:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .filter-results-count {
+            padding: 10px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .search-filter-bar {
+                flex-direction: column;
+            }
+
+            .search-filter-bar input,
+            .search-filter-bar select {
+                width: 100%;
+            }
+
+            .chart-container {
+                gap: 15px;
+                height: 220px;
+            }
+
+            .compare-side-by-side {
+                gap: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1838,6 +2285,11 @@
                 <div class="ai-summary-grid" id="aiSummaryGrid"></div>
             </div>
 
+            <div id="valuationChartSection" class="valuation-chart" style="display:none;">
+                <h3>Rozpětí ocenění — tržní hodnota</h3>
+                <div class="chart-container" id="valuationChartContainer"></div>
+            </div>
+
             <div class="btn-group buttons">
                 <button class="btn btn-primary" onclick="openSaveValuationDialog()" id="btnSaveValuation">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px;">
@@ -1876,12 +2328,23 @@
         </div>
     </div>
 
+    <!-- Compare Dialog Overlay (C2) -->
+    <div class="compare-dialog-overlay" id="compareDialogOverlay">
+        <div class="compare-dialog">
+            <button class="btn btn-secondary" onclick="closeCompareDialog()" style="float: right; margin-bottom: 20px;">Zavřít</button>
+            <h2 id="compareDialogTitle">Srovnání ocenění</h2>
+            <div id="compareDialogContent"></div>
+        </div>
+    </div>
+
     <!-- Save Valuation Dialog -->
     <div class="save-dialog-overlay" id="saveValuationDialog">
         <div class="save-dialog">
             <h3>Uložit ocenění</h3>
             <label for="valuationNameInput">Název ocenění</label>
             <input type="text" id="valuationNameInput" placeholder="např. Pozemek Brno-Řečkovice, 03/2026" autofocus>
+            <label for="valuationNotesInput" style="margin-top: 16px;">Poznámky (volitelně)</label>
+            <textarea id="valuationNotesInput" class="valuation-notes-edit" placeholder="Přidejte své poznámky k tomuto ocenění..."></textarea>
             <div class="btn-group">
                 <button class="btn btn-secondary" onclick="closeSaveValuationDialog()">Zrušit</button>
                 <button class="btn btn-primary" onclick="confirmSaveValuation()">Uložit</button>
@@ -3190,6 +3653,7 @@
             html += '</tbody>';
             document.getElementById('comparisonTable').innerHTML = html;
             renderAISummary();
+            renderValuationChart(); // C5
         }
 
         function renderAISummary() {
@@ -3322,6 +3786,62 @@
             grid.innerHTML = cardsHtml + verdictHtml;
         }
 
+        // C5: Render valuation chart
+        function renderValuationChart() {
+            const section = document.getElementById('valuationChartSection');
+            const container = document.getElementById('valuationChartContainer');
+            const sources = ['chatgpt', 'claude', 'gemini'];
+            const labels = { chatgpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini' };
+
+            // Collect tržní hodnota values
+            const values = sources.map(s => ({
+                source: s,
+                label: labels[s],
+                value: aiParsedData[s]?.trzniHodnota || 0
+            })).filter(v => v.value > 0);
+
+            if (values.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+
+            const maxValue = Math.max(...values.map(v => v.value));
+            const minValue = Math.min(...values.map(v => v.value));
+            const range = maxValue - minValue;
+
+            const fmt = (n) => {
+                if (!n && n !== 0) return '—';
+                return new Intl.NumberFormat('cs-CZ').format(Math.round(n)) + ' Kč';
+            };
+
+            let html = '';
+            values.forEach(v => {
+                const heightPct = (v.value / maxValue) * 100;
+                const labelTruncated = fmt(v.value);
+                html += `
+                    <div class="chart-bar-group">
+                        <div class="chart-bar" style="height: ${heightPct}%;" title="${labelTruncated}">
+                            <div class="chart-bar-value">${labelTruncated}</div>
+                        </div>
+                        <div class="chart-label">${v.label}</div>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="chart-legend">
+                    <div class="chart-legend-item">
+                        <div class="chart-legend-color"></div>
+                        <span>Tržní hodnota (Kč)</span>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
         function exportComparisonMD() {
             const config = propertyConfigs[propertyType];
             let md = '# Srovnání AI valuací\n\n';
@@ -3399,7 +3919,11 @@
         }
 
         function closeSaveValuationDialog() {
-            document.getElementById('saveValuationDialog').classList.remove('show');
+            const dialog = document.getElementById('saveValuationDialog');
+            dialog.classList.remove('show');
+            // Clear inputs
+            document.getElementById('valuationNameInput').value = '';
+            document.getElementById('valuationNotesInput').value = '';
         }
 
         function confirmSaveValuation() {
@@ -3409,6 +3933,7 @@
                 return;
             }
 
+            const notes = document.getElementById('valuationNotesInput').value.trim();
             const config = propertyConfigs[propertyType];
             const sources = ['chatgpt', 'claude', 'gemini'];
 
@@ -3421,6 +3946,7 @@
             const valuation = {
                 id: Date.now(),
                 name: name,
+                notes: notes || null,
                 date: new Date().toLocaleString('cs-CZ'),
                 propertyType: propertyType,
                 propertyTypeName: config?.name || propertyType,
@@ -3456,6 +3982,11 @@
             showToast('Ocenění uloženo');
         }
 
+        // C2, C6: Global state for compare and filter
+        let compareSelectedIds = new Set();
+        let filterSearchText = '';
+        let filterPropertyType = '';
+
         function renderSavedValuationsPanel() {
             const container = document.getElementById('savedValuationsContainer');
             if (!container) return;
@@ -3479,6 +4010,15 @@
                 return new Intl.NumberFormat('cs-CZ').format(Math.round(n)) + ' Kč';
             };
 
+            // C6: Filter items based on search and property type
+            let filtered = saved.filter(item => {
+                const matchSearch = !filterSearchText ||
+                    item.name.toLowerCase().includes(filterSearchText.toLowerCase()) ||
+                    (item.notes && item.notes.toLowerCase().includes(filterSearchText.toLowerCase()));
+                const matchType = !filterPropertyType || item.propertyType === filterPropertyType;
+                return matchSearch && matchType;
+            });
+
             let html = `
                 <div class="saved-valuations-panel">
                     <div class="step1-panel-header" onclick="this.classList.toggle('collapsed'); this.nextElementSibling.classList.toggle('collapsed');">
@@ -3492,11 +4032,29 @@
                         <svg class="panel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
                     <div class="step1-panel-body">
+                        <!-- C6: Search and Filter Bar -->
+                        <div class="search-filter-bar">
+                            <input type="text" placeholder="Hledat v názvu nebo poznámkách..." id="filterSearchInput" oninput="onFilterSearchChange(this.value)">
+                            <select id="filterPropertyTypeSelect" onchange="onFilterPropertyTypeChange(this.value)">
+                                <option value="">Všechny typy</option>
+                                ${[...new Set(saved.map(s => s.propertyType))].map(type => {
+                                    const config = propertyConfigs[type];
+                                    return `<option value="${type}">${esc(config?.name || type)}</option>`;
+                                }).join('')}
+                            </select>
+                        </div>
+                        ${filtered.length !== saved.length ? `<div class="filter-results-count">Zobrazeno ${filtered.length} z ${saved.length} ocenění</div>` : ''}
             `;
 
-            saved.forEach(item => {
+            filtered.forEach(item => {
+                const isChecked = compareSelectedIds.has(item.id);
                 html += `
                     <div class="valuation-item">
+                        <!-- C2: Checkbox for comparison -->
+                        <input type="checkbox" class="compare-checkbox" id="compare-${item.id}"
+                            ${isChecked ? 'checked' : ''}
+                            onchange="toggleCompareValuation(${item.id})">
+
                         <div class="valuation-item-info">
                             <div class="valuation-item-name">${esc(item.name)}</div>
                             <div class="valuation-item-meta">
@@ -3507,9 +4065,14 @@
                                 ${item.avgTrzni ? `<span class="valuation-value-badge">Tržní: ${fmt(item.avgTrzni)}</span>` : ''}
                                 ${item.avgZastavni ? `<span class="valuation-value-badge">Zástavní: ${fmt(item.avgZastavni)}</span>` : ''}
                             </div>
+                            <!-- C3: Notes display -->
+                            ${item.notes ? `<div class="valuation-notes">${esc(item.notes)}</div>` : ''}
                         </div>
+
                         <div class="valuation-item-buttons">
                             <button class="history-item-btn" onclick="loadSavedValuation(${item.id})">Načíst</button>
+                            <button class="history-item-btn" onclick="openEditNotesDialog(${item.id})">Poznámky</button>
+                            <button class="history-item-btn" onclick="duplicateSavedValuation(${item.id})">Duplikovat</button>
                             <button class="history-item-btn delete" onclick="deleteSavedValuation(${item.id})">Smazat</button>
                         </div>
                     </div>
@@ -3518,6 +4081,254 @@
 
             html += '</div></div>';
             container.innerHTML = html;
+
+            // C6: Restore filter input values and focus after re-render
+            const searchInput = document.getElementById('filterSearchInput');
+            const typeSelect = document.getElementById('filterPropertyTypeSelect');
+            if (searchInput && filterSearchText) {
+                searchInput.value = filterSearchText;
+                searchInput.focus();
+                searchInput.setSelectionRange(filterSearchText.length, filterSearchText.length);
+            }
+            if (typeSelect && filterPropertyType) {
+                typeSelect.value = filterPropertyType;
+            }
+
+            // C2: Show/hide compare floating bar
+            updateCompareFloatingBar();
+        }
+
+        // C6: Filter callbacks
+        function onFilterSearchChange(text) {
+            filterSearchText = text;
+            renderSavedValuationsPanel();
+        }
+
+        function onFilterPropertyTypeChange(type) {
+            filterPropertyType = type;
+            renderSavedValuationsPanel();
+        }
+
+        // C1: Duplicate valuation
+        function duplicateSavedValuation(id) {
+            try {
+                var saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+            } catch (e) {
+                showToast('Chyba při načítání ocenění');
+                return;
+            }
+
+            const original = saved.find(v => v.id === id);
+            if (!original) return;
+
+            const duplicate = {
+                ...JSON.parse(JSON.stringify(original)),
+                id: Date.now(),
+                name: original.name + ' (kopie)',
+                date: new Date().toLocaleString('cs-CZ')
+            };
+
+            try {
+                saved.unshift(duplicate);
+                if (saved.length > 50) saved.pop();
+                localStorage.setItem('saved-valuations', JSON.stringify(saved));
+                renderSavedValuationsPanel();
+                showToast('Ocenění duplikováno');
+            } catch (e) {
+                showToast('Chyba při ukládání');
+            }
+        }
+
+        // C2: Toggle compare checkbox
+        function toggleCompareValuation(id) {
+            if (compareSelectedIds.has(id)) {
+                compareSelectedIds.delete(id);
+            } else {
+                if (compareSelectedIds.size >= 2) {
+                    // Uncheck the checkbox back — max 2 allowed
+                    const cb = document.getElementById('compare-' + id);
+                    if (cb) cb.checked = false;
+                    showToast('Lze vybrat maximálně 2 ocenění pro srovnání');
+                    return;
+                }
+                compareSelectedIds.add(id);
+            }
+            updateCompareFloatingBar();
+        }
+
+        function updateCompareFloatingBar() {
+            const count = compareSelectedIds.size;
+            let bar = document.getElementById('compareFloatingBar');
+
+            if (count === 2) {
+                if (!bar) {
+                    bar = document.createElement('div');
+                    bar.id = 'compareFloatingBar';
+                    bar.className = 'compare-floating-bar';
+                    bar.innerHTML = `
+                        <button class="btn btn-primary" onclick="compareSelectedValuations()">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px;">
+                                <path d="M3 4h4v8H3z" stroke-width="1.5"/>
+                                <path d="M9 4h4v8H9z" stroke-width="1.5"/>
+                            </svg>
+                            Porovnat vybrané (2)
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearCompareSelection()">Zrušit výběr</button>
+                    `;
+                    document.body.appendChild(bar);
+                }
+                bar.classList.remove('hidden');
+            } else if (bar) {
+                bar.classList.add('hidden');
+            }
+        }
+
+        function clearCompareSelection() {
+            compareSelectedIds.clear();
+            renderSavedValuationsPanel();
+        }
+
+        // C2: Compare two valuations
+        function compareSelectedValuations() {
+            if (compareSelectedIds.size !== 2) {
+                showToast('Vyberte právě 2 ocenění pro srovnání');
+                return;
+            }
+
+            try {
+                var saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+            } catch (e) {
+                showToast('Chyba při načítání ocenění');
+                return;
+            }
+
+            const ids = Array.from(compareSelectedIds);
+            const val1 = saved.find(v => v.id === ids[0]);
+            const val2 = saved.find(v => v.id === ids[1]);
+
+            if (!val1 || !val2) return;
+
+            const fmt = (n) => {
+                if (!n && n !== 0) return '—';
+                return new Intl.NumberFormat('cs-CZ').format(Math.round(n)) + ' Kč';
+            };
+            const esc = (str) => {
+                const d = document.createElement('div');
+                d.textContent = str;
+                return d.innerHTML;
+            };
+
+            let html = `
+                <div class="compare-side-by-side">
+                    <div class="compare-section">
+                        <h3>${esc(val1.name)}</h3>
+                        <div class="compare-row">
+                            <div class="compare-row-label">Typ nemovitosti</div>
+                            <div class="compare-row-value">${esc(val1.propertyTypeName || val1.propertyType)}</div>
+                        </div>
+                        <div class="compare-row">
+                            <div class="compare-row-label">Datum</div>
+                            <div class="compare-row-value">${esc(val1.date)}</div>
+                        </div>
+                        <div class="compare-row">
+                            <div class="compare-row-label">Tržní hodnota</div>
+                            <div class="compare-row-value">${fmt(val1.avgTrzni)}</div>
+                        </div>
+                        <div class="compare-row">
+                            <div class="compare-row-label">Zástavní hodnota</div>
+                            <div class="compare-row-value">${fmt(val1.avgZastavni)}</div>
+                        </div>
+                        ${val1.notes ? `<div class="compare-row"><div class="compare-row-label">Poznámky</div><div class="compare-row-value">${esc(val1.notes)}</div></div>` : ''}
+                    </div>
+                    <div class="compare-section">
+                        <h3>${esc(val2.name)}</h3>
+                        <div class="compare-row">
+                            <div class="compare-row-label">Typ nemovitosti</div>
+                            <div class="compare-row-value">${esc(val2.propertyTypeName || val2.propertyType)}</div>
+                        </div>
+                        <div class="compare-row">
+                            <div class="compare-row-label">Datum</div>
+                            <div class="compare-row-value">${esc(val2.date)}</div>
+                        </div>
+                        <div class="compare-row">
+                            <div class="compare-row-label">Tržní hodnota</div>
+                            <div class="compare-row-value">${fmt(val2.avgTrzni)}</div>
+                        </div>
+                        <div class="compare-row">
+                            <div class="compare-row-label">Zástavní hodnota</div>
+                            <div class="compare-row-value">${fmt(val2.avgZastavni)}</div>
+                        </div>
+                        ${val2.notes ? `<div class="compare-row"><div class="compare-row-label">Poznámky</div><div class="compare-row-value">${esc(val2.notes)}</div></div>` : ''}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('compareDialogTitle').textContent = `Srovnání: ${val1.name} vs ${val2.name}`;
+            document.getElementById('compareDialogContent').innerHTML = html;
+            document.getElementById('compareDialogOverlay').classList.add('show');
+        }
+
+        function closeCompareDialog() {
+            document.getElementById('compareDialogOverlay').classList.remove('show');
+        }
+
+        // C3: Edit valuation notes
+        function openEditNotesDialog(id) {
+            try {
+                var saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+            } catch (e) {
+                showToast('Chyba při načítání ocenění');
+                return;
+            }
+
+            const item = saved.find(v => v.id === id);
+            if (!item) return;
+
+            const esc = (str) => {
+                const d = document.createElement('div');
+                d.textContent = str;
+                return d.innerHTML;
+            };
+
+            const dialog = document.createElement('div');
+            dialog.className = 'modal-overlay show';
+            dialog.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <h3>Upravit poznámky</h3>
+                    <p style="margin-bottom: 16px;">Ocenění: <strong>${esc(item.name)}</strong></p>
+                    <textarea id="notesEditInput" class="valuation-notes-edit" style="margin-bottom: 20px;"></textarea>
+                    <div class="modal-buttons">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Zrušit</button>
+                        <button class="btn btn-primary" onclick="saveValuationNotes(${id}); this.closest('.modal-overlay').remove()">Uložit</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+            document.getElementById('notesEditInput').value = item.notes || '';
+            setTimeout(() => document.getElementById('notesEditInput').focus(), 100);
+        }
+
+        function saveValuationNotes(id) {
+            const notes = document.getElementById('notesEditInput').value.trim();
+            try {
+                var saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+            } catch (e) {
+                showToast('Chyba při načítání ocenění');
+                return;
+            }
+
+            const item = saved.find(v => v.id === id);
+            if (!item) return;
+
+            item.notes = notes || null;
+
+            try {
+                localStorage.setItem('saved-valuations', JSON.stringify(saved));
+                renderSavedValuationsPanel();
+                showToast('Poznámky uloženy');
+            } catch (e) {
+                showToast('Chyba při ukládání');
+            }
         }
 
         function loadSavedValuation(id) {
@@ -3587,13 +4398,24 @@
             if (e.target === this) closeSaveValuationDialog();
         });
 
-        // Close save dialog on Escape
+        // Close dialogs on Escape
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeSaveValuationDialog();
+            if (e.key === 'Escape') {
+                closeSaveValuationDialog();
+                closeCompareDialog();
+                // Close notes edit dialog if open
+                const notesModal = document.querySelector('.modal-overlay.show');
+                if (notesModal) notesModal.remove();
+            }
             if (e.key === 'Enter' && document.getElementById('saveValuationDialog').classList.contains('show')) {
                 e.preventDefault();
                 confirmSaveValuation();
             }
+        });
+
+        // Close compare dialog on overlay click
+        document.getElementById('compareDialogOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeCompareDialog();
         });
 
         // ===== DATA EXPORT / IMPORT =====
@@ -3694,10 +4516,17 @@
             step5Textareas.forEach(ta => ta.value = '');
             document.getElementById('comparisonTableWrapper').style.display = 'none';
             document.getElementById('aiSummarySection').style.display = 'none';
+            document.getElementById('valuationChartSection').style.display = 'none';
             document.querySelectorAll('.property-type-card').forEach(card => {
                 card.classList.remove('selected');
             });
             document.getElementById('step1Next').disabled = true;
+            // Reset compare and filter state
+            compareSelectedIds.clear();
+            filterSearchText = '';
+            filterPropertyType = '';
+            const floatingBar = document.getElementById('compareFloatingBar');
+            if (floatingBar) floatingBar.classList.add('hidden');
             updateStepIndicator();
             showSection(1);
             localStorage.removeItem('prompt-gen-state');
