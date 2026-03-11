@@ -9,23 +9,18 @@
     <style>
         /* R-E Prompt Generator - app-specific styles */
         body {
-            padding: 20px;
+            padding: 0;
             display: flex;
-            justify-content: center;
-            align-items: flex-start;
+            flex-direction: column;
+            align-items: stretch;
         }
 
         .container {
             max-width: 1200px;
-            padding: 50px;
+            padding: 40px 50px 50px;
             position: relative;
-        }
-
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+            margin: 0 auto;
+            width: 100%;
         }
 
         .language-toggle {
@@ -230,7 +225,28 @@
             outline-offset: 2px;
         }
 
-        .property-icon { font-size: 56px; margin-bottom: 20px; }
+        .property-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            background: var(--accent-light);
+        }
+
+        .property-type-card.selected .property-icon {
+            background: rgba(56, 189, 248, 0.25);
+        }
+
+        .property-icon svg {
+            width: 28px;
+            height: 28px;
+            stroke: var(--accent);
+            fill: none;
+            stroke-width: 1.5;
+        }
 
         .property-type-card h3 {
             color: var(--text-primary);
@@ -714,14 +730,18 @@
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
             border-radius: 14px;
-            padding: 20px;
             margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .history-panel .step1-panel-body {
+            padding: 0 20px 20px;
             max-height: 400px;
             overflow-y: auto;
         }
 
         .history-panel h3 {
-            margin-bottom: 16px;
+            margin-bottom: 0;
         }
 
         .history-item {
@@ -787,14 +807,18 @@
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
             border-radius: 14px;
-            padding: 20px;
             margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .saved-valuations-panel .step1-panel-body {
+            padding: 0 20px 20px;
             max-height: 500px;
             overflow-y: auto;
         }
 
         .saved-valuations-panel h3 {
-            margin-bottom: 16px;
+            margin-bottom: 0;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -928,6 +952,92 @@
             justify-content: flex-end;
         }
 
+        /* Step 1 Collapsible Panels */
+        .step1-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 14px 14px 0 0;
+            transition: var(--transition);
+        }
+
+        .step1-panel-header:hover {
+            background: var(--accent-light);
+        }
+
+        .step1-panel-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .step1-panel-header .panel-chevron {
+            transition: transform 0.3s;
+        }
+
+        .step1-panel-header.collapsed .panel-chevron {
+            transform: rotate(-90deg);
+        }
+
+        .step1-panel-body {
+            max-height: 500px;
+            overflow-y: auto;
+            transition: max-height 0.3s ease;
+        }
+
+        .step1-panel-body.collapsed {
+            max-height: 0;
+            overflow: hidden;
+        }
+
+        /* Step 5 Expanded Textareas */
+        .ai-source-card textarea {
+            transition: min-height 0.3s ease;
+        }
+
+        .ai-source-card textarea.expanded {
+            min-height: 500px !important;
+        }
+
+        .textarea-expand-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .textarea-expand-btn:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Locked Step Indicator */
+        .step.step-locked {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .step-lock-icon {
+            width: 14px;
+            height: 14px;
+            margin-left: -4px;
+            opacity: 0.6;
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .container {
@@ -943,13 +1053,6 @@
             .container {
                 padding: 20px;
             }
-
-            .top-bar {
-                flex-direction: column;
-                gap: 15px;
-                align-items: flex-start;
-            }
-
 
             .property-type-grid {
                 grid-template-columns: 1fr;
@@ -1047,7 +1150,7 @@
 
         .ai-source-card textarea {
             width: 100%;
-            min-height: 200px;
+            min-height: 320px;
             padding: 16px;
             border: 1px solid var(--border-color);
             border-radius: 10px;
@@ -1401,16 +1504,49 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="top-bar">
-            <a href="index.html" class="back-btn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 4px; vertical-align: middle;">
-                    <path d="M10 2L4 8l6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Zpět
-            </a>
+    <!-- Navigation -->
+    <nav class="top-nav">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="index.html" class="logo">
+                    <div class="logo-icon">
+                        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="4" y="20" width="6" height="8" rx="1.5" fill="white" opacity="0.5"/>
+                            <rect x="13" y="13" width="6" height="15" rx="1.5" fill="white" opacity="0.75"/>
+                            <rect x="22" y="4" width="6" height="24" rx="1.5" fill="white"/>
+                        </svg>
+                    </div>
+                    <span>Investment Tools</span>
+                </a>
+                <div class="nav-menu">
+                    <div class="nav-item">
+                        <a href="index.html" class="nav-link">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            Domů
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="apps.html" class="nav-link">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                            Aplikace
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-right">
+                <div class="theme-toggle">
+                    <button class="theme-btn theme-btn-snow active" onclick="setTheme('snow')" title="Light Mode">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    </button>
+                    <button class="theme-btn theme-btn-carbon" onclick="setTheme('carbon')" title="Dark Mode">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </button>
+                </div>
+            </div>
         </div>
+    </nav>
 
+    <div class="container">
         <h1>R-E Prompt Generator</h1>
         <p class="subtitle">Profesionální AI valuace pro zástavní financování</p>
 
@@ -1435,10 +1571,12 @@
                 <div class="step step-locked" data-step="4">
                     <div class="step-number">4</div>
                     <span>Prompt</span>
+                    <svg class="step-lock-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 016 0v2"/></svg>
                 </div>
                 <div class="step step-locked" data-step="5">
                     <div class="step-number">5</div>
                     <span>Srovnání</span>
+                    <svg class="step-lock-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 016 0v2"/></svg>
                 </div>
             </div>
         </div>
@@ -1447,26 +1585,44 @@
         <div class="section active" id="step1">
             <div class="property-type-grid">
                 <div class="property-type-card" onclick="selectPropertyType('land')" role="button" tabindex="0" aria-label="Vybrat typ: Pozemek" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('land');}">
+                    <div class="property-icon">
+                        <svg viewBox="0 0 24 24"><path d="M2 22L12 2l10 20H2z" stroke-linejoin="round"/><path d="M7 22v-4h10v4" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 10v4" stroke-linecap="round"/></svg>
+                    </div>
                     <h3>Pozemek</h3>
                     <p>Stavební parcela nebo developerský projekt</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('apartment')" role="button" tabindex="0" aria-label="Vybrat typ: Byt" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('apartment');}">
+                    <div class="property-icon">
+                        <svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22V18h6v4"/><rect x="8" y="6" width="3" height="3" rx="0.5"/><rect x="13" y="6" width="3" height="3" rx="0.5"/><rect x="8" y="11" width="3" height="3" rx="0.5"/><rect x="13" y="11" width="3" height="3" rx="0.5"/></svg>
+                    </div>
                     <h3>Byt</h3>
                     <p>Bytová jednotka</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('house')" role="button" tabindex="0" aria-label="Vybrat typ: Rodinný dům" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('house');}">
+                    <div class="property-icon">
+                        <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><rect x="9" y="14" width="6" height="7" rx="0.5"/><path d="M9 6l3-2 3 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
                     <h3>Rodinný dům</h3>
                     <p>Samostatný dům s pozemkem</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('commercial')" role="button" tabindex="0" aria-label="Vybrat typ: Komerční objekt" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('commercial');}">
+                    <div class="property-icon">
+                        <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="16" rx="2"/><path d="M6 6V4a2 2 0 012-2h8a2 2 0 012 2v2"/><path d="M2 12h20"/><path d="M10 12v2h4v-2"/></svg>
+                    </div>
                     <h3>Komerční objekt</h3>
                     <p>Kanceláře, sklady, retail</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('mixed_use')" role="button" tabindex="0" aria-label="Vybrat typ: Polyfunkční dům" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('mixed_use');}">
+                    <div class="property-icon">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 12h18"/><rect x="7" y="7" width="3" height="2" rx="0.5"/><rect x="14" y="7" width="3" height="2" rx="0.5"/><rect x="7" y="15" width="3" height="4" rx="0.5"/><rect x="14" y="15" width="3" height="2" rx="0.5"/></svg>
+                    </div>
                     <h3>Polyfunkční dům</h3>
                     <p>Bydlení + komerční prostor</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('recreation')" role="button" tabindex="0" aria-label="Vybrat typ: Rekreační objekt" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('recreation');}">
+                    <div class="property-icon">
+                        <svg viewBox="0 0 24 24"><path d="M8 21V11l-5 4V21h5z"/><path d="M8 11l8-8 8 8v10H8z"/><rect x="13" y="15" width="4" height="6" rx="0.5"/><circle cx="15" cy="10" r="1.5" fill="var(--accent)" stroke="none"/></svg>
+                    </div>
                     <h3>Rekreační objekt</h3>
                     <p>Chata, chalupa, rekreační dům</p>
                 </div>
@@ -1685,6 +1841,10 @@
                 <div class="ai-source-card">
                     <h3>ChatGPT</h3>
                     <textarea id="aiOutputChatGPT" placeholder="Vložte celý výstup od ChatGPT..." oninput="parseAIOutput('chatgpt')"></textarea>
+                    <button class="textarea-expand-btn" onclick="toggleTextareaExpand(this, 'aiOutputChatGPT')">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 6l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span>Rozbalit</span>
+                    </button>
                     <div class="parse-status waiting" id="statusChatGPT">Čeká na vložení výstupu...</div>
                     <div class="manual-fallback" id="manualChatGPT" style="display:none;">
                         <label>Tržní hodnota (Kč)</label>
@@ -1696,6 +1856,10 @@
                 <div class="ai-source-card">
                     <h3>Claude</h3>
                     <textarea id="aiOutputClaude" placeholder="Vložte celý výstup od Claude..." oninput="parseAIOutput('claude')"></textarea>
+                    <button class="textarea-expand-btn" onclick="toggleTextareaExpand(this, 'aiOutputClaude')">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 6l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span>Rozbalit</span>
+                    </button>
                     <div class="parse-status waiting" id="statusClaude">Čeká na vložení výstupu...</div>
                     <div class="manual-fallback" id="manualClaude" style="display:none;">
                         <label>Tržní hodnota (Kč)</label>
@@ -1707,6 +1871,10 @@
                 <div class="ai-source-card">
                     <h3>Gemini</h3>
                     <textarea id="aiOutputGemini" placeholder="Vložte celý výstup od Gemini..." oninput="parseAIOutput('gemini')"></textarea>
+                    <button class="textarea-expand-btn" onclick="toggleTextareaExpand(this, 'aiOutputGemini')">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 6l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span>Rozbalit</span>
+                    </button>
                     <div class="parse-status waiting" id="statusGemini">Čeká na vložení výstupu...</div>
                     <div class="manual-fallback" id="manualGemini" style="display:none;">
                         <label>Tržní hodnota (Kč)</label>
@@ -2129,6 +2297,8 @@
             if (step === 1) { renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility(); }
             if (step === 2) populateInputsGrid();
             if (step === 5) populatePropertySummary();
+            // Scroll to top of container on step change
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function populateInputsGrid() {
@@ -2880,9 +3050,18 @@
                 return;
             }
 
+            const esc = (str) => { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; };
+
             let html = `
                 <div class="history-panel">
-                    <h3>Poslední ocenění (${history.length})</h3>
+                    <div class="step1-panel-header" onclick="this.classList.toggle('collapsed'); this.nextElementSibling.classList.toggle('collapsed');">
+                        <h3>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M8 1v8M4 5l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v3h12v-3"/></svg>
+                            Poslední prompty (${history.length})
+                        </h3>
+                        <svg class="panel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="step1-panel-body collapsed">
             `;
 
             history.forEach(item => {
@@ -2890,8 +3069,8 @@
                 html += `
                     <div class="history-item">
                         <div class="history-item-info">
-                            <div class="history-item-type">${config?.name || item.type} - ${item.address}</div>
-                            <div class="history-item-date">${item.date}</div>
+                            <div class="history-item-type">${esc(config?.name || item.type)} - ${esc(item.address)}</div>
+                            <div class="history-item-date">${esc(item.date)}</div>
                         </div>
                         <div class="history-item-buttons">
                             <button class="history-item-btn" onclick="loadFromHistory(${item.id})">Načíst</button>
@@ -2901,7 +3080,7 @@
                 `;
             });
 
-            html += '</div>';
+            html += '</div></div>';
             document.getElementById('historyContainer').innerHTML = html;
         }
 
@@ -3433,6 +3612,7 @@
                 return;
             }
 
+            const esc = (str) => { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; };
             const fmt = (n) => {
                 if (!n && n !== 0) return '—';
                 return new Intl.NumberFormat('cs-CZ').format(Math.round(n)) + ' Kč';
@@ -3440,23 +3620,27 @@
 
             let html = `
                 <div class="saved-valuations-panel">
-                    <h3>
-                        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5">
-                            <path d="M3 3v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6l-4-4H4a1 1 0 0 0-1 1z"/>
-                            <path d="M9 2v4h4"/>
-                        </svg>
-                        Uložená ocenění (${saved.length})
-                    </h3>
+                    <div class="step1-panel-header" onclick="this.classList.toggle('collapsed'); this.nextElementSibling.classList.toggle('collapsed');">
+                        <h3>
+                            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5">
+                                <path d="M3 3v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6l-4-4H4a1 1 0 0 0-1 1z"/>
+                                <path d="M9 2v4h4"/>
+                            </svg>
+                            Uložená ocenění (${saved.length})
+                        </h3>
+                        <svg class="panel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="step1-panel-body">
             `;
 
             saved.forEach(item => {
                 html += `
                     <div class="valuation-item">
                         <div class="valuation-item-info">
-                            <div class="valuation-item-name">${item.name}</div>
+                            <div class="valuation-item-name">${esc(item.name)}</div>
                             <div class="valuation-item-meta">
-                                <span>${item.propertyTypeName || item.propertyType}</span>
-                                <span>${item.date}</span>
+                                <span>${esc(item.propertyTypeName || item.propertyType)}</span>
+                                <span>${esc(item.date)}</span>
                             </div>
                             <div class="valuation-item-values">
                                 ${item.avgTrzni ? `<span class="valuation-value-badge">Tržní: ${fmt(item.avgTrzni)}</span>` : ''}
@@ -3471,7 +3655,7 @@
                 `;
             });
 
-            html += '</div>';
+            html += '</div></div>';
             container.innerHTML = html;
         }
 
@@ -3678,6 +3862,35 @@
             localStorage.removeItem('prompt-gen-state');
             renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
         }
+
+        // Toggle textarea expand/collapse in Step 5
+        function toggleTextareaExpand(btn, textareaId) {
+            const textarea = document.getElementById(textareaId);
+            if (!textarea) return;
+            const isExpanded = textarea.classList.toggle('expanded');
+            btn.querySelector('span').textContent = isExpanded ? 'Sbalit' : 'Rozbalit';
+        }
+
+        // Theme toggle (for nav bar)
+        function setTheme(t) {
+            if (t === 'carbon') {
+                document.documentElement.classList.add('carbon');
+                document.body.classList.add('carbon');
+                localStorage.setItem('daynight-theme', 'carbon');
+            } else {
+                document.documentElement.classList.remove('carbon');
+                document.body.classList.remove('carbon');
+                localStorage.setItem('daynight-theme', 'snow');
+            }
+            document.querySelectorAll('.theme-btn-snow').forEach(b => b.classList.toggle('active', t === 'snow'));
+            document.querySelectorAll('.theme-btn-carbon').forEach(b => b.classList.toggle('active', t === 'carbon'));
+        }
+
+        // Initialize theme toggle buttons
+        (function() {
+            const t = localStorage.getItem('daynight-theme') === 'carbon' ? 'carbon' : 'snow';
+            setTheme(t);
+        })();
 
         // Auto-save form on input
         document.addEventListener('change', () => {
