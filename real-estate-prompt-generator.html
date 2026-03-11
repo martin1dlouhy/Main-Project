@@ -2017,6 +2017,20 @@
                     <h3>Rekreační objekt</h3>
                     <p>Chata, chalupa, rekreační dům</p>
                 </div>
+                <div class="property-type-card" onclick="selectPropertyType('apartment_building')" role="button" tabindex="0" aria-label="Vybrat typ: Bytový dům" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('apartment_building');}">
+                    <div class="property-icon">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="2" width="18" height="20" rx="2"/><rect x="6" y="5" width="3" height="2.5" rx="0.5"/><rect x="10.5" y="5" width="3" height="2.5" rx="0.5"/><rect x="15" y="5" width="3" height="2.5" rx="0.5"/><rect x="6" y="9.5" width="3" height="2.5" rx="0.5"/><rect x="10.5" y="9.5" width="3" height="2.5" rx="0.5"/><rect x="15" y="9.5" width="3" height="2.5" rx="0.5"/><rect x="6" y="14" width="3" height="2.5" rx="0.5"/><rect x="10.5" y="14" width="3" height="2.5" rx="0.5"/><rect x="15" y="14" width="3" height="2.5" rx="0.5"/><rect x="9.5" y="18.5" width="5" height="3.5" rx="0.5"/></svg>
+                    </div>
+                    <h3>Bytový dům</h3>
+                    <p>Celý bytový dům jako investice</p>
+                </div>
+                <div class="property-type-card" onclick="selectPropertyType('industrial')" role="button" tabindex="0" aria-label="Vybrat typ: Průmyslový objekt" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('industrial');}">
+                    <div class="property-icon">
+                        <svg viewBox="0 0 24 24"><path d="M2 20V10l5-3v5l5-3v5l5-3v6H2z"/><rect x="19" y="4" width="3" height="16" rx="0.5"/><circle cx="20.5" cy="5.5" r="1" fill="var(--accent)" stroke="none"/><path d="M19 8h3" stroke-linecap="round"/><path d="M19 12h3" stroke-linecap="round"/></svg>
+                    </div>
+                    <h3>Průmyslový objekt</h3>
+                    <p>Výrobní haly, logistické areály</p>
+                </div>
             </div>
 
             <div id="savedValuationsContainer"></div>
@@ -2384,7 +2398,9 @@
             land: 0.60,
             commercial: 0.70,
             mixed_use: 0.70,
-            recreation: 0.55
+            recreation: 0.55,
+            apartment_building: 0.75,
+            industrial: 0.65
         };
         let aiParsedData = {
             chatgpt: null,
@@ -2552,6 +2568,71 @@
                     rok_stavby: { type: 'number', label: 'Rok stavby/rekonstrukce', placeholder: 'např. 2000', min: 1800, max: 2026 },
                     najemne: { type: 'number', label: 'Průměrný měsíční výnos z pronájmu (Kč)', placeholder: 'např. 8000', min: 0 },
                     dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Vybavení, tradičnost lokality, bezpečnostní rizika...' }
+                }
+            },
+            apartment_building: {
+                name: 'Bytový dům',
+                inputs: [
+                    { id: 'znalecky_posudek', label: 'Znalecký posudek', icon: '◆' },
+                    { id: 'lv', label: 'List vlastnictví (LV)', icon: '◆' },
+                    { id: 'adresa', label: 'Adresa', icon: '◆' },
+                    { id: 'najemni_smlouvy', label: 'Nájemní smlouvy', icon: '◆' },
+                    { id: 'provozni_naklady', label: 'Provozní náklady / Fond oprav', icon: '◆' },
+                    { id: 'fotografie', label: 'Fotografie objektu', icon: '◆' },
+                    { id: 'pudorys', label: 'Půdorysy', icon: '◆' },
+                    { id: 'energeticky_stitek', label: 'Energetický štítek (PENB)', icon: '◆' },
+                    { id: 'vymer_listu', label: 'Výměr z katastru', icon: '◆' },
+                    { id: 'pasport_budovy', label: 'Pasport budovy', icon: '◆' }
+                ],
+                fields: {
+                    adresa: { type: 'text', label: 'Adresa', placeholder: 'např. Vinohradská 120, Praha 2' },
+                    celkova_plocha: { type: 'number', label: 'Celková užitná plocha (m²)', placeholder: 'např. 1800', min: 1 },
+                    plocha_pozemku: { type: 'number', label: 'Plocha pozemku (m²)', placeholder: 'např. 600', min: 1 },
+                    pocet_bytu: { type: 'number', label: 'Počet bytových jednotek', placeholder: 'např. 12', min: 1 },
+                    pocet_podlazi: { type: 'text', label: 'Počet podlaží', placeholder: 'např. 4 NP + suterén' },
+                    obsazenost: { type: 'number', label: 'Obsazenost (%)', placeholder: 'např. 95', min: 0, max: 100 },
+                    najemne_rocni: { type: 'number', label: 'Celkové roční nájemné (Kč)', placeholder: 'např. 2400000', min: 0 },
+                    prumerne_najemne_byt: { type: 'number', label: 'Průměrné měsíční nájemné za byt (Kč)', placeholder: 'např. 18000', min: 0 },
+                    fond_oprav_rocni: { type: 'number', label: 'Roční fond oprav / údržba (Kč)', placeholder: 'např. 200000', min: 0 },
+                    stav: { type: 'select', label: 'Stav budovy', options: ['Výborný - po rekonstrukci', 'Velmi dobrý', 'Dobrý', 'Průměrný', 'Před rekonstrukcí', 'Nutná rekonstrukce'] },
+                    rok_stavby: { type: 'number', label: 'Rok stavby', placeholder: 'např. 1935', min: 1800, max: 2026 },
+                    rok_rekonstrukce: { type: 'number', label: 'Rok poslední rekonstrukce', placeholder: 'např. 2018', min: 1800, max: 2026 },
+                    typ_konstrukce: { type: 'select', label: 'Typ konstrukce', options: ['Cihlová', 'Panelová', 'Skeletová', 'Smíšená', 'Jiná'] },
+                    vytah: { type: 'select', label: 'Výtah', options: ['Ano', 'Ne'] },
+                    parking: { type: 'select', label: 'Parkování', options: ['Podzemní garáže', 'Venkovní stání', 'Přilehlé parkoviště', 'Ne'] },
+                    komercni_plochy: { type: 'number', label: 'Komerční plochy v přízemí (m²)', placeholder: 'např. 150', min: 0 },
+                    dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Stav rozvodů, střechy, fasády, SVJ/BD, věcná břemena, plánované investice, struktura nájemníků...' }
+                }
+            },
+            industrial: {
+                name: 'Průmyslový objekt',
+                inputs: [
+                    { id: 'znalecky_posudek', label: 'Znalecký posudek', icon: '◆' },
+                    { id: 'lv', label: 'List vlastnictví (LV)', icon: '◆' },
+                    { id: 'adresa', label: 'Adresa', icon: '◆' },
+                    { id: 'najemni_smlouvy', label: 'Nájemní smlouvy', icon: '◆' },
+                    { id: 'provozni_naklady', label: 'Provozní náklady', icon: '◆' },
+                    { id: 'fotografie', label: 'Fotografie areálu', icon: '◆' },
+                    { id: 'pudorys', label: 'Situační výkres / Půdorysy', icon: '◆' },
+                    { id: 'ekologicky_audit', label: 'Ekologický audit', icon: '◆' },
+                    { id: 'stavebni_povoleni', label: 'Kolaudační rozhodnutí', icon: '◆' }
+                ],
+                fields: {
+                    adresa: { type: 'text', label: 'Adresa areálu', placeholder: 'např. Průmyslová zóna Mošnov, Ostrava' },
+                    typ_objektu: { type: 'select', label: 'Typ průmyslového objektu', options: ['Výrobní hala', 'Logistický/Skladový areál', 'Výrobně-skladový areál', 'Lehká výroba', 'Technologický park', 'Smíšený průmyslový areál'] },
+                    celkova_plocha: { type: 'number', label: 'Celková zastavěná plocha (m²)', placeholder: 'např. 5000', min: 1 },
+                    plocha_pozemku: { type: 'number', label: 'Plocha pozemku (m²)', placeholder: 'např. 15000', min: 1 },
+                    vyska_haly: { type: 'number', label: 'Světlá výška hal (m)', placeholder: 'např. 10', min: 1 },
+                    pocet_ramp: { type: 'number', label: 'Počet nakládacích ramp', placeholder: 'např. 6', min: 0 },
+                    nosnost_podlahy: { type: 'text', label: 'Nosnost podlahy (t/m²)', placeholder: 'např. 5 t/m²' },
+                    obsazenost: { type: 'number', label: 'Obsazenost (%)', placeholder: 'např. 90', min: 0, max: 100 },
+                    najemne_rocni: { type: 'number', label: 'Roční nájemné (Kč)', placeholder: 'např. 4500000', min: 0 },
+                    stav: { type: 'select', label: 'Stav objektu', options: ['Výborný - nový/Class A', 'Velmi dobrý - Class A/B', 'Dobrý - Class B', 'Průměrný - Class C', 'Nutná renovace'] },
+                    rok_stavby: { type: 'number', label: 'Rok stavby', placeholder: 'např. 2015', min: 1800, max: 2026 },
+                    dopravni_dostupnost: { type: 'select', label: 'Dopravní dostupnost', options: ['Výborná - u dálnice/rychlostní komunikace', 'Dobrá - hlavní silnice', 'Průměrná', 'Omezená'] },
+                    zeleznicni_vlecka: { type: 'select', label: 'Železniční vlečka', options: ['Ano - aktivní', 'Ano - neaktivní', 'V dosahu', 'Ne'] },
+                    ekologicka_zatez: { type: 'select', label: 'Ekologická zátěž', options: ['Bez zátěže - audit OK', 'Drobná - řešitelná', 'Významná', 'Nezjištěno'] },
+                    dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Technické vybavení, inženýrské sítě, kapacita elektro přípojky, kvalita nájemníků, délka smluv, BREEAM/LEED certifikace...' }
                 }
             }
         };
