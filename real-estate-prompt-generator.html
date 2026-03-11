@@ -725,63 +725,7 @@
             animation: slideOut 0.3s ease forwards;
         }
 
-        /* History Panel */
-        .history-panel {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            margin-top: 20px;
-            overflow: hidden;
-        }
-
-        .history-panel .step1-panel-body {
-            padding: 0 20px 20px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .history-panel h3 {
-            margin-bottom: 0;
-        }
-
-        .history-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            background: var(--bg-primary);
-            border-radius: 10px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .history-item:hover {
-            background: var(--accent-light);
-        }
-
-        .history-item-info {
-            flex: 1;
-            margin-right: 10px;
-        }
-
-        .history-item-type {
-            font-weight: 600;
-            color: var(--text-primary);
-            font-size: 15px;
-        }
-
-        .history-item-date {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-top: 4px;
-        }
-
-        .history-item-buttons {
-            display: flex;
-            gap: 8px;
-        }
-
+        /* History Item Buttons (used by saved valuations) */
         .history-item-btn {
             padding: 6px 12px;
             border: none;
@@ -1628,7 +1572,6 @@
                 </div>
             </div>
 
-            <div id="historyContainer"></div>
             <div id="savedValuationsContainer"></div>
 
             <div class="data-sync-bar" id="dataSyncBar" style="display:none;">
@@ -2153,7 +2096,7 @@
         // Initialize
         loadState();
         updateStepIndicator();
-        renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
+        renderSavedValuationsPanel(); updateSyncBarVisibility();
 
         function loadState() {
             const saved = localStorage.getItem('prompt-gen-state');
@@ -2294,7 +2237,7 @@
                 section.classList.remove('active');
             });
             document.getElementById('step' + step).classList.add('active');
-            if (step === 1) { renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility(); }
+            if (step === 1) { renderSavedValuationsPanel(); updateSyncBarVisibility(); }
             if (step === 2) populateInputsGrid();
             if (step === 5) populatePropertySummary();
             // Scroll to top of container on step change
@@ -2507,7 +2450,7 @@
 
             const prompt = buildPrompt();
             document.getElementById('promptText').textContent = prompt;
-            savePromptToHistory();
+
             nextStep();
         }
 
@@ -2526,7 +2469,7 @@
             closeValidationModal();
             const prompt = buildPrompt();
             document.getElementById('promptText').textContent = prompt;
-            savePromptToHistory();
+
             nextStep();
         }
 
@@ -3027,89 +2970,7 @@
             setTimeout(() => printWindow.print(), 250);
         }
 
-        function savePromptToHistory() {
-            const history = JSON.parse(localStorage.getItem('prompt-history') || '[]');
-            history.unshift({
-                id: Date.now(),
-                type: propertyType,
-                address: formData.adresa || 'Bez adresy',
-                date: new Date().toLocaleString('cs-CZ'),
-                prompt: document.getElementById('promptText').textContent
-            });
-            if (history.length > 20) history.pop();
-            localStorage.setItem('prompt-history', JSON.stringify(history));
-            renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
-        }
 
-        function renderHistoryPanel() {
-            if (currentStep !== 1) return;
-
-            const history = JSON.parse(localStorage.getItem('prompt-history') || '[]');
-            if (history.length === 0) {
-                document.getElementById('historyContainer').innerHTML = '';
-                return;
-            }
-
-            const esc = (str) => { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; };
-
-            let html = `
-                <div class="history-panel">
-                    <div class="step1-panel-header" onclick="this.classList.toggle('collapsed'); this.nextElementSibling.classList.toggle('collapsed');">
-                        <h3>
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M8 1v8M4 5l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v3h12v-3"/></svg>
-                            Poslední prompty (${history.length})
-                        </h3>
-                        <svg class="panel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </div>
-                    <div class="step1-panel-body collapsed">
-            `;
-
-            history.forEach(item => {
-                const config = propertyConfigs[item.type];
-                html += `
-                    <div class="history-item">
-                        <div class="history-item-info">
-                            <div class="history-item-type">${esc(config?.name || item.type)} - ${esc(item.address)}</div>
-                            <div class="history-item-date">${esc(item.date)}</div>
-                        </div>
-                        <div class="history-item-buttons">
-                            <button class="history-item-btn" onclick="loadFromHistory(${item.id})">Načíst</button>
-                            <button class="history-item-btn delete" onclick="deleteFromHistory(${item.id})">Smazat</button>
-                        </div>
-                    </div>
-                `;
-            });
-
-            html += '</div></div>';
-            document.getElementById('historyContainer').innerHTML = html;
-        }
-
-        function loadFromHistory(id) {
-            const history = JSON.parse(localStorage.getItem('prompt-history') || '[]');
-            const item = history.find(h => h.id === id);
-            if (item) {
-                propertyType = item.type;
-                document.querySelectorAll('.property-type-card').forEach(card => {
-                    card.classList.remove('selected');
-                });
-                const selectedCard = document.querySelector(`[onclick="selectPropertyType('${item.type}')"]`);
-                if (selectedCard) selectedCard.classList.add('selected');
-                document.getElementById('promptText').textContent = item.prompt;
-                currentStep = 4;
-                updateStepIndicator();
-                showSection(4);
-                saveState();
-                showToast('Valuace načtena');
-            }
-        }
-
-        function deleteFromHistory(id) {
-            let history = JSON.parse(localStorage.getItem('prompt-history') || '[]');
-            history = history.filter(h => h.id !== id);
-            localStorage.setItem('prompt-history', JSON.stringify(history));
-            renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
-            showToast('Valuace smazána');
-        }
 
         function goToComparisonStep() {
             currentStep = 5;
@@ -3742,8 +3603,7 @@
             if (!bar) return;
             try {
                 const valuations = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
-                const history = JSON.parse(localStorage.getItem('prompt-history') || '[]');
-                bar.style.display = (valuations.length > 0 || history.length > 0) ? 'flex' : 'none';
+                bar.style.display = valuations.length > 0 ? 'flex' : 'none';
             } catch (e) {
                 bar.style.display = 'none';
             }
@@ -3756,8 +3616,7 @@
                     app: 're-prompt-generator',
                     exportDate: new Date().toISOString(),
                     data: {
-                        savedValuations: JSON.parse(localStorage.getItem('saved-valuations') || '[]'),
-                        promptHistory: JSON.parse(localStorage.getItem('prompt-history') || '[]')
+                        savedValuations: JSON.parse(localStorage.getItem('saved-valuations') || '[]')
                     }
                 };
 
@@ -3808,28 +3667,10 @@
                     existingValuations.sort((a, b) => b.id - a.id);
                     localStorage.setItem('saved-valuations', JSON.stringify(existingValuations));
 
-                    // Merge prompt history
-                    const existingHistory = JSON.parse(localStorage.getItem('prompt-history') || '[]');
-                    const importedHistory = imported.data.promptHistory || [];
-                    const existingHistIds = new Set(existingHistory.map(h => h.id));
-                    let newHistCount = 0;
+                    renderSavedValuationsPanel(); updateSyncBarVisibility();
 
-                    importedHistory.forEach(h => {
-                        if (!existingHistIds.has(h.id)) {
-                            existingHistory.push(h);
-                            newHistCount++;
-                        }
-                    });
-
-                    existingHistory.sort((a, b) => b.id - a.id);
-                    if (existingHistory.length > 20) existingHistory.length = 20;
-                    localStorage.setItem('prompt-history', JSON.stringify(existingHistory));
-
-                    renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
-
-                    const total = newCount + newHistCount;
-                    if (total > 0) {
-                        showToast(`Importováno: ${newCount} ocenění, ${newHistCount} promptů`);
+                    if (newCount > 0) {
+                        showToast(`Importováno: ${newCount} ocenění`);
                     } else {
                         showToast('Všechna data již existují — nic nového k importu');
                     }
@@ -3860,7 +3701,7 @@
             updateStepIndicator();
             showSection(1);
             localStorage.removeItem('prompt-gen-state');
-            renderHistoryPanel(); renderSavedValuationsPanel(); updateSyncBarVisibility();
+            renderSavedValuationsPanel(); updateSyncBarVisibility();
         }
 
         // Toggle textarea expand/collapse in Step 5
