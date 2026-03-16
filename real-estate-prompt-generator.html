@@ -203,6 +203,11 @@
             margin-bottom: 30px;
         }
 
+        /* Fix: Kontrola mezer nadpisů před gridy (property-type-grid, purpose-grid) */
+        .inputs-section > h3 {
+            margin: 0 0 12px 0;
+        }
+
         .property-type-card {
             background: var(--bg-surface);
             border: 2px solid var(--border-color);
@@ -253,6 +258,13 @@
             stroke: var(--accent);
             fill: none;
             stroke-width: 1.5;
+        }
+
+        /* Purpose cards používají filled Material Design ikony */
+        .purpose-card .property-icon svg {
+            fill: var(--accent);
+            stroke: none;
+            stroke-width: 0;
         }
 
         .property-type-card h3 {
@@ -995,7 +1007,8 @@
                 padding: 30px;
             }
 
-            .property-type-grid {
+            .property-type-grid,
+            .purpose-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
         }
@@ -1005,7 +1018,8 @@
                 padding: 20px;
             }
 
-            .property-type-grid {
+            .property-type-grid,
+            .purpose-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -2090,21 +2104,24 @@
                 <div class="purpose-grid">
                     <div class="property-type-card purpose-card" onclick="selectLoanPurpose('general')" role="button" tabindex="0" aria-label="Vybrat účel: Bezúčelový" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectLoanPurpose('general');}">
                         <div class="property-icon">
-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+                            <!-- Štít s fajfkou — standardní ocenění / bezpečnost -->
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
                         </div>
                         <h3>Bezúčelový</h3>
                         <p>Standardní ocenění bez speciálních podmínek</p>
                     </div>
                     <div class="property-type-card purpose-card" onclick="selectLoanPurpose('refinancing')" role="button" tabindex="0" aria-label="Vybrat účel: Refinancování" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectLoanPurpose('refinancing');}">
                         <div class="property-icon">
-                            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+                            <!-- Cyklické šipky — refinancování / obměna dluhu -->
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
                         </div>
                         <h3>Refinancování</h3>
                         <p>Vyplacení stávajícího věřitele, nové financování</p>
                     </div>
                     <div class="property-type-card purpose-card" onclick="selectLoanPurpose('acquisition')" role="button" tabindex="0" aria-label="Vybrat účel: Akvizice" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectLoanPurpose('acquisition');}">
                         <div class="property-icon">
-                            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                            <!-- Klíč — akvizice / pořízení nemovitosti -->
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
                         </div>
                         <h3>Akvizice</h3>
                         <p>Pořízení nemovitosti, ověření kupní ceny</p>
