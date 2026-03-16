@@ -196,6 +196,13 @@
             margin-bottom: 30px;
         }
 
+        .purpose-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
         .property-type-card {
             background: var(--bg-surface);
             border: 2px solid var(--border-color);
@@ -1953,19 +1960,23 @@
                 </div>
                 <div class="step" data-step="2" role="button" tabindex="0" onclick="goToStep(2)" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); goToStep(2);}">
                     <div class="step-number">2</div>
-                    <span>Vstupy</span>
+                    <span>Účel</span>
                 </div>
                 <div class="step" data-step="3" role="button" tabindex="0" onclick="goToStep(3)" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); goToStep(3);}">
                     <div class="step-number">3</div>
-                    <span>Údaje</span>
+                    <span>Vstupy</span>
                 </div>
-                <div class="step step-locked" data-step="4">
+                <div class="step" data-step="4" role="button" tabindex="0" onclick="goToStep(4)" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); goToStep(4);}">
                     <div class="step-number">4</div>
-                    <span>Prompt</span>
-                    <svg class="step-lock-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 016 0v2"/></svg>
+                    <span>Údaje</span>
                 </div>
                 <div class="step step-locked" data-step="5">
                     <div class="step-number">5</div>
+                    <span>Prompt</span>
+                    <svg class="step-lock-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 016 0v2"/></svg>
+                </div>
+                <div class="step step-locked" data-step="6">
+                    <div class="step-number">6</div>
                     <span>Srovnání</span>
                     <svg class="step-lock-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 016 0v2"/></svg>
                 </div>
@@ -2072,8 +2083,53 @@
             </div>
         </div>
 
-        <!-- STEP 2 -->
+        <!-- STEP 2: ÚČEL (Purpose) -->
         <div class="section" id="step2">
+            <div class="inputs-section">
+                <h3>Vyberte účel financování:</h3>
+                <div class="purpose-grid">
+                    <div class="property-type-card purpose-card" onclick="selectLoanPurpose('general')" role="button" tabindex="0" aria-label="Vybrat účel: Bezúčelový" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectLoanPurpose('general');}">
+                        <div class="property-icon">
+                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+                        </div>
+                        <h3>Bezúčelový</h3>
+                        <p>Standardní ocenění bez speciálních podmínek</p>
+                    </div>
+                    <div class="property-type-card purpose-card" onclick="selectLoanPurpose('refinancing')" role="button" tabindex="0" aria-label="Vybrat účel: Refinancování" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectLoanPurpose('refinancing');}">
+                        <div class="property-icon">
+                            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+                        </div>
+                        <h3>Refinancování</h3>
+                        <p>Vyplacení stávajícího věřitele, nové financování</p>
+                    </div>
+                    <div class="property-type-card purpose-card" onclick="selectLoanPurpose('acquisition')" role="button" tabindex="0" aria-label="Vybrat účel: Akvizice" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectLoanPurpose('acquisition');}">
+                        <div class="property-icon">
+                            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                        </div>
+                        <h3>Akvizice</h3>
+                        <p>Pořízení nemovitosti, ověření kupní ceny</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-secondary" onclick="prevStep()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px; vertical-align: middle;">
+                        <path d="M10 2L4 8l6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Zpět
+                </button>
+                <button class="btn btn-primary" onclick="nextStep()" id="step2Next" disabled>
+                    Pokračovat
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-left: 6px; vertical-align: middle;">
+                        <path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 3 (formerly STEP 2) -->
+        <div class="section" id="step3">
             <div class="inputs-section">
                 <h3>Dostupné materiály a podklady:</h3>
                 <div class="checkbox-grid" id="inputsGrid"></div>
@@ -2108,8 +2164,8 @@
             </div>
         </div>
 
-        <!-- STEP 3 -->
-        <div class="section" id="step3">
+        <!-- STEP 4 (formerly STEP 3) -->
+        <div class="section" id="step4">
             <div class="inputs-section">
                 <h3>Vyplňte dostupné údaje:</h3>
                 <div id="detailForm"></div>
@@ -2141,8 +2197,8 @@
             </div>
         </div>
 
-        <!-- STEP 4 -->
-        <div class="section" id="step4">
+        <!-- STEP 5 (formerly STEP 4) -->
+        <div class="section" id="step5">
             <div class="result-section">
                 <h2>AI Prompt pro bankovní valuaci</h2>
 
@@ -2233,8 +2289,8 @@
             </div>
         </div>
 
-        <!-- STEP 5 -->
-        <div class="section" id="step5">
+        <!-- STEP 6 (formerly STEP 5) -->
+        <div class="section" id="step6">
             <h2>Srovnání AI valuací</h2>
 
             <div class="property-summary" id="propertySummary"></div>
@@ -2388,6 +2444,7 @@
     <script>
         let currentStep = 1;
         let propertyType = '';
+        let loanPurpose = '';
         let selectedInputs = [];
         let formData = {};
         let visitedSteps = [1];
@@ -2654,6 +2711,7 @@
                     return;
                 }
                 propertyType = state.propertyType || '';
+                loanPurpose = state.loanPurpose || '';
                 selectedInputs = state.selectedInputs || [];
                 formData = state.formData || {};
                 currentStep = state.currentStep || 1;
@@ -2672,6 +2730,15 @@
                     });
                     document.getElementById('step1Next').disabled = false;
                 }
+                // Restore loan purpose selection UI
+                if (loanPurpose) {
+                    document.querySelectorAll('.purpose-card').forEach(card => {
+                        if (card.getAttribute('onclick') && card.getAttribute('onclick').includes("'" + loanPurpose + "'")) {
+                            card.classList.add('selected');
+                        }
+                    });
+                    document.getElementById('step2Next').disabled = false;
+                }
                 // Restore visited steps
                 for (let i = 1; i <= currentStep; i++) {
                     if (!visitedSteps.includes(i)) visitedSteps.push(i);
@@ -2684,6 +2751,7 @@
         function saveState() {
             const state = {
                 propertyType,
+                loanPurpose,
                 selectedInputs,
                 formData,
                 currentStep,
@@ -2697,8 +2765,8 @@
             document.querySelectorAll('[data-lang]').forEach(b => b.classList.remove('active'));
             document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
             saveState();
-            // Re-build prompt in new language if we're on step 4
-            if (currentStep === 4 && propertyType) {
+            // Re-build prompt in new language if we're on step 5
+            if (currentStep === 5 && propertyType) {
                 try {
                     const prompt = buildPrompt();
                     document.getElementById('promptText').textContent = prompt;
@@ -2727,9 +2795,22 @@
             saveState();
         }
 
+        function selectLoanPurpose(purpose) {
+            loanPurpose = purpose;
+            document.querySelectorAll('.purpose-card').forEach(card => card.classList.remove('selected'));
+            const cards = document.querySelectorAll('.purpose-card');
+            cards.forEach(card => {
+                if (card.getAttribute('onclick') && card.getAttribute('onclick').includes("'" + purpose + "'")) {
+                    card.classList.add('selected');
+                }
+            });
+            document.getElementById('step2Next').disabled = false;
+            saveState();
+        }
+
         function goToStep(step) {
-            if (step > currentStep && step < 4) return; // Can't jump forward
-            if (step >= 4) return; // Can't go to step 4 or 5 directly
+            if (step > currentStep && step < 5) return; // Can't jump forward
+            if (step >= 5) return; // Can't go to step 5 or 6 directly
             if (visitedSteps.includes(step)) {
                 currentStep = step;
                 updateStepIndicator();
@@ -2740,7 +2821,8 @@
 
         function nextStep() {
             if (currentStep === 1 && !propertyType) return;
-            if (currentStep === 2) populateDetailForm();
+            if (currentStep === 2 && !loanPurpose) return;
+            if (currentStep === 3) populateDetailForm();
             currentStep++;
             if (!visitedSteps.includes(currentStep)) {
                 visitedSteps.push(currentStep);
@@ -2763,7 +2845,7 @@
                 if (stepNum === currentStep) {
                     step.classList.add('active');
                     step.classList.remove('visited');
-                } else if (visitedSteps.includes(stepNum) && stepNum < 4) {
+                } else if (visitedSteps.includes(stepNum) && stepNum < 5) {
                     step.classList.add('visited');
                     step.classList.remove('active');
                 } else {
@@ -2772,7 +2854,7 @@
             });
 
             // Update progress bar
-            const progress = (currentStep / 5) * 100;
+            const progress = (currentStep / 6) * 100;
             document.getElementById('progressFill').style.width = progress + '%';
         }
 
@@ -2782,8 +2864,8 @@
             });
             document.getElementById('step' + step).classList.add('active');
             if (step === 1) { renderSavedValuationsPanel(); updateSyncBarVisibility(); }
-            if (step === 2) populateInputsGrid();
-            if (step === 5) populatePropertySummary();
+            if (step === 3) populateInputsGrid();
+            if (step === 6) populatePropertySummary();
             // Scroll to top of container on step change
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -3039,6 +3121,32 @@
                 prompt += `## PROPERTY TYPE\n`;
                 prompt += `**${config.name}**\n\n`;
 
+                // Add loan purpose section
+                if (loanPurpose === 'refinancing') {
+                    prompt += `## FINANCING PURPOSE\n`;
+                    prompt += `**Refinancing** — Existing collateral lender will be paid off.\n\n`;
+                    prompt += `### CRITICAL INSTRUCTIONS FOR REFINANCING:\n`;
+                    prompt += `I am uploading the Title Deed (Land Registry), where another entity is registered as collateral lender. This lender **will be paid off as part of the refinancing** and we (ProfiLend) will be the **sole collateral lender**.\n\n`;
+                    prompt += `**Your tasks in the refinancing context:**\n`;
+                    prompt += `1. **Value the property as if the third-party collateral lien does not exist** — our financing will replace it\n`;
+                    prompt += `2. **List ALL liens, executions and legal obligations from Land Registry** — we need a complete overview of what is registered on the property\n`;
+                    prompt += `3. **Identify risks** — are there multiple collateral liens? Are there executions? Notes of disputes?\n`;
+                    prompt += `4. **Alert to discrepancies** — the borrower may claim only one lien, but the Land Registry reality may be different\n\n`;
+                    prompt += `⚠️ CRITICAL: Even when valuing the property "unencumbered", always explicitly list all liens and encumbrances from the Land Registry in the Red Flags section.\n\n`;
+                } else if (loanPurpose === 'acquisition') {
+                    prompt += `## FINANCING PURPOSE\n`;
+                    prompt += `**Acquisition** — Borrower is purchasing this property.\n\n`;
+                    prompt += `### CRITICAL INSTRUCTIONS FOR ACQUISITION:\n`;
+                    prompt += `This valuation is for financing the property purchase.\n\n`;
+                    prompt += `**Your tasks in the acquisition context:**\n`;
+                    prompt += `1. **Verify that the purchase price matches market value** — if the purchase price is significantly above market estimate (>10%), clearly flag it\n`;
+                    prompt += `2. **Assess the motivation for sale** — is the property in foreclosure, insolvency, or is it a standard sale?\n`;
+                    prompt += `3. **Identify transaction risks** — are there relationships between buyer and seller (related parties)?\n\n`;
+                } else {
+                    prompt += `## FINANCING PURPOSE\n`;
+                    prompt += `**General-purpose loan** — Standard valuation for loan collateral purposes.\n\n`;
+                }
+
                 if (selectedInputs.length > 0) {
                     prompt += `## AVAILABLE MATERIALS AND DOCUMENTS\n`;
                     selectedInputs.forEach(inputId => {
@@ -3093,6 +3201,32 @@
 
                 prompt += `## TYP NEMOVITOSTI\n`;
                 prompt += `**${config.name}**\n\n`;
+
+                // Add loan purpose section
+                if (loanPurpose === 'refinancing') {
+                    prompt += `## ÚČEL FINANCOVÁNÍ\n`;
+                    prompt += `**Refinancování** — Stávající zástavní věřitel bude vyplacen.\n\n`;
+                    prompt += `### DŮLEŽITÉ INSTRUKCE PRO REFINANCOVÁNÍ:\n`;
+                    prompt += `Nahrávám ti List vlastnictví (LV), kde je jako zástavní věřitel zapsán jiný subjekt. Tento věřitel **bude v rámci refinancování vyplacen** a my (ProfiLend) budeme **jediný zástavní věřitel**.\n\n`;
+                    prompt += `**Tvé úkoly v kontextu refinancování:**\n`;
+                    prompt += `1. **Oceň nemovitost tak, jako by zástavní právo třetí strany neexistovalo** — naše financování jej nahradí\n`;
+                    prompt += `2. **Vypiš VŠECHNY zástavy, exekuce a právní závazky z LV** — potřebujeme kompletní přehled, co vše je na nemovitosti zapsáno\n`;
+                    prompt += `3. **Identifikuj rizika** — existuje zástavní právo více věřitelů? Jsou tam exekuce? Poznámky sporů?\n`;
+                    prompt += `4. **Upozorni na nesrovnalosti** — dlužník může tvrdit, že jde o jednu zástavu, ale realita na LV může být jiná\n\n`;
+                    prompt += `⚠️ DŮLEŽITÉ: I když oceňuješ nemovitost "bez zatížení", vždy explicitně uveď seznam všech zástav a břemen z LV v sekci Red Flags.\n\n`;
+                } else if (loanPurpose === 'acquisition') {
+                    prompt += `## ÚČEL FINANCOVÁNÍ\n`;
+                    prompt += `**Akvizice** — Dlužník pořizuje tuto nemovitost.\n\n`;
+                    prompt += `### DŮLEŽITÉ INSTRUKCE PRO AKVIZICI:\n`;
+                    prompt += `Toto ocenění slouží pro financování nákupu nemovitosti.\n\n`;
+                    prompt += `**Tvé úkoly v kontextu akvizice:**\n`;
+                    prompt += `1. **Ověř, zda kupní cena odpovídá tržní hodnotě** — pokud je kupní cena výrazně nad tržním odhadem (>10%), jasně na to upozorni\n`;
+                    prompt += `2. **Zhodnoť motivaci prodeje** — je nemovitost v dražbě, insolvenci, nebo jde o standardní prodej?\n`;
+                    prompt += `3. **Identifikuj rizika transakce** — jsou tam vztahy mezi kupujícím a prodávajícím (spříznění)?\n\n`;
+                } else {
+                    prompt += `## ÚČEL FINANCOVÁNÍ\n`;
+                    prompt += `**Bezúčelový úvěr** — Standardní ocenění pro účely zajištění úvěru.\n\n`;
+                }
 
                 if (selectedInputs.length > 0) {
                     prompt += `## DOSTUPNÉ MATERIÁLY A PODKLADY\n`;
@@ -3517,10 +3651,10 @@
 
 
         function goToComparisonStep() {
-            currentStep = 5;
-            if (!visitedSteps.includes(5)) visitedSteps.push(5);
+            currentStep = 6;
+            if (!visitedSteps.includes(6)) visitedSteps.push(6);
             updateStepIndicator();
-            showSection(5);
+            showSection(6);
             populatePropertySummary();
             saveState();
         }
@@ -4031,6 +4165,7 @@
                 date: new Date().toLocaleString('cs-CZ'),
                 propertyType: propertyType,
                 propertyTypeName: config?.name || propertyType,
+                loanPurpose: loanPurpose,
                 formData: { ...formData },
                 selectedInputs: [...selectedInputs],
                 aiParsedData: JSON.parse(JSON.stringify(aiParsedData)),
@@ -4430,6 +4565,14 @@
             const selectedCard = document.querySelector(`[onclick="selectPropertyType('${item.propertyType}')"]`);
             if (selectedCard) selectedCard.classList.add('selected');
 
+            // Restore loan purpose
+            loanPurpose = item.loanPurpose || '';
+            if (loanPurpose) {
+                document.querySelectorAll('.purpose-card').forEach(card => card.classList.remove('selected'));
+                const purposeCard = document.querySelector(`[onclick="selectLoanPurpose('${loanPurpose}')"]`);
+                if (purposeCard) purposeCard.classList.add('selected');
+            }
+
             // Restore form data with type validation
             formData = (item.formData && typeof item.formData === 'object' && !Array.isArray(item.formData)) ? item.formData : {};
             selectedInputs = Array.isArray(item.selectedInputs) ? item.selectedInputs : [];
@@ -4439,11 +4582,11 @@
                 document.getElementById('promptText').textContent = item.prompt;
             }
 
-            // Navigate to Step 5
-            currentStep = 5;
-            visitedSteps = [1, 2, 3, 4, 5];
+            // Navigate to Step 6
+            currentStep = 6;
+            visitedSteps = [1, 2, 3, 4, 5, 6];
             updateStepIndicator();
-            showSection(5);
+            showSection(6);
             populatePropertySummary();
 
             // Restore AI raw outputs into textareas
@@ -4589,19 +4732,24 @@
         function resetGenerator() {
             currentStep = 1;
             propertyType = '';
+            loanPurpose = '';
             selectedInputs = [];
             formData = {};
             visitedSteps = [1];
             aiParsedData = { chatgpt: null, claude: null, gemini: null };
-            const step5Textareas = document.querySelectorAll('#step5 textarea');
-            step5Textareas.forEach(ta => ta.value = '');
+            const step6Textareas = document.querySelectorAll('#step6 textarea');
+            step6Textareas.forEach(ta => ta.value = '');
             document.getElementById('comparisonTableWrapper').style.display = 'none';
             document.getElementById('aiSummarySection').style.display = 'none';
             document.getElementById('valuationChartSection').style.display = 'none';
             document.querySelectorAll('.property-type-card').forEach(card => {
                 card.classList.remove('selected');
             });
+            document.querySelectorAll('.purpose-card').forEach(card => {
+                card.classList.remove('selected');
+            });
             document.getElementById('step1Next').disabled = true;
+            document.getElementById('step2Next').disabled = true;
             // Reset compare and filter state
             compareSelectedIds.clear();
             filterSearchText = '';
