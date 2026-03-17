@@ -2078,6 +2078,7 @@
                         <path d="M14 2v4h-4M2 14v-4h4" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     <span>Synchronizace dat</span>
+                    <span id="backupStatusIndicator" style="margin-left: 12px; font-size: 12px;"></span>
                 </div>
                 <div class="sync-bar-buttons">
                     <button class="btn btn-secondary btn-sm" onclick="exportAllData()">
@@ -4206,6 +4207,7 @@
                 saved.unshift(valuation);
                 if (saved.length > 50) saved.pop();
                 localStorage.setItem('saved-valuations', JSON.stringify(saved));
+                autoBackup();
             } catch (e) {
                 if (e.name === 'QuotaExceededError') {
                     showToast('Úložiště je plné — smažte staré ocenění');
@@ -4365,6 +4367,7 @@
                 saved.unshift(duplicate);
                 if (saved.length > 50) saved.pop();
                 localStorage.setItem('saved-valuations', JSON.stringify(saved));
+                autoBackup();
                 renderSavedValuationsPanel();
                 showToast('Ocenění duplikováno');
             } catch (e) {
@@ -4557,6 +4560,7 @@
 
             try {
                 localStorage.setItem('saved-valuations', JSON.stringify(saved));
+                autoBackup();
                 renderSavedValuationsPanel();
                 showToast('Poznámky uloženy');
             } catch (e) {
@@ -4629,6 +4633,7 @@
                 let saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
                 saved = saved.filter(v => v.id !== id);
                 localStorage.setItem('saved-valuations', JSON.stringify(saved));
+                autoBackup();
             } catch (e) { return; }
             renderSavedValuationsPanel();
             showToast('Ocenění smazáno');
@@ -4671,6 +4676,217 @@
                 bar.style.display = 'none';
             }
         }
+
+        // === AUTO-BACKUP: Vrstva 2 (auto-download) + Vrstva 1 (IndexedDB) ===
+        // Automatická záloha po každé změně v saved-valuations
+
+        // IndexedDB helper functions
+        function openBackupDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('re-prompt-backup', 1);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('valuations')) {
+                        db.createObjectStore('valuations', { keyPath: 'key' });
+                    }
+                };
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function saveToIndexedDB(data) {
+            try {
+                const db = await openBackupDB();
+                const tx = db.transaction('valuations', 'readwrite');
+                tx.objectStore('valuations').put({ key: 'saved-valuations', value: data, updatedAt: new Date().toISOString() });
+                await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
+                db.close();
+            } catch (e) {
+                console.warn('IndexedDB backup failed:', e);
+            }
+        }
+
+        async function loadFromIndexedDB() {
+            try {
+                const db = await openBackupDB();
+                const tx = db.transaction('valuations', 'readonly');
+                const request = tx.objectStore('valuations').get('saved-valuations');
+                return new Promise((resolve, reject) => {
+                    request.onsuccess = () => { db.close(); resolve(request.result?.value || null); };
+                    request.onerror = () => { db.close(); reject(request.error); };
+                });
+            } catch (e) {
+                console.warn('IndexedDB read failed:', e);
+                return null;
+            }
+        }
+
+        // === Vrstva 3: File System Access API — zápis přímo do OneDrive složky ===
+        // Uživatel jednou vybere složku, app si ji zapamatuje (handle v IndexedDB)
+        let backupDirHandle = null;
+
+        async function saveBackupDirHandle(handle) {
+            try {
+                const db = await openBackupDB();
+                const tx = db.transaction('valuations', 'readwrite');
+                tx.objectStore('valuations').put({ key: 'backup-dir-handle', value: handle });
+                await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = reject; });
+                db.close();
+            } catch (e) { console.warn('Failed to save dir handle:', e); }
+        }
+
+        async function loadBackupDirHandle() {
+            try {
+                const db = await openBackupDB();
+                const tx = db.transaction('valuations', 'readonly');
+                const request = tx.objectStore('valuations').get('backup-dir-handle');
+                return new Promise((resolve, reject) => {
+                    request.onsuccess = () => { db.close(); resolve(request.result?.value || null); };
+                    request.onerror = () => { db.close(); resolve(null); };
+                });
+            } catch (e) { return null; }
+        }
+
+        // Výběr zálohovací složky (volá se z UI)
+        async function selectBackupFolder() {
+            try {
+                if (!window.showDirectoryPicker) {
+                    showToast('Tvůj prohlížeč nepodporuje přímý zápis do složky. Použij Chrome.');
+                    return;
+                }
+                const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                backupDirHandle = handle;
+                await saveBackupDirHandle(handle);
+                showToast('Zálohovací složka nastavena: ' + handle.name);
+                updateBackupStatus();
+                // Okamžitě ulož aktuální data
+                await writeBackupToFolder();
+            } catch (e) {
+                if (e.name !== 'AbortError') { // Uživatel jen zavřel dialog
+                    console.warn('Folder selection failed:', e);
+                    showToast('Nepodařilo se vybrat složku');
+                }
+            }
+        }
+
+        // Zápis zálohy do vybrané složky
+        async function writeBackupToFolder() {
+            if (!backupDirHandle) return false;
+            try {
+                // Ověř oprávnění (prohlížeč může vyžadovat potvrzení po restartu)
+                const perm = await backupDirHandle.queryPermission({ mode: 'readwrite' });
+                if (perm !== 'granted') {
+                    const req = await backupDirHandle.requestPermission({ mode: 'readwrite' });
+                    if (req !== 'granted') return false;
+                }
+
+                const data = localStorage.getItem('saved-valuations') || '[]';
+                const parsed = JSON.parse(data);
+                if (parsed.length === 0) return false;
+
+                const exportData = {
+                    version: 1,
+                    app: 're-prompt-generator',
+                    exportDate: new Date().toISOString(),
+                    data: { savedValuations: parsed }
+                };
+
+                const json = JSON.stringify(exportData, null, 2);
+                const fileHandle = await backupDirHandle.getFileHandle('re-valuace-backup.json', { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(json);
+                await writable.close();
+                lastBackupOk = true;
+                updateBackupStatus();
+                console.log('Auto-backup: uloženo do ' + backupDirHandle.name + '/re-valuace-backup.json');
+                return true;
+            } catch (e) {
+                console.warn('File system backup failed:', e);
+                lastBackupOk = false;
+                updateBackupStatus();
+                return false;
+            }
+        }
+
+        // Stav poslední zálohy
+        let lastBackupOk = null; // null = nezálohováno, true = ok, false = chyba
+
+        // Aktualizace statusu v Sync baru
+        function updateBackupStatus() {
+            const indicator = document.getElementById('backupStatusIndicator');
+            if (!indicator) return;
+
+            if (!window.showDirectoryPicker) {
+                // Safari/Firefox — File System API není k dispozici
+                indicator.innerHTML = '<span style="color: var(--text-secondary); font-size:12px;">Záloha: pouze export</span>';
+                return;
+            }
+
+            if (backupDirHandle) {
+                const statusIcon = lastBackupOk === false ? '⚠' : '✓';
+                const statusColor = lastBackupOk === false ? 'var(--danger)' : 'var(--success)';
+                const statusText = lastBackupOk === false ? 'chyba zápisu' : backupDirHandle.name;
+                indicator.innerHTML = '<span style="color:' + statusColor + ';cursor:pointer;" onclick="selectBackupFolder()" title="Klikni pro změnu složky">' + statusIcon + ' ' + statusText + '</span>';
+            } else {
+                indicator.innerHTML = '<button class="btn btn-secondary btn-sm" onclick="selectBackupFolder()" style="font-size:12px;">Nastavit OneDrive zálohu</button>';
+            }
+        }
+
+        // Načti uložený handle při startu
+        async function initBackupDir() {
+            if (!window.showDirectoryPicker) { updateBackupStatus(); return; }
+            const saved = await loadBackupDirHandle();
+            if (saved) {
+                backupDirHandle = saved;
+                // Ověř oprávnění (Chrome si pamatuje grant)
+                try {
+                    const perm = await backupDirHandle.queryPermission({ mode: 'readwrite' });
+                    if (perm !== 'granted') {
+                        // Oprávnění vypršelo — uživatel musí znovu potvrdit
+                        backupDirHandle = null;
+                    }
+                } catch (e) {
+                    backupDirHandle = null;
+                }
+            }
+            updateBackupStatus();
+        }
+        initBackupDir();
+
+        // Auto-backup (debounced — max 1× za 5 sekund)
+        let autoBackupTimer = null;
+        function autoBackup() {
+            // Vrstva 1: IndexedDB — okamžitě
+            const data = localStorage.getItem('saved-valuations') || '[]';
+            saveToIndexedDB(data);
+
+            // Vrstva 3: File System (OneDrive) — debounced
+            clearTimeout(autoBackupTimer);
+            autoBackupTimer = setTimeout(async () => {
+                if (backupDirHandle) {
+                    await writeBackupToFolder();
+                }
+            }, 5000);
+        }
+
+        // Při startu: pokud localStorage je prázdný ale IndexedDB má data → obnov
+        (async function recoverFromIndexedDB() {
+            const lsData = localStorage.getItem('saved-valuations');
+            if (!lsData || lsData === '[]') {
+                const idbData = await loadFromIndexedDB();
+                if (idbData) {
+                    const parsed = JSON.parse(idbData);
+                    if (parsed.length > 0) {
+                        localStorage.setItem('saved-valuations', idbData); // autoBackup() se NEVOLÁ — recovery není backup
+                        console.log('Recovered ' + parsed.length + ' valuations from IndexedDB');
+                        renderSavedValuationsPanel();
+                        updateSyncBarVisibility();
+                        showToast('Data obnovena ze zálohy (' + parsed.length + ' ocenění)');
+                    }
+                }
+            }
+        })();
 
         function exportAllData() {
             try {
@@ -4729,6 +4945,7 @@
                     // Sort by ID descending (newest first)
                     existingValuations.sort((a, b) => b.id - a.id);
                     localStorage.setItem('saved-valuations', JSON.stringify(existingValuations));
+                    autoBackup();
 
                     renderSavedValuationsPanel(); updateSyncBarVisibility();
 
