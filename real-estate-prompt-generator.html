@@ -2466,6 +2466,9 @@
         let formData = {};
         let visitedSteps = [1];
         let currentLanguage = 'cs';
+        let compareSelectedIds = new Set();
+        let filterSearchText = '';
+        let filterPropertyType = '';
         let safetyCoefficients = {
             apartment: 0.80,
             house: 0.70,
@@ -4214,11 +4217,6 @@
             closeSaveValuationDialog();
             showToast('Ocenění uloženo');
         }
-
-        // C2, C6: Global state for compare and filter
-        let compareSelectedIds = new Set();
-        let filterSearchText = '';
-        let filterPropertyType = '';
 
         function renderSavedValuationsPanel() {
             const container = document.getElementById('savedValuationsContainer');
