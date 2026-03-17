@@ -776,7 +776,7 @@
 
         .saved-valuations-panel .step1-panel-body {
             padding: 0 20px 20px;
-            max-height: 500px;
+            max-height: 780px;
             overflow-y: auto;
         }
 
@@ -2058,6 +2058,15 @@
                 </div>
             </div>
 
+            <div class="buttons">
+                <button class="btn btn-primary" onclick="nextStep()" id="step1Next" disabled>
+                    Pokračovat
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-left: 6px; vertical-align: middle;">
+                        <path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
             <div id="savedValuationsContainer"></div>
 
             <div class="data-sync-bar" id="dataSyncBar" style="display:none;">
@@ -2085,15 +2094,6 @@
                     </button>
                     <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importAllData(event)">
                 </div>
-            </div>
-
-            <div class="buttons">
-                <button class="btn btn-primary" onclick="nextStep()" id="step1Next" disabled>
-                    Pokračovat
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-left: 6px; vertical-align: middle;">
-                        <path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
             </div>
         </div>
 
