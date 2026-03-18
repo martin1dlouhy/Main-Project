@@ -3518,6 +3518,116 @@
                     prompt += `5. **Právní vady**: Pozemek v lese, ochranná pásma, CHKO\n\n`;
                 }
 
+                if (propertyType === 'apartment_building') {
+                    prompt += `## METODIKA OCENĚNÍ BYTOVÉHO DOMU\n\n`;
+                    prompt += `**DŮLEŽITÉ**: Pro bytový dům jsou **obě metody primární** a rovnocenné. Výslednou tržní hodnotu stanov jako vážený průměr obou metod (nebo zdůvodni, proč jedné dáváš vyšší váhu). Neplatí pravidlo „jedna primární, druhá sekundární".\n`;
+                    prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data.\n\n`;
+
+                    prompt += `### 1. VÝNOSOVÁ METODA (Primární — DCF / přímá kapitalizace)\n`;
+                    prompt += `Bytový dům je investiční aktivum — výnosová hodnota je klíčová pro investora.\n\n`;
+                    if (formData.najemne_bytove_rocni) {
+                        prompt += `**Krok 1 - Hrubý roční příjem**:\n`;
+                        prompt += `- Roční nájemné bytů: ${formData.najemne_bytove_rocni} Kč\n`;
+                        if (formData.pocet_bytu) prompt += `- Počet bytových jednotek: ${formData.pocet_bytu}\n`;
+                        if (formData.obsazenost) prompt += `- Obsazenost: ${formData.obsazenost}%\n`;
+                        prompt += `\n**Krok 2 - Provozní náklady (OpEx)**:\n`;
+                        prompt += `- Správa domu, údržba, pojištění, daně, rezervní fond\n`;
+                        prompt += `- Obvykle 25-40% z hrubého příjmu u bytových domů\n\n`;
+                        prompt += `**Krok 3 - Net Operating Income (NOI)**:\n`;
+                        prompt += `NOI = Efektivní příjem × Obsazenost - OpEx\n\n`;
+                        prompt += `**Krok 4 - Kapitalizační míra (Gross Yield)**:\n`;
+                        prompt += `- Praha centrum: 3,5–5 %\n`;
+                        prompt += `- Praha periferie: 4,5–6 %\n`;
+                        prompt += `- Krajská města: 5–7 %\n`;
+                        prompt += `- Menší města: 6–9 %\n`;
+                        prompt += `- Výnosová hodnota = NOI / Yield\n\n`;
+                    } else {
+                        prompt += `- Nájemné nebylo zadáno — odhadni tržní nájemné pro danou lokalitu a typ bytů\n`;
+                        if (formData.pocet_bytu) prompt += `- Počet bytových jednotek: ${formData.pocet_bytu}\n`;
+                        prompt += `- Postup: odhadni průměrné nájemné za m² → vynásob plochou → aplikuj obsazenost a OpEx\n\n`;
+                    }
+
+                    prompt += `### 2. POROVNÁVACÍ METODA (Primární — srovnání s trhem)\n`;
+                    prompt += `Bytový dům lze ocenit i jako celek porovnáním s podobnými realizovanými prodeji.\n\n`;
+                    prompt += `- Hledej prodeje celých bytových domů v dané lokalitě (databáze CUZK, realitní servery)\n`;
+                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod na realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti. Celkový haircut = cca 15%.\n`;
+                    prompt += `- Cena za m² celkové podlahové plochy nebo cena za bytovou jednotku\n`;
+                    if (formData.uzitna_plocha) prompt += `- Celková plocha: ${formData.uzitna_plocha} m²\n`;
+                    if (formData.pocet_bytu) prompt += `- Počet jednotek: ${formData.pocet_bytu}\n`;
+                    prompt += `- Korekce: stav budovy, rok výstavby, lokalita, velikost bytů, výtah\n\n`;
+
+                    prompt += `### 3. VÝSLEDNÁ TRŽNÍ HODNOTA\n`;
+                    prompt += `- Uveď výsledky obou metod\n`;
+                    prompt += `- Pokud se výsledky liší o méně než 15 %, použij vážený průměr (50/50 nebo zdůvodni jiné váhy)\n`;
+                    prompt += `- Pokud se liší o více než 15 %, analyzuj příčinu odchylky a zdůvodni výslednou hodnotu\n\n`;
+
+                    prompt += `## RED FLAGS - BYTOVÝ DŮM\n`;
+                    prompt += `1. **Regulovaná nájemná**: Existují v domě regulované nájemní smlouvy na dobu neurčitou?\n`;
+                    prompt += `2. **Technický stav**: Stav rozvodů (voda, elektrika, plyn), střecha, výtah — nutné investice (CapEx)\n`;
+                    prompt += `3. **Koncentrace vlastnictví**: Je celý dům v osobním vlastnictví, nebo jsou byty v SVJ/BD?\n`;
+                    prompt += `4. **Obsazenost**: Volné byty výrazně snižují výnosovou hodnotu\n`;
+                    prompt += `5. **Právní vady**: Zástavní práva, věcná břemena, exekuce\n\n`;
+                }
+
+                if (propertyType === 'industrial') {
+                    prompt += `## METODIKA OCENĚNÍ PRŮMYSLOVÉHO OBJEKTU\n\n`;
+                    prompt += `**DŮLEŽITÉ**: Pro průmyslové nemovitosti je **výnosová metoda primární** — průmyslový objekt je investiční aktivum a kupující rozhoduje na základě výnosu. Porovnávací metoda slouží jako sekundární validace.\n`;
+                    prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (JLL, CBRE, Cushman & Wakefield, Colliers průmyslové reporty). Nepoužívej pouze svá tréninková data.\n\n`;
+
+                    prompt += `### 1. VÝNOSOVÁ METODA (Primární — přímá kapitalizace / DCF)\n\n`;
+                    if (formData.najemne_rocni) {
+                        prompt += `**Krok 1 - Hrubý roční příjem**:\n`;
+                        prompt += `- Roční nájemné: ${formData.najemne_rocni} Kč\n`;
+                        if (formData.obsazenost) prompt += `- Obsazenost: ${formData.obsazenost}%\n`;
+                        prompt += `\n**Krok 2 - Provozní náklady (OpEx)**:\n`;
+                        prompt += `- Správa, pojištění, daně, údržba\n`;
+                        prompt += `- Průmyslové objekty obvykle NNN (triple-net) smlouvy — ověř, co hradí nájemce vs. vlastník\n\n`;
+                        prompt += `**Krok 3 - Net Operating Income (NOI)**:\n`;
+                        prompt += `NOI = Efektivní příjem × (Obsazenost/100) - OpEx vlastníka\n\n`;
+                        prompt += `**Krok 4 - Kapitalizační míra (Yield)**:\n`;
+                    } else {
+                        prompt += `- Nájemné nebylo zadáno — odhadni tržní nájemné dle lokality a třídy objektu\n\n`;
+                        prompt += `**Krok 1 - Odhad tržního nájemného**:\n`;
+                        if (formData.celkova_plocha) prompt += `- Celková plocha: ${formData.celkova_plocha} m²\n`;
+                        prompt += `- Vyhledej aktuální tržní nájemné pro daný typ a lokalitu (Kč/m²/rok)\n\n`;
+                        prompt += `**Krok 2 - Kapitalizační míra (Yield)**:\n`;
+                    }
+                    prompt += `- Průmyslové prime (logistika u D1/D11): 5,0–6,0 %\n`;
+                    prompt += `- Průmyslové sekundární lokality: 6,5–8,5 %\n`;
+                    prompt += `- Starší výroba (Class C): 8,5–11 %\n`;
+                    if (formData.stav) prompt += `- Stav objektu: ${formData.stav}\n`;
+                    if (formData.dopravni_dostupnost) prompt += `- Dopravní dostupnost: ${formData.dopravni_dostupnost}\n`;
+                    prompt += `- Yield upravíš podle: stáří a stavu, délky nájemních smluv, bonity nájemníků, lokality\n`;
+                    prompt += `- Výnosová hodnota = NOI / Yield\n\n`;
+
+                    prompt += `### 2. POROVNÁVACÍ METODA (Sekundární — validace)\n`;
+                    prompt += `- Hledej srovnatelné prodeje průmyslových nemovitostí (databáze CUZK, JLL, Cushman & Wakefield)\n`;
+                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod na realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti. Celkový haircut = cca 15%.\n`;
+                    prompt += `- Cena za m² zastavěné plochy — korekce na typ, stav, lokalitu, světlou výšku, rampy\n`;
+                    if (formData.celkova_plocha) prompt += `- Celková plocha: ${formData.celkova_plocha} m²\n`;
+                    if (formData.vyska_haly) prompt += `- Světlá výška: ${formData.vyska_haly} m (výrazně ovlivňuje hodnotu — haly <6m jsou méně likvidní)\n`;
+                    prompt += `- Porovnávací metoda slouží jako kontrola výnosové — při odchylce > 20 % analyzuj příčinu\n\n`;
+
+                    prompt += `## RED FLAGS - PRŮMYSLOVÝ OBJEKT\n`;
+                    prompt += `1. **⚠ KRITICKÉ — Propojené osoby (nájemce = vlastník nebo spřízněná osoba)**:\n`;
+                    prompt += `   - Pokud je nájemcem stejná osoba jako vlastník, nebo osoba ekonomicky nebo rodinně propojená s vlastníkem, nájemné NEODRÁŽÍ tržní realitu!\n`;
+                    prompt += `   - V takovém případě: nájemné může být uměle nadhodnoceno (pro navýšení hodnoty zástavy) nebo naopak podhodnoceno (daňová optimalizace)\n`;
+                    prompt += `   - **POSTUP**: Nájemné ignoruj jako vstupní hodnotu. Místo toho použij tržní nájemné z externích zdrojů pro daný typ objektu a lokalitu. Upozorni věřitele, že výnos je ze spřízněného vztahu a vyžaduje nezávislé ověření.\n\n`;
+                    prompt += `2. **Ekologická zátěž**:\n`;
+                    if (formData.ekologicka_zatez) prompt += `   - Zadáno: ${formData.ekologicka_zatez}\n`;
+                    prompt += `   - Historická výroba, chemikálie, PHM — může zásadně snížit nebo eliminovat zástavní hodnotu\n`;
+                    prompt += `   - Bez Phase I ekologického auditu = neúplné podklady pro ocenění\n`;
+                    prompt += `3. **Délka a kvalita nájemních smluv**:\n`;
+                    prompt += `   - Krátká zbývající délka smluv (< 2 roky) výrazně zvyšuje riziko a snižuje hodnotu\n`;
+                    prompt += `   - Bonita nájemníků: nadnárodní korporace vs. lokální výrobce\n`;
+                    prompt += `4. **Technická specifika**:\n`;
+                    if (formData.vyska_haly) prompt += `   - Světlá výška ${formData.vyska_haly} m — haly pod 6 m jsou problematické pro moderní logistiku\n`;
+                    if (formData.nosnost_podlahy) prompt += `   - Nosnost podlahy: ${formData.nosnost_podlahy}\n`;
+                    prompt += `   - Kapacita elektro přípojky, přítomnost jeřábové dráhy, stav vzduchotechniky\n`;
+                    prompt += `5. **Monofunkčnost**:\n`;
+                    prompt += `   - Specializované výrobní haly jsou těžko pronajmout jinému nájemci — nízká likvidita\n\n`;
+                }
+
                 // Závěrečné instrukce
                 prompt += `## ZÁVĚREČNÝ VÝSTUP\n\n`;
                 prompt += `Strukturuj svou odpověď následovně:\n\n`;
@@ -3531,10 +3641,15 @@
                 prompt += `- Výsledná hodnota v Kč\n\n`;
 
                 prompt += `### 3. POROVNÁNÍ METOD\n`;
-                prompt += `- Tabulka výsledků všech použitých metod (primární i sekundární)\n`;
-                prompt += `- **PRAVIDLO**: Finální tržní hodnotu stanov výhradně na základě **primární metody** pro daný typ nemovitosti. Sekundární metody slouží pouze jako kontrolní validace — uveď jejich výsledky, ale neprůměruj je s primární metodou.\n`;
-                prompt += `- Pokud sekundární metoda ukazuje výrazně odlišný výsledek (odchylka > 20%), uveď důvod odchylky.\n`;
-                prompt += `- **Finální tržní hodnota** = výsledek primární metody (s odůvodněním)\n\n`;
+                prompt += `- Tabulka výsledků všech použitých metod\n`;
+                if (propertyType === 'apartment_building') {
+                    prompt += `- **PRAVIDLO pro bytový dům**: Obě metody (výnosová i porovnávací) jsou primární a rovnocenné. Výslednou hodnotu stanov jako vážený průměr — pokud se výsledky liší o méně než 15 %, použi 50/50. Při větší odchylce zdůvodni, které metodě dáváš vyšší váhu a proč.\n`;
+                } else {
+                    prompt += `- **PRAVIDLO**: Finální tržní hodnotu stanov výhradně na základě **primární metody** pro daný typ nemovitosti. Sekundární metody slouží pouze jako kontrolní validace — uveď jejich výsledky, ale neprůměruj je s primární metodou.\n`;
+                    prompt += `- Pokud sekundární metoda ukazuje výrazně odlišný výsledek (odchylka > 20%), uveď důvod odchylky.\n`;
+                    prompt += `- **Finální tržní hodnota** = výsledek primární metody (s odůvodněním)\n`;
+                }
+                prompt += `\n`;
 
                 prompt += `### 4. ZÁSTAVNÍ HODNOTA\n`;
                 prompt += `- Bezpečnostní koeficient: **${safetyCoefficients[propertyType]}**\n`;
