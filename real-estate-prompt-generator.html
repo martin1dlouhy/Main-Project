@@ -485,6 +485,7 @@
             display: none;
         }
 
+
         .safety-coefficient-input {
             display: flex;
             flex-direction: column;
@@ -2896,7 +2897,14 @@
         function populateInputsGrid() {
             const grid = document.getElementById('inputsGrid');
             const config = propertyConfigs[propertyType];
-            grid.innerHTML = config.inputs.map(input => {
+
+            // Property-specific inputs + global inputs (all types)
+            const globalInputs = [
+                { id: 'cenova_mapa', label: 'Cenová mapa CUZK', icon: '◆' }
+            ];
+            const allInputs = [...config.inputs, ...globalInputs];
+
+            grid.innerHTML = allInputs.map(input => {
                 const isChecked = selectedInputs.includes(input.id);
                 return `
                     <div class="checkbox-item ${isChecked ? 'checked' : ''}" onclick="toggleInput('${input.id}', event)">
@@ -3045,6 +3053,7 @@
                     }
                 }
             }
+
             saveState();
         }
 
@@ -3170,11 +3179,14 @@
                     prompt += `**General-purpose loan** — Standard valuation for loan collateral purposes.\n\n`;
                 }
 
+                // Global input labels (not in config.inputs)
+                const globalInputDefsEN = { cenova_mapa: 'Land Registry Price Map (CUZK)' };
                 if (selectedInputs.length > 0) {
                     prompt += `## AVAILABLE MATERIALS AND DOCUMENTS\n`;
                     selectedInputs.forEach(inputId => {
                         const input = config.inputs.find(i => i.id === inputId);
-                        if (input) prompt += `- ${input.label}\n`;
+                        const label = input ? input.label : globalInputDefsEN[inputId];
+                        if (label) prompt += `- ${label}\n`;
                     });
                     prompt += `\n`;
                 }
@@ -3185,6 +3197,22 @@
                     if (field && value) prompt += `- **${field.label}**: ${value}\n`;
                 }
                 prompt += `\n`;
+
+                // Land Registry price map reference data (EN version)
+                if (selectedInputs.includes('cenova_mapa')) {
+                    prompt += `## REFERENCE DATA FROM LAND REGISTRY (PRICE MAP)\n\n`;
+                    prompt += `Land Registry price map data (CUZK) is available — a realized transfer of this property (or comparable property in the area) recorded in the Czech Land Registry.\n\n`;
+                    prompt += `### ⚠ CRITICAL INSTRUCTIONS FOR LAND REGISTRY DATA\n`;
+                    prompt += `This Land Registry price is a REFERENCE ONLY — NOT a basis for valuation or confirmation of market value. Reasons:\n\n`;
+                    prompt += `1. **Buyer may have overpaid** — emotional decision, market ignorance, time pressure or speculation. The realized price tells us nothing about whether it was a fair market transaction.\n`;
+                    prompt += `2. **Market shift** — since the transfer date the market may have changed significantly (up or down). Data older than 12 months is particularly unreliable.\n`;
+                    prompt += `3. **Non-standard transaction conditions** — price may have been influenced by related parties, seller distress, non-cash consideration or other non-standard circumstances.\n`;
+                    prompt += `4. **We are financing this property as loan collateral** — our role is to protect the lender, not to confirm the borrower's purchase price.\n\n`;
+                    prompt += `**PROCEDURE**: Conduct your own independent valuation using the appropriate methodology. Only after determining your own market value, compare it to the Land Registry price and comment on the variance:\n`;
+                    prompt += `- KN price **up to 10% above** your estimate: normal variance, no special comment needed.\n`;
+                    prompt += `- KN price **10–20% above** your estimate: flag possible overpayment, request detailed justification.\n`;
+                    prompt += `- KN price **more than 20% above** your estimate: **RED FLAG** — explicitly warn the lender that the buyer likely overpaid and collateral value will be significantly below the Land Registry price.\n\n`;
+                }
 
                 prompt += `## VALUATION METHODOLOGY\n\n`;
                 prompt += `Use comparative method for residential properties and income approach for commercial properties.\n\n`;
@@ -3251,11 +3279,14 @@
                     prompt += `**Bezúčelový úvěr** — Standardní ocenění pro účely zajištění úvěru.\n\n`;
                 }
 
+                // Globální inputy (nejsou v config.inputs)
+                const globalInputDefs = { cenova_mapa: 'Cenová mapa CUZK' };
                 if (selectedInputs.length > 0) {
                     prompt += `## DOSTUPNÉ MATERIÁLY A PODKLADY\n`;
                     selectedInputs.forEach(inputId => {
                         const input = config.inputs.find(i => i.id === inputId);
-                        if (input) prompt += `- ${input.label}\n`;
+                        const label = input ? input.label : globalInputDefs[inputId];
+                        if (label) prompt += `- ${label}\n`;
                     });
                     prompt += `\n`;
                 }
@@ -3266,6 +3297,22 @@
                     if (field && value) prompt += `- **${field.label}**: ${value}\n`;
                 }
                 prompt += `\n`;
+
+                // Cenová mapa CUZK — instrukce při zaškrtnutém podkladu
+                if (selectedInputs.includes('cenova_mapa')) {
+                    prompt += `## REFERENČNÍ DATA Z KATASTRU NEMOVITOSTÍ (CENOVÁ MAPA)\n\n`;
+                    prompt += `K dispozici jsou data z cenové mapy CUZK — realizovaný převod této nemovitosti (nebo srovnatelné nemovitosti v lokalitě) evidovaný v katastru nemovitostí.\n\n`;
+                    prompt += `### ⚠ KRITICKÉ INSTRUKCE K DATŮM Z CENOVÉ MAPY\n`;
+                    prompt += `Tato cena z katastru TI SLOUŽÍ POUZE JAKO ORIENTAČNÍ REFERENCE — NIKOLI jako základ ocenění ani jako potvrzení tržní hodnoty. Důvody:\n\n`;
+                    prompt += `1. **Kupující mohl nemovitost koupit za NADHODNOCENOU cenu** — přeplacení z emocí, neznalosti trhu, časového tlaku nebo spekulace. Realizační cena z KN nám neříká nic o tom, zda šlo o férovou tržní transakci.\n`;
+                    prompt += `2. **Časový posun** — od data převodu se trh mohl výrazně změnit (nahoru i dolů). Data starší než 12 měsíců jsou zvláště nespolehlivá.\n`;
+                    prompt += `3. **Nestandardní podmínky transakce** — cena mohla být ovlivněna propojenými osobami, tísní prodávajícího, nepeněžním plněním nebo jinými nestandardními okolnostmi.\n`;
+                    prompt += `4. **My financujeme tuto nemovitost jako zajištění úvěru** — naším úkolem je chránit věřitele, ne potvrzovat kupní cenu dlužníka.\n\n`;
+                    prompt += `**POSTUP**: Proveď vlastní nezávislé ocenění dle příslušné metodiky pro tento typ nemovitosti. Teprve po stanovení vlastní tržní hodnoty srovnej s cenou z cenové mapy a komentuj odchylku:\n`;
+                    prompt += `- Cena z KN **do 10 % nad** tvým odhadem tržní hodnoty: standardní rozptyl, bez zvláštního komentáře.\n`;
+                    prompt += `- Cena z KN **10–20 % nad** tvým odhadem: upozorni na možné přeplacení, vyžaduj detailní zdůvodnění.\n`;
+                    prompt += `- Cena z KN **více než 20 % nad** tvým odhadem: **RED FLAG** — explicitně upozorni věřitele, že kupující pravděpodobně přeplatil a zástavní hodnota bude výrazně nižší než cena z KN.\n\n`;
+                }
 
                 // Specifické instrukce podle typu
                 if (propertyType === 'land') {
