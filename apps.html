@@ -59,16 +59,22 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                                 Domů
                             </a>
                         </div>
-                        
                         <div class="nav-item">
-                            <a href="apps.html" class="nav-link active">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="7" height="7"/>
-                                    <rect x="14" y="3" width="7" height="7"/>
-                                    <rect x="14" y="14" width="7" height="7"/>
-                                    <rect x="3" y="14" width="7" height="7"/>
-                                </svg>
-                                Aplikace
+                            <a href="apps.html#osobni" class="nav-link" data-cat="osobni">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                Osobní
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="apps.html#pracovni" class="nav-link" data-cat="pracovni">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                                Pracovní
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="apps.html#profilend" class="nav-link" data-cat="profilend">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                ProfiLend
                             </a>
                         </div>
                     </div>
@@ -99,26 +105,10 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
             </div>
         </nav>
 
-        <!-- Category Picker Styles -->
+        <!-- Category Styles -->
         <style>
-            .cat-picker{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2rem}
-            .cat-card{background:var(--bg-primary);border:2px solid var(--border-color);border-radius:16px;padding:2.5rem 2rem;cursor:pointer;transition:all 0.3s ease;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1rem}
-            .cat-card:hover{border-color:var(--accent);box-shadow:0 8px 24px var(--accent-glow);transform:translateY(-2px)}
-            .cat-card-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center}
-            .cat-card-icon svg{width:28px;height:28px}
-            .cat-card h2{font-size:1.375rem;font-weight:700;color:var(--text-primary);margin:0}
-            .cat-card p{font-size:0.9375rem;color:var(--text-secondary);margin:0;line-height:1.5}
-            .cat-card .cat-count{font-size:0.8125rem;font-weight:600;color:var(--accent);background:var(--accent-light,rgba(56,189,248,0.1));padding:0.25rem 0.75rem;border-radius:20px;margin-top:0.25rem}
-            .cat-tabs{display:flex;gap:0;border-bottom:2px solid var(--border-color);margin-bottom:1.5rem;margin-top:1rem}
-            .cat-tab{padding:0.875rem 1.75rem;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--text-secondary);font-size:1rem;font-weight:600;font-family:inherit;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:0.5rem}
-            .cat-tab:hover{color:var(--text-primary)}
-            .cat-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-            .cat-tab svg{width:18px;height:18px;opacity:0.7}
-            .cat-tab.active svg{opacity:1}
             .category-section{display:none}
             .category-section.active{display:block}
-            @media(max-width:900px){.cat-picker{grid-template-columns:1fr 1fr !important}}
-            @media(max-width:640px){.cat-picker{grid-template-columns:1fr !important}.cat-card{padding:1.5rem}}
         </style>
 
         <!-- Main Content -->
@@ -128,51 +118,7 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                 <p class="page-subtitle">Profesionální nástroje pro investice a finance</p>
             </div>
 
-            <!-- Category Picker -->
-            <div id="category-picker" class="cat-picker" style="grid-template-columns:1fr 1fr 1fr;">
-                <div class="cat-card" onclick="showCategory('osobni')">
-                    <div class="cat-card-icon" style="background:var(--accent-light,rgba(56,189,248,0.1));color:var(--accent);">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    </div>
-                    <h2>Osobní</h2>
-                    <p>Investiční nástroje a kalkulačky</p>
-                    <span class="cat-count">5 aplikací</span>
-                </div>
-                <div class="cat-card" onclick="showCategory('pracovni')">
-                    <div class="cat-card-icon" style="background:rgba(236,72,153,0.1);color:#EC4899;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-                    </div>
-                    <h2>Pracovní</h2>
-                    <p>Nástroje pro správu portfolia a business</p>
-                    <span class="cat-count">1 aplikace</span>
-                </div>
-                <div class="cat-card" onclick="showCategory('profilend')">
-                    <div class="cat-card-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    </div>
-                    <h2>ProfiLend</h2>
-                    <p>Interní nástroje pro ProfiLend</p>
-                    <span class="cat-count">1 aplikace</span>
-                </div>
-            </div>
-
-            <!-- Category Tabs (hidden initially, shown after selection) -->
-            <div id="category-tabs" style="display:none">
-                <div class="cat-tabs">
-                    <button class="cat-tab" data-cat="osobni" onclick="showCategory('osobni')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        Osobní
-                    </button>
-                    <button class="cat-tab" data-cat="pracovni" onclick="showCategory('pracovni')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-                        Pracovní
-                    </button>
-                    <button class="cat-tab" data-cat="profilend" onclick="showCategory('profilend')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                        ProfiLend
-                    </button>
-                </div>
-            </div>
+            <!-- No intermediate picker — sections controlled by hash and nav -->
 
             <!-- Section: Osobní -->
             <div id="section-osobni" class="category-section">
@@ -510,27 +456,40 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
         <!-- Category Switch Script -->
         <script>
         function showCategory(cat) {
-            // Hide picker, show tabs
-            document.getElementById('category-picker').style.display = 'none';
-            document.getElementById('category-tabs').style.display = 'block';
-            // Toggle tabs active state
-            document.querySelectorAll('.cat-tab').forEach(function(t) {
-                t.classList.toggle('active', t.dataset.cat === cat);
-            });
             // Toggle sections
             document.querySelectorAll('.category-section').forEach(function(s) { s.classList.remove('active'); });
             var section = document.getElementById('section-' + cat);
             if (section) section.classList.add('active');
+            // Highlight active nav link
+            document.querySelectorAll('.nav-link[data-cat]').forEach(function(link) {
+                link.classList.toggle('active', link.dataset.cat === cat);
+            });
             // Update URL hash
             history.replaceState(null, '', '#' + cat);
         }
-        // On load: check hash
+        // Nav link click handler (prevent page reload when already on apps.html)
+        document.querySelectorAll('.nav-link[data-cat]').forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                showCategory(this.dataset.cat);
+            });
+        });
+        // On load: check hash, default to osobni
         (function() {
             var hash = window.location.hash.replace('#', '');
             if (hash === 'osobni' || hash === 'pracovni' || hash === 'profilend') {
                 showCategory(hash);
+            } else {
+                showCategory('osobni');
             }
         })();
+        // Handle hash changes (e.g. back/forward)
+        window.addEventListener('hashchange', function() {
+            var hash = window.location.hash.replace('#', '');
+            if (hash === 'osobni' || hash === 'pracovni' || hash === 'profilend') {
+                showCategory(hash);
+            }
+        });
         </script>
 
         <!-- Footer -->
@@ -544,7 +503,9 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                     <h4>Navigace</h4>
                     <ul>
                         <li><a href="index.html">Domů</a></li>
-                        <li><a href="apps.html">Aplikace</a></li>
+                        <li><a href="apps.html#osobni">Osobní</a></li>
+                        <li><a href="apps.html#pracovni">Pracovní</a></li>
+                        <li><a href="apps.html#profilend">ProfiLend</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">

@@ -59,16 +59,22 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                                 Domů
                             </a>
                         </div>
-                        
                         <div class="nav-item">
-                            <a href="apps.html" class="nav-link">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="3" width="7" height="7"/>
-                                    <rect x="14" y="3" width="7" height="7"/>
-                                    <rect x="14" y="14" width="7" height="7"/>
-                                    <rect x="3" y="14" width="7" height="7"/>
-                                </svg>
-                                Aplikace
+                            <a href="apps.html#osobni" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                Osobní
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="apps.html#pracovni" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                                Pracovní
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="apps.html#profilend" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                ProfiLend
                             </a>
                         </div>
                     </div>
@@ -257,6 +263,41 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                 </div>
             </div>
 
+            <!-- ProfiLend -->
+            <div class="section">
+                <h2 class="section-title" style="display:flex;align-items:center;gap:0.75rem;">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;background:rgba(16,185,129,0.1);color:#10b981;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </span>
+                    ProfiLend
+                </h2>
+                <div class="apps-grid">
+                    <a href="termsheet-generator.html" class="app-card">
+                        <div class="app-card-header">
+                            <div class="app-icon green">
+                                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <defs><linearGradient id="tsDoc2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="white" stop-opacity="0.9"/><stop offset="100%" stop-color="white" stop-opacity="0.5"/></linearGradient></defs>
+                                    <rect x="6" y="3" width="16" height="22" rx="2.5" fill="url(#tsDoc2)"/>
+                                    <line x1="10" y1="10" x2="18" y2="10" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+                                    <line x1="10" y1="13.5" x2="16" y2="13.5" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+                                    <line x1="10" y1="17" x2="17" y2="17" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+                                    <circle cx="23" cy="22" r="6" fill="white" fill-opacity="0.2"/>
+                                    <path d="M21 22l1.5 1.5 3-3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+                                    <rect x="8" y="5.5" width="10" height="2.5" rx="1" fill="white" opacity="0.3"/>
+                                </svg>
+                            </div>
+                            <span class="app-badge live">● Live</span>
+                        </div>
+                        <h3 class="app-card-title">Term Sheet Generátor</h3>
+                        <p class="app-card-desc">Vytváření a správa Term Sheetů pro klienty ProfiLend s exportem do Word a PDF</p>
+                        <div class="app-card-tags">
+                            <span class="tag">ProfiLend</span>
+                            <span class="tag">Term Sheet</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
             <!-- Features -->
             <div class="section">
                 <h2 class="section-title">Proč tyto nástroje?</h2>
@@ -333,7 +374,9 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                     <h4>Navigace</h4>
                     <ul>
                         <li><a href="index.html">Domů</a></li>
-                        <li><a href="apps.html">Aplikace</a></li>
+                        <li><a href="apps.html#osobni">Osobní</a></li>
+                        <li><a href="apps.html#pracovni">Pracovní</a></li>
+                        <li><a href="apps.html#profilend">ProfiLend</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">
