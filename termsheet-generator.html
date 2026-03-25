@@ -337,19 +337,26 @@
         .form-row .form-group { flex: 1; }
         .form-input-with-unit {
             display: flex;
-            align-items: center;
+            align-items: stretch;
         }
-        .form-input-with-unit input { border-radius: 8px 0 0 8px; }
+        .form-input-with-unit input {
+            border-radius: 10px 0 0 10px;
+            border-right: none;
+            min-width: 0;
+            flex: 1;
+        }
         .input-unit {
-            padding: 0.75rem 0.75rem;
+            padding: 0 1rem;
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
             border-left: none;
-            border-radius: 0 8px 8px 0;
+            border-radius: 0 10px 10px 0;
             color: var(--text-secondary);
             font-size: 0.875rem;
             font-weight: 600;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
         }
 
         /* ===== DYNAMIC LIST (Zajištění, Dokumentace) ===== */
