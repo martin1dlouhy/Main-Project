@@ -1,0 +1,1872 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Term Sheet Generátor | ProfiLend</title>
+    <script>if(localStorage.getItem("daynight-theme")==="carbon"){document.documentElement.classList.add("carbon");}</script>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        /* ===== PIN SCREEN ===== */
+        .pin-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-secondary);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s ease;
+        }
+        .pin-overlay.hidden { opacity: 0; pointer-events: none; }
+        .pin-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+            text-align: center;
+            max-width: 360px;
+            width: 90%;
+            box-shadow: var(--shadow-md);
+        }
+        .pin-box h2 {
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        .pin-box p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        .pin-input-group {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .pin-digit {
+            width: 52px;
+            height: 60px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-family: inherit;
+            transition: var(--transition);
+        }
+        .pin-digit:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--bg-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .pin-error {
+            color: var(--danger);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            margin-top: -0.5rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .pin-logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .pin-logo svg { width: 28px; height: 28px; }
+
+        /* ===== APP HEADER ===== */
+        .app-header {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.5rem 2rem;
+            margin: -2rem -2rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .app-header-left { display: flex; align-items: center; gap: 1rem; }
+        .app-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        .app-subtitle {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+        .profilend-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .header-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+        /* ===== VIEW TOGGLE ===== */
+        .view-tabs {
+            display: flex;
+            gap: 0;
+            background: var(--bg-surface);
+            border-radius: 10px;
+            padding: 4px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+            width: fit-content;
+        }
+        .view-tab {
+            padding: 0.625rem 1.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border: none;
+            background: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+        .view-tab:hover { color: var(--text-primary); }
+        .view-tab.active {
+            background: var(--bg-primary);
+            color: var(--accent);
+            box-shadow: var(--shadow);
+        }
+        .view-tab svg { width: 16px; height: 16px; }
+
+        /* ===== FORM SECTIONS ===== */
+        .form-section {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-title svg { width: 20px; height: 20px; color: var(--accent); }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.25rem;
+        }
+        .form-group { margin-bottom: 0.25rem; }
+        .form-label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            transition: var(--transition);
+            font-family: inherit;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--bg-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .form-textarea { min-height: 80px; resize: vertical; }
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+            opacity: 0.8;
+        }
+        .form-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+        .form-row .form-group { flex: 1; }
+        .form-input-with-unit {
+            display: flex;
+            align-items: center;
+        }
+        .form-input-with-unit input { border-radius: 8px 0 0 8px; }
+        .input-unit {
+            padding: 0.75rem 0.75rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-left: none;
+            border-radius: 0 8px 8px 0;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        /* ===== DYNAMIC LIST (Zajištění, Dokumentace) ===== */
+        .dynamic-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .dynamic-item {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .dynamic-item input, .dynamic-item select { flex: 1; }
+        .btn-remove-item {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+        .btn-remove-item:hover { background: rgba(239, 68, 68, 0.2); }
+        .btn-add-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--accent);
+            background: var(--accent-light);
+            border: 1px dashed var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            margin-top: 0.5rem;
+        }
+        .btn-add-item:hover { background: rgba(56, 189, 248, 0.2); }
+        .btn-add-item svg { width: 14px; height: 14px; }
+
+        /* ===== CHECKBOX GROUP ===== */
+        .checkbox-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        .checkbox-item label {
+            font-size: 0.9375rem;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        /* ===== WARNING BANNER ===== */
+        .warning-banner {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .warning-banner svg { width: 20px; height: 20px; color: var(--warning); flex-shrink: 0; margin-top: 1px; }
+        .warning-banner p { font-size: 0.875rem; color: var(--text-primary); line-height: 1.5; margin: 0; }
+
+        /* ===== ACTION BAR ===== */
+        .action-bar {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+            padding: 1.5rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+        .action-bar .btn { flex: 1; min-width: 180px; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: var(--transition);
+            cursor: pointer;
+            font-family: inherit;
+            border: none;
+        }
+        .btn svg { width: 18px; height: 18px; }
+        .btn-generate {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+        .btn-generate:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+        }
+        .btn-save {
+            background: linear-gradient(135deg, var(--accent), #0EA5E9);
+            color: white;
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+        .btn-save:hover { transform: translateY(-1px); }
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-danger-outline {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .btn-danger-outline:hover { background: rgba(239, 68, 68, 0.1); }
+
+        /* ===== LIST VIEW ===== */
+        .ts-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .ts-list-item {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .ts-list-item:hover {
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+        .ts-item-info { flex: 1; min-width: 0; }
+        .ts-item-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .ts-item-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .ts-meta-tag {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .ts-meta-tag svg { width: 12px; height: 12px; }
+        .ts-item-status {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .status-draft { background: rgba(148, 163, 184, 0.15); color: var(--text-secondary); }
+        .status-sent { background: rgba(56, 189, 248, 0.15); color: var(--accent); }
+        .status-approved { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+        .status-rejected { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+        .ts-item-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+        .ts-item-actions .btn {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8125rem;
+            min-width: auto;
+        }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+        .empty-state svg { width: 64px; height: 64px; opacity: 0.3; margin-bottom: 1rem; }
+        .empty-state h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        .empty-state p { font-size: 0.9375rem; margin-bottom: 1.5rem; }
+
+        /* ===== TOAST ===== */
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .toast {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.875rem 1.25rem;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            animation: slideIn 0.3s ease;
+            max-width: 360px;
+        }
+        .toast.success { border-left: 3px solid var(--success); }
+        .toast.error { border-left: 3px solid var(--danger); }
+        .toast.info { border-left: 3px solid var(--accent); }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* ===== FORMAT DIALOG ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.visible { opacity: 1; pointer-events: all; }
+        .modal {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 440px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .modal h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        .modal p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        .format-options { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+        .format-option {
+            flex: 1;
+            padding: 1.25rem;
+            background: var(--bg-surface);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .format-option:hover { border-color: var(--accent); }
+        .format-option.selected {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+        .format-option svg { width: 32px; height: 32px; margin-bottom: 0.5rem; }
+        .format-option span {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+
+        /* ===== LTV DISPLAY ===== */
+        .ltv-display {
+            background: var(--accent-light);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .ltv-label { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
+        .ltv-value { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
+
+        /* ===== SEARCH BAR ===== */
+        .search-bar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .search-input-wrapper {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+        .search-input-wrapper svg {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--text-secondary);
+        }
+        .search-input-wrapper input {
+            padding-left: 2.5rem;
+        }
+        .filter-select {
+            width: auto;
+            min-width: 140px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 968px) {
+            .app-header {
+                margin: -1.5rem -1.5rem 1.5rem;
+                padding: 1.5rem;
+            }
+            .app-title { font-size: 1.5rem; }
+            .form-grid { grid-template-columns: 1fr; }
+            .action-bar { flex-direction: column; }
+            .action-bar .btn { min-width: auto; }
+        }
+        @media (max-width: 640px) {
+            .header-actions { width: 100%; }
+            .header-actions .btn { flex: 1; }
+            .ts-list-item { flex-direction: column; align-items: flex-start; }
+            .ts-item-actions { width: 100%; }
+            .ts-item-actions .btn { flex: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ===== PIN SCREEN ===== -->
+    <div id="pin-overlay" class="pin-overlay">
+        <div class="pin-box">
+            <div class="pin-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+            </div>
+            <h2>ProfiLend</h2>
+            <p>Zadejte PIN pro přístup k Term Sheet Generátoru</p>
+            <div class="pin-input-group">
+                <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" data-index="0" autofocus>
+                <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" data-index="1">
+                <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" data-index="2">
+                <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" data-index="3">
+            </div>
+            <p id="pin-error" class="pin-error">Nesprávný PIN</p>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- ===== NAVIGATION ===== -->
+        <nav class="top-nav">
+            <div class="nav-container">
+                <div class="nav-left">
+                    <a href="index.html" class="logo">
+                        <div class="logo-icon">
+                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="logoBar1" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.5"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.25"/>
+                                    </linearGradient>
+                                    <linearGradient id="logoBar2" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.75"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.45"/>
+                                    </linearGradient>
+                                    <linearGradient id="logoBar3" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.7"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="4" y="20" width="6" height="8" rx="1.5" fill="url(#logoBar1)"/>
+                                <rect x="13" y="13" width="6" height="15" rx="1.5" fill="url(#logoBar2)"/>
+                                <rect x="22" y="4" width="6" height="24" rx="1.5" fill="url(#logoBar3)"/>
+                                <path d="M6 18L15 10L21 14L28 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+                                <circle cx="28" cy="4" r="2" fill="white" opacity="0.8"/>
+                            </svg>
+                        </div>
+                        <span>Investment Tools</span>
+                    </a>
+                    <div class="nav-menu">
+                        <div class="nav-item">
+                            <a href="index.html" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                    <polyline points="9 22 9 12 15 12 15 22"/>
+                                </svg>
+                                Domů
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="apps.html" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/>
+                                    <rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="14" y="14" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/>
+                                </svg>
+                                Aplikace
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-right">
+                    <div class="theme-toggle">
+                        <button class="theme-btn theme-btn-snow active" onclick="setTheme('snow')" title="Light Mode">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="5"/>
+                                <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                            </svg>
+                        </button>
+                        <button class="theme-btn theme-btn-carbon" onclick="setTheme('carbon')" title="Dark Mode">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- ===== MAIN CONTENT ===== -->
+        <main class="main-content">
+            <!-- Header -->
+            <div class="app-header">
+                <div class="app-header-left">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.25rem;">
+                            <h1 class="app-title">Term Sheet Generátor</h1>
+                            <span class="profilend-badge">ProfiLend</span>
+                        </div>
+                        <p class="app-subtitle">Vytváření a správa Term Sheetů pro klienty</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline" onclick="showView('list')" id="btn-show-list">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                        Přehled
+                    </button>
+                    <button class="btn btn-save" onclick="newTermSheet()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Nový Term Sheet
+                    </button>
+                </div>
+            </div>
+
+            <!-- ===== LIST VIEW ===== -->
+            <div id="view-list" style="display:none;">
+                <div class="search-bar">
+                    <div class="search-input-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" class="form-input" id="search-input" placeholder="Hledat podle názvu klienta..." oninput="filterList()">
+                    </div>
+                    <select class="form-select filter-select" id="filter-status" onchange="filterList()">
+                        <option value="">Všechny stavy</option>
+                        <option value="draft">Návrh</option>
+                        <option value="sent">Odesláno</option>
+                        <option value="approved">Schváleno</option>
+                        <option value="rejected">Zamítnuto</option>
+                    </select>
+                </div>
+                <div id="ts-list" class="ts-list"></div>
+            </div>
+
+            <!-- ===== FORM VIEW ===== -->
+            <div id="view-form">
+                <!-- Základní informace -->
+                <div class="form-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Základní informace
+                    </h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Úvěrovaný *</label>
+                            <input type="text" class="form-input" id="f-borrower" placeholder="Název klienta / právnické osoby">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Stav</label>
+                            <select class="form-select" id="f-status">
+                                <option value="draft">Návrh</option>
+                                <option value="sent">Odesláno klientovi</option>
+                                <option value="approved">Schváleno</option>
+                                <option value="rejected">Zamítnuto</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:1rem;">
+                        <label class="form-label">Účel úvěru</label>
+                        <textarea class="form-textarea" id="f-purpose" placeholder="Popis účelu financování..." style="min-height:60px;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Parametry úvěru -->
+                <div class="form-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                        Parametry úvěru
+                    </h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Úvěrovaná částka *</label>
+                            <div class="form-input-with-unit">
+                                <input type="text" class="form-input" id="f-amount" placeholder="5 000 000" oninput="formatAmount(this); calcLTV();">
+                                <span class="input-unit" id="amount-unit">CZK</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Měna</label>
+                            <select class="form-select" id="f-currency" onchange="document.getElementById('amount-unit').textContent=this.value; document.getElementById('collateral-unit').textContent=this.value;">
+                                <option value="CZK">CZK</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Datum čerpání</label>
+                            <input type="date" class="form-input" id="f-drawdown-date">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Čerpání</label>
+                            <select class="form-select" id="f-drawdown-type">
+                                <option value="Jednorázové">Jednorázové</option>
+                                <option value="Ve tranších">Ve tranších</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Úrok (% p.a.) *</label>
+                            <div class="form-input-with-unit">
+                                <input type="text" class="form-input" id="f-interest" placeholder="12">
+                                <span class="input-unit">% p.a.</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Placení úroků</label>
+                            <select class="form-select" id="f-interest-payment">
+                                <option value="Měsíční">Měsíční</option>
+                                <option value="Čtvrtletní">Čtvrtletní</option>
+                                <option value="Anuitní">Anuitní</option>
+                                <option value="Úroky s jistinou k splatnosti">Úroky s jistinou k splatnosti</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Doba splatnosti *</label>
+                            <input type="text" class="form-input" id="f-maturity" placeholder="např. 2 – 3 roky">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Předčasné splacení</label>
+                            <input type="text" class="form-input" id="f-early-repayment" placeholder="např. Možné, 6 % poplatek">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Poplatky -->
+                <div class="form-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        Poplatky
+                    </h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Poplatek za sjednání</label>
+                            <div class="form-row">
+                                <div class="form-group" style="flex:2;">
+                                    <input type="text" class="form-input" id="f-origination-fee" placeholder="např. 2">
+                                </div>
+                                <div class="form-group" style="flex:1;">
+                                    <select class="form-select" id="f-origination-fee-type">
+                                        <option value="percent">% z částky</option>
+                                        <option value="absolute">Absolutní</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ostatní náklady a poplatky</label>
+                            <textarea class="form-textarea" id="f-other-costs" placeholder="např. Náklady na notářský zápis..." style="min-height:60px;"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zajištění -->
+                <div class="form-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Zajištění
+                    </h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Hodnota zajištění</label>
+                            <div class="form-input-with-unit">
+                                <input type="text" class="form-input" id="f-collateral-value" placeholder="Odhadní cena" oninput="formatAmount(this); calcLTV();">
+                                <span class="input-unit" id="collateral-unit">CZK</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">LTV (Loan-to-Value)</label>
+                            <div class="ltv-display">
+                                <span class="ltv-label">LTV</span>
+                                <span class="ltv-value" id="ltv-value">—</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top:1rem;">
+                        <label class="form-label">Položky zajištění</label>
+                        <div id="collateral-list" class="dynamic-list">
+                            <div class="dynamic-item">
+                                <input type="text" class="form-input" placeholder="např. LV 303, 321 kú Čečovice (BD)">
+                                <button class="btn-remove-item" onclick="removeItem(this)" title="Odebrat">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn-add-item" onclick="addCollateralItem()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Přidat zajištění
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dokumentace -->
+                <div class="form-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Dokumentace
+                    </h2>
+                    <div class="checkbox-group" id="doc-checkboxes">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="doc-zastavni" checked>
+                            <label for="doc-zastavni">Zástavní smlouva – nemovitosti</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="doc-uverova" checked>
+                            <label for="doc-uverova">Úvěrová smlouva</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="doc-nz" checked>
+                            <label for="doc-nz">Notářský zápis (NZ)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="doc-smenka">
+                            <label for="doc-smenka">Směnka</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="doc-vinkulace">
+                            <label for="doc-vinkulace">Vinkulace pojistného plnění</label>
+                        </div>
+                    </div>
+                    <div style="margin-top:0.75rem;">
+                        <label class="form-label">Další dokumenty</label>
+                        <div id="custom-docs-list" class="dynamic-list"></div>
+                        <button class="btn-add-item" onclick="addCustomDoc()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Přidat dokument
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Doplňující informace -->
+                <div class="form-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        Doplňující informace
+                    </h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Datum platnosti Term Sheetu</label>
+                            <input type="date" class="form-input" id="f-validity-date">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:1rem;">
+                        <label class="form-label">Interní poznámky</label>
+                        <textarea class="form-textarea" id="f-notes" placeholder="Soukromé poznámky — nebudou součástí výstupního dokumentu..." style="min-height:80px;"></textarea>
+                        <p class="form-hint">Tyto poznámky se neobjeví ve vygenerovaném Term Sheetu.</p>
+                    </div>
+
+                    <div class="warning-banner">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <p><strong>Upozornění:</strong> Finální schválení financování závisí na interním ocenění nemovitosti ze strany ProfiLend. Uvedené podmínky jsou předběžné a mohou být upraveny na základě výsledků ocenění.</p>
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="action-bar">
+                    <button class="btn btn-save" onclick="saveTermSheet()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Uložit
+                    </button>
+                    <button class="btn btn-generate" onclick="openGenerateDialog()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        Vygenerovat Term Sheet
+                    </button>
+                    <button class="btn btn-outline" onclick="resetForm()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        Reset
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- ===== FORMAT DIALOG ===== -->
+        <div id="format-modal" class="modal-overlay">
+            <div class="modal">
+                <h3>Vygenerovat Term Sheet</h3>
+                <p>Vyberte formát výstupního dokumentu</p>
+                <div class="format-options">
+                    <div class="format-option selected" data-format="docx" onclick="selectFormat(this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span>Word (.docx)</span>
+                    </div>
+                    <div class="format-option" data-format="pdf" onclick="selectFormat(this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span>PDF (.pdf)</span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-outline" onclick="closeGenerateDialog()">Zrušit</button>
+                    <button class="btn btn-generate" onclick="generateTermSheet()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Stáhnout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Container -->
+        <div id="toast-container" class="toast-container"></div>
+
+        <!-- ===== FOOTER ===== -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Investment Tools</h4>
+                    <p>Profesionální nástroje pro správu investic a financí.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Navigace</h4>
+                    <ul>
+                        <li><a href="index.html">Domů</a></li>
+                        <li><a href="apps.html">Aplikace</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Kontakt</h4>
+                    <p>Email: <a href="mailto:martin@dlouhy.com">martin@dlouhy.com</a></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Martin Dlouhý. Všechna práva vyhrazena.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ===== SCRIPTS ===== -->
+    <script src="script.js"></script>
+    <script>
+    /* ================================================
+       TERM SHEET GENERATOR — ProfiLend
+       ================================================ */
+
+    // ===== STATE =====
+    let currentEditId = null;
+    let selectedFormat = 'docx';
+    let termSheets = [];
+    let dirHandle = null;
+
+    // ===== PIN AUTHENTICATION =====
+    const APP_PIN = '0409';
+
+    (function initPIN() {
+        if (sessionStorage.getItem('ts-auth') === 'true') {
+            document.getElementById('pin-overlay').classList.add('hidden');
+            return;
+        }
+        var digits = document.querySelectorAll('.pin-digit');
+        digits.forEach(function(d, i) {
+            d.addEventListener('input', function() {
+                if (d.value.length === 1 && i < 3) digits[i + 1].focus();
+                checkPIN();
+            });
+            d.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && d.value === '' && i > 0) digits[i - 1].focus();
+            });
+        });
+    })();
+
+    function checkPIN() {
+        var digits = document.querySelectorAll('.pin-digit');
+        var pin = '';
+        digits.forEach(function(d) { pin += d.value; });
+        if (pin.length === 4) {
+            if (pin === APP_PIN) {
+                sessionStorage.setItem('ts-auth', 'true');
+                document.getElementById('pin-overlay').classList.add('hidden');
+                document.getElementById('pin-error').style.display = 'none';
+            } else {
+                document.getElementById('pin-error').style.display = 'block';
+                digits.forEach(function(d) { d.value = ''; });
+                digits[0].focus();
+            }
+        }
+    }
+
+    // ===== VIEW MANAGEMENT =====
+    function showView(view) {
+        document.getElementById('view-form').style.display = view === 'form' ? 'block' : 'none';
+        document.getElementById('view-list').style.display = view === 'list' ? 'block' : 'none';
+        if (view === 'list') renderList();
+    }
+
+    function newTermSheet() {
+        currentEditId = null;
+        resetForm();
+        showView('form');
+    }
+
+    // ===== DATA PERSISTENCE (IndexedDB) =====
+    var dbName = 'ProfiLendTermSheets';
+    var storeName = 'termsheets';
+    var db = null;
+
+    function openDB() {
+        return new Promise(function(resolve, reject) {
+            var request = indexedDB.open(dbName, 1);
+            request.onupgradeneeded = function(e) {
+                var d = e.target.result;
+                if (!d.objectStoreNames.contains(storeName)) {
+                    d.createObjectStore(storeName, { keyPath: 'id' });
+                }
+            };
+            request.onsuccess = function(e) {
+                db = e.target.result;
+                resolve(db);
+            };
+            request.onerror = function(e) { reject(e); };
+        });
+    }
+
+    function saveToDB(data) {
+        return new Promise(function(resolve, reject) {
+            var tx = db.transaction(storeName, 'readwrite');
+            tx.objectStore(storeName).put(data);
+            tx.oncomplete = function() { resolve(); };
+            tx.onerror = function(e) { reject(e); };
+        });
+    }
+
+    function getAllFromDB() {
+        return new Promise(function(resolve, reject) {
+            var tx = db.transaction(storeName, 'readonly');
+            var req = tx.objectStore(storeName).getAll();
+            req.onsuccess = function() { resolve(req.result || []); };
+            req.onerror = function(e) { reject(e); };
+        });
+    }
+
+    function deleteFromDB(id) {
+        return new Promise(function(resolve, reject) {
+            var tx = db.transaction(storeName, 'readwrite');
+            tx.objectStore(storeName).delete(id);
+            tx.oncomplete = function() { resolve(); };
+            tx.onerror = function(e) { reject(e); };
+        });
+    }
+
+    // ===== FORM HELPERS =====
+    function formatAmount(input) {
+        var raw = input.value.replace(/[^\d]/g, '');
+        if (raw === '') { input.value = ''; return; }
+        input.value = parseInt(raw).toLocaleString('cs-CZ');
+    }
+
+    function parseAmount(str) {
+        if (!str) return 0;
+        return parseInt(str.replace(/[^\d]/g, '')) || 0;
+    }
+
+    function calcLTV() {
+        var amount = parseAmount(document.getElementById('f-amount').value);
+        var collateral = parseAmount(document.getElementById('f-collateral-value').value);
+        var el = document.getElementById('ltv-value');
+        if (amount > 0 && collateral > 0) {
+            var ltv = (amount / collateral * 100).toFixed(1);
+            el.textContent = ltv + ' %';
+            el.style.color = parseFloat(ltv) > 80 ? 'var(--danger)' : parseFloat(ltv) > 65 ? 'var(--warning)' : 'var(--success)';
+        } else {
+            el.textContent = '—';
+            el.style.color = 'var(--accent)';
+        }
+    }
+
+    function addCollateralItem() {
+        var list = document.getElementById('collateral-list');
+        var div = document.createElement('div');
+        div.className = 'dynamic-item';
+        div.innerHTML = '<input type="text" class="form-input" placeholder="např. LV xxx kú Obec (typ)">' +
+            '<button class="btn-remove-item" onclick="removeItem(this)" title="Odebrat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+        list.appendChild(div);
+    }
+
+    function addCustomDoc() {
+        var list = document.getElementById('custom-docs-list');
+        var div = document.createElement('div');
+        div.className = 'dynamic-item';
+        div.innerHTML = '<input type="text" class="form-input" placeholder="Název dokumentu">' +
+            '<button class="btn-remove-item" onclick="removeItem(this)" title="Odebrat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+        list.appendChild(div);
+    }
+
+    function removeItem(btn) {
+        btn.parentElement.remove();
+    }
+
+    // ===== COLLECT FORM DATA =====
+    function collectFormData() {
+        var collateralItems = [];
+        document.querySelectorAll('#collateral-list .dynamic-item input').forEach(function(inp) {
+            if (inp.value.trim()) collateralItems.push(inp.value.trim());
+        });
+
+        var docs = [];
+        if (document.getElementById('doc-zastavni').checked) docs.push('Zástavní smlouva – nemovitosti');
+        if (document.getElementById('doc-uverova').checked) docs.push('Úvěrová smlouva');
+        if (document.getElementById('doc-nz').checked) docs.push('Notářský zápis (NZ)');
+        if (document.getElementById('doc-smenka').checked) docs.push('Směnka');
+        if (document.getElementById('doc-vinkulace').checked) docs.push('Vinkulace pojistného plnění');
+        document.querySelectorAll('#custom-docs-list .dynamic-item input').forEach(function(inp) {
+            if (inp.value.trim()) docs.push(inp.value.trim());
+        });
+
+        var feeVal = document.getElementById('f-origination-fee').value.trim();
+        var feeType = document.getElementById('f-origination-fee-type').value;
+        var feeDisplay = '';
+        if (feeVal) {
+            feeDisplay = feeType === 'percent' ? feeVal + ' % z úvěrované částky' : feeVal + ' ' + document.getElementById('f-currency').value;
+        }
+
+        return {
+            id: currentEditId || ('ts-' + Date.now()),
+            borrower: document.getElementById('f-borrower').value.trim(),
+            status: document.getElementById('f-status').value,
+            purpose: document.getElementById('f-purpose').value.trim(),
+            amount: document.getElementById('f-amount').value.trim(),
+            currency: document.getElementById('f-currency').value,
+            drawdownDate: document.getElementById('f-drawdown-date').value,
+            drawdownType: document.getElementById('f-drawdown-type').value,
+            interest: document.getElementById('f-interest').value.trim(),
+            interestPayment: document.getElementById('f-interest-payment').value,
+            maturity: document.getElementById('f-maturity').value.trim(),
+            earlyRepayment: document.getElementById('f-early-repayment').value.trim(),
+            originationFee: feeVal,
+            originationFeeType: feeType,
+            originationFeeDisplay: feeDisplay,
+            otherCosts: document.getElementById('f-other-costs').value.trim(),
+            collateralValue: document.getElementById('f-collateral-value').value.trim(),
+            collateralItems: collateralItems,
+            documentation: docs,
+            validityDate: document.getElementById('f-validity-date').value,
+            notes: document.getElementById('f-notes').value.trim(),
+            createdAt: currentEditId ? (termSheets.find(function(t) { return t.id === currentEditId; }) || {}).createdAt || new Date().toISOString() : new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+    }
+
+    // ===== POPULATE FORM =====
+    function populateForm(data) {
+        document.getElementById('f-borrower').value = data.borrower || '';
+        document.getElementById('f-status').value = data.status || 'draft';
+        document.getElementById('f-purpose').value = data.purpose || '';
+        document.getElementById('f-amount').value = data.amount || '';
+        document.getElementById('f-currency').value = data.currency || 'CZK';
+        document.getElementById('amount-unit').textContent = data.currency || 'CZK';
+        document.getElementById('collateral-unit').textContent = data.currency || 'CZK';
+        document.getElementById('f-drawdown-date').value = data.drawdownDate || '';
+        document.getElementById('f-drawdown-type').value = data.drawdownType || 'Jednorázové';
+        document.getElementById('f-interest').value = data.interest || '';
+        document.getElementById('f-interest-payment').value = data.interestPayment || 'Měsíční';
+        document.getElementById('f-maturity').value = data.maturity || '';
+        document.getElementById('f-early-repayment').value = data.earlyRepayment || '';
+        document.getElementById('f-origination-fee').value = data.originationFee || '';
+        document.getElementById('f-origination-fee-type').value = data.originationFeeType || 'percent';
+        document.getElementById('f-other-costs').value = data.otherCosts || '';
+        document.getElementById('f-collateral-value').value = data.collateralValue || '';
+        document.getElementById('f-validity-date').value = data.validityDate || '';
+        document.getElementById('f-notes').value = data.notes || '';
+
+        // Collateral items
+        var list = document.getElementById('collateral-list');
+        list.innerHTML = '';
+        var items = data.collateralItems || [''];
+        items.forEach(function(item) {
+            var div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = '<input type="text" class="form-input" placeholder="např. LV xxx kú Obec (typ)" value="' + escapeHtml(item) + '">' +
+                '<button class="btn-remove-item" onclick="removeItem(this)" title="Odebrat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+            list.appendChild(div);
+        });
+        if (items.length === 0) addCollateralItem();
+
+        // Documentation checkboxes
+        var docsArr = data.documentation || [];
+        document.getElementById('doc-zastavni').checked = docsArr.indexOf('Zástavní smlouva – nemovitosti') >= 0;
+        document.getElementById('doc-uverova').checked = docsArr.indexOf('Úvěrová smlouva') >= 0;
+        document.getElementById('doc-nz').checked = docsArr.indexOf('Notářský zápis (NZ)') >= 0;
+        document.getElementById('doc-smenka').checked = docsArr.indexOf('Směnka') >= 0;
+        document.getElementById('doc-vinkulace').checked = docsArr.indexOf('Vinkulace pojistného plnění') >= 0;
+
+        // Custom docs
+        var customDocs = docsArr.filter(function(d) {
+            return ['Zástavní smlouva – nemovitosti', 'Úvěrová smlouva', 'Notářský zápis (NZ)', 'Směnka', 'Vinkulace pojistného plnění'].indexOf(d) === -1;
+        });
+        var cdList = document.getElementById('custom-docs-list');
+        cdList.innerHTML = '';
+        customDocs.forEach(function(doc) {
+            var div = document.createElement('div');
+            div.className = 'dynamic-item';
+            div.innerHTML = '<input type="text" class="form-input" placeholder="Název dokumentu" value="' + escapeHtml(doc) + '">' +
+                '<button class="btn-remove-item" onclick="removeItem(this)" title="Odebrat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+            cdList.appendChild(div);
+        });
+
+        calcLTV();
+    }
+
+    function resetForm() {
+        currentEditId = null;
+        document.getElementById('f-borrower').value = '';
+        document.getElementById('f-status').value = 'draft';
+        document.getElementById('f-purpose').value = '';
+        document.getElementById('f-amount').value = '';
+        document.getElementById('f-currency').value = 'CZK';
+        document.getElementById('amount-unit').textContent = 'CZK';
+        document.getElementById('collateral-unit').textContent = 'CZK';
+        document.getElementById('f-drawdown-date').value = '';
+        document.getElementById('f-drawdown-type').value = 'Jednorázové';
+        document.getElementById('f-interest').value = '';
+        document.getElementById('f-interest-payment').value = 'Měsíční';
+        document.getElementById('f-maturity').value = '';
+        document.getElementById('f-early-repayment').value = '';
+        document.getElementById('f-origination-fee').value = '';
+        document.getElementById('f-origination-fee-type').value = 'percent';
+        document.getElementById('f-other-costs').value = '';
+        document.getElementById('f-collateral-value').value = '';
+        document.getElementById('f-validity-date').value = '';
+        document.getElementById('f-notes').value = '';
+        document.getElementById('collateral-list').innerHTML = '';
+        addCollateralItem();
+        document.getElementById('custom-docs-list').innerHTML = '';
+        document.getElementById('doc-zastavni').checked = true;
+        document.getElementById('doc-uverova').checked = true;
+        document.getElementById('doc-nz').checked = true;
+        document.getElementById('doc-smenka').checked = false;
+        document.getElementById('doc-vinkulace').checked = false;
+        calcLTV();
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function sanitizeFileName(name) {
+        return name.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, ' ').trim();
+    }
+
+    function validateForm(data) {
+        var errors = [];
+        if (!data.borrower) errors.push('Úvěrovaný');
+        if (!data.amount) errors.push('Úvěrovaná částka');
+        if (!data.interest) errors.push('Úrok');
+        if (!data.maturity) errors.push('Doba splatnosti');
+        return errors;
+    }
+
+    // ===== SAVE =====
+    async function saveTermSheet() {
+        var data = collectFormData();
+        if (!data.borrower) {
+            showToast('Vyplňte název úvěrovaného.', 'error');
+            document.getElementById('f-borrower').focus();
+            return;
+        }
+        try {
+            currentEditId = data.id;
+            await saveToDB(data);
+            termSheets = await getAllFromDB();
+            showToast('Term Sheet uložen: ' + data.borrower, 'success');
+        } catch (e) {
+            console.error('Save error:', e);
+            showToast('Chyba při ukládání: ' + e.message, 'error');
+        }
+    }
+
+    // ===== LOAD / EDIT =====
+    async function loadTermSheet(id) {
+        var data = termSheets.find(function(t) { return t.id === id; });
+        if (!data) return;
+        currentEditId = id;
+        populateForm(data);
+        showView('form');
+        showToast('Načten: ' + data.borrower, 'info');
+    }
+
+    // ===== DELETE =====
+    async function confirmDeleteTS(id) {
+        var ts = termSheets.find(function(t) { return t.id === id; });
+        if (!ts) return;
+        if (!confirm('Opravdu chcete smazat Term Sheet pro "' + ts.borrower + '"?')) return;
+        await deleteFromDB(id);
+        termSheets = await getAllFromDB();
+        renderList();
+        showToast('Smazáno: ' + ts.borrower, 'info');
+    }
+
+    // ===== LIST RENDERING =====
+    function renderList() {
+        var container = document.getElementById('ts-list');
+        var search = (document.getElementById('search-input').value || '').toLowerCase();
+        var statusFilter = document.getElementById('filter-status').value;
+
+        var filtered = termSheets.filter(function(ts) {
+            var matchName = !search || ts.borrower.toLowerCase().indexOf(search) >= 0;
+            var matchStatus = !statusFilter || ts.status === statusFilter;
+            return matchName && matchStatus;
+        });
+
+        // Sort by updatedAt desc
+        filtered.sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); });
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="empty-state">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+                '<h3>' + (search || statusFilter ? 'Žádné výsledky' : 'Zatím žádné Term Sheety') + '</h3>' +
+                '<p>' + (search || statusFilter ? 'Zkuste upravit vyhledávání nebo filtr.' : 'Vytvořte svůj první Term Sheet kliknutím na tlačítko výše.') + '</p>' +
+                '</div>';
+            return;
+        }
+
+        var html = '';
+        var statusLabels = { draft: 'Návrh', sent: 'Odesláno', approved: 'Schváleno', rejected: 'Zamítnuto' };
+        var statusClass = { draft: 'status-draft', sent: 'status-sent', approved: 'status-approved', rejected: 'status-rejected' };
+        filtered.forEach(function(ts) {
+            var dateStr = new Date(ts.updatedAt).toLocaleDateString('cs-CZ');
+            var amountStr = ts.amount ? (escapeHtml(ts.amount) + ' ' + escapeHtml(ts.currency || 'CZK')) : '—';
+            var safeId = escapeHtml(ts.id);
+
+            html += '<div class="ts-list-item" data-ts-id="' + safeId + '">' +
+                '<div class="ts-item-info">' +
+                    '<div class="ts-item-name">' + escapeHtml(ts.borrower) + '</div>' +
+                    '<div class="ts-item-meta">' +
+                        '<span class="ts-meta-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>' + amountStr + '</span>' +
+                        '<span class="ts-meta-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' + dateStr + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<span class="ts-item-status ' + (statusClass[ts.status] || 'status-draft') + '">' + (statusLabels[ts.status] || 'Návrh') + '</span>' +
+                '<div class="ts-item-actions">' +
+                    '<button class="btn btn-outline ts-btn-edit" data-ts-id="' + safeId + '" title="Upravit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>' +
+                    '<button class="btn btn-danger-outline ts-btn-delete" data-ts-id="' + safeId + '" title="Smazat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
+                '</div>' +
+            '</div>';
+        });
+        container.innerHTML = html;
+
+        // Attach event listeners safely (no inline onclick with IDs)
+        container.querySelectorAll('.ts-list-item').forEach(function(item) {
+            item.addEventListener('click', function(e) {
+                if (!e.target.closest('.ts-item-actions')) {
+                    loadTermSheet(item.dataset.tsId);
+                }
+            });
+        });
+        container.querySelectorAll('.ts-btn-edit').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                loadTermSheet(btn.dataset.tsId);
+            });
+        });
+        container.querySelectorAll('.ts-btn-delete').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                confirmDeleteTS(btn.dataset.tsId);
+            });
+        });
+    }
+
+    function filterList() { renderList(); }
+
+    // ===== FORMAT DIALOG =====
+    function openGenerateDialog() {
+        var data = collectFormData();
+        var errors = validateForm(data);
+        if (errors.length > 0) {
+            showToast('Vyplňte povinná pole: ' + errors.join(', '), 'error');
+            if (!data.borrower) document.getElementById('f-borrower').focus();
+            else if (!data.amount) document.getElementById('f-amount').focus();
+            else if (!data.interest) document.getElementById('f-interest').focus();
+            else if (!data.maturity) document.getElementById('f-maturity').focus();
+            return;
+        }
+        document.getElementById('format-modal').classList.add('visible');
+    }
+
+    function closeGenerateDialog() {
+        document.getElementById('format-modal').classList.remove('visible');
+    }
+
+    function selectFormat(el) {
+        document.querySelectorAll('.format-option').forEach(function(o) { o.classList.remove('selected'); });
+        el.classList.add('selected');
+        selectedFormat = el.dataset.format;
+    }
+
+    // ===== GENERATE DOCX =====
+    function generateDOCX(data) {
+        var D = docx;
+
+        var children = [];
+
+        // Title
+        children.push(new D.Paragraph({
+            children: [new D.TextRun({ text: 'Term Sheet – financování', bold: true, size: 32, font: 'Calibri' })],
+            spacing: { after: 400 },
+            alignment: D.AlignmentType.LEFT,
+        }));
+
+        // Helper function
+        function addField(label, value) {
+            if (!value) return;
+            children.push(new D.Paragraph({
+                children: [new D.TextRun({ text: label, bold: true, size: 24, font: 'Calibri' })],
+                spacing: { before: 200, after: 60 },
+            }));
+            children.push(new D.Paragraph({
+                children: [new D.TextRun({ text: value, size: 24, font: 'Calibri' })],
+                spacing: { after: 80 },
+            }));
+        }
+
+        addField('Úvěrovaný:', data.borrower);
+        if (data.purpose) addField('Účel úvěru:', data.purpose);
+        addField('Úvěrovaná částka:', data.amount ? data.amount + ' ' + data.currency : '');
+        if (data.drawdownDate) {
+            var dd = new Date(data.drawdownDate);
+            addField('Datum čerpání:', dd.toLocaleDateString('cs-CZ'));
+        }
+        addField('Čerpání:', data.drawdownType);
+        addField('Měna:', data.currency);
+        addField('Úrok:', data.interest ? data.interest + ' % p.a.' : '');
+        addField('Placení úroků:', data.interestPayment);
+        addField('Doba splatnosti:', data.maturity);
+        if (data.earlyRepayment) addField('Předčasné splacení:', data.earlyRepayment);
+        if (data.originationFeeDisplay) addField('Poplatek za sjednání:', data.originationFeeDisplay);
+
+        // Collateral value + LTV
+        if (data.collateralValue) {
+            addField('Hodnota zajištění:', data.collateralValue + ' ' + data.currency);
+            var amt = parseAmount(data.amount);
+            var col = parseAmount(data.collateralValue);
+            if (amt > 0 && col > 0) {
+                addField('LTV:', (amt / col * 100).toFixed(1) + ' %');
+            }
+        }
+
+        // Collateral items
+        if (data.collateralItems && data.collateralItems.length > 0) {
+            children.push(new D.Paragraph({
+                children: [new D.TextRun({ text: 'Zajištění:', bold: true, size: 24, font: 'Calibri' })],
+                spacing: { before: 200, after: 60 },
+            }));
+            data.collateralItems.forEach(function(item) {
+                children.push(new D.Paragraph({
+                    children: [new D.TextRun({ text: item, size: 24, font: 'Calibri' })],
+                    spacing: { after: 40 },
+                }));
+            });
+        }
+
+        // Documentation
+        if (data.documentation && data.documentation.length > 0) {
+            children.push(new D.Paragraph({
+                children: [new D.TextRun({ text: 'Dokumentace:', bold: true, size: 24, font: 'Calibri' })],
+                spacing: { before: 200, after: 60 },
+            }));
+            data.documentation.forEach(function(doc) {
+                children.push(new D.Paragraph({
+                    children: [new D.TextRun({ text: doc, size: 24, font: 'Calibri' })],
+                    spacing: { after: 40 },
+                }));
+            });
+        }
+
+        // Other costs
+        if (data.otherCosts) addField('Ostatní náklady a poplatky:', data.otherCosts);
+
+        // Validity date
+        if (data.validityDate) {
+            var vd = new Date(data.validityDate);
+            addField('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
+        }
+
+        // Warning
+        children.push(new D.Paragraph({ children: [], spacing: { before: 300 } }));
+        children.push(new D.Paragraph({
+            children: [
+                new D.TextRun({ text: 'Upozornění: ', bold: true, size: 20, font: 'Calibri', italics: true }),
+                new D.TextRun({ text: 'Finální schválení financování závisí na interním ocenění nemovitosti ze strany ProfiLend. Uvedené podmínky jsou předběžné a mohou být upraveny na základě výsledků ocenění.', size: 20, font: 'Calibri', italics: true })
+            ],
+            spacing: { before: 200 },
+        }));
+
+        var doc = new D.Document({
+            sections: [{
+                properties: {
+                    page: {
+                        margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 },
+                    }
+                },
+                children: children
+            }]
+        });
+
+        return D.Packer.toBlob(doc);
+    }
+
+    // ===== CZECH FONT FOR PDF =====
+    var czechFontLoaded = false;
+    var czechFontData = null;
+    var czechFontBoldData = null;
+
+    async function loadCzechFont() {
+        if (czechFontLoaded) return true;
+        try {
+            // DejaVu Sans — open-source font with full Czech diacritics support
+            var fontUrl = 'https://cdn.jsdelivr.net/gh/nicoptere/2400fonts@master/fonts/DejaVuSans.ttf';
+            var boldUrl = 'https://cdn.jsdelivr.net/gh/nicoptere/2400fonts@master/fonts/DejaVuSans-Bold.ttf';
+
+            var [fontResp, boldResp] = await Promise.all([
+                fetch(fontUrl),
+                fetch(boldUrl)
+            ]);
+
+            if (!fontResp.ok || !boldResp.ok) throw new Error('Font download failed');
+
+            var fontBuf = await fontResp.arrayBuffer();
+            var boldBuf = await boldResp.arrayBuffer();
+
+            // Convert to base64
+            function bufToBase64(buf) {
+                var bytes = new Uint8Array(buf);
+                var binary = '';
+                for (var i = 0; i < bytes.byteLength; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary);
+            }
+
+            czechFontData = bufToBase64(fontBuf);
+            czechFontBoldData = bufToBase64(boldBuf);
+            czechFontLoaded = true;
+            return true;
+        } catch (e) {
+            console.warn('Czech font load failed, using fallback:', e);
+            return false;
+        }
+    }
+
+    // Pre-load font on page load
+    loadCzechFont();
+
+    // ===== GENERATE PDF =====
+    async function generatePDF(data) {
+        var jsPDF = window.jspdf.jsPDF;
+        var pdf = new jsPDF('p', 'mm', 'a4');
+        var y = 25;
+        var leftMargin = 20;
+        var pageWidth = 170;
+
+        // Register Czech font if available
+        var fontName = 'helvetica';
+        if (czechFontLoaded && czechFontData) {
+            pdf.addFileToVFS('DejaVuSans.ttf', czechFontData);
+            pdf.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
+            if (czechFontBoldData) {
+                pdf.addFileToVFS('DejaVuSans-Bold.ttf', czechFontBoldData);
+                pdf.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
+            }
+            fontName = 'DejaVuSans';
+        }
+
+        pdf.setFont(fontName, 'bold');
+        pdf.setFontSize(18);
+        pdf.text('Term Sheet \u2013 financov\u00e1n\u00ed', leftMargin, y);
+        y += 15;
+
+        function addFieldPDF(label, value) {
+            if (!value) return;
+            if (y > 265) { pdf.addPage(); y = 25; }
+            pdf.setFont(fontName, 'bold');
+            pdf.setFontSize(11);
+            pdf.text(label, leftMargin, y);
+            y += 6;
+            pdf.setFont(fontName, 'normal');
+            pdf.setFontSize(11);
+            var lines = pdf.splitTextToSize(value, pageWidth);
+            pdf.text(lines, leftMargin, y);
+            y += lines.length * 5 + 4;
+        }
+
+        addFieldPDF('\u00dav\u011brovan\u00fd:', data.borrower);
+        if (data.purpose) addFieldPDF('\u00da\u010del \u00fav\u011bru:', data.purpose);
+        addFieldPDF('\u00dav\u011brovan\u00e1 \u010d\u00e1stka:', data.amount ? data.amount + ' ' + data.currency : '');
+        if (data.drawdownDate) {
+            var dd = new Date(data.drawdownDate);
+            addFieldPDF('Datum \u010derp\u00e1n\u00ed:', dd.toLocaleDateString('cs-CZ'));
+        }
+        addFieldPDF('\u010cerp\u00e1n\u00ed:', data.drawdownType);
+        addFieldPDF('M\u011bna:', data.currency);
+        addFieldPDF('\u00darok:', data.interest ? data.interest + ' % p.a.' : '');
+        addFieldPDF('Placen\u00ed \u00farok\u016f:', data.interestPayment);
+        addFieldPDF('Doba splatnosti:', data.maturity);
+        if (data.earlyRepayment) addFieldPDF('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
+        if (data.originationFeeDisplay) addFieldPDF('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
+        if (data.collateralValue) {
+            addFieldPDF('Hodnota zaji\u0161t\u011bn\u00ed:', data.collateralValue + ' ' + data.currency);
+            var amt = parseAmount(data.amount);
+            var col = parseAmount(data.collateralValue);
+            if (amt > 0 && col > 0) addFieldPDF('LTV:', (amt / col * 100).toFixed(1) + ' %');
+        }
+
+        if (data.collateralItems && data.collateralItems.length > 0) {
+            if (y > 265) { pdf.addPage(); y = 25; }
+            pdf.setFont(fontName, 'bold');
+            pdf.setFontSize(11);
+            pdf.text('Zaji\u0161t\u011bn\u00ed:', leftMargin, y);
+            y += 6;
+            pdf.setFont(fontName, 'normal');
+            data.collateralItems.forEach(function(item) {
+                if (y > 270) { pdf.addPage(); y = 25; }
+                var lines = pdf.splitTextToSize(item, pageWidth);
+                pdf.text(lines, leftMargin, y);
+                y += lines.length * 5;
+            });
+            y += 4;
+        }
+
+        if (data.documentation && data.documentation.length > 0) {
+            if (y > 265) { pdf.addPage(); y = 25; }
+            pdf.setFont(fontName, 'bold');
+            pdf.setFontSize(11);
+            pdf.text('Dokumentace:', leftMargin, y);
+            y += 6;
+            pdf.setFont(fontName, 'normal');
+            data.documentation.forEach(function(doc) {
+                if (y > 270) { pdf.addPage(); y = 25; }
+                pdf.text(doc, leftMargin, y);
+                y += 5;
+            });
+            y += 4;
+        }
+
+        if (data.otherCosts) addFieldPDF('Ostatn\u00ed n\u00e1klady a poplatky:', data.otherCosts);
+        if (data.validityDate) {
+            var vd = new Date(data.validityDate);
+            addFieldPDF('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
+        }
+
+        // Warning
+        y += 6;
+        if (y > 255) { pdf.addPage(); y = 25; }
+        pdf.setFont(fontName, 'bold');
+        pdf.setFontSize(9);
+        var warnText = 'Upozorn\u011bn\u00ed: Fin\u00e1ln\u00ed schv\u00e1len\u00ed financov\u00e1n\u00ed z\u00e1vis\u00ed na intern\u00edm ocen\u011bn\u00ed nemovitosti ze strany ProfiLend. Uveden\u00e9 podm\u00ednky jsou p\u0159edb\u011b\u017en\u00e9 a mohou b\u00fdt upraveny na z\u00e1klad\u011b v\u00fdsledk\u016f ocen\u011bn\u00ed.';
+        var warnLines = pdf.splitTextToSize(warnText, pageWidth);
+        pdf.text(warnLines, leftMargin, y);
+
+        return pdf.output('blob');
+    }
+
+    // ===== GENERATE & DOWNLOAD =====
+    async function generateTermSheet() {
+        var data = collectFormData();
+        var errors = validateForm(data);
+        if (errors.length > 0) {
+            showToast('Vyplňte povinná pole: ' + errors.join(', '), 'error');
+            return;
+        }
+
+        closeGenerateDialog();
+        showToast('Generuji Term Sheet...', 'info');
+
+        // Save first
+        try {
+            currentEditId = data.id;
+            await saveToDB(data);
+            termSheets = await getAllFromDB();
+        } catch (e) {
+            console.error('Save before generate failed:', e);
+        }
+
+        var dateStr = new Date().toISOString().slice(0, 10);
+        var fileName = sanitizeFileName(data.borrower) + ' - Termsheet (' + dateStr + ')';
+
+        try {
+            var blob;
+            if (selectedFormat === 'docx') {
+                blob = await generateDOCX(data);
+                fileName += '.docx';
+            } else {
+                blob = await generatePDF(data);
+                fileName += '.pdf';
+            }
+
+            // Try File System Access API for direct save
+            var saved = false;
+            if (dirHandle) {
+                try {
+                    var fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+                    var writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    saved = true;
+                    showToast('Uloženo do složky: ' + fileName, 'success');
+                } catch (e) {
+                    console.warn('FS API save failed:', e);
+                }
+            }
+
+            // Also offer browser download
+            saveAs(blob, fileName);
+            if (!saved) {
+                showToast('Staženo: ' + fileName, 'success');
+            }
+
+        } catch (e) {
+            console.error('Generate error:', e);
+            showToast('Chyba při generování: ' + e.message, 'error');
+        }
+    }
+
+    // ===== FOLDER PICKER =====
+    async function pickSaveFolder() {
+        try {
+            dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            showToast('Složka vybrána pro ukládání', 'success');
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                showToast('Nepodařilo se vybrat složku', 'error');
+            }
+        }
+    }
+
+    // ===== TOAST =====
+    function showToast(msg, type) {
+        var container = document.getElementById('toast-container');
+        var toast = document.createElement('div');
+        toast.className = 'toast ' + (type || 'info');
+        var icons = {
+            success: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>',
+            error: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+            info: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+        };
+        toast.innerHTML = (icons[type] || icons.info) + '<span>' + escapeHtml(msg) + '</span>';
+        container.appendChild(toast);
+        setTimeout(function() {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            toast.style.transition = 'all 0.3s ease';
+            setTimeout(function() { toast.remove(); }, 300);
+        }, 4000);
+    }
+
+    // ===== INIT =====
+    async function init() {
+        await openDB();
+        termSheets = await getAllFromDB();
+
+        // Set default date
+        var today = new Date().toISOString().slice(0, 10);
+        if (!document.getElementById('f-drawdown-date').value) {
+            document.getElementById('f-drawdown-date').value = today;
+        }
+    }
+
+    init().catch(function(e) { console.error('Init failed:', e); showToast('Chyba při inicializaci databáze', 'error'); });
+    </script>
+</body>
+</html>

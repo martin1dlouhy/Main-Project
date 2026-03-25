@@ -117,7 +117,8 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
             .cat-tab.active svg{opacity:1}
             .category-section{display:none}
             .category-section.active{display:block}
-            @media(max-width:640px){.cat-picker{grid-template-columns:1fr}.cat-card{padding:1.5rem}}
+            @media(max-width:900px){.cat-picker{grid-template-columns:1fr 1fr !important}}
+            @media(max-width:640px){.cat-picker{grid-template-columns:1fr !important}.cat-card{padding:1.5rem}}
         </style>
 
         <!-- Main Content -->
@@ -128,7 +129,7 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
             </div>
 
             <!-- Category Picker -->
-            <div id="category-picker" class="cat-picker">
+            <div id="category-picker" class="cat-picker" style="grid-template-columns:1fr 1fr 1fr;">
                 <div class="cat-card" onclick="showCategory('osobni')">
                     <div class="cat-card-icon" style="background:var(--accent-light,rgba(56,189,248,0.1));color:var(--accent);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -145,6 +146,14 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                     <p>Nástroje pro správu portfolia a business</p>
                     <span class="cat-count">1 aplikace</span>
                 </div>
+                <div class="cat-card" onclick="showCategory('profilend')">
+                    <div class="cat-card-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <h2>ProfiLend</h2>
+                    <p>Interní nástroje pro ProfiLend</p>
+                    <span class="cat-count">1 aplikace</span>
+                </div>
             </div>
 
             <!-- Category Tabs (hidden initially, shown after selection) -->
@@ -157,6 +166,10 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                     <button class="cat-tab" data-cat="pracovni" onclick="showCategory('pracovni')">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
                         Pracovní
+                    </button>
+                    <button class="cat-tab" data-cat="profilend" onclick="showCategory('profilend')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        ProfiLend
                     </button>
                 </div>
             </div>
@@ -442,6 +455,56 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
                 </a>
             </div>
             </div><!-- /section-pracovni -->
+
+            <!-- Section: ProfiLend -->
+            <div id="section-profilend" class="category-section">
+            <div style="margin-bottom: 0.75rem; margin-top: 1rem;">
+                <h2 style="font-size: 1.375rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(16,185,129,0.1);color:#10b981;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </span>
+                    ProfiLend
+                </h2>
+                <p style="font-size: 0.9375rem; color: var(--text-secondary); margin: 0.375rem 0 0 2.75rem;">Interní nástroje pro ProfiLend</p>
+            </div>
+            <div class="apps-grid">
+                <a href="termsheet-generator.html" class="app-card">
+                    <div class="app-card-header">
+                        <div class="app-icon green">
+                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="tsDoc" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.9"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.5"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="6" y="3" width="16" height="22" rx="2.5" fill="url(#tsDoc)"/>
+                                <line x1="10" y1="10" x2="18" y2="10" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+                                <line x1="10" y1="13.5" x2="16" y2="13.5" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+                                <line x1="10" y1="17" x2="17" y2="17" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+                                <circle cx="23" cy="22" r="6" fill="white" fill-opacity="0.2"/>
+                                <path d="M21 22l1.5 1.5 3-3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+                                <rect x="8" y="5.5" width="10" height="2.5" rx="1" fill="white" opacity="0.3"/>
+                            </svg>
+                        </div>
+                        <span class="app-badge live">● Live</span>
+                    </div>
+                    <h3 class="app-card-title">Term Sheet Generátor</h3>
+                    <p class="app-card-desc">Vytváření, správa a generování Term Sheetů pro klienty. Export do Word a PDF, automatické ukládání, správa verzí.</p>
+                    <div class="app-features">
+                        <div class="feature-item">✓ Formulář s předvyplněnými poli</div>
+                        <div class="feature-item">✓ Export Word &amp; PDF</div>
+                        <div class="feature-item">✓ Správa existujících TS</div>
+                        <div class="feature-item">✓ Auto LTV kalkulace</div>
+                    </div>
+                    <div class="app-card-tags">
+                        <span class="tag">ProfiLend</span>
+                        <span class="tag">Term Sheet</span>
+                        <span class="tag">Export</span>
+                    </div>
+                </a>
+            </div>
+            </div><!-- /section-profilend -->
         </main>
 
         <!-- Category Switch Script -->
@@ -464,7 +527,7 @@ document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getIt
         // On load: check hash
         (function() {
             var hash = window.location.hash.replace('#', '');
-            if (hash === 'osobni' || hash === 'pracovni') {
+            if (hash === 'osobni' || hash === 'pracovni' || hash === 'profilend') {
                 showCategory(hash);
             }
         })();
