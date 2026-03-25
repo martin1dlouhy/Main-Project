@@ -214,30 +214,113 @@
             background: var(--bg-primary);
             box-shadow: 0 0 0 3px var(--accent-glow);
         }
-        /* ===== MODERN SELECT DROPDOWN ===== */
-        .form-select {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.875rem center;
-            background-size: 16px;
-            padding-right: 2.5rem;
-            cursor: pointer;
+        /* ===== CUSTOM DROPDOWN ===== */
+        .form-select { display: none !important; }
+        .custom-dropdown {
+            position: relative;
+            width: 100%;
         }
-        .form-select:hover {
-            border-color: var(--accent);
-            background-color: var(--bg-primary);
-        }
-        .form-select option {
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            padding: 0.75rem 1rem;
+        .custom-dropdown-trigger {
+            width: 100%;
+            padding: 0.75rem 2.5rem 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
             font-size: 0.9375rem;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            position: relative;
+            user-select: none;
         }
-        .carbon .form-select {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        .custom-dropdown-trigger::after {
+            content: '';
+            position: absolute;
+            right: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%) rotate(0deg);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid var(--text-secondary);
+            transition: transform 0.25s ease;
+        }
+        .custom-dropdown.open .custom-dropdown-trigger::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+        .custom-dropdown-trigger:hover,
+        .custom-dropdown.open .custom-dropdown-trigger {
+            border-color: var(--accent);
+            background: var(--bg-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .custom-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: var(--bg-primary);
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15), 0 0 0 1px var(--accent-glow);
+            z-index: 500;
+            max-height: 240px;
+            overflow-y: auto;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-4px);
+            transition: all 0.2s ease;
+            padding: 4px;
+        }
+        .custom-dropdown.open .custom-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .custom-dropdown-option {
+            padding: 0.625rem 0.875rem;
+            font-size: 0.9375rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 7px;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .custom-dropdown-option:hover {
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+        .custom-dropdown-option.selected {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+        .custom-dropdown-option.selected:hover {
+            background: var(--accent-hover);
+            color: white;
+        }
+        .carbon .custom-dropdown-menu {
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--accent-glow);
+        }
+        /* Scrollbar styling for dropdown */
+        .custom-dropdown-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-dropdown-menu::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-dropdown-menu::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+        .custom-dropdown-menu::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
         }
         .form-textarea { min-height: 80px; resize: vertical; }
         .form-hint {
@@ -651,6 +734,11 @@
         .filter-select {
             width: auto;
             min-width: 140px;
+        }
+        .search-bar .custom-dropdown {
+            width: auto;
+            min-width: 160px;
+            flex-shrink: 0;
         }
 
         /* ===== RESPONSIVE ===== */
@@ -1384,6 +1472,11 @@
         });
 
         calcLTV();
+
+        // Sync custom dropdowns
+        ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type'].forEach(function(id) {
+            syncCustomDropdown(document.getElementById(id));
+        });
     }
 
     function resetForm() {
@@ -1416,6 +1509,11 @@
         document.getElementById('doc-smenka').checked = false;
         document.getElementById('doc-vinkulace').checked = false;
         calcLTV();
+
+        // Sync custom dropdowns
+        ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type'].forEach(function(id) {
+            syncCustomDropdown(document.getElementById(id));
+        });
     }
 
     function escapeHtml(str) {
@@ -1934,6 +2032,80 @@
         }, 4000);
     }
 
+    // ===== CUSTOM DROPDOWN =====
+    function initCustomDropdowns() {
+        document.querySelectorAll('select.form-select').forEach(function(sel) {
+            // Skip already initialized
+            if (sel.parentElement.classList && sel.parentElement.classList.contains('custom-dropdown')) return;
+
+            var wrapper = document.createElement('div');
+            wrapper.className = 'custom-dropdown';
+
+            var trigger = document.createElement('div');
+            trigger.className = 'custom-dropdown-trigger';
+            var selectedOpt = sel.options[sel.selectedIndex];
+            trigger.textContent = selectedOpt ? selectedOpt.textContent : '';
+
+            var menu = document.createElement('div');
+            menu.className = 'custom-dropdown-menu';
+
+            Array.from(sel.options).forEach(function(opt) {
+                var item = document.createElement('div');
+                item.className = 'custom-dropdown-option';
+                if (opt.selected) item.classList.add('selected');
+                item.dataset.value = opt.value;
+                item.textContent = opt.textContent;
+                item.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    sel.value = this.dataset.value;
+                    trigger.textContent = this.textContent;
+                    menu.querySelectorAll('.custom-dropdown-option').forEach(function(o) { o.classList.remove('selected'); });
+                    this.classList.add('selected');
+                    wrapper.classList.remove('open');
+                    // Trigger change event on original select
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                menu.appendChild(item);
+            });
+
+            sel.parentNode.insertBefore(wrapper, sel);
+            wrapper.appendChild(trigger);
+            wrapper.appendChild(menu);
+            wrapper.appendChild(sel);
+
+            trigger.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // Close all other dropdowns
+                document.querySelectorAll('.custom-dropdown.open').forEach(function(d) {
+                    if (d !== wrapper) d.classList.remove('open');
+                });
+                wrapper.classList.toggle('open');
+            });
+        });
+
+        // Close on outside click (register only once)
+        if (!document._dropdownClickListenerSet) {
+            document._dropdownClickListenerSet = true;
+            document.addEventListener('click', function() {
+                document.querySelectorAll('.custom-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+            });
+        }
+    }
+
+    // Update custom dropdown display when select value changes programmatically
+    function syncCustomDropdown(selectEl) {
+        var wrapper = selectEl.closest('.custom-dropdown');
+        if (!wrapper) return;
+        var trigger = wrapper.querySelector('.custom-dropdown-trigger');
+        var selectedOpt = selectEl.options[selectEl.selectedIndex];
+        if (trigger && selectedOpt) {
+            trigger.textContent = selectedOpt.textContent;
+            wrapper.querySelectorAll('.custom-dropdown-option').forEach(function(o) {
+                o.classList.toggle('selected', o.dataset.value === selectEl.value);
+            });
+        }
+    }
+
     // ===== INIT =====
     async function init() {
         await openDB();
@@ -1944,6 +2116,9 @@
         if (!document.getElementById('f-drawdown-date').value) {
             document.getElementById('f-drawdown-date').value = today;
         }
+
+        // Initialize custom dropdowns
+        initCustomDropdowns();
     }
 
     init().catch(function(e) { console.error('Init failed:', e); showToast('Chyba při inicializaci databáze', 'error'); });
