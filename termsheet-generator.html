@@ -1229,6 +1229,10 @@
                         </div>
                         <input type="file" id="lv-file-input" multiple accept=".pdf,.docx,.doc" style="display:none;" onchange="handleLVFiles(this.files); this.value='';">
                         <div class="lv-file-list" id="lv-file-list"></div>
+                        <div id="lv-instructions-wrap" style="display:none; margin-bottom:0.75rem;">
+                            <label class="form-label">Pokyn pro AI (volitelné)</label>
+                            <textarea class="form-textarea" id="lv-instructions" placeholder="např. Použij pouze parcely 456/2 a 456/3 nebo Zajímají mě jen pozemky v kú Čečovice..." style="min-height:50px;"></textarea>
+                        </div>
                         <div id="lv-results-container"></div>
                     </div>
 
@@ -1760,6 +1764,7 @@
         addCollateralItem();
         // Clear LV uploads
         lvFiles = [];
+        document.getElementById('lv-instructions').value = '';
         renderLVFileList();
         document.getElementById('custom-docs-list').innerHTML = '';
         document.getElementById('doc-zastavni').checked = true;
@@ -2363,11 +2368,14 @@
 
     function renderLVFileList() {
         var container = document.getElementById('lv-file-list');
+        var instrWrap = document.getElementById('lv-instructions-wrap');
         if (lvFiles.length === 0) {
             container.innerHTML = '';
+            instrWrap.style.display = 'none';
             document.getElementById('lv-results-container').innerHTML = '';
             return;
         }
+        instrWrap.style.display = 'block';
         var html = '';
         lvFiles.forEach(function(lf, idx) {
             var statusHtml = '';
@@ -2416,8 +2424,22 @@
         for (var i = 1; i <= pdf.numPages; i++) {
             var page = await pdf.getPage(i);
             var content = await page.getTextContent();
-            var pageText = content.items.map(function(item) { return item.str; }).join(' ');
-            allText += pageText + '\n';
+            // Group text items by Y position to preserve line structure
+            var lines = {};
+            content.items.forEach(function(item) {
+                if (!item.str || !item.str.trim()) return;
+                var y = Math.round(item.transform[5]); // Y coordinate
+                if (!lines[y]) lines[y] = [];
+                lines[y].push({ x: item.transform[4], text: item.str });
+            });
+            // Sort by Y descending (PDF origin is bottom-left), then X ascending
+            var sortedYs = Object.keys(lines).map(Number).sort(function(a, b) { return b - a; });
+            sortedYs.forEach(function(y) {
+                var lineItems = lines[y].sort(function(a, b) { return a.x - b.x; });
+                var lineText = lineItems.map(function(item) { return item.text; }).join(' ');
+                allText += lineText + '\n';
+            });
+            allText += '\n--- Stránka ' + i + ' ---\n\n';
         }
         return allText;
     }
@@ -2466,8 +2488,14 @@
                 var response = await fetch('/api/parse-lv', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text, fileName: lvFiles[i].name })
+                    body: JSON.stringify({ text: text, fileName: lvFiles[i].name, instructions: document.getElementById('lv-instructions').value.trim() })
                 });
+
+                if (!response.ok) {
+                    var errData = {};
+                    try { errData = await response.json(); } catch(e) {}
+                    throw new Error(errData.error || 'Server vrátil chybu ' + response.status);
+                }
 
                 var result = await response.json();
 
@@ -2477,11 +2505,11 @@
                     showToast('LV zpracován: ' + lvFiles[i].name, 'success');
                 } else {
                     lvFiles[i].status = 'error';
-                    showToast('Chyba při analýze ' + lvFiles[i].name + ': ' + (result.error || 'Neznámá chyba'), 'error');
+                    showToast(result.error || 'Nepodařilo se zpracovat ' + lvFiles[i].name, 'error');
                 }
             } catch (err) {
                 lvFiles[i].status = 'error';
-                showToast('Chyba: ' + err.message, 'error');
+                showToast(lvFiles[i].name + ': ' + err.message, 'error');
             }
             renderLVFileList();
         }
