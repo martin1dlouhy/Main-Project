@@ -1940,12 +1940,12 @@
     // Bullet list paragraph (List Paragraph style with indent)
     var BULLET_PPR = '<w:pPr><w:pStyle w:val="ListParagraph"/>' +
         '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>' +
-        '<w:spacing w:after="40"/></w:pPr>';
+        '<w:spacing w:after="40" w:line="360" w:lineRule="auto"/></w:pPr>';
 
     function buildFieldXml(label, value) {
         if (!value) return '';
         // Bold label as normal paragraph
-        var xml = '<w:p><w:pPr><w:spacing w:before="120" w:after="0"/></w:pPr>' +
+        var xml = '<w:p><w:pPr><w:spacing w:before="120" w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
                '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="22"/></w:rPr>' +
                '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>';
         // Value as bullet list paragraph
@@ -1957,7 +1957,7 @@
 
     function buildListXml(label, items) {
         if (!items || items.length === 0) return '';
-        var xml = '<w:p><w:pPr><w:spacing w:before="120" w:after="0"/></w:pPr>' +
+        var xml = '<w:p><w:pPr><w:spacing w:before="120" w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
                   '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="22"/></w:rPr>' +
                   '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>';
         items.forEach(function(item) {
@@ -1972,7 +1972,7 @@
         var xml = '';
 
         // Title — uses Title style matching the Agri Partners reference
-        xml += '<w:p><w:pPr><w:pStyle w:val="Title"/><w:spacing w:after="400"/></w:pPr>' +
+        xml += '<w:p><w:pPr><w:pStyle w:val="Title"/><w:spacing w:after="400" w:line="360" w:lineRule="auto"/></w:pPr>' +
                '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="32"/></w:rPr>' +
                '<w:t>Term Sheet \u2013 financov\u00e1n\u00ed</w:t></w:r></w:p>';
 
