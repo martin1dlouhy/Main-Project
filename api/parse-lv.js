@@ -76,69 +76,83 @@ module.exports = async function handler(req, res) {
         'Klíč "collateral_summary" je nejdůležitější — měl by obsahovat stručný popis vhodný do Term Sheetu.\n' +
         'Text může být špatně extrahovaný z PDF — pokus se i tak rozpoznat klíčové údaje (číslo LV, katastrální území, parcely).';
 
+    // Helper: try to extract JSON from Claude response text
+    function tryParseJSON(responseText) {
+        // Strategy 1: Direct parse
+        try {
+            return JSON.parse(responseText.trim());
+        } catch (e) { /* not pure JSON */ }
+
+        // Strategy 2: Markdown code block ```json ... ```
+        var codeBlockMatch = responseText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+        if (codeBlockMatch) {
+            try {
+                return JSON.parse(codeBlockMatch[1].trim());
+            } catch (e) { /* invalid JSON in code block */ }
+        }
+
+        // Strategy 3: Find first { to last } or first [ to last ]
+        var startObj = responseText.indexOf('{');
+        var startArr = responseText.indexOf('[');
+
+        if (startArr !== -1 && (startObj === -1 || startArr < startObj)) {
+            try {
+                return JSON.parse(responseText.substring(startArr, responseText.lastIndexOf(']') + 1));
+            } catch (e) { /* invalid */ }
+        }
+        if (startObj !== -1) {
+            try {
+                return JSON.parse(responseText.substring(startObj, responseText.lastIndexOf('}') + 1));
+            } catch (e) { /* invalid */ }
+        }
+
+        return null;
+    }
+
+    var inputText = text.substring(0, 30000);
+    console.log('LV parse request:', { fileName: fileName, textLength: text.length, trimmedLength: inputText.length, firstChars: text.substring(0, 100) });
+
     try {
+        var userContent = 'Analyzuj tento List vlastnictví z katastru nemovitostí (soubor: ' + (fileName || 'neznámý') + '):\n\n' +
+            (instructions ? 'POKYN OD UŽIVATELE: ' + instructions + '\n\n' : '') +
+            inputText;
+
         var message = await client.messages.create({
             model: 'claude-sonnet-4-20250514',
             max_tokens: 4096,
-            messages: [
-                {
-                    role: 'user',
-                    content: 'Analyzuj tento List vlastnictví z katastru nemovitostí (soubor: ' + (fileName || 'neznámý') + '):\n\n' +
-                        (instructions ? 'POKYN OD UŽIVATELE: ' + instructions + '\n\n' : '') +
-                        text.substring(0, 30000)
-                }
-            ],
+            messages: [{ role: 'user', content: userContent }],
             system: systemPrompt
         });
 
         var responseText = message.content[0].text;
+        var parsed = tryParseJSON(responseText);
 
-        // Try to parse JSON from response — multiple strategies
-        var parsed = null;
-
-        // Strategy 1: Try direct parse (Claude returned pure JSON)
-        try {
-            parsed = JSON.parse(responseText.trim());
-        } catch (e) { /* not pure JSON */ }
-
-        // Strategy 2: Extract from markdown code block ```json ... ```
+        // Retry once if parsing failed — ask Claude to fix its output
         if (!parsed) {
-            var codeBlockMatch = responseText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
-            if (codeBlockMatch) {
-                try {
-                    parsed = JSON.parse(codeBlockMatch[1].trim());
-                } catch (e) { /* invalid JSON in code block */ }
-            }
-        }
+            console.log('First attempt failed to return valid JSON. Claude response (first 300 chars):', responseText.substring(0, 300));
+            var retryMessage = await client.messages.create({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 4096,
+                messages: [
+                    { role: 'user', content: userContent },
+                    { role: 'assistant', content: responseText },
+                    { role: 'user', content: 'Tvoje odpověď neobsahovala platný JSON. Vrať POUZE čistý JSON objekt bez jakéhokoli dalšího textu, bez markdown formátování, bez ```json``` bloků. Začni přímo znakem { nebo [.' }
+                ],
+                system: systemPrompt
+            });
+            var retryText = retryMessage.content[0].text;
+            parsed = tryParseJSON(retryText);
 
-        // Strategy 3: Find JSON object or array with balanced braces
-        if (!parsed) {
-            // Try array first, then object
-            var jsonStr = null;
-            var startIdx = responseText.indexOf('[');
-            var startObj = responseText.indexOf('{');
-
-            // Use whichever comes first, prefer array if both exist
-            if (startIdx !== -1 && (startObj === -1 || startIdx < startObj)) {
-                jsonStr = responseText.substring(startIdx, responseText.lastIndexOf(']') + 1);
-            } else if (startObj !== -1) {
-                jsonStr = responseText.substring(startObj, responseText.lastIndexOf('}') + 1);
-            }
-
-            if (jsonStr) {
-                try {
-                    parsed = JSON.parse(jsonStr);
-                } catch (e) { /* still invalid */ }
+            if (!parsed) {
+                console.error('Retry also failed. Retry response (first 300 chars):', retryText.substring(0, 300));
             }
         }
 
         if (parsed) {
-            // Normalize to array
             var results = Array.isArray(parsed) ? parsed : [parsed];
             return res.status(200).json({ success: true, data: results });
         } else {
-            console.error('Failed to parse JSON from Claude response:', responseText.substring(0, 500));
-            return res.status(200).json({ success: false, error: 'Claude nedokázal z textu extrahovat strukturovaná data.', raw: responseText.substring(0, 1000) });
+            return res.status(200).json({ success: false, error: 'Claude nedokázal z textu extrahovat strukturovaná data. Zkuste soubor nahrát znovu.', raw: responseText.substring(0, 500) });
         }
     } catch (err) {
         console.error('Claude API error:', JSON.stringify({

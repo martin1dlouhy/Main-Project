@@ -2507,6 +2507,7 @@
                     showToast('LV zpracován: ' + lvFiles[i].name, 'success');
                 } else {
                     lvFiles[i].status = 'error';
+                    if (result.raw) console.warn('Claude raw response for ' + lvFiles[i].name + ':', result.raw);
                     showToast(result.error || 'Nepodařilo se zpracovat ' + lvFiles[i].name, 'error');
                 }
             } catch (err) {
