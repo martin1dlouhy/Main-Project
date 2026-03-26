@@ -9,7 +9,7 @@
     <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.7/pizzip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
     <style>
         /* ===== PIN SCREEN ===== */
         .pin-overlay {
@@ -1793,16 +1793,20 @@
 
         if (zip) {
             // === TEMPLATE-BASED GENERATION ===
+            console.log('Generuji DOCX ze šablony...');
             var docXml = zip.file('word/document.xml').asText();
 
             // Build content XML
             var contentXml = buildTermSheetBodyXml(data);
 
             // Find the body content area — replace empty body paragraphs with our content
-            // The template body has just empty paragraphs between <w:body> and </w:body>
             var bodyMatch = docXml.match(/(<w:body[^>]*>)([\s\S]*?)(<w:sectPr[\s\S]*?<\/w:body>)/);
             if (bodyMatch) {
                 docXml = bodyMatch[1] + contentXml + bodyMatch[3];
+                console.log('Obsah vložen do šablony, sectPr zachován');
+            } else {
+                console.error('Regex pro body/sectPr nenašel shodu — šablona má neočekávanou strukturu');
+                showToast('Šablona má neočekávanou XML strukturu', 'error');
             }
 
             zip.file('word/document.xml', docXml);
@@ -1812,6 +1816,7 @@
                 mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 compression: 'DEFLATE'
             });
+            showToast('Term Sheet vygenerován ze šablony (s logem a zápatím)', 'success');
             return blob;
         } else {
             // === FALLBACK: Generate from scratch (original method) ===
@@ -2143,14 +2148,25 @@
     }
 
     async function loadTemplateAsZip() {
-        if (!templateFolderHandle) return null;
+        if (!templateFolderHandle) {
+            console.warn('Template: složka není připojena');
+            return null;
+        }
         try {
             var fileHandle = await templateFolderHandle.getFileHandle(TEMPLATE_FILENAME);
             var file = await fileHandle.getFile();
             var arrayBuf = await file.arrayBuffer();
-            return new PizZip(arrayBuf);
+            if (typeof PizZip === 'undefined') {
+                console.error('PizZip knihovna není načtena!');
+                showToast('Chyba: PizZip knihovna se nenačetla. Zkuste obnovit stránku.', 'error');
+                return null;
+            }
+            var zip = new PizZip(arrayBuf);
+            console.log('Template úspěšně načtena, souborů v ZIP:', Object.keys(zip.files).length);
+            return zip;
         } catch (e) {
-            console.warn('Template load failed:', e);
+            console.error('Template load failed:', e);
+            showToast('Šablonu se nepodařilo načíst: ' + e.message, 'error');
             return null;
         }
     }
