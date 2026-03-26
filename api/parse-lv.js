@@ -104,15 +104,34 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ success: false, error: 'Claude nedokázal z textu extrahovat strukturovaná data.', raw: responseText });
         }
     } catch (err) {
-        console.error('Claude API error:', err);
+        console.error('Claude API error:', JSON.stringify({
+            message: err.message,
+            status: err.status,
+            type: err.constructor.name,
+            body: err.body || null
+        }));
         var errorMsg = err.message || 'Neznámá chyba';
+        var statusCode = 500;
         if (err.status === 401) {
             errorMsg = 'Neplatný API klíč. Zkontrolujte ANTHROPIC_API_KEY na Vercelu.';
+            statusCode = 401;
         } else if (err.status === 429) {
             errorMsg = 'Příliš mnoho požadavků. Počkejte chvíli a zkuste znovu.';
+            statusCode = 429;
         } else if (err.status === 529 || err.status === 503) {
             errorMsg = 'Claude API je přetížené. Zkuste znovu za chvíli.';
+            statusCode = 503;
+        } else if (err.status === 400) {
+            errorMsg = 'Chyba požadavku na Claude API: ' + (err.message || 'neznámá');
+            statusCode = 400;
         }
-        return res.status(500).json({ error: errorMsg });
+        return res.status(statusCode).json({
+            error: errorMsg,
+            debug: {
+                apiStatus: err.status || null,
+                type: err.constructor.name,
+                detail: (err.body && err.body.error && err.body.error.message) || err.message || null
+            }
+        });
     }
 };

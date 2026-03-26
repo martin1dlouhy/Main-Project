@@ -2494,7 +2494,9 @@
                 if (!response.ok) {
                     var errData = {};
                     try { errData = await response.json(); } catch(e) {}
-                    throw new Error(errData.error || 'Server vrátil chybu ' + response.status);
+                    var debugInfo = errData.debug ? ' [API status: ' + (errData.debug.apiStatus || '?') + ', detail: ' + (errData.debug.detail || 'N/A') + ']' : '';
+                    console.error('LV API error:', JSON.stringify(errData));
+                    throw new Error((errData.error || 'Server vrátil chybu ' + response.status) + debugInfo);
                 }
 
                 var result = await response.json();
