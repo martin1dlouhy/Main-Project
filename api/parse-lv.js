@@ -93,15 +93,52 @@ module.exports = async function handler(req, res) {
 
         var responseText = message.content[0].text;
 
-        // Try to parse JSON from response
-        var jsonMatch = responseText.match(/\[[\s\S]*\]/) || responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            var parsed = JSON.parse(jsonMatch[0]);
+        // Try to parse JSON from response — multiple strategies
+        var parsed = null;
+
+        // Strategy 1: Try direct parse (Claude returned pure JSON)
+        try {
+            parsed = JSON.parse(responseText.trim());
+        } catch (e) { /* not pure JSON */ }
+
+        // Strategy 2: Extract from markdown code block ```json ... ```
+        if (!parsed) {
+            var codeBlockMatch = responseText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+            if (codeBlockMatch) {
+                try {
+                    parsed = JSON.parse(codeBlockMatch[1].trim());
+                } catch (e) { /* invalid JSON in code block */ }
+            }
+        }
+
+        // Strategy 3: Find JSON object or array with balanced braces
+        if (!parsed) {
+            // Try array first, then object
+            var jsonStr = null;
+            var startIdx = responseText.indexOf('[');
+            var startObj = responseText.indexOf('{');
+
+            // Use whichever comes first, prefer array if both exist
+            if (startIdx !== -1 && (startObj === -1 || startIdx < startObj)) {
+                jsonStr = responseText.substring(startIdx, responseText.lastIndexOf(']') + 1);
+            } else if (startObj !== -1) {
+                jsonStr = responseText.substring(startObj, responseText.lastIndexOf('}') + 1);
+            }
+
+            if (jsonStr) {
+                try {
+                    parsed = JSON.parse(jsonStr);
+                } catch (e) { /* still invalid */ }
+            }
+        }
+
+        if (parsed) {
             // Normalize to array
             var results = Array.isArray(parsed) ? parsed : [parsed];
             return res.status(200).json({ success: true, data: results });
         } else {
-            return res.status(200).json({ success: false, error: 'Claude nedokázal z textu extrahovat strukturovaná data.', raw: responseText });
+            console.error('Failed to parse JSON from Claude response:', responseText.substring(0, 500));
+            return res.status(200).json({ success: false, error: 'Claude nedokázal z textu extrahovat strukturovaná data.', raw: responseText.substring(0, 1000) });
         }
     } catch (err) {
         console.error('Claude API error:', JSON.stringify({
