@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         /* ===== PIN SCREEN ===== */
         .pin-overlay {
@@ -395,6 +396,131 @@
         .form-input-with-unit:focus-within .custom-dropdown-trigger {
             border-color: var(--accent);
             box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        /* ===== LV UPLOAD ZONE ===== */
+        .lv-upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg-surface);
+            margin-bottom: 1rem;
+        }
+        .lv-upload-zone:hover,
+        .lv-upload-zone.drag-over {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+        }
+        .lv-upload-zone svg.upload-icon {
+            width: 36px;
+            height: 36px;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .lv-upload-zone.drag-over svg.upload-icon {
+            color: var(--accent);
+        }
+        .lv-upload-zone p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        .lv-upload-zone .upload-link {
+            color: var(--accent);
+            font-weight: 600;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .lv-file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .lv-file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 0.75rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.875rem;
+        }
+        .lv-file-item svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+        .lv-file-item .lv-file-name {
+            flex: 1;
+            color: var(--text-primary);
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .lv-file-item .lv-file-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .lv-file-item .lv-file-status.success {
+            color: var(--success);
+        }
+        .lv-file-item .lv-file-status.error {
+            color: var(--error);
+        }
+        .lv-file-item .btn-remove-item {
+            flex-shrink: 0;
+        }
+        .lv-parse-btn {
+            margin-top: 0.5rem;
+        }
+        .lv-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: lv-spin 0.6s linear infinite;
+        }
+        @keyframes lv-spin {
+            to { transform: rotate(360deg); }
+        }
+        .lv-results-preview {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            background: var(--bg-surface);
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+        }
+        .lv-results-preview h4 {
+            font-size: 0.8125rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .lv-results-preview table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .lv-results-preview td {
+            padding: 0.25rem 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+        .lv-results-preview td:first-child {
+            font-weight: 600;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            width: 140px;
         }
 
         /* ===== DYNAMIC LIST (Zajištění, Dokumentace) ===== */
@@ -1085,6 +1211,27 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                         Zajištění
                     </h2>
+                    <!-- LV Upload -->
+                    <div style="margin-bottom:1rem;">
+                        <label class="form-label">Nahrát listy vlastnictví (PDF / Word)</label>
+                        <div class="lv-upload-zone" id="lv-upload-zone"
+                             ondragover="event.preventDefault(); this.classList.add('drag-over');"
+                             ondragleave="this.classList.remove('drag-over');"
+                             ondrop="event.preventDefault(); this.classList.remove('drag-over'); handleLVFiles(event.dataTransfer.files);"
+                             onclick="document.getElementById('lv-file-input').click();">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <p>Přetáhněte soubory sem nebo <span class="upload-link">vyberte z počítače</span></p>
+                            <p style="font-size:0.75rem; margin-top:0.25rem; color:var(--text-tertiary);">PDF, DOCX — listy vlastnictví z katastru</p>
+                        </div>
+                        <input type="file" id="lv-file-input" multiple accept=".pdf,.docx,.doc" style="display:none;" onchange="handleLVFiles(this.files); this.value='';">
+                        <div class="lv-file-list" id="lv-file-list"></div>
+                        <div id="lv-results-container"></div>
+                    </div>
+
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">Hodnota zajištění</label>
@@ -1611,6 +1758,9 @@
         document.getElementById('f-notes').value = '';
         document.getElementById('collateral-list').innerHTML = '';
         addCollateralItem();
+        // Clear LV uploads
+        lvFiles = [];
+        renderLVFileList();
         document.getElementById('custom-docs-list').innerHTML = '';
         document.getElementById('doc-zastavni').checked = true;
         document.getElementById('doc-uverova').checked = true;
@@ -2185,6 +2335,235 @@
                 o.classList.toggle('selected', o.dataset.value === selectEl.value);
             });
         }
+    }
+
+    // ===== LV UPLOAD & PARSING =====
+    var lvFiles = []; // Array of {file, name, status, text, results}
+
+    // Configure pdf.js worker
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    function handleLVFiles(fileList) {
+        for (var i = 0; i < fileList.length; i++) {
+            var f = fileList[i];
+            var ext = f.name.split('.').pop().toLowerCase();
+            if (ext !== 'pdf' && ext !== 'docx' && ext !== 'doc') {
+                showToast('Nepodporovaný formát: ' + f.name + '. Použijte PDF nebo DOCX.', 'error');
+                continue;
+            }
+            // Avoid duplicates
+            var already = lvFiles.some(function(lf) { return lf.name === f.name && lf.file.size === f.size; });
+            if (already) continue;
+            lvFiles.push({ file: f, name: f.name, status: 'pending', text: null, results: null });
+        }
+        renderLVFileList();
+    }
+
+    function renderLVFileList() {
+        var container = document.getElementById('lv-file-list');
+        if (lvFiles.length === 0) {
+            container.innerHTML = '';
+            document.getElementById('lv-results-container').innerHTML = '';
+            return;
+        }
+        var html = '';
+        lvFiles.forEach(function(lf, idx) {
+            var statusHtml = '';
+            if (lf.status === 'pending') statusHtml = '<span class="lv-file-status">Čeká na zpracování</span>';
+            else if (lf.status === 'extracting') statusHtml = '<span class="lv-file-status"><span class="lv-spinner"></span> Načítání textu…</span>';
+            else if (lf.status === 'parsing') statusHtml = '<span class="lv-file-status"><span class="lv-spinner"></span> AI analyzuje…</span>';
+            else if (lf.status === 'done') statusHtml = '<span class="lv-file-status success">✓ Zpracováno</span>';
+            else if (lf.status === 'error') statusHtml = '<span class="lv-file-status error">✗ Chyba</span>';
+
+            var ext = lf.name.split('.').pop().toLowerCase();
+            var icon = ext === 'pdf'
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="#e74c3c" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="#2b579a" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+
+            html += '<div class="lv-file-item">' +
+                icon +
+                '<span class="lv-file-name">' + escapeHtml(lf.name) + '</span>' +
+                statusHtml +
+                '<button class="btn-remove-item" onclick="removeLVFile(' + idx + ')" title="Odebrat">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+                '</button></div>';
+        });
+
+        // Add parse button if any pending files
+        var hasPending = lvFiles.some(function(lf) { return lf.status === 'pending'; });
+        var hasProcessing = lvFiles.some(function(lf) { return lf.status === 'extracting' || lf.status === 'parsing'; });
+        if (hasPending && !hasProcessing) {
+            html += '<button class="btn btn-generate lv-parse-btn" onclick="processAllLVFiles()">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:6px;"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4"/></svg>' +
+                    'Analyzovat listy vlastnictví</button>';
+        }
+
+        container.innerHTML = html;
+    }
+
+    function removeLVFile(idx) {
+        lvFiles.splice(idx, 1);
+        renderLVFileList();
+        renderLVResults();
+    }
+
+    async function extractTextFromPDF(file) {
+        var arrayBuffer = await file.arrayBuffer();
+        var pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        var allText = '';
+        for (var i = 1; i <= pdf.numPages; i++) {
+            var page = await pdf.getPage(i);
+            var content = await page.getTextContent();
+            var pageText = content.items.map(function(item) { return item.str; }).join(' ');
+            allText += pageText + '\n';
+        }
+        return allText;
+    }
+
+    async function extractTextFromDOCX(file) {
+        var arrayBuffer = await file.arrayBuffer();
+        var zip = new PizZip(arrayBuffer);
+        var docXml = zip.file('word/document.xml');
+        if (!docXml) return '';
+        var xmlStr = docXml.asText();
+        // Strip XML tags, keep text
+        var text = xmlStr.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        return text;
+    }
+
+    async function processAllLVFiles() {
+        for (var i = 0; i < lvFiles.length; i++) {
+            if (lvFiles[i].status !== 'pending') continue;
+
+            // Step 1: Extract text
+            lvFiles[i].status = 'extracting';
+            renderLVFileList();
+
+            try {
+                var ext = lvFiles[i].name.split('.').pop().toLowerCase();
+                var text;
+                if (ext === 'pdf') {
+                    text = await extractTextFromPDF(lvFiles[i].file);
+                } else {
+                    text = await extractTextFromDOCX(lvFiles[i].file);
+                }
+
+                if (!text || text.trim().length < 20) {
+                    lvFiles[i].status = 'error';
+                    showToast('Nepodařilo se extrahovat text z ' + lvFiles[i].name, 'error');
+                    renderLVFileList();
+                    continue;
+                }
+
+                lvFiles[i].text = text;
+
+                // Step 2: Send to Claude API
+                lvFiles[i].status = 'parsing';
+                renderLVFileList();
+
+                var response = await fetch('/api/parse-lv', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text, fileName: lvFiles[i].name })
+                });
+
+                var result = await response.json();
+
+                if (result.success && result.data) {
+                    lvFiles[i].results = result.data;
+                    lvFiles[i].status = 'done';
+                    showToast('LV zpracován: ' + lvFiles[i].name, 'success');
+                } else {
+                    lvFiles[i].status = 'error';
+                    showToast('Chyba při analýze ' + lvFiles[i].name + ': ' + (result.error || 'Neznámá chyba'), 'error');
+                }
+            } catch (err) {
+                lvFiles[i].status = 'error';
+                showToast('Chyba: ' + err.message, 'error');
+            }
+            renderLVFileList();
+        }
+        renderLVResults();
+    }
+
+    function renderLVResults() {
+        var container = document.getElementById('lv-results-container');
+        var allResults = [];
+        lvFiles.forEach(function(lf) {
+            if (lf.results) allResults = allResults.concat(lf.results);
+        });
+        if (allResults.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        var html = '';
+        allResults.forEach(function(lv, idx) {
+            var e = escapeHtml;
+            html += '<div class="lv-results-preview">';
+            html += '<h4>LV ' + e(lv.lv_cislo || '?') + ' — ' + e(lv.katastralni_uzemi || 'neznámé kú') + '</h4>';
+            html += '<table>';
+            if (lv.obec) html += '<tr><td>Obec</td><td>' + e(lv.obec) + '</td></tr>';
+            if (lv.vlastnici && lv.vlastnici.length > 0) html += '<tr><td>Vlastníci</td><td>' + lv.vlastnici.map(e).join(', ') + '</td></tr>';
+            if (lv.parcely && lv.parcely.length > 0) {
+                var parcelyStr = lv.parcely.map(function(p) {
+                    return e((p.typ === 'stavba' ? 'st. ' : 'p.č. ') + p.parcelni_cislo) +
+                           (p.vymera ? ' (' + e(p.vymera) + ' m²)' : '') +
+                           (p.druh ? ' — ' + e(p.druh) : '');
+                }).join('<br>');
+                html += '<tr><td>Parcely</td><td>' + parcelyStr + '</td></tr>';
+            }
+            if (lv.zastavni_prava && lv.zastavni_prava.length > 0) {
+                var zpStr = lv.zastavni_prava.map(function(z) {
+                    return e(z.typ) + ' — ' + e(z.oprávněný || '') + (z.castka ? ' (' + e(z.castka) + ')' : '');
+                }).join('<br>');
+                html += '<tr><td>Zástavní práva</td><td>' + zpStr + '</td></tr>';
+            }
+            if (lv.vecna_bremena && lv.vecna_bremena.length > 0) {
+                var vbStr = lv.vecna_bremena.map(function(v) { return e(v.typ); }).join('<br>');
+                html += '<tr><td>Věcná břemena</td><td>' + vbStr + '</td></tr>';
+            }
+            if (lv.collateral_summary) {
+                html += '<tr><td style="color:var(--accent);font-weight:700;">Zajištění</td><td style="font-weight:600;">' + e(lv.collateral_summary) + '</td></tr>';
+            }
+            html += '</table>';
+            html += '<button class="btn btn-outline" style="margin-top:0.75rem;font-size:0.8125rem;" onclick="insertLVToCollateral(' + idx + ')">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+                    'Vložit do zajištění</button>';
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    function insertLVToCollateral(resultIdx) {
+        var allResults = [];
+        lvFiles.forEach(function(lf) {
+            if (lf.results) allResults = allResults.concat(lf.results);
+        });
+        var lv = allResults[resultIdx];
+        if (!lv || !lv.collateral_summary) return;
+
+        // Add to collateral items list
+        var list = document.getElementById('collateral-list');
+        var items = list.querySelectorAll('.dynamic-item input');
+        // Find empty slot or add new
+        var inserted = false;
+        for (var i = 0; i < items.length; i++) {
+            if (!items[i].value.trim()) {
+                items[i].value = lv.collateral_summary;
+                inserted = true;
+                break;
+            }
+        }
+        if (!inserted) {
+            addCollateralItem();
+            var newItems = list.querySelectorAll('.dynamic-item input');
+            newItems[newItems.length - 1].value = lv.collateral_summary;
+        }
+        showToast('Zajištění vloženo: LV ' + (lv.lv_cislo || '?'), 'success');
     }
 
     // ===== INIT =====
