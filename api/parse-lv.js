@@ -40,7 +40,8 @@ module.exports = async function handler(req, res) {
 
     var systemPrompt = 'Jsi expert na analýzu českých katastrálních dokumentů — Listů vlastnictví (LV).\n' +
         'Tvým úkolem je z poskytnutého textu extrahovat strukturovaná data.\n\n' +
-        'VŽDY vrať POUZE platný JSON objekt (žádný markdown, žádný text okolo). Formát:\n' +
+        'KRITICKÉ PRAVIDLO: Vrať POUZE platný JSON. Žádný markdown, žádné ```json``` bloky, žádný text před ani za JSON. Odpověď MUSÍ začínat znakem { nebo [.\n\n' +
+        'Formát JSON:\n' +
         '{\n' +
         '  "lv_cislo": "číslo LV nebo null",\n' +
         '  "katastralni_uzemi": "název katastrálního území nebo null",\n' +
@@ -74,7 +75,8 @@ module.exports = async function handler(req, res) {
         'Pokud některé údaje v textu nejsou, vrať null nebo prázdné pole.\n' +
         'Pokud text obsahuje více LV, vrať pole JSON objektů.\n' +
         'Klíč "collateral_summary" je nejdůležitější — měl by obsahovat stručný popis vhodný do Term Sheetu.\n' +
-        'Text může být špatně extrahovaný z PDF — pokus se i tak rozpoznat klíčové údaje (číslo LV, katastrální území, parcely).';
+        'Text může být špatně extrahovaný z PDF — pokus se i tak rozpoznat klíčové údaje (číslo LV, katastrální území, parcely).\n' +
+        'U velkých LV s mnoha parcelami uveď VŠECHNY parcely — nevynechávej žádnou.';
 
     // Helper: try to extract JSON from Claude response text
     function tryParseJSON(responseText) {
@@ -83,7 +85,7 @@ module.exports = async function handler(req, res) {
             return JSON.parse(responseText.trim());
         } catch (e) { /* not pure JSON */ }
 
-        // Strategy 2: Markdown code block ```json ... ```
+        // Strategy 2: Markdown code block
         var codeBlockMatch = responseText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
         if (codeBlockMatch) {
             try {
@@ -110,48 +112,35 @@ module.exports = async function handler(req, res) {
     }
 
     var inputText = text.substring(0, 30000);
-    console.log('LV parse request:', { fileName: fileName, textLength: text.length, trimmedLength: inputText.length, firstChars: text.substring(0, 100) });
+    console.log('LV parse request:', { fileName: fileName, textLength: text.length, trimmedLength: inputText.length });
 
     try {
         var userContent = 'Analyzuj tento List vlastnictví z katastru nemovitostí (soubor: ' + (fileName || 'neznámý') + '):\n\n' +
             (instructions ? 'POKYN OD UŽIVATELE: ' + instructions + '\n\n' : '') +
             inputText;
 
+        // Use assistant prefill to force JSON output — Claude must continue from "{"
         var message = await client.messages.create({
             model: 'claude-sonnet-4-20250514',
-            max_tokens: 4096,
-            messages: [{ role: 'user', content: userContent }],
+            max_tokens: 8192,
+            messages: [
+                { role: 'user', content: userContent },
+                { role: 'assistant', content: '{' }
+            ],
             system: systemPrompt
         });
 
-        var responseText = message.content[0].text;
+        // Reconstruct full JSON — prefill "{" + Claude's continuation
+        var responseText = '{' + message.content[0].text;
+        console.log('Claude response length:', responseText.length, 'first 100 chars:', responseText.substring(0, 100));
+
         var parsed = tryParseJSON(responseText);
-
-        // Retry once if parsing failed — ask Claude to fix its output
-        if (!parsed) {
-            console.log('First attempt failed to return valid JSON. Claude response (first 300 chars):', responseText.substring(0, 300));
-            var retryMessage = await client.messages.create({
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 4096,
-                messages: [
-                    { role: 'user', content: userContent },
-                    { role: 'assistant', content: responseText },
-                    { role: 'user', content: 'Tvoje odpověď neobsahovala platný JSON. Vrať POUZE čistý JSON objekt bez jakéhokoli dalšího textu, bez markdown formátování, bez ```json``` bloků. Začni přímo znakem { nebo [.' }
-                ],
-                system: systemPrompt
-            });
-            var retryText = retryMessage.content[0].text;
-            parsed = tryParseJSON(retryText);
-
-            if (!parsed) {
-                console.error('Retry also failed. Retry response (first 300 chars):', retryText.substring(0, 300));
-            }
-        }
 
         if (parsed) {
             var results = Array.isArray(parsed) ? parsed : [parsed];
             return res.status(200).json({ success: true, data: results });
         } else {
+            console.error('Failed to parse JSON from Claude response (first 500 chars):', responseText.substring(0, 500));
             return res.status(200).json({ success: false, error: 'Claude nedokázal z textu extrahovat strukturovaná data. Zkuste soubor nahrát znovu.', raw: responseText.substring(0, 500) });
         }
     } catch (err) {
