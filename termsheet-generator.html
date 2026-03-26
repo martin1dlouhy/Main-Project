@@ -7,7 +7,6 @@
     <script>if(localStorage.getItem("daynight-theme")==="carbon"){document.documentElement.classList.add("carbon");}</script>
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
     <style>
@@ -1180,21 +1179,11 @@
             </div>
         </main>
 
-        <!-- ===== FORMAT DIALOG ===== -->
+        <!-- ===== GENERATE DIALOG ===== -->
         <div id="format-modal" class="modal-overlay">
             <div class="modal">
                 <h3>Vygenerovat Term Sheet</h3>
-                <p>Vyberte formát výstupního dokumentu</p>
-                <div class="format-options">
-                    <div class="format-option selected" data-format="docx" onclick="selectFormat(this)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        <span>Word (.docx)</span>
-                    </div>
-                    <div class="format-option" data-format="pdf" onclick="selectFormat(this)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        <span>PDF (.pdf)</span>
-                    </div>
-                </div>
+                <p>Dokument bude vygenerován ve formátu Word (.docx)</p>
                 <div class="modal-actions">
                     <button class="btn btn-outline" onclick="closeGenerateDialog()">Zrušit</button>
                     <button class="btn btn-generate" onclick="generateTermSheet()">
@@ -1244,11 +1233,70 @@
 
     // ===== STATE =====
     let currentEditId = null;
-    let selectedFormat = 'docx';
+    // Format is always DOCX (PDF removed)
     let termSheets = [];
     let dirHandle = null;
     let templateFolderHandle = null;
     var TEMPLATE_FILENAME = 'Šablona - Term sheet.docx';
+
+    // ===== FOLDER HANDLE PERSISTENCE (IndexedDB) =====
+    function openHandleDB() {
+        return new Promise(function(resolve, reject) {
+            var req = indexedDB.open('TermSheetFolderDB', 1);
+            req.onupgradeneeded = function(e) {
+                e.target.result.createObjectStore('handles');
+            };
+            req.onsuccess = function(e) { resolve(e.target.result); };
+            req.onerror = function(e) { reject(e); };
+        });
+    }
+
+    async function saveFolderHandle(handle) {
+        try {
+            var db = await openHandleDB();
+            var tx = db.transaction('handles', 'readwrite');
+            tx.objectStore('handles').put(handle, 'templateFolder');
+            await new Promise(function(resolve, reject) {
+                tx.oncomplete = resolve;
+                tx.onerror = reject;
+            });
+        } catch (e) {
+            console.warn('Could not save folder handle:', e);
+        }
+    }
+
+    async function loadFolderHandle() {
+        try {
+            var db = await openHandleDB();
+            var tx = db.transaction('handles', 'readonly');
+            var req = tx.objectStore('handles').get('templateFolder');
+            return new Promise(function(resolve, reject) {
+                req.onsuccess = function() { resolve(req.result || null); };
+                req.onerror = function() { resolve(null); };
+            });
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function restoreFolderHandle() {
+        var handle = await loadFolderHandle();
+        if (!handle) return;
+        try {
+            // Request permission — if previously granted, resolves immediately
+            var perm = await handle.requestPermission({ mode: 'readwrite' });
+            if (perm === 'granted') {
+                templateFolderHandle = handle;
+                dirHandle = handle;
+                document.getElementById('folder-status-text').textContent = 'Složka připojena';
+                document.getElementById('btn-template-folder').classList.add('folder-connected');
+                console.log('Složka obnovena z IndexedDB');
+            }
+        } catch (e) {
+            // Permission denied or handle expired — user will need to reconnect
+            console.log('Folder permission not granted, user needs to reconnect:', e.message);
+        }
+    }
 
     // ===== PIN AUTHENTICATION =====
     const APP_PIN = '0409';
@@ -1701,12 +1749,6 @@
         document.getElementById('format-modal').classList.remove('visible');
     }
 
-    function selectFormat(el) {
-        document.querySelectorAll('.format-option').forEach(function(o) { o.classList.remove('selected'); });
-        el.classList.add('selected');
-        selectedFormat = el.dataset.format;
-    }
-
     // ===== GENERATE DOCX =====
     // ===== XML HELPERS FOR TEMPLATE =====
     function xmlEscape(str) {
@@ -1716,21 +1758,21 @@
     function buildFieldXml(label, value) {
         if (!value) return '';
         return '<w:p><w:pPr><w:spacing w:before="200" w:after="60"/></w:pPr>' +
-               '<w:r><w:rPr><w:b/><w:sz w:val="24"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="24"/></w:rPr>' +
                '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>' +
                '<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>' +
-               '<w:r><w:rPr><w:sz w:val="24"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/></w:rPr>' +
                '<w:t xml:space="preserve">' + xmlEscape(value) + '</w:t></w:r></w:p>';
     }
 
     function buildListXml(label, items) {
         if (!items || items.length === 0) return '';
         var xml = '<w:p><w:pPr><w:spacing w:before="200" w:after="60"/></w:pPr>' +
-                  '<w:r><w:rPr><w:b/><w:sz w:val="24"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+                  '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="24"/></w:rPr>' +
                   '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>';
         items.forEach(function(item) {
             xml += '<w:p><w:pPr><w:spacing w:after="40"/></w:pPr>' +
-                   '<w:r><w:rPr><w:sz w:val="24"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+                   '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/></w:rPr>' +
                    '<w:t xml:space="preserve">' + xmlEscape(item) + '</w:t></w:r></w:p>';
         });
         return xml;
@@ -1741,7 +1783,7 @@
 
         // Title
         xml += '<w:p><w:pPr><w:spacing w:after="400"/></w:pPr>' +
-               '<w:r><w:rPr><w:b/><w:sz w:val="32"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="32"/></w:rPr>' +
                '<w:t>Term Sheet \u2013 financov\u00e1n\u00ed</w:t></w:r></w:p>';
 
         xml += buildFieldXml('\u00dav\u011brovan\u00fd:', data.borrower);
@@ -1802,8 +1844,10 @@
             // Find the body content area — replace empty body paragraphs with our content
             var bodyMatch = docXml.match(/(<w:body[^>]*>)([\s\S]*?)(<w:sectPr[\s\S]*?<\/w:body>)/);
             if (bodyMatch) {
-                docXml = bodyMatch[1] + contentXml + bodyMatch[3];
-                console.log('Obsah vložen do šablony, sectPr zachován');
+                // CRITICAL: use replace on the full match to preserve XML declaration,
+                // namespace declarations, and </w:document> closing tag
+                docXml = docXml.replace(bodyMatch[0], bodyMatch[1] + contentXml + bodyMatch[3]);
+                console.log('Obsah vložen do šablony, XML struktura zachována');
             } else {
                 console.error('Regex pro body/sectPr nenašel shodu — šablona má neočekávanou strukturu');
                 showToast('Šablona má neočekávanou XML strukturu', 'error');
@@ -1813,8 +1857,7 @@
 
             var blob = zip.generate({
                 type: 'blob',
-                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                compression: 'DEFLATE'
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             });
             showToast('Term Sheet vygenerován ze šablony (s logem a zápatím)', 'success');
             return blob;
@@ -1910,159 +1953,7 @@
         }
     }
 
-    // ===== CZECH FONT FOR PDF =====
-    var czechFontLoaded = false;
-    var czechFontData = null;
-    var czechFontBoldData = null;
-
-    async function loadCzechFont() {
-        if (czechFontLoaded) return true;
-        try {
-            // DejaVu Sans — open-source font with full Czech diacritics support
-            var fontUrl = 'https://cdn.jsdelivr.net/gh/nicoptere/2400fonts@master/fonts/DejaVuSans.ttf';
-            var boldUrl = 'https://cdn.jsdelivr.net/gh/nicoptere/2400fonts@master/fonts/DejaVuSans-Bold.ttf';
-
-            var [fontResp, boldResp] = await Promise.all([
-                fetch(fontUrl),
-                fetch(boldUrl)
-            ]);
-
-            if (!fontResp.ok || !boldResp.ok) throw new Error('Font download failed');
-
-            var fontBuf = await fontResp.arrayBuffer();
-            var boldBuf = await boldResp.arrayBuffer();
-
-            // Convert to base64
-            function bufToBase64(buf) {
-                var bytes = new Uint8Array(buf);
-                var binary = '';
-                for (var i = 0; i < bytes.byteLength; i++) {
-                    binary += String.fromCharCode(bytes[i]);
-                }
-                return btoa(binary);
-            }
-
-            czechFontData = bufToBase64(fontBuf);
-            czechFontBoldData = bufToBase64(boldBuf);
-            czechFontLoaded = true;
-            return true;
-        } catch (e) {
-            console.warn('Czech font load failed, using fallback:', e);
-            return false;
-        }
-    }
-
-    // Pre-load font on page load
-    loadCzechFont();
-
-    // ===== GENERATE PDF =====
-    async function generatePDF(data) {
-        var jsPDF = window.jspdf.jsPDF;
-        var pdf = new jsPDF('p', 'mm', 'a4');
-        var y = 25;
-        var leftMargin = 20;
-        var pageWidth = 170;
-
-        // Register Czech font if available
-        var fontName = 'helvetica';
-        if (czechFontLoaded && czechFontData) {
-            pdf.addFileToVFS('DejaVuSans.ttf', czechFontData);
-            pdf.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
-            if (czechFontBoldData) {
-                pdf.addFileToVFS('DejaVuSans-Bold.ttf', czechFontBoldData);
-                pdf.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
-            }
-            fontName = 'DejaVuSans';
-        }
-
-        pdf.setFont(fontName, 'bold');
-        pdf.setFontSize(18);
-        pdf.text('Term Sheet \u2013 financov\u00e1n\u00ed', leftMargin, y);
-        y += 15;
-
-        function addFieldPDF(label, value) {
-            if (!value) return;
-            if (y > 265) { pdf.addPage(); y = 25; }
-            pdf.setFont(fontName, 'bold');
-            pdf.setFontSize(11);
-            pdf.text(label, leftMargin, y);
-            y += 6;
-            pdf.setFont(fontName, 'normal');
-            pdf.setFontSize(11);
-            var lines = pdf.splitTextToSize(value, pageWidth);
-            pdf.text(lines, leftMargin, y);
-            y += lines.length * 5 + 4;
-        }
-
-        addFieldPDF('\u00dav\u011brovan\u00fd:', data.borrower);
-        if (data.purpose) addFieldPDF('\u00da\u010del \u00fav\u011bru:', data.purpose);
-        addFieldPDF('\u00dav\u011brovan\u00e1 \u010d\u00e1stka:', data.amount ? data.amount + ' ' + data.currency : '');
-        if (data.drawdownDate) {
-            var dd = new Date(data.drawdownDate);
-            addFieldPDF('Datum \u010derp\u00e1n\u00ed:', dd.toLocaleDateString('cs-CZ'));
-        }
-        addFieldPDF('\u010cerp\u00e1n\u00ed:', data.drawdownType);
-        addFieldPDF('M\u011bna:', data.currency);
-        addFieldPDF('\u00darok:', data.interest ? data.interest + ' % p.a.' : '');
-        addFieldPDF('Placen\u00ed \u00farok\u016f:', data.interestPayment);
-        addFieldPDF('Doba splatnosti:', data.maturity);
-        if (data.earlyRepayment) addFieldPDF('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
-        if (data.originationFeeDisplay) addFieldPDF('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
-        if (data.collateralValue) {
-            addFieldPDF('Hodnota zaji\u0161t\u011bn\u00ed:', data.collateralValue + ' ' + data.currency);
-            var amt = parseAmount(data.amount);
-            var col = parseAmount(data.collateralValue);
-            if (amt > 0 && col > 0) addFieldPDF('LTV:', (amt / col * 100).toFixed(1) + ' %');
-        }
-
-        if (data.collateralItems && data.collateralItems.length > 0) {
-            if (y > 265) { pdf.addPage(); y = 25; }
-            pdf.setFont(fontName, 'bold');
-            pdf.setFontSize(11);
-            pdf.text('Zaji\u0161t\u011bn\u00ed:', leftMargin, y);
-            y += 6;
-            pdf.setFont(fontName, 'normal');
-            data.collateralItems.forEach(function(item) {
-                if (y > 270) { pdf.addPage(); y = 25; }
-                var lines = pdf.splitTextToSize(item, pageWidth);
-                pdf.text(lines, leftMargin, y);
-                y += lines.length * 5;
-            });
-            y += 4;
-        }
-
-        if (data.documentation && data.documentation.length > 0) {
-            if (y > 265) { pdf.addPage(); y = 25; }
-            pdf.setFont(fontName, 'bold');
-            pdf.setFontSize(11);
-            pdf.text('Dokumentace:', leftMargin, y);
-            y += 6;
-            pdf.setFont(fontName, 'normal');
-            data.documentation.forEach(function(doc) {
-                if (y > 270) { pdf.addPage(); y = 25; }
-                pdf.text(doc, leftMargin, y);
-                y += 5;
-            });
-            y += 4;
-        }
-
-        if (data.otherCosts) addFieldPDF('Ostatn\u00ed n\u00e1klady a poplatky:', data.otherCosts);
-        if (data.validityDate) {
-            var vd = new Date(data.validityDate);
-            addFieldPDF('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
-        }
-
-        // Warning
-        y += 6;
-        if (y > 255) { pdf.addPage(); y = 25; }
-        pdf.setFont(fontName, 'bold');
-        pdf.setFontSize(9);
-        var warnText = 'Upozorn\u011bn\u00ed: Fin\u00e1ln\u00ed schv\u00e1len\u00ed financov\u00e1n\u00ed z\u00e1vis\u00ed na intern\u00edm ocen\u011bn\u00ed nemovitosti ze strany ProfiLend. Uveden\u00e9 podm\u00ednky jsou p\u0159edb\u011b\u017en\u00e9 a mohou b\u00fdt upraveny na z\u00e1klad\u011b v\u00fdsledk\u016f ocen\u011bn\u00ed.';
-        var warnLines = pdf.splitTextToSize(warnText, pageWidth);
-        pdf.text(warnLines, leftMargin, y);
-
-        return pdf.output('blob');
-    }
+    // PDF generation removed — only DOCX output is supported
 
     // ===== GENERATE & DOWNLOAD =====
     async function generateTermSheet() {
@@ -2088,14 +1979,8 @@
         var fileName = 'Term Sheet ' + sanitizeFileName(data.borrower) + ' - financov\u00e1n\u00ed';
 
         try {
-            var blob;
-            if (selectedFormat === 'docx') {
-                blob = await generateDOCX(data);
-                fileName += '.docx';
-            } else {
-                blob = await generatePDF(data);
-                fileName += '.pdf';
-            }
+            var blob = await generateDOCX(data);
+            fileName += '.docx';
 
             // Try File System Access API for direct save
             var saved = false;
@@ -2129,6 +2014,8 @@
         try {
             templateFolderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
             dirHandle = templateFolderHandle; // also use as save folder
+            // Save handle to IndexedDB for persistence
+            await saveFolderHandle(templateFolderHandle);
             // Verify template exists
             try {
                 await templateFolderHandle.getFileHandle(TEMPLATE_FILENAME);
@@ -2278,6 +2165,9 @@
 
         // Initialize custom dropdowns
         initCustomDropdowns();
+
+        // Restore previously connected folder
+        restoreFolderHandle();
     }
 
     init().catch(function(e) { console.error('Init failed:', e); showToast('Chyba při inicializaci databáze', 'error'); });
