@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.7/pizzip.min.js"></script>
     <style>
         /* ===== PIN SCREEN ===== */
         .pin-overlay {
@@ -88,6 +89,15 @@
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
         .pin-logo svg { width: 28px; height: 28px; }
+
+        /* ===== FOLDER CONNECTED INDICATOR ===== */
+        .btn.folder-connected {
+            border-color: var(--success);
+            color: var(--success);
+        }
+        .btn.folder-connected svg {
+            stroke: var(--success);
+        }
 
         /* ===== APP HEADER ===== */
         .app-header {
@@ -357,6 +367,17 @@
             white-space: nowrap;
             display: flex;
             align-items: center;
+            transition: var(--transition);
+        }
+        /* Focus-within: when input inside is focused, highlight both input AND unit */
+        .form-input-with-unit:focus-within input {
+            border-color: var(--accent);
+            background: var(--bg-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .form-input-with-unit:focus-within .input-unit {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
         }
 
         /* ===== DYNAMIC LIST (Zajištění, Dokumentace) ===== */
@@ -886,6 +907,10 @@
                     </div>
                 </div>
                 <div class="header-actions">
+                    <button class="btn btn-outline" onclick="pickTemplateFolder()" id="btn-template-folder" title="Připojit složku se šablonou Term Sheetu">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        <span id="folder-status-text">Připojit složku</span>
+                    </button>
                     <button class="btn btn-outline" onclick="showView('list')" id="btn-show-list">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                         Přehled
@@ -1222,6 +1247,8 @@
     let selectedFormat = 'docx';
     let termSheets = [];
     let dirHandle = null;
+    let templateFolderHandle = null;
+    var TEMPLATE_FILENAME = 'Šablona - Term sheet.docx';
 
     // ===== PIN AUTHENTICATION =====
     const APP_PIN = '0409';
@@ -1681,115 +1708,201 @@
     }
 
     // ===== GENERATE DOCX =====
-    function generateDOCX(data) {
-        var D = docx;
+    // ===== XML HELPERS FOR TEMPLATE =====
+    function xmlEscape(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
 
-        var children = [];
+    function buildFieldXml(label, value) {
+        if (!value) return '';
+        return '<w:p><w:pPr><w:spacing w:before="200" w:after="60"/></w:pPr>' +
+               '<w:r><w:rPr><w:b/><w:sz w:val="24"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+               '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>' +
+               '<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>' +
+               '<w:r><w:rPr><w:sz w:val="24"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+               '<w:t xml:space="preserve">' + xmlEscape(value) + '</w:t></w:r></w:p>';
+    }
+
+    function buildListXml(label, items) {
+        if (!items || items.length === 0) return '';
+        var xml = '<w:p><w:pPr><w:spacing w:before="200" w:after="60"/></w:pPr>' +
+                  '<w:r><w:rPr><w:b/><w:sz w:val="24"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+                  '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>';
+        items.forEach(function(item) {
+            xml += '<w:p><w:pPr><w:spacing w:after="40"/></w:pPr>' +
+                   '<w:r><w:rPr><w:sz w:val="24"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+                   '<w:t xml:space="preserve">' + xmlEscape(item) + '</w:t></w:r></w:p>';
+        });
+        return xml;
+    }
+
+    function buildTermSheetBodyXml(data) {
+        var xml = '';
 
         // Title
-        children.push(new D.Paragraph({
-            children: [new D.TextRun({ text: 'Term Sheet – financování', bold: true, size: 32, font: 'Calibri' })],
-            spacing: { after: 400 },
-            alignment: D.AlignmentType.LEFT,
-        }));
+        xml += '<w:p><w:pPr><w:spacing w:after="400"/></w:pPr>' +
+               '<w:r><w:rPr><w:b/><w:sz w:val="32"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr>' +
+               '<w:t>Term Sheet \u2013 financov\u00e1n\u00ed</w:t></w:r></w:p>';
 
-        // Helper function
-        function addField(label, value) {
-            if (!value) return;
-            children.push(new D.Paragraph({
-                children: [new D.TextRun({ text: label, bold: true, size: 24, font: 'Calibri' })],
-                spacing: { before: 200, after: 60 },
-            }));
-            children.push(new D.Paragraph({
-                children: [new D.TextRun({ text: value, size: 24, font: 'Calibri' })],
-                spacing: { after: 80 },
-            }));
-        }
-
-        addField('Úvěrovaný:', data.borrower);
-        if (data.purpose) addField('Účel úvěru:', data.purpose);
-        addField('Úvěrovaná částka:', data.amount ? data.amount + ' ' + data.currency : '');
+        xml += buildFieldXml('\u00dav\u011brovan\u00fd:', data.borrower);
+        if (data.purpose) xml += buildFieldXml('\u00da\u010del \u00fav\u011bru:', data.purpose);
+        xml += buildFieldXml('\u00dav\u011brovan\u00e1 \u010d\u00e1stka:', data.amount ? data.amount + ' ' + data.currency : '');
         if (data.drawdownDate) {
             var dd = new Date(data.drawdownDate);
-            addField('Datum čerpání:', dd.toLocaleDateString('cs-CZ'));
+            xml += buildFieldXml('Datum \u010derp\u00e1n\u00ed:', dd.toLocaleDateString('cs-CZ'));
         }
-        addField('Čerpání:', data.drawdownType);
-        addField('Měna:', data.currency);
-        addField('Úrok:', data.interest ? data.interest + ' % p.a.' : '');
-        addField('Placení úroků:', data.interestPayment);
-        addField('Doba splatnosti:', data.maturity);
-        if (data.earlyRepayment) addField('Předčasné splacení:', data.earlyRepayment);
-        if (data.originationFeeDisplay) addField('Poplatek za sjednání:', data.originationFeeDisplay);
+        xml += buildFieldXml('\u010cerp\u00e1n\u00ed:', data.drawdownType);
+        xml += buildFieldXml('M\u011bna:', data.currency);
+        xml += buildFieldXml('\u00darok:', data.interest ? data.interest + ' % p.a.' : '');
+        xml += buildFieldXml('Placen\u00ed \u00farok\u016f:', data.interestPayment);
+        xml += buildFieldXml('Doba splatnosti:', data.maturity);
+        if (data.earlyRepayment) xml += buildFieldXml('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
+        if (data.originationFeeDisplay) xml += buildFieldXml('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
 
         // Collateral value + LTV
         if (data.collateralValue) {
-            addField('Hodnota zajištění:', data.collateralValue + ' ' + data.currency);
+            xml += buildFieldXml('Hodnota zaji\u0161t\u011bn\u00ed:', data.collateralValue + ' ' + data.currency);
             var amt = parseAmount(data.amount);
             var col = parseAmount(data.collateralValue);
             if (amt > 0 && col > 0) {
-                addField('LTV:', (amt / col * 100).toFixed(1) + ' %');
+                xml += buildFieldXml('LTV:', (amt / col * 100).toFixed(1) + ' %');
             }
         }
 
         // Collateral items
-        if (data.collateralItems && data.collateralItems.length > 0) {
-            children.push(new D.Paragraph({
-                children: [new D.TextRun({ text: 'Zajištění:', bold: true, size: 24, font: 'Calibri' })],
-                spacing: { before: 200, after: 60 },
-            }));
-            data.collateralItems.forEach(function(item) {
-                children.push(new D.Paragraph({
-                    children: [new D.TextRun({ text: item, size: 24, font: 'Calibri' })],
-                    spacing: { after: 40 },
-                }));
-            });
-        }
+        xml += buildListXml('Zaji\u0161t\u011bn\u00ed:', data.collateralItems);
 
         // Documentation
-        if (data.documentation && data.documentation.length > 0) {
-            children.push(new D.Paragraph({
-                children: [new D.TextRun({ text: 'Dokumentace:', bold: true, size: 24, font: 'Calibri' })],
-                spacing: { before: 200, after: 60 },
-            }));
-            data.documentation.forEach(function(doc) {
-                children.push(new D.Paragraph({
-                    children: [new D.TextRun({ text: doc, size: 24, font: 'Calibri' })],
-                    spacing: { after: 40 },
-                }));
-            });
-        }
+        xml += buildListXml('Dokumentace:', data.documentation);
 
         // Other costs
-        if (data.otherCosts) addField('Ostatní náklady a poplatky:', data.otherCosts);
+        if (data.otherCosts) xml += buildFieldXml('Ostatn\u00ed n\u00e1klady a poplatky:', data.otherCosts);
 
         // Validity date
         if (data.validityDate) {
             var vd = new Date(data.validityDate);
-            addField('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
+            xml += buildFieldXml('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
         }
 
-        // Warning
-        children.push(new D.Paragraph({ children: [], spacing: { before: 300 } }));
-        children.push(new D.Paragraph({
-            children: [
-                new D.TextRun({ text: 'Upozornění: ', bold: true, size: 20, font: 'Calibri', italics: true }),
-                new D.TextRun({ text: 'Finální schválení financování závisí na interním ocenění nemovitosti ze strany ProfiLend. Uvedené podmínky jsou předběžné a mohou být upraveny na základě výsledků ocenění.', size: 20, font: 'Calibri', italics: true })
-            ],
-            spacing: { before: 200 },
-        }));
+        return xml;
+    }
 
-        var doc = new D.Document({
-            sections: [{
-                properties: {
-                    page: {
-                        margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 },
-                    }
-                },
-                children: children
-            }]
-        });
+    async function generateDOCX(data) {
+        // Try to load template
+        var zip = await loadTemplateAsZip();
 
-        return D.Packer.toBlob(doc);
+        if (zip) {
+            // === TEMPLATE-BASED GENERATION ===
+            var docXml = zip.file('word/document.xml').asText();
+
+            // Build content XML
+            var contentXml = buildTermSheetBodyXml(data);
+
+            // Find the body content area — replace empty body paragraphs with our content
+            // The template body has just empty paragraphs between <w:body> and </w:body>
+            var bodyMatch = docXml.match(/(<w:body[^>]*>)([\s\S]*?)(<w:sectPr[\s\S]*?<\/w:body>)/);
+            if (bodyMatch) {
+                docXml = bodyMatch[1] + contentXml + bodyMatch[3];
+            }
+
+            zip.file('word/document.xml', docXml);
+
+            var blob = zip.generate({
+                type: 'blob',
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                compression: 'DEFLATE'
+            });
+            return blob;
+        } else {
+            // === FALLBACK: Generate from scratch (original method) ===
+            var D = docx;
+            var children = [];
+
+            children.push(new D.Paragraph({
+                children: [new D.TextRun({ text: 'Term Sheet \u2013 financov\u00e1n\u00ed', bold: true, size: 32, font: 'Calibri' })],
+                spacing: { after: 400 },
+                alignment: D.AlignmentType.LEFT,
+            }));
+
+            function addField(label, value) {
+                if (!value) return;
+                children.push(new D.Paragraph({
+                    children: [new D.TextRun({ text: label, bold: true, size: 24, font: 'Calibri' })],
+                    spacing: { before: 200, after: 60 },
+                }));
+                children.push(new D.Paragraph({
+                    children: [new D.TextRun({ text: value, size: 24, font: 'Calibri' })],
+                    spacing: { after: 80 },
+                }));
+            }
+
+            addField('\u00dav\u011brovan\u00fd:', data.borrower);
+            if (data.purpose) addField('\u00da\u010del \u00fav\u011bru:', data.purpose);
+            addField('\u00dav\u011brovan\u00e1 \u010d\u00e1stka:', data.amount ? data.amount + ' ' + data.currency : '');
+            if (data.drawdownDate) {
+                var dd = new Date(data.drawdownDate);
+                addField('Datum \u010derp\u00e1n\u00ed:', dd.toLocaleDateString('cs-CZ'));
+            }
+            addField('\u010cerp\u00e1n\u00ed:', data.drawdownType);
+            addField('M\u011bna:', data.currency);
+            addField('\u00darok:', data.interest ? data.interest + ' % p.a.' : '');
+            addField('Placen\u00ed \u00farok\u016f:', data.interestPayment);
+            addField('Doba splatnosti:', data.maturity);
+            if (data.earlyRepayment) addField('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
+            if (data.originationFeeDisplay) addField('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
+            if (data.collateralValue) {
+                addField('Hodnota zaji\u0161t\u011bn\u00ed:', data.collateralValue + ' ' + data.currency);
+                var amt = parseAmount(data.amount);
+                var col = parseAmount(data.collateralValue);
+                if (amt > 0 && col > 0) addField('LTV:', (amt / col * 100).toFixed(1) + ' %');
+            }
+            if (data.collateralItems && data.collateralItems.length > 0) {
+                children.push(new D.Paragraph({
+                    children: [new D.TextRun({ text: 'Zaji\u0161t\u011bn\u00ed:', bold: true, size: 24, font: 'Calibri' })],
+                    spacing: { before: 200, after: 60 },
+                }));
+                data.collateralItems.forEach(function(item) {
+                    children.push(new D.Paragraph({
+                        children: [new D.TextRun({ text: item, size: 24, font: 'Calibri' })],
+                        spacing: { after: 40 },
+                    }));
+                });
+            }
+            if (data.documentation && data.documentation.length > 0) {
+                children.push(new D.Paragraph({
+                    children: [new D.TextRun({ text: 'Dokumentace:', bold: true, size: 24, font: 'Calibri' })],
+                    spacing: { before: 200, after: 60 },
+                }));
+                data.documentation.forEach(function(d) {
+                    children.push(new D.Paragraph({
+                        children: [new D.TextRun({ text: d, size: 24, font: 'Calibri' })],
+                        spacing: { after: 40 },
+                    }));
+                });
+            }
+            if (data.otherCosts) addField('Ostatn\u00ed n\u00e1klady a poplatky:', data.otherCosts);
+            if (data.validityDate) {
+                var vd = new Date(data.validityDate);
+                addField('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
+            }
+            children.push(new D.Paragraph({ children: [], spacing: { before: 300 } }));
+            children.push(new D.Paragraph({
+                children: [
+                    new D.TextRun({ text: 'Upozorn\u011bn\u00ed: ', bold: true, size: 20, font: 'Calibri', italics: true }),
+                    new D.TextRun({ text: 'Fin\u00e1ln\u00ed schv\u00e1len\u00ed financov\u00e1n\u00ed z\u00e1vis\u00ed na intern\u00edm ocen\u011bn\u00ed nemovitosti ze strany ProfiLend. Uveden\u00e9 podm\u00ednky jsou p\u0159edb\u011b\u017en\u00e9 a mohou b\u00fdt upraveny na z\u00e1klad\u011b v\u00fdsledk\u016f ocen\u011bn\u00ed.', size: 20, font: 'Calibri', italics: true })
+                ],
+                spacing: { before: 200 },
+            }));
+
+            var doc = new D.Document({
+                sections: [{
+                    properties: { page: { margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 } } },
+                    children: children
+                }]
+            });
+
+            return D.Packer.toBlob(doc);
+        }
     }
 
     // ===== CZECH FONT FOR PDF =====
@@ -1967,8 +2080,7 @@
             console.error('Save before generate failed:', e);
         }
 
-        var dateStr = new Date().toISOString().slice(0, 10);
-        var fileName = sanitizeFileName(data.borrower) + ' - Termsheet (' + dateStr + ')';
+        var fileName = 'Term Sheet ' + sanitizeFileName(data.borrower) + ' - financov\u00e1n\u00ed';
 
         try {
             var blob;
@@ -2007,15 +2119,39 @@
         }
     }
 
-    // ===== FOLDER PICKER =====
-    async function pickSaveFolder() {
+    // ===== TEMPLATE FOLDER PICKER =====
+    async function pickTemplateFolder() {
         try {
-            dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-            showToast('Složka vybrána pro ukládání', 'success');
+            templateFolderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            dirHandle = templateFolderHandle; // also use as save folder
+            // Verify template exists
+            try {
+                await templateFolderHandle.getFileHandle(TEMPLATE_FILENAME);
+                document.getElementById('folder-status-text').textContent = 'Složka připojena';
+                document.getElementById('btn-template-folder').classList.add('folder-connected');
+                showToast('Složka připojena — šablona nalezena', 'success');
+            } catch (e) {
+                document.getElementById('folder-status-text').textContent = 'Složka připojena';
+                document.getElementById('btn-template-folder').classList.add('folder-connected');
+                showToast('Složka připojena, ale šablona "' + TEMPLATE_FILENAME + '" nebyla nalezena. DOCX bude generován bez šablony.', 'info');
+            }
         } catch (e) {
             if (e.name !== 'AbortError') {
                 showToast('Nepodařilo se vybrat složku', 'error');
             }
+        }
+    }
+
+    async function loadTemplateAsZip() {
+        if (!templateFolderHandle) return null;
+        try {
+            var fileHandle = await templateFolderHandle.getFileHandle(TEMPLATE_FILENAME);
+            var file = await fileHandle.getFile();
+            var arrayBuf = await file.arrayBuffer();
+            return new PizZip(arrayBuf);
+        } catch (e) {
+            console.warn('Template load failed:', e);
+            return null;
         }
     }
 
