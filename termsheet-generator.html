@@ -378,6 +378,24 @@
             border-color: var(--accent);
             box-shadow: 0 0 0 3px var(--accent-glow);
         }
+        /* Custom dropdown inside input-with-unit (e.g. maturity unit selector) */
+        .form-input-with-unit .custom-dropdown {
+            width: auto;
+            min-width: 100px;
+        }
+        .form-input-with-unit .custom-dropdown-trigger {
+            border-radius: 0 10px 10px 0;
+            border-left: none;
+            padding: 0.75rem 2rem 0.75rem 0.75rem;
+            font-size: 0.875rem;
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        .form-input-with-unit:focus-within .custom-dropdown-trigger {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
 
         /* ===== DYNAMIC LIST (Zajištění, Dokumentace) ===== */
         .dynamic-list { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -1018,7 +1036,13 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Doba splatnosti *</label>
-                            <input type="text" class="form-input" id="f-maturity" placeholder="např. 2 – 3 roky">
+                            <div class="form-input-with-unit">
+                                <input type="text" class="form-input" id="f-maturity" placeholder="např. 3">
+                                <select class="form-select" id="f-maturity-unit">
+                                    <option value="let">let</option>
+                                    <option value="měsíců">měsíců</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Předčasné splacení</label>
@@ -1481,6 +1505,7 @@
             interest: document.getElementById('f-interest').value.trim(),
             interestPayment: document.getElementById('f-interest-payment').value,
             maturity: document.getElementById('f-maturity').value.trim(),
+            maturityUnit: document.getElementById('f-maturity-unit').value,
             earlyRepayment: document.getElementById('f-early-repayment').value.trim(),
             originationFee: feeVal,
             originationFeeType: feeType,
@@ -1510,6 +1535,7 @@
         document.getElementById('f-interest').value = data.interest || '';
         document.getElementById('f-interest-payment').value = data.interestPayment || 'Měsíční';
         document.getElementById('f-maturity').value = data.maturity || '';
+        document.getElementById('f-maturity-unit').value = data.maturityUnit || 'let';
         document.getElementById('f-early-repayment').value = data.earlyRepayment || '';
         document.getElementById('f-origination-fee').value = data.originationFee || '';
         document.getElementById('f-origination-fee-type').value = data.originationFeeType || 'percent';
@@ -1556,7 +1582,7 @@
         calcLTV();
 
         // Sync custom dropdowns
-        ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type'].forEach(function(id) {
+        ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type','f-maturity-unit'].forEach(function(id) {
             syncCustomDropdown(document.getElementById(id));
         });
     }
@@ -1575,6 +1601,7 @@
         document.getElementById('f-interest').value = '';
         document.getElementById('f-interest-payment').value = 'Měsíční';
         document.getElementById('f-maturity').value = '';
+        document.getElementById('f-maturity-unit').value = 'let';
         document.getElementById('f-early-repayment').value = '';
         document.getElementById('f-origination-fee').value = '';
         document.getElementById('f-origination-fee-type').value = 'percent';
@@ -1593,7 +1620,7 @@
         calcLTV();
 
         // Sync custom dropdowns
-        ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type'].forEach(function(id) {
+        ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type','f-maturity-unit'].forEach(function(id) {
             syncCustomDropdown(document.getElementById(id));
         });
     }
@@ -1755,24 +1782,32 @@
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // Bullet list paragraph (List Paragraph style with indent)
+    var BULLET_PPR = '<w:pPr><w:pStyle w:val="ListParagraph"/>' +
+        '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>' +
+        '<w:spacing w:after="40"/></w:pPr>';
+
     function buildFieldXml(label, value) {
         if (!value) return '';
-        return '<w:p><w:pPr><w:spacing w:before="200" w:after="60"/></w:pPr>' +
-               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="24"/></w:rPr>' +
-               '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>' +
-               '<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>' +
-               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/></w:rPr>' +
+        // Bold label as normal paragraph
+        var xml = '<w:p><w:pPr><w:spacing w:before="120" w:after="0"/></w:pPr>' +
+               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="22"/></w:rPr>' +
+               '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>';
+        // Value as bullet list paragraph
+        xml += '<w:p>' + BULLET_PPR +
+               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr>' +
                '<w:t xml:space="preserve">' + xmlEscape(value) + '</w:t></w:r></w:p>';
+        return xml;
     }
 
     function buildListXml(label, items) {
         if (!items || items.length === 0) return '';
-        var xml = '<w:p><w:pPr><w:spacing w:before="200" w:after="60"/></w:pPr>' +
-                  '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="24"/></w:rPr>' +
+        var xml = '<w:p><w:pPr><w:spacing w:before="120" w:after="0"/></w:pPr>' +
+                  '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="22"/></w:rPr>' +
                   '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>';
         items.forEach(function(item) {
-            xml += '<w:p><w:pPr><w:spacing w:after="40"/></w:pPr>' +
-                   '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/></w:rPr>' +
+            xml += '<w:p>' + BULLET_PPR +
+                   '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr>' +
                    '<w:t xml:space="preserve">' + xmlEscape(item) + '</w:t></w:r></w:p>';
         });
         return xml;
@@ -1781,9 +1816,9 @@
     function buildTermSheetBodyXml(data) {
         var xml = '';
 
-        // Title
-        xml += '<w:p><w:pPr><w:spacing w:after="400"/></w:pPr>' +
-               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="32"/></w:rPr>' +
+        // Title — uses Title style matching the Agri Partners reference
+        xml += '<w:p><w:pPr><w:pStyle w:val="Title"/><w:spacing w:after="400"/></w:pPr>' +
+               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="32"/></w:rPr>' +
                '<w:t>Term Sheet \u2013 financov\u00e1n\u00ed</w:t></w:r></w:p>';
 
         xml += buildFieldXml('\u00dav\u011brovan\u00fd:', data.borrower);
@@ -1797,7 +1832,7 @@
         xml += buildFieldXml('M\u011bna:', data.currency);
         xml += buildFieldXml('\u00darok:', data.interest ? data.interest + ' % p.a.' : '');
         xml += buildFieldXml('Placen\u00ed \u00farok\u016f:', data.interestPayment);
-        xml += buildFieldXml('Doba splatnosti:', data.maturity);
+        xml += buildFieldXml('Doba splatnosti:', data.maturity ? data.maturity + ' ' + data.maturityUnit : '');
         if (data.earlyRepayment) xml += buildFieldXml('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
         if (data.originationFeeDisplay) xml += buildFieldXml('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
 
@@ -1895,7 +1930,7 @@
             addField('M\u011bna:', data.currency);
             addField('\u00darok:', data.interest ? data.interest + ' % p.a.' : '');
             addField('Placen\u00ed \u00farok\u016f:', data.interestPayment);
-            addField('Doba splatnosti:', data.maturity);
+            addField('Doba splatnosti:', data.maturity ? data.maturity + ' ' + data.maturityUnit : '');
             if (data.earlyRepayment) addField('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
             if (data.originationFeeDisplay) addField('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
             if (data.collateralValue) {
