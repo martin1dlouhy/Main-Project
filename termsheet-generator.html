@@ -398,6 +398,21 @@
             box-shadow: 0 0 0 3px var(--accent-glow);
         }
 
+        /* ===== ARES AUTOCOMPLETE ===== */
+        .ares-wrapper { position: relative; }
+        .ares-status { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; pointer-events: none; }
+        .ares-status .ares-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: lv-spin 0.6s linear infinite; }
+        .ares-status .ares-ok { color: #2ecc71; font-size: 1.1rem; }
+        .ares-status .ares-fail { color: #e74c3c; font-size: 0.8rem; }
+        .ares-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0 0 10px 10px; box-shadow: var(--shadow-md); max-height: 240px; overflow-y: auto; display: none; }
+        .ares-dropdown.open { display: block; }
+        .ares-dropdown-item { padding: 0.625rem 0.75rem; cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background 0.15s; }
+        .ares-dropdown-item:last-child { border-bottom: none; }
+        .ares-dropdown-item:hover { background: var(--accent-glow); }
+        .ares-dropdown-item .ares-item-name { font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
+        .ares-dropdown-item .ares-item-detail { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+        .ares-wrapper .form-input { padding-right: 36px; }
+
         /* ===== LV UPLOAD ZONE ===== */
         .lv-upload-zone {
             border: 2px dashed var(--border-color);
@@ -1094,11 +1109,18 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">Úvěrovaný (název subjektu) *</label>
-                            <input type="text" class="form-input" id="f-borrower" placeholder="Název klienta / právnické osoby">
+                            <div class="ares-wrapper" id="ares-wrap-borrower">
+                                <input type="text" class="form-input" id="f-borrower" placeholder="Název klienta / právnické osoby" autocomplete="off">
+                                <div class="ares-status" id="ares-status-borrower"></div>
+                                <div class="ares-dropdown" id="ares-dropdown-borrower"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">IČO</label>
-                            <input type="text" class="form-input" id="f-ico" placeholder="např. 252 33 238">
+                            <div class="ares-wrapper" id="ares-wrap-ico">
+                                <input type="text" class="form-input" id="f-ico" placeholder="např. 252 33 238" autocomplete="off">
+                                <div class="ares-status" id="ares-status-ico"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Spisová značka</label>
@@ -2657,6 +2679,165 @@
         showToast('Zajištění vloženo: LV ' + (lv.lv_cislo || '?'), 'success');
     }
 
+    // ===== ARES AUTOCOMPLETE =====
+    var aresDebounceTimer = null;
+    var aresAbortController = null;
+
+    function initAresAutocomplete() {
+        var icoInput = document.getElementById('f-ico');
+        var borrowerInput = document.getElementById('f-borrower');
+
+        // IČO → lookup when 8 digits entered
+        icoInput.addEventListener('input', function() {
+            var val = this.value.replace(/\s/g, '');
+            if (/^\d{8}$/.test(val)) {
+                aresLookupByICO(val);
+            } else {
+                setAresStatus('ico', '');
+            }
+        });
+
+        // Název → search with debounce
+        borrowerInput.addEventListener('input', function() {
+            var val = this.value.trim();
+            if (aresDebounceTimer) clearTimeout(aresDebounceTimer);
+
+            if (val.length < 3) {
+                closeAresDropdown();
+                setAresStatus('borrower', '');
+                return;
+            }
+
+            setAresStatus('borrower', 'loading');
+            aresDebounceTimer = setTimeout(function() {
+                aresSearchByName(val);
+            }, 500);
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            var wrap = document.getElementById('ares-wrap-borrower');
+            if (wrap && !wrap.contains(e.target)) {
+                closeAresDropdown();
+            }
+        });
+    }
+
+    async function aresLookupByICO(ico) {
+        if (aresAbortController) aresAbortController.abort();
+        aresAbortController = new AbortController();
+
+        setAresStatus('ico', 'loading');
+
+        try {
+            var response = await fetch('/api/ares?ico=' + encodeURIComponent(ico), {
+                signal: aresAbortController.signal
+            });
+            var result = await response.json();
+
+            if (result.success && result.data && result.data.length > 0) {
+                var subj = result.data[0];
+                fillAresData(subj);
+                setAresStatus('ico', 'ok');
+            } else {
+                setAresStatus('ico', 'fail');
+            }
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('ARES ICO lookup error:', err);
+                setAresStatus('ico', 'fail');
+            }
+        }
+    }
+
+    async function aresSearchByName(name) {
+        if (aresAbortController) aresAbortController.abort();
+        aresAbortController = new AbortController();
+
+        try {
+            var response = await fetch('/api/ares?name=' + encodeURIComponent(name), {
+                signal: aresAbortController.signal
+            });
+            var result = await response.json();
+
+            if (result.success && result.data && result.data.length > 0) {
+                renderAresDropdown(result.data);
+                setAresStatus('borrower', '');
+            } else {
+                closeAresDropdown();
+                setAresStatus('borrower', 'fail');
+            }
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('ARES name search error:', err);
+                setAresStatus('borrower', 'fail');
+            }
+        }
+    }
+
+    var aresLastResults = [];
+
+    function renderAresDropdown(subjects) {
+        aresLastResults = subjects;
+        var dropdown = document.getElementById('ares-dropdown-borrower');
+        var html = '';
+        subjects.forEach(function(subj, idx) {
+            var detailParts = [];
+            if (subj.ico) detailParts.push('IČO: ' + escapeHtml(subj.ico));
+            if (subj.sidlo) detailParts.push(escapeHtml(subj.sidlo));
+            html += '<div class="ares-dropdown-item" data-ares-idx="' + idx + '">' +
+                    '<div class="ares-item-name">' + escapeHtml(subj.nazev || '') + '</div>' +
+                    '<div class="ares-item-detail">' + detailParts.join(' &middot; ') + '</div>' +
+                    '</div>';
+        });
+        dropdown.innerHTML = html;
+        dropdown.classList.add('open');
+
+        // Attach click handlers
+        dropdown.querySelectorAll('.ares-dropdown-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var idx = parseInt(this.getAttribute('data-ares-idx'));
+                var data = aresLastResults[idx];
+                if (data) {
+                    fillAresData(data);
+                    closeAresDropdown();
+                    setAresStatus('borrower', 'ok');
+                }
+            });
+        });
+    }
+
+    function closeAresDropdown() {
+        var dropdown = document.getElementById('ares-dropdown-borrower');
+        if (dropdown) {
+            dropdown.classList.remove('open');
+            dropdown.innerHTML = '';
+        }
+    }
+
+    function fillAresData(subj) {
+        if (subj.nazev) document.getElementById('f-borrower').value = subj.nazev;
+        if (subj.ico) document.getElementById('f-ico').value = subj.ico;
+        if (subj.spisovaZnacka) document.getElementById('f-spisova-znacka').value = subj.spisovaZnacka;
+        if (subj.sidlo) document.getElementById('f-sidlo').value = subj.sidlo;
+    }
+
+    function setAresStatus(field, state) {
+        var el = document.getElementById('ares-status-' + field);
+        if (!el) return;
+        if (state === 'loading') {
+            el.innerHTML = '<span class="ares-spinner"></span>';
+        } else if (state === 'ok') {
+            el.innerHTML = '<span class="ares-ok">\u2713</span>';
+            setTimeout(function() { if (el.querySelector('.ares-ok')) el.innerHTML = ''; }, 3000);
+        } else if (state === 'fail') {
+            el.innerHTML = '<span class="ares-fail">Nenalezeno</span>';
+            setTimeout(function() { if (el.querySelector('.ares-fail')) el.innerHTML = ''; }, 3000);
+        } else {
+            el.innerHTML = '';
+        }
+    }
+
     // ===== INIT =====
     async function init() {
         await openDB();
@@ -2670,6 +2851,9 @@
 
         // Initialize custom dropdowns
         initCustomDropdowns();
+
+        // Initialize ARES autocomplete
+        initAresAutocomplete();
 
         // Restore previously connected folder
         restoreFolderHandle();

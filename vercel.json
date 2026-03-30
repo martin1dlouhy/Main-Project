@@ -3,6 +3,9 @@
   "functions": {
     "api/parse-lv.js": {
       "maxDuration": 60
+    },
+    "api/ares.js": {
+      "maxDuration": 15
     }
   }
 }
