@@ -1093,8 +1093,20 @@
                     </h2>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label class="form-label">Úvěrovaný *</label>
+                            <label class="form-label">Úvěrovaný (název subjektu) *</label>
                             <input type="text" class="form-input" id="f-borrower" placeholder="Název klienta / právnické osoby">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">IČO</label>
+                            <input type="text" class="form-input" id="f-ico" placeholder="např. 252 33 238">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Spisová značka</label>
+                            <input type="text" class="form-input" id="f-spisova-znacka" placeholder="např. C 11211 vedená u KS v Plzni">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sídlo</label>
+                            <input type="text" class="form-input" id="f-sidlo" placeholder="např. Těšetiny 6, 339 01 Mochtín">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Stav</label>
@@ -1156,6 +1168,7 @@
                             <select class="form-select" id="f-interest-payment">
                                 <option value="Měsíční">Měsíční</option>
                                 <option value="Čtvrtletní">Čtvrtletní</option>
+                                <option value="Pololetní">Pololetní</option>
                                 <option value="Anuitní">Anuitní</option>
                                 <option value="Úroky s jistinou k splatnosti">Úroky s jistinou k splatnosti</option>
                             </select>
@@ -1280,6 +1293,16 @@
                             <input type="checkbox" id="doc-zastavni" checked>
                             <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
                             <span>Zástavní smlouva – nemovitosti</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="doc-zastavni-podily">
+                            <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span>Zástavní smlouva – podíly</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="doc-zastavni-akcie">
+                            <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span>Zástavní smlouva – akcie</span>
                         </label>
                         <label class="checkbox-item">
                             <input type="checkbox" id="doc-uverova" checked>
@@ -1629,6 +1652,8 @@
 
         var docs = [];
         if (document.getElementById('doc-zastavni').checked) docs.push('Zástavní smlouva – nemovitosti');
+        if (document.getElementById('doc-zastavni-podily').checked) docs.push('Zástavní smlouva – podíly');
+        if (document.getElementById('doc-zastavni-akcie').checked) docs.push('Zástavní smlouva – akcie');
         if (document.getElementById('doc-uverova').checked) docs.push('Úvěrová smlouva');
         if (document.getElementById('doc-nz').checked) docs.push('Notářský zápis (NZ)');
         if (document.getElementById('doc-smenka').checked) docs.push('Směnka');
@@ -1647,6 +1672,9 @@
         return {
             id: currentEditId || ('ts-' + Date.now()),
             borrower: document.getElementById('f-borrower').value.trim(),
+            ico: document.getElementById('f-ico').value.trim(),
+            spisovaZnacka: document.getElementById('f-spisova-znacka').value.trim(),
+            sidlo: document.getElementById('f-sidlo').value.trim(),
             status: document.getElementById('f-status').value,
             purpose: document.getElementById('f-purpose').value.trim(),
             amount: document.getElementById('f-amount').value.trim(),
@@ -1675,6 +1703,9 @@
     // ===== POPULATE FORM =====
     function populateForm(data) {
         document.getElementById('f-borrower').value = data.borrower || '';
+        document.getElementById('f-ico').value = data.ico || '';
+        document.getElementById('f-spisova-znacka').value = data.spisovaZnacka || '';
+        document.getElementById('f-sidlo').value = data.sidlo || '';
         document.getElementById('f-status').value = data.status || 'draft';
         document.getElementById('f-purpose').value = data.purpose || '';
         document.getElementById('f-amount').value = data.amount || '';
@@ -1711,6 +1742,8 @@
         // Documentation checkboxes
         var docsArr = data.documentation || [];
         document.getElementById('doc-zastavni').checked = docsArr.indexOf('Zástavní smlouva – nemovitosti') >= 0;
+        document.getElementById('doc-zastavni-podily').checked = docsArr.indexOf('Zástavní smlouva – podíly') >= 0;
+        document.getElementById('doc-zastavni-akcie').checked = docsArr.indexOf('Zástavní smlouva – akcie') >= 0;
         document.getElementById('doc-uverova').checked = docsArr.indexOf('Úvěrová smlouva') >= 0;
         document.getElementById('doc-nz').checked = docsArr.indexOf('Notářský zápis (NZ)') >= 0;
         document.getElementById('doc-smenka').checked = docsArr.indexOf('Směnka') >= 0;
@@ -1718,7 +1751,7 @@
 
         // Custom docs
         var customDocs = docsArr.filter(function(d) {
-            return ['Zástavní smlouva – nemovitosti', 'Úvěrová smlouva', 'Notářský zápis (NZ)', 'Směnka', 'Vinkulace pojistného plnění'].indexOf(d) === -1;
+            return ['Zástavní smlouva – nemovitosti', 'Zástavní smlouva – podíly', 'Zástavní smlouva – akcie', 'Úvěrová smlouva', 'Notářský zápis (NZ)', 'Směnka', 'Vinkulace pojistného plnění'].indexOf(d) === -1;
         });
         var cdList = document.getElementById('custom-docs-list');
         cdList.innerHTML = '';
@@ -1741,6 +1774,9 @@
     function resetForm() {
         currentEditId = null;
         document.getElementById('f-borrower').value = '';
+        document.getElementById('f-ico').value = '';
+        document.getElementById('f-spisova-znacka').value = '';
+        document.getElementById('f-sidlo').value = '';
         document.getElementById('f-status').value = 'draft';
         document.getElementById('f-purpose').value = '';
         document.getElementById('f-amount').value = '';
@@ -1768,6 +1804,8 @@
         renderLVFileList();
         document.getElementById('custom-docs-list').innerHTML = '';
         document.getElementById('doc-zastavni').checked = true;
+        document.getElementById('doc-zastavni-podily').checked = false;
+        document.getElementById('doc-zastavni-akcie').checked = false;
         document.getElementById('doc-uverova').checked = true;
         document.getElementById('doc-nz').checked = true;
         document.getElementById('doc-smenka').checked = false;
@@ -1977,6 +2015,9 @@
                '<w:t>Term Sheet \u2013 financov\u00e1n\u00ed</w:t></w:r></w:p>';
 
         xml += buildFieldXml('\u00dav\u011brovan\u00fd:', data.borrower);
+        if (data.ico) xml += buildFieldXml('I\u010cO:', data.ico);
+        if (data.spisovaZnacka) xml += buildFieldXml('Spisov\u00e1 zna\u010dka:', data.spisovaZnacka);
+        if (data.sidlo) xml += buildFieldXml('S\u00eddlo:', data.sidlo);
         if (data.purpose) xml += buildFieldXml('\u00da\u010del \u00fav\u011bru:', data.purpose);
         xml += buildFieldXml('\u00dav\u011brovan\u00e1 \u010d\u00e1stka:', data.amount ? data.amount + ' ' + data.currency : '');
         if (data.drawdownDate) {
@@ -2015,6 +2056,22 @@
             var vd = new Date(data.validityDate);
             xml += buildFieldXml('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
         }
+
+        // Upozornění — vždy na konci, ProfiLend barva #07B7ED
+        xml += '<w:p><w:pPr><w:spacing w:before="400" w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
+               '<w:r><w:t></w:t></w:r></w:p>';
+        xml += '<w:p><w:pPr><w:pBdr>' +
+               '<w:top w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
+               '<w:left w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
+               '<w:bottom w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
+               '<w:right w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
+               '</w:pBdr>' +
+               '<w:shd w:val="clear" w:fill="E8F8FD"/>' +
+               '<w:spacing w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
+               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/><w:color w:val="07B7ED"/></w:rPr>' +
+               '<w:t xml:space="preserve">Upozorn\u011bn\u00ed: </w:t></w:r>' +
+               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/><w:color w:val="555555"/></w:rPr>' +
+               '<w:t>Fin\u00e1ln\u00ed schv\u00e1len\u00ed financov\u00e1n\u00ed z\u00e1vis\u00ed na intern\u00edm ocen\u011bn\u00ed nemovitosti ze strany ProfiLend. Uveden\u00e9 podm\u00ednky jsou p\u0159edb\u011b\u017en\u00e9 a mohou b\u00fdt upraveny na z\u00e1klad\u011b v\u00fdsledk\u016f ocen\u011bn\u00ed.</w:t></w:r></w:p>';
 
         return xml;
     }
@@ -2075,6 +2132,9 @@
             }
 
             addField('\u00dav\u011brovan\u00fd:', data.borrower);
+            if (data.ico) addField('I\u010cO:', data.ico);
+            if (data.spisovaZnacka) addField('Spisov\u00e1 zna\u010dka:', data.spisovaZnacka);
+            if (data.sidlo) addField('S\u00eddlo:', data.sidlo);
             if (data.purpose) addField('\u00da\u010del \u00fav\u011bru:', data.purpose);
             addField('\u00dav\u011brovan\u00e1 \u010d\u00e1stka:', data.amount ? data.amount + ' ' + data.currency : '');
             if (data.drawdownDate) {
