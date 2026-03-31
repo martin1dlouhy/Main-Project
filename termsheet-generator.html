@@ -1451,6 +1451,11 @@
        TERM SHEET GENERATOR — ProfiLend
        ================================================ */
 
+    // ===== CONFIG =====
+    // LV Parse API — Railway endpoint (no timeout limit)
+    // Replace with your Railway URL after deployment, e.g.: 'https://your-app.railway.app'
+    var LV_API_BASE = '';  // empty = same origin (Vercel fallback)
+
     // ===== STATE =====
     let currentEditId = null;
     // Format is always DOCX (PDF removed)
@@ -2567,7 +2572,7 @@
                 lvFiles[i].status = 'parsing';
                 renderLVFileList();
 
-                var response = await fetch('/api/parse-lv', {
+                var response = await fetch(LV_API_BASE + '/api/parse-lv', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: text, fileName: lvFiles[i].name, instructions: document.getElementById('lv-instructions').value.trim() })
