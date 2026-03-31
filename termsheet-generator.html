@@ -1206,6 +1206,11 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <label class="form-label">Datum splatnosti</label>
+                            <input type="date" class="form-input" id="f-maturity-date">
+                            <span class="form-hint" id="f-maturity-date-hint" style="font-size:0.82em;color:var(--text-muted);margin-top:2px;display:none;"></span>
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Předčasné splacení</label>
                             <input type="text" class="form-input" id="f-early-repayment" placeholder="např. Možné, 6 % poplatek">
                         </div>
@@ -1712,6 +1717,7 @@
             interestPayment: document.getElementById('f-interest-payment').value,
             maturity: document.getElementById('f-maturity').value.trim(),
             maturityUnit: document.getElementById('f-maturity-unit').value,
+            maturityDate: document.getElementById('f-maturity-date').value,
             earlyRepayment: document.getElementById('f-early-repayment').value.trim(),
             originationFee: feeVal,
             originationFeeType: feeType,
@@ -1745,6 +1751,7 @@
         document.getElementById('f-interest-payment').value = data.interestPayment || 'Měsíční';
         document.getElementById('f-maturity').value = data.maturity || '';
         document.getElementById('f-maturity-unit').value = data.maturityUnit || 'let';
+        document.getElementById('f-maturity-date').value = data.maturityDate || '';
         document.getElementById('f-early-repayment').value = data.earlyRepayment || '';
         document.getElementById('f-origination-fee').value = data.originationFee || '';
         document.getElementById('f-origination-fee-type').value = data.originationFeeType || 'percent';
@@ -1816,6 +1823,8 @@
         document.getElementById('f-interest-payment').value = 'Měsíční';
         document.getElementById('f-maturity').value = '';
         document.getElementById('f-maturity-unit').value = 'let';
+        document.getElementById('f-maturity-date').value = '';
+        document.getElementById('f-maturity-date-hint').style.display = 'none';
         document.getElementById('f-early-repayment').value = '';
         document.getElementById('f-origination-fee').value = '';
         document.getElementById('f-origination-fee-type').value = 'percent';
@@ -2056,6 +2065,10 @@
         xml += buildFieldXml('\u00darok:', data.interest ? data.interest + ' % p.a.' : '');
         xml += buildFieldXml('Placen\u00ed \u00farok\u016f:', data.interestPayment);
         xml += buildFieldXml('Doba splatnosti:', data.maturity ? data.maturity + ' ' + data.maturityUnit : '');
+        if (data.maturityDate) {
+            var md = new Date(data.maturityDate);
+            xml += buildFieldXml('Datum splatnosti:', md.toLocaleDateString('cs-CZ'));
+        }
         if (data.earlyRepayment) xml += buildFieldXml('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
         if (data.originationFeeDisplay) xml += buildFieldXml('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
 
@@ -2173,6 +2186,10 @@
             addField('\u00darok:', data.interest ? data.interest + ' % p.a.' : '');
             addField('Placen\u00ed \u00farok\u016f:', data.interestPayment);
             addField('Doba splatnosti:', data.maturity ? data.maturity + ' ' + data.maturityUnit : '');
+            if (data.maturityDate) {
+                var md2 = new Date(data.maturityDate);
+                addField('Datum splatnosti:', md2.toLocaleDateString('cs-CZ'));
+            }
             if (data.earlyRepayment) addField('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
             if (data.originationFeeDisplay) addField('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
             if (data.collateralValue) {
@@ -2843,6 +2860,39 @@
         }
     }
 
+    // ===== MATURITY DATE AUTO-CALC =====
+    function calcMaturityDate() {
+        var val = parseFloat(document.getElementById('f-maturity').value);
+        var unit = document.getElementById('f-maturity-unit').value;
+        var drawdownDate = document.getElementById('f-drawdown-date').value;
+        var hint = document.getElementById('f-maturity-date-hint');
+        if (!val || val <= 0 || !drawdownDate) { hint.style.display = 'none'; return; }
+        var base = new Date(drawdownDate + 'T00:00:00');
+        if (isNaN(base.getTime())) { hint.style.display = 'none'; return; }
+        if (unit === 'let') {
+            base.setFullYear(base.getFullYear() + Math.floor(val));
+            var frac = val - Math.floor(val);
+            if (frac > 0) base.setMonth(base.getMonth() + Math.round(frac * 12));
+        } else {
+            base.setMonth(base.getMonth() + Math.round(val));
+        }
+        var iso = base.toISOString().slice(0, 10);
+        document.getElementById('f-maturity-date').value = iso;
+        hint.textContent = 'Automaticky: ' + base.toLocaleDateString('cs-CZ');
+        hint.style.display = 'block';
+    }
+
+    function initMaturityDateCalc() {
+        ['f-maturity', 'f-maturity-unit', 'f-drawdown-date'].forEach(function(id) {
+            document.getElementById(id).addEventListener('change', calcMaturityDate);
+            if (id === 'f-maturity') document.getElementById(id).addEventListener('input', calcMaturityDate);
+        });
+        // Allow manual override — hide hint when user changes date directly
+        document.getElementById('f-maturity-date').addEventListener('input', function() {
+            document.getElementById('f-maturity-date-hint').style.display = 'none';
+        });
+    }
+
     // ===== INIT =====
     async function init() {
         await openDB();
@@ -2859,6 +2909,9 @@
 
         // Initialize ARES autocomplete
         initAresAutocomplete();
+
+        // Initialize maturity date auto-calculation
+        initMaturityDateCalc();
 
         // Restore previously connected folder
         restoreFolderHandle();
