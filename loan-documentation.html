@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ProfiLend - Úvěrová dokumentace</title>
     <link rel="stylesheet" href="styles.css">
+    <script>
+    if(localStorage.getItem("daynight-theme")==="carbon"){document.documentElement.classList.add("carbon");}
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -702,7 +705,7 @@
                     <span class="profilend-badge">ProfiLend</span>
                 </div>
                 <div class="header-controls">
-                    <a href="index.html" class="back-link">← Zpět</a>
+                    <a href="apps.html#profilend" class="back-link">← Zpět</a>
                     <button class="btn-icon" onclick="toggleTheme()" title="Přepnout motiv">
                         <span id="themeIcon">🌙</span>
                     </button>
@@ -936,7 +939,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Existující zástavní právo k výmazu</label>
-                            <textarea id="existingPledge" class="form-textarea" placeholder="Opgět (oprávněný) a sp.zn. (spisová značka)"></textarea>
+                            <textarea id="existingPledge" class="form-textarea" placeholder="Oprávněný a sp.zn. (spisová značka)"></textarea>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Vlastníci nemovitostí</label>
@@ -1010,9 +1013,8 @@
 
     <script>
         var LOAN_API_BASE = 'https://main-project-production-b048.up.railway.app';
-        var CORRECT_PIN = '2580';
+        var CORRECT_PIN = '0409';
         var db = null;
-        var templateDb = null;
         var generatedDocuments = {};
         var folderHandle = null;
         var selectedTemplates = {};
@@ -1047,7 +1049,7 @@
         }
 
         function openDB() {
-            var request = indexedDB.open('loanDocDB', 1);
+            var request = indexedDB.open('loanDocDB', 2);
             request.onerror = function() {
                 showToast('Chyba připojení k databázi', 'error');
             };
@@ -1059,14 +1061,14 @@
                 if (!database.objectStoreNames.contains('documents')) {
                     database.createObjectStore('documents', { keyPath: 'id', autoIncrement: true });
                 }
+                if (!database.objectStoreNames.contains('templates')) {
+                    database.createObjectStore('templates', { keyPath: 'id', autoIncrement: true });
+                }
             };
         }
 
         function openTemplateDB() {
-            var request = indexedDB.open('loanDocDB', 1);
-            request.onsuccess = function(event) {
-                templateDb = event.target.result;
-            };
+            // Templates are stored in the same DB - no separate open needed
         }
 
         function getAllFromDB(storeName, callback) {
@@ -1270,8 +1272,10 @@
         }
 
         function populateForm(data) {
-            document.getElementById('uvereovany').value = data.borrowerName || '';
+            // Podpora importu z term sheetu (borrowerName) i z uložené sady (uvereovany)
+            document.getElementById('uvereovany').value = data.uvereovany || data.borrowerName || '';
             document.getElementById('ico').value = data.ico || '';
+            document.getElementById('spisovaZnacka').value = data.spisovaZnacka || '';
             document.getElementById('sidlo').value = data.sidlo || '';
             document.getElementById('purpose').value = data.purpose || '';
             document.getElementById('amount').value = data.amount || '';
@@ -1289,6 +1293,29 @@
             document.getElementById('otherCosts').value = data.otherCosts || '';
             document.getElementById('collateralValue').value = data.collateralValue || '';
             document.getElementById('collateralItems').value = data.collateralItems || '';
+            // Dodatečné údaje
+            document.getElementById('representativeName').value = data.representativeName || '';
+            document.getElementById('representativeRole').value = data.representativeRole || '';
+            document.getElementById('contactName').value = data.contactName || '';
+            document.getElementById('contactPhone').value = data.contactPhone || '';
+            document.getElementById('contactEmail').value = data.contactEmail || '';
+            document.getElementById('deliveryAddress').value = data.deliveryAddress || '';
+            document.getElementById('borrowerAccount').value = data.borrowerAccount || '';
+            document.getElementById('borrowerBank').value = data.borrowerBank || '';
+            document.getElementById('lenderAccount').value = data.lenderAccount || '43-1241270217/0100';
+            document.getElementById('lenderBank').value = data.lenderBank || 'Komerční Banka, a.s.';
+            document.getElementById('appraisalRef').value = data.appraisalRef || '';
+            document.getElementById('appraiser').value = data.appraiser || '';
+            document.getElementById('appraisalDate').value = data.appraisalDate || '';
+            document.getElementById('appraisalValue').value = data.appraisalValue || '';
+            document.getElementById('existingPledge').value = data.existingPledge || '';
+            document.getElementById('propertyOwners').value = data.propertyOwners || '';
+            document.getElementById('defaultInterest').value = data.defaultInterest || '25';
+            document.getElementById('accelerationPenalty').value = data.accelerationPenalty || '8';
+            document.getElementById('breachPenalty').value = data.breachPenalty || '1';
+            document.getElementById('signDate').value = data.signDate || '';
+            document.getElementById('signPlace').value = data.signPlace || '';
+            document.getElementById('notes').value = data.notes || '';
         }
 
         function collectFormData() {
@@ -1371,6 +1398,7 @@
             }
 
             generatedDocuments = {};
+            lastGenerationTracked = withTrackedChanges;
             document.getElementById('resultContainer').style.display = 'none';
 
             var formData = collectFormData();
@@ -1481,15 +1509,17 @@
             return blob;
         }
 
+        var lastGenerationTracked = false;
+
         function displayResults() {
             var html = '';
             Object.keys(generatedDocuments).forEach(function(name) {
                 var doc = generatedDocuments[name];
+                var safeName = name.replace(/'/g, "\\'");
                 html += '<div class="result-card">';
-                html += '<span class="result-name">' + escapeHtml(name) + '</span>';
+                html += '<span class="result-name">' + escapeHtml(name) + (lastGenerationTracked ? ' (se změnami)' : '') + '</span>';
                 html += '<div class="result-actions">';
-                html += '<button class="btn btn-small btn-outline" onclick="downloadSingle(\'' + name.replace(/'/g, "\\'") + '\', false)">Stáhnout</button>';
-                html += '<button class="btn btn-small btn-secondary" onclick="downloadSingle(\'' + name.replace(/'/g, "\\'") + '\', true)">Se změnami</button>';
+                html += '<button class="btn btn-small btn-primary" onclick="downloadSingle(\'' + safeName + '\', ' + lastGenerationTracked + ')">⬇️ Stáhnout</button>';
                 html += '</div>';
                 html += '</div>';
             });
@@ -1593,38 +1623,47 @@
             }
 
             Object.keys(generatedDocuments).forEach(function(name) {
-                generatedDocuments[name].docx.then(function(blob) {
-                    folderHandle.getFileHandle(name, { create: true }).then(function(fileHandle) {
-                        return fileHandle.createWritable();
-                    }).then(function(writable) {
-                        return writable.write(blob).then(function() {
-                            return writable.close();
-                        });
-                    }).then(function() {
-                        showToast(name + ' uložen', 'success');
-                    }).catch(function(err) {
-                        showToast('Chyba při ukládání: ' + name, 'error');
+                var blob = generatedDocuments[name].docx;
+                var filename = name.endsWith('.docx') ? name : name + '.docx';
+                folderHandle.getFileHandle(filename, { create: true }).then(function(fileHandle) {
+                    return fileHandle.createWritable();
+                }).then(function(writable) {
+                    return writable.write(blob).then(function() {
+                        return writable.close();
                     });
+                }).then(function() {
+                    showToast(filename + ' uložen', 'success');
+                }).catch(function(err) {
+                    showToast('Chyba při ukládání: ' + filename, 'error');
                 });
             });
         }
 
         function toggleTheme() {
-            var isDark = document.documentElement.getAttribute('data-theme') === 'carbon';
-            var newTheme = isDark ? 'snow' : 'carbon';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
+            var isDark = document.documentElement.classList.contains('carbon');
+            if (isDark) {
+                document.documentElement.classList.remove('carbon');
+                document.body.classList.remove('carbon');
+                localStorage.setItem('daynight-theme', 'snow');
+            } else {
+                document.documentElement.classList.add('carbon');
+                document.body.classList.add('carbon');
+                localStorage.setItem('daynight-theme', 'carbon');
+            }
             updateThemeIcon();
         }
 
         function loadTheme() {
-            var theme = localStorage.getItem('theme') || 'snow';
-            document.documentElement.setAttribute('data-theme', theme);
+            var theme = localStorage.getItem('daynight-theme') || 'snow';
+            if (theme === 'carbon') {
+                document.documentElement.classList.add('carbon');
+                document.body.classList.add('carbon');
+            }
             updateThemeIcon();
         }
 
         function updateThemeIcon() {
-            var isDark = document.documentElement.getAttribute('data-theme') === 'carbon';
+            var isDark = document.documentElement.classList.contains('carbon');
             document.getElementById('themeIcon').textContent = isDark ? '☀️' : '🌙';
         }
 
