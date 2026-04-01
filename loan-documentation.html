@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProfiLend - Úvěrová dokumentace</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #059669;
+            --danger-color: #dc2626;
+            --warning-color: #f59e0b;
+            --text-light: #9ca3af;
+            --border-light: #e5e7eb;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 20px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-light);
+            margin-bottom: 12px;
+            margin-top: 20px;
+        }
+
+        .sidebar-title:first-child {
+            margin-top: 0;
+        }
+
+        .doc-set-item {
+            padding: 10px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+
+        .doc-set-item:hover {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .doc-set-item-date {
+            display: block;
+            font-size: 11px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        .doc-set-item:hover .doc-set-item-date {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .profilend-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-color), #1d4ed8);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .back-link {
+            text-decoration: none;
+            color: var(--primary-color);
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .pin-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+        }
+
+        .pin-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .pin-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .pin-subtitle {
+            font-size: 14px;
+            color: var(--text-light);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .pin-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 16px;
+            letter-spacing: 4px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .pin-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .pin-button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .pin-button:hover {
+            background-color: #1d4ed8;
+        }
+
+        .pin-error {
+            color: var(--danger-color);
+            font-size: 13px;
+            text-align: center;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .section {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group.inline {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .form-group.triple {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+
+        .form-label.required::after {
+            content: ' *';
+            color: var(--danger-color);
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: var(--bg-primary);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(37, 99, 235, 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--primary-color);
+            background-color: rgba(37, 99, 235, 0.1);
+        }
+
+        .upload-zone-text {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .upload-zone-hint {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .template-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .template-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .template-name {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .template-delete {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px 8px;
+            margin-left: 8px;
+        }
+
+        .template-delete:hover {
+            opacity: 0.7;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #047857;
+        }
+
+        .btn-secondary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--bg-primary);
+            border-color: var(--primary-color);
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
+        .action-bar {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            flex-shrink: 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-md);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .modal-item {
+            padding: 12px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .modal-item:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .modal-item-meta {
+            font-size: 12px;
+            margin-top: 4px;
+            opacity: 0.7;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 20px;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: var(--shadow-md);
+            z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+            max-width: 400px;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+            color: var(--text-primary);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .toast.info {
+            border-left: 4px solid var(--primary-color);
+            color: var(--text-primary);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background-color: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--success-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .status-message {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 8px;
+        }
+
+        .result-card {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 200px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                display: flex;
+                gap: 20px;
+                overflow-x: auto;
+            }
+
+            .form-group.inline,
+            .form-group.triple {
+                grid-template-columns: 1fr;
+            }
+
+            .checkbox-group {
+                grid-template-columns: 1fr;
+            }
+
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="pin-screen" id="pinScreen">
+        <div class="pin-card">
+            <div class="pin-title">ProfiLend</div>
+            <div class="pin-subtitle">Úvěrová dokumentace</div>
+            <input type="password" id="pinInput" class="pin-input" placeholder="Zadejte PIN" maxlength="4">
+            <button class="pin-button" onclick="verifyPin()">Pokračovat</button>
+            <div class="pin-error" id="pinError">Nesprávný PIN</div>
+        </div>
+    </div>
+
+    <div class="app-container" id="appContainer" style="display: none;">
+        <div class="sidebar">
+            <div class="sidebar-title">Uložené sady</div>
+            <div id="documentSetList"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <div class="header-title">
+                    <h1>Úvěrová dokumentace</h1>
+                    <span class="profilend-badge">ProfiLend</span>
+                </div>
+                <div class="header-controls">
+                    <a href="index.html" class="back-link">← Zpět</a>
+                    <button class="btn-icon" onclick="toggleTheme()" title="Přepnout motiv">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="content" id="formContent">
+                <form id="documentForm" onsubmit="return false;">
+                    <!-- Section 1: Import & Templates -->
+                    <div class="section">
+                        <div class="section-title">Import & Šablony</div>
+                        <div class="form-group">
+                            <button type="button" class="btn btn-outline" onclick="openImportModal()">📥 Importovat term sheet</button>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nahrát šablony DOCX</label>
+                            <div class="upload-zone" id="uploadZone">
+                                <div class="upload-zone-text">Přetáhněte soubory nebo klikněte pro výběr</div>
+                                <div class="upload-zone-hint">Podporovány jsou soubory .docx (úvěrová smlouva, zástavní smlouva, atd.)</div>
+                                <input type="file" id="fileInput" accept=".docx" multiple style="display: none;">
+                            </div>
+                        </div>
+                        <div id="templateList" class="template-list"></div>
+
+                        <div class="form-group">
+                            <label class="form-label">Dokumenty k vygenerování</label>
+                            <div class="checkbox-group" id="documentCheckboxes"></div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Dlužník -->
+                    <div class="section">
+                        <div class="section-title">Dlužník</div>
+                        <div class="form-group">
+                            <label class="form-label required">Úvěrovaný (jméno)</label>
+                            <input type="text" id="uvereovany" class="form-input" placeholder="Jméno dlužníka">
+                        </div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">IČO</label>
+                                <input type="text" id="ico" class="form-input" placeholder="12345678">
+                            </div>
+                            <div>
+                                <label class="form-label">Spisová značka</label>
+                                <input type="text" id="spisovaZnacka" class="form-input" placeholder="C 123456">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sídlo</label>
+                            <input type="text" id="sidlo" class="form-input" placeholder="Adresa sídla">
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Parametry úvěru -->
+                    <div class="section">
+                        <div class="section-title">Parametry úvěru</div>
+                        <div class="form-group">
+                            <label class="form-label">Účel úvěru</label>
+                            <input type="text" id="purpose" class="form-input" placeholder="Nákup, refinancování, atd.">
+                        </div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label required">Výše úvěru</label>
+                                <input type="text" id="amount" class="form-input" placeholder="1000000">
+                            </div>
+                            <div>
+                                <label class="form-label">Měna</label>
+                                <select id="currency" class="form-select">
+                                    <option value="CZK">CZK</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="PLN">PLN</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">Datum čerpání</label>
+                                <input type="date" id="drawdownDate" class="form-input">
+                            </div>
+                            <div>
+                                <label class="form-label">Typ čerpání</label>
+                                <select id="drawdownType" class="form-select">
+                                    <option value="Jednorázové">Jednorázové</option>
+                                    <option value="Postupné">Postupné</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Úroková sazba (% p.a.)</label>
+                            <input type="text" id="interest" class="form-input" placeholder="5.5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Placení úroků</label>
+                            <select id="interestPayment" class="form-select">
+                                <option value="Měsíční">Měsíční</option>
+                                <option value="Kvartální">Kvartální</option>
+                                <option value="Pololetní">Pololetní</option>
+                                <option value="Roční">Roční</option>
+                                <option value="Úroky s jistinou k splatnosti">Úroky s jistinou k splatnosti</option>
+                            </select>
+                        </div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">Doba splatnosti</label>
+                                <input type="text" id="maturity" class="form-input" placeholder="5">
+                            </div>
+                            <div>
+                                <label class="form-label">Jednotka</label>
+                                <select id="maturityUnit" class="form-select">
+                                    <option value="let">let</option>
+                                    <option value="měsíců">měsíců</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Datum splatnosti</label>
+                            <input type="date" id="maturityDate" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Předčasné splacení (pokuta %)</label>
+                            <input type="text" id="earlyRepayment" class="form-input" placeholder="2.0">
+                        </div>
+                    </div>
+
+                    <!-- Section 4: Poplatky a náklady -->
+                    <div class="section">
+                        <div class="section-title">Poplatky a náklady</div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">Poplatek za sjednání</label>
+                                <input type="text" id="originationFee" class="form-input" placeholder="0.5">
+                            </div>
+                            <div>
+                                <label class="form-label">Typ</label>
+                                <select id="originationFeeType" class="form-select">
+                                    <option value="%">% z výše</option>
+                                    <option value="fixní">fixní Kč</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ostatní náklady</label>
+                            <input type="text" id="otherCosts" class="form-input" placeholder="0">
+                        </div>
+                    </div>
+
+                    <!-- Section 5: Zajištění -->
+                    <div class="section">
+                        <div class="section-title">Zajištění</div>
+                        <div class="form-group">
+                            <label class="form-label">Hodnota zajištění</label>
+                            <input type="text" id="collateralValue" class="form-input" placeholder="2000000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Položky zajištění</label>
+                            <textarea id="collateralItems" class="form-textarea" placeholder="Seznam zajišťovacích prostředků (z LV analýzy)"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Section 6: Dodatečné údaje -->
+                    <div class="section">
+                        <div class="section-title">Dodatečné údaje</div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">Jednatel/Zástupce jméno</label>
+                                <input type="text" id="representativeName" class="form-input" placeholder="Jméno">
+                            </div>
+                            <div>
+                                <label class="form-label">Funkce</label>
+                                <input type="text" id="representativeRole" class="form-input" placeholder="Jednatel, jednatelka, ředitel">
+                            </div>
+                        </div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">Kontaktní osoba - jméno</label>
+                                <input type="text" id="contactName" class="form-input" placeholder="Jméno">
+                            </div>
+                            <div>
+                                <label class="form-label">Telefon</label>
+                                <input type="text" id="contactPhone" class="form-input" placeholder="+420 123 456 789">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">E-mail</label>
+                            <input type="email" id="contactEmail" class="form-input" placeholder="info@company.cz">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Adresa pro doručování</label>
+                            <input type="text" id="deliveryAddress" class="form-input" placeholder="Ulice a číslo, PSČ, město">
+                        </div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">Účet dlužníka - číslo</label>
+                                <input type="text" id="borrowerAccount" class="form-input" placeholder="123456789">
+                            </div>
+                            <div>
+                                <label class="form-label">Banka</label>
+                                <input type="text" id="borrowerBank" class="form-input" placeholder="Komerční banka">
+                            </div>
+                        </div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">Účet věřitele - číslo</label>
+                                <input type="text" id="lenderAccount" class="form-input" value="43-1241270217/0100" placeholder="43-1241270217/0100">
+                            </div>
+                            <div>
+                                <label class="form-label">Banka</label>
+                                <input type="text" id="lenderBank" class="form-input" value="Komerční Banka, a.s." placeholder="Komerční Banka, a.s.">
+                            </div>
+                        </div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">Odhad č.</label>
+                                <input type="text" id="appraisalRef" class="form-input" placeholder="2024/001234">
+                            </div>
+                            <div>
+                                <label class="form-label">Odhadce</label>
+                                <input type="text" id="appraiser" class="form-input" placeholder="Jméno odhadce">
+                            </div>
+                        </div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">Datum odhadu</label>
+                                <input type="date" id="appraisalDate" class="form-input">
+                            </div>
+                            <div>
+                                <label class="form-label">Hodnota odhadu</label>
+                                <input type="text" id="appraisalValue" class="form-input" placeholder="1950000">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Existující zástavní právo k výmazu</label>
+                            <textarea id="existingPledge" class="form-textarea" placeholder="Opgět (oprávněný) a sp.zn. (spisová značka)"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Vlastníci nemovitostí</label>
+                            <textarea id="propertyOwners" class="form-textarea" placeholder="Jméno vlastníka, výměra nemovitosti"></textarea>
+                        </div>
+                        <div class="form-group triple">
+                            <div>
+                                <label class="form-label">Úrok z prodlení (%)</label>
+                                <input type="text" id="defaultInterest" class="form-input" value="25" placeholder="25">
+                            </div>
+                            <div>
+                                <label class="form-label">Pokuta při zesplatnění (%)</label>
+                                <input type="text" id="accelerationPenalty" class="form-input" value="8" placeholder="8">
+                            </div>
+                            <div>
+                                <label class="form-label">Pokuta za porušení (%)</label>
+                                <input type="text" id="breachPenalty" class="form-input" value="1" placeholder="1">
+                            </div>
+                        </div>
+                        <div class="form-group inline">
+                            <div>
+                                <label class="form-label">Datum podpisu</label>
+                                <input type="date" id="signDate" class="form-input">
+                            </div>
+                            <div>
+                                <label class="form-label">Místo podpisu</label>
+                                <input type="text" id="signPlace" class="form-input" placeholder="Praha">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 7: Poznámky -->
+                    <div class="section">
+                        <div class="section-title">Poznámky</div>
+                        <div class="form-group">
+                            <textarea id="notes" class="form-textarea" placeholder="Dodatečné poznámky k dokumentaci"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="action-bar">
+                <button class="btn btn-primary" onclick="generateDocuments(false)">🔄 Generovat dokumenty</button>
+                <button class="btn btn-secondary" onclick="generateDocuments(true)">✏️ Generovat se změnami</button>
+                <button class="btn btn-outline" onclick="saveDocumentSet()">💾 Uložit</button>
+                <button class="btn btn-outline" onclick="resetForm()">🔄 Reset</button>
+                <button class="btn btn-outline" onclick="connectFolder()" title="Připojit složku pro ukládání na disk">📁 Složka</button>
+            </div>
+
+            <div id="resultContainer" style="display: none; padding: 30px;">
+                <div class="section">
+                    <div class="section-title">Vygenerované dokumenty</div>
+                    <div id="resultsList"></div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="downloadAllDocuments(false)">⬇️ Stáhnout vše (čisté)</button>
+                        <button class="btn btn-secondary" onclick="downloadAllDocuments(true)">⬇️ Stáhnout vše (se změnami)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Term Sheet Modal -->
+    <div class="modal" id="importModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('importModal')">✕</button>
+            <div class="modal-header">Importovat term sheet</div>
+            <div id="importList" class="modal-list"></div>
+        </div>
+    </div>
+
+    <script>
+        var LOAN_API_BASE = 'https://main-project-production-b048.up.railway.app';
+        var CORRECT_PIN = '2580';
+        var db = null;
+        var templateDb = null;
+        var generatedDocuments = {};
+        var folderHandle = null;
+        var selectedTemplates = {};
+
+        function verifyPin() {
+            var pin = document.getElementById('pinInput').value;
+            if (pin === CORRECT_PIN) {
+                document.getElementById('pinScreen').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'flex';
+                document.getElementById('pinInput').value = '';
+                initializeApp();
+            } else {
+                document.getElementById('pinError').style.display = 'block';
+                setTimeout(function() {
+                    document.getElementById('pinError').style.display = 'none';
+                }, 2000);
+                document.getElementById('pinInput').value = '';
+            }
+        }
+
+        document.getElementById('pinInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') verifyPin();
+        });
+
+        function initializeApp() {
+            openDB();
+            openTemplateDB();
+            setupEventListeners();
+            loadTheme();
+            renderDocumentList();
+            renderTemplateList();
+        }
+
+        function openDB() {
+            var request = indexedDB.open('loanDocDB', 1);
+            request.onerror = function() {
+                showToast('Chyba připojení k databázi', 'error');
+            };
+            request.onsuccess = function(event) {
+                db = event.target.result;
+            };
+            request.onupgradeneeded = function(event) {
+                var database = event.target.result;
+                if (!database.objectStoreNames.contains('documents')) {
+                    database.createObjectStore('documents', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+        }
+
+        function openTemplateDB() {
+            var request = indexedDB.open('loanDocDB', 1);
+            request.onsuccess = function(event) {
+                templateDb = event.target.result;
+            };
+        }
+
+        function getAllFromDB(storeName, callback) {
+            if (!db) {
+                callback([]);
+                return;
+            }
+            var transaction = db.transaction([storeName], 'readonly');
+            var store = transaction.objectStore(storeName);
+            var request = store.getAll();
+            request.onsuccess = function() {
+                callback(request.result);
+            };
+            request.onerror = function() {
+                callback([]);
+            };
+        }
+
+        function saveToDb(storeName, data, callback) {
+            if (!db) {
+                if (callback) callback(null);
+                return;
+            }
+            var transaction = db.transaction([storeName], 'readwrite');
+            var store = transaction.objectStore(storeName);
+            var request = store.add(data);
+            request.onsuccess = function() {
+                if (callback) callback(request.result);
+            };
+            request.onerror = function() {
+                if (callback) callback(null);
+            };
+        }
+
+        function deleteFromDB(storeName, id, callback) {
+            if (!db) {
+                if (callback) callback(false);
+                return;
+            }
+            var transaction = db.transaction([storeName], 'readwrite');
+            var store = transaction.objectStore(storeName);
+            var request = store.delete(id);
+            request.onsuccess = function() {
+                if (callback) callback(true);
+            };
+            request.onerror = function() {
+                if (callback) callback(false);
+            };
+        }
+
+        function setupEventListeners() {
+            var uploadZone = document.getElementById('uploadZone');
+            var fileInput = document.getElementById('fileInput');
+
+            uploadZone.addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            uploadZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+
+            uploadZone.addEventListener('dragleave', function() {
+                uploadZone.classList.remove('dragover');
+            });
+
+            uploadZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                var files = Array.from(e.dataTransfer.files);
+                files.forEach(function(file) {
+                    if (file.name.endsWith('.docx')) {
+                        uploadTemplate(file);
+                    }
+                });
+            });
+
+            fileInput.addEventListener('change', function() {
+                var files = Array.from(this.files);
+                files.forEach(function(file) {
+                    uploadTemplate(file);
+                });
+                this.value = '';
+            });
+        }
+
+        function uploadTemplate(file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var templateData = {
+                    name: file.name,
+                    data: e.target.result,
+                    uploadedAt: new Date().toISOString()
+                };
+                saveToDb('templates', templateData, function(id) {
+                    if (id) {
+                        showToast('Šablona ' + file.name + ' nahrána', 'success');
+                        renderTemplateList();
+                    } else {
+                        showToast('Chyba při nahrávání šablony', 'error');
+                    }
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function renderTemplateList() {
+            getAllFromDB('templates', function(templates) {
+                var html = '';
+                var checkboxHtml = '';
+                selectedTemplates = {};
+
+                templates.forEach(function(template) {
+                    html += '<div class="template-item">';
+                    html += '<span class="template-name">' + escapeHtml(template.name) + '</span>';
+                    html += '<button type="button" class="template-delete" onclick="deleteTemplate(' + template.id + ')">✕</button>';
+                    html += '</div>';
+
+                    var docName = template.name.replace('.docx', '');
+                    checkboxHtml += '<div class="checkbox-item">';
+                    checkboxHtml += '<input type="checkbox" id="doc_' + template.id + '" data-id="' + template.id + '" data-name="' + escapeHtml(docName) + '" onchange="updateSelectedDocs()">';
+                    checkboxHtml += '<label for="doc_' + template.id + '">' + escapeHtml(docName) + '</label>';
+                    checkboxHtml += '</div>';
+                });
+
+                document.getElementById('templateList').innerHTML = html;
+                document.getElementById('documentCheckboxes').innerHTML = checkboxHtml;
+            });
+        }
+
+        function updateSelectedDocs() {
+            selectedTemplates = {};
+            var checkboxes = document.querySelectorAll('#documentCheckboxes input[type="checkbox"]:checked');
+            checkboxes.forEach(function(cb) {
+                selectedTemplates[cb.dataset.id] = cb.dataset.name;
+            });
+        }
+
+        function deleteTemplate(id) {
+            if (confirm('Smazat tuto šablonu?')) {
+                deleteFromDB('templates', id, function(success) {
+                    if (success) {
+                        showToast('Šablona smazána', 'success');
+                        renderTemplateList();
+                    }
+                });
+            }
+        }
+
+        function openImportModal() {
+            var termSheetRequest = indexedDB.open('termSheetDB', 1);
+            termSheetRequest.onsuccess = function(event) {
+                var termDb = event.target.result;
+                var transaction = termDb.transaction(['termSheets'], 'readonly');
+                var store = transaction.objectStore('termSheets');
+                var getAllRequest = store.getAll();
+
+                getAllRequest.onsuccess = function() {
+                    var termSheets = getAllRequest.result;
+                    var html = '';
+
+                    if (termSheets.length === 0) {
+                        html = '<p style="color: var(--text-light); padding: 20px; text-align: center;">Žádné uložené term sheety</p>';
+                    } else {
+                        termSheets.forEach(function(sheet) {
+                            html += '<div class="modal-item" onclick="importTermSheet(' + sheet.id + ')">';
+                            html += escapeHtml(sheet.borrowerName || 'Bez jména');
+                            html += '<div class="modal-item-meta">' + new Date(sheet.createdAt).toLocaleDateString('cs-CZ') + '</div>';
+                            html += '</div>';
+                        });
+                    }
+
+                    document.getElementById('importList').innerHTML = html;
+                    document.getElementById('importModal').classList.add('active');
+                };
+            };
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function importTermSheet(id) {
+            var termSheetRequest = indexedDB.open('termSheetDB', 1);
+            termSheetRequest.onsuccess = function(event) {
+                var termDb = event.target.result;
+                var transaction = termDb.transaction(['termSheets'], 'readonly');
+                var store = transaction.objectStore('termSheets');
+                var getRequest = store.get(id);
+
+                getRequest.onsuccess = function() {
+                    var sheet = getRequest.result;
+                    if (sheet) {
+                        populateForm(sheet);
+                        closeModal('importModal');
+                        showToast('Term sheet importován', 'success');
+                    }
+                };
+            };
+        }
+
+        function populateForm(data) {
+            document.getElementById('uvereovany').value = data.borrowerName || '';
+            document.getElementById('ico').value = data.ico || '';
+            document.getElementById('sidlo').value = data.sidlo || '';
+            document.getElementById('purpose').value = data.purpose || '';
+            document.getElementById('amount').value = data.amount || '';
+            document.getElementById('currency').value = data.currency || 'CZK';
+            document.getElementById('drawdownDate').value = data.drawdownDate || '';
+            document.getElementById('drawdownType').value = data.drawdownType || 'Jednorázové';
+            document.getElementById('interest').value = data.interest || '';
+            document.getElementById('interestPayment').value = data.interestPayment || 'Měsíční';
+            document.getElementById('maturity').value = data.maturity || '';
+            document.getElementById('maturityUnit').value = data.maturityUnit || 'let';
+            document.getElementById('maturityDate').value = data.maturityDate || '';
+            document.getElementById('earlyRepayment').value = data.earlyRepayment || '';
+            document.getElementById('originationFee').value = data.originationFee || '';
+            document.getElementById('originationFeeType').value = data.originationFeeType || '%';
+            document.getElementById('otherCosts').value = data.otherCosts || '';
+            document.getElementById('collateralValue').value = data.collateralValue || '';
+            document.getElementById('collateralItems').value = data.collateralItems || '';
+        }
+
+        function collectFormData() {
+            return {
+                uvereovany: document.getElementById('uvereovany').value,
+                ico: document.getElementById('ico').value,
+                spisovaZnacka: document.getElementById('spisovaZnacka').value,
+                sidlo: document.getElementById('sidlo').value,
+                purpose: document.getElementById('purpose').value,
+                amount: document.getElementById('amount').value,
+                currency: document.getElementById('currency').value,
+                drawdownDate: document.getElementById('drawdownDate').value,
+                drawdownType: document.getElementById('drawdownType').value,
+                interest: document.getElementById('interest').value,
+                interestPayment: document.getElementById('interestPayment').value,
+                maturity: document.getElementById('maturity').value,
+                maturityUnit: document.getElementById('maturityUnit').value,
+                maturityDate: document.getElementById('maturityDate').value,
+                earlyRepayment: document.getElementById('earlyRepayment').value,
+                originationFee: document.getElementById('originationFee').value,
+                originationFeeType: document.getElementById('originationFeeType').value,
+                otherCosts: document.getElementById('otherCosts').value,
+                collateralValue: document.getElementById('collateralValue').value,
+                collateralItems: document.getElementById('collateralItems').value,
+                representativeName: document.getElementById('representativeName').value,
+                representativeRole: document.getElementById('representativeRole').value,
+                contactName: document.getElementById('contactName').value,
+                contactPhone: document.getElementById('contactPhone').value,
+                contactEmail: document.getElementById('contactEmail').value,
+                deliveryAddress: document.getElementById('deliveryAddress').value,
+                borrowerAccount: document.getElementById('borrowerAccount').value,
+                borrowerBank: document.getElementById('borrowerBank').value,
+                lenderAccount: document.getElementById('lenderAccount').value,
+                lenderBank: document.getElementById('lenderBank').value,
+                appraisalRef: document.getElementById('appraisalRef').value,
+                appraiser: document.getElementById('appraiser').value,
+                appraisalDate: document.getElementById('appraisalDate').value,
+                appraisalValue: document.getElementById('appraisalValue').value,
+                existingPledge: document.getElementById('existingPledge').value,
+                propertyOwners: document.getElementById('propertyOwners').value,
+                defaultInterest: document.getElementById('defaultInterest').value,
+                accelerationPenalty: document.getElementById('accelerationPenalty').value,
+                breachPenalty: document.getElementById('breachPenalty').value,
+                signDate: document.getElementById('signDate').value,
+                signPlace: document.getElementById('signPlace').value,
+                notes: document.getElementById('notes').value
+            };
+        }
+
+        function resetForm() {
+            if (confirm('Opravdu resetovat formulář?')) {
+                document.getElementById('documentForm').reset();
+                document.getElementById('lenderAccount').value = '43-1241270217/0100';
+                document.getElementById('lenderBank').value = 'Komerční Banka, a.s.';
+                document.getElementById('defaultInterest').value = '25';
+                document.getElementById('accelerationPenalty').value = '8';
+                document.getElementById('breachPenalty').value = '1';
+                selectedTemplates = {};
+                document.querySelectorAll('#documentCheckboxes input[type="checkbox"]').forEach(function(cb) {
+                    cb.checked = false;
+                });
+                showToast('Formulář resetován', 'info');
+            }
+        }
+
+        function generateDocuments(withTrackedChanges) {
+            updateSelectedDocs();
+
+            if (!document.getElementById('uvereovany').value) {
+                showToast('Vyplňte jméno dlužníka', 'error');
+                return;
+            }
+            if (!document.getElementById('amount').value) {
+                showToast('Vyplňte výši úvěru', 'error');
+                return;
+            }
+            if (Object.keys(selectedTemplates).length === 0) {
+                showToast('Vyberte alespoň jednu šablonu', 'error');
+                return;
+            }
+
+            generatedDocuments = {};
+            document.getElementById('resultContainer').style.display = 'none';
+
+            var formData = collectFormData();
+            var templateIds = Object.keys(selectedTemplates);
+            var processed = 0;
+
+            templateIds.forEach(function(templateId) {
+                var templateName = selectedTemplates[templateId];
+                getAllFromDB('templates', function(templates) {
+                    var template = templates.find(function(t) { return t.id.toString() === templateId; });
+                    if (template) {
+                        processTemplate(template, formData, withTrackedChanges, function(result) {
+                            if (result.success) {
+                                generatedDocuments[templateName] = result;
+                                processed++;
+                                if (processed === templateIds.length) {
+                                    displayResults();
+                                    saveDocumentSet();
+                                }
+                            } else {
+                                showToast('Chyba při generování ' + templateName, 'error');
+                                processed++;
+                                if (processed === templateIds.length) {
+                                    displayResults();
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
+        function processTemplate(template, formData, withTrackedChanges, callback) {
+            showToast('Generuji ' + template.name + '...', 'info');
+
+            var extracted = extractDocxText(template.data);
+
+            var payload = {
+                templateText: extracted.text,
+                formData: formData,
+                templateName: template.name,
+                withTrackedChanges: withTrackedChanges
+            };
+
+            fetch(LOAN_API_BASE + '/api/generate-loan-doc', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.replacements) {
+                    var newXml = withTrackedChanges
+                        ? applyReplacementsWithTracking(extracted.xml, data.replacements)
+                        : applyReplacements(extracted.xml, data.replacements);
+
+                    var newDocx = repackDocx(extracted.zip, newXml);
+                    callback({
+                        success: true,
+                        docx: newDocx,
+                        filename: template.name
+                    });
+                } else {
+                    callback({ success: false });
+                }
+            })
+            .catch(function(error) {
+                console.error('API Error:', error);
+                callback({ success: false });
+            });
+        }
+
+        function extractDocxText(arrayBuffer) {
+            var zip = new PizZip(arrayBuffer);
+            var xml = zip.file('word/document.xml').asText();
+            var text = xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            return { xml: xml, text: text, zip: zip };
+        }
+
+        function applyReplacements(originalXml, replacements) {
+            var xml = originalXml;
+            replacements.forEach(function(r) {
+                xml = xml.split(r.find).join(r.replace);
+            });
+            return xml;
+        }
+
+        function applyReplacementsWithTracking(originalXml, replacements) {
+            var xml = originalXml;
+            var date = new Date().toISOString();
+            var id = 0;
+            replacements.forEach(function(r) {
+                var find = escapeXml(r.find);
+                var replace = escapeXml(r.replace);
+                var del = '<w:del w:id="' + (id * 2) + '" w:author="Claude" w:date="' + date + '"><w:r><w:delText>' + find + '</w:delText></w:r></w:del>';
+                var ins = '<w:ins w:id="' + (id * 2 + 1) + '" w:author="Claude" w:date="' + date + '"><w:r><w:t>' + replace + '</w:t></w:r></w:ins>';
+                xml = xml.split(r.find).join(del + ins);
+                id++;
+            });
+            return xml;
+        }
+
+        function repackDocx(zip, newXml) {
+            zip.file('word/document.xml', newXml);
+            var blob = zip.generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            return blob;
+        }
+
+        function displayResults() {
+            var html = '';
+            Object.keys(generatedDocuments).forEach(function(name) {
+                var doc = generatedDocuments[name];
+                html += '<div class="result-card">';
+                html += '<span class="result-name">' + escapeHtml(name) + '</span>';
+                html += '<div class="result-actions">';
+                html += '<button class="btn btn-small btn-outline" onclick="downloadSingle(\'' + name.replace(/'/g, "\\'") + '\', false)">Stáhnout</button>';
+                html += '<button class="btn btn-small btn-secondary" onclick="downloadSingle(\'' + name.replace(/'/g, "\\'") + '\', true)">Se změnami</button>';
+                html += '</div>';
+                html += '</div>';
+            });
+            document.getElementById('resultsList').innerHTML = html;
+            document.getElementById('resultContainer').style.display = 'block';
+            showToast('Dokumenty vygenerovány', 'success');
+        }
+
+        function downloadSingle(name, withChanges) {
+            if (generatedDocuments[name] && generatedDocuments[name].docx) {
+                var blob = generatedDocuments[name].docx;
+                var filename = name.replace(/\.docx$/, '') + (withChanges ? '_zmeny.docx' : '.docx');
+                saveAs(blob, filename);
+            }
+        }
+
+        function downloadAllDocuments(withChanges) {
+            if (Object.keys(generatedDocuments).length === 0) {
+                showToast('Žádné dokumenty ke stažení', 'error');
+                return;
+            }
+
+            var jszip = new JSZip();
+            Object.keys(generatedDocuments).forEach(function(name) {
+                if (generatedDocuments[name].docx) {
+                    var filename = name.replace(/\.docx$/, '') + (withChanges ? '_zmeny' : '');
+                    jszip.file(filename + '.docx', generatedDocuments[name].docx);
+                }
+            });
+
+            jszip.generateAsync({ type: 'blob' }).then(function(zipBlob) {
+                saveAs(zipBlob, 'uverova-dokumentace.zip');
+            });
+        }
+
+        function saveDocumentSet() {
+            var data = {
+                formData: collectFormData(),
+                templates: selectedTemplates,
+                generatedAt: new Date().toISOString()
+            };
+
+            saveToDb('documents', data, function(id) {
+                if (id) {
+                    showToast('Sada dokumentů uložena', 'success');
+                    renderDocumentList();
+                } else {
+                    showToast('Chyba při ukládání', 'error');
+                }
+            });
+        }
+
+        function renderDocumentList() {
+            getAllFromDB('documents', function(documents) {
+                var html = '';
+                documents.reverse().forEach(function(doc) {
+                    var date = new Date(doc.generatedAt);
+                    var dateStr = date.toLocaleDateString('cs-CZ') + ' ' + date.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+                    html += '<div class="doc-set-item" onclick="loadDocumentSet(' + doc.id + ')">';
+                    html += '<strong>' + escapeHtml(doc.formData.uvereovany || 'Bez názvu') + '</strong>';
+                    html += '<span class="doc-set-item-date">' + dateStr + '</span>';
+                    html += '</div>';
+                });
+
+                if (documents.length === 0) {
+                    html = '<p style="color: var(--text-light); font-size: 12px; text-align: center; padding: 10px;">Žádné uložené sady</p>';
+                }
+
+                document.getElementById('documentSetList').innerHTML = html;
+            });
+        }
+
+        function loadDocumentSet(id) {
+            getAllFromDB('documents', function(documents) {
+                var doc = documents.find(function(d) { return d.id === id; });
+                if (doc) {
+                    populateForm(doc.formData);
+                    showToast('Sada dokumentů načtena', 'success');
+                }
+            });
+        }
+
+        function connectFolder() {
+            if (window.showDirectoryPicker) {
+                window.showDirectoryPicker().then(function(handle) {
+                    folderHandle = handle;
+                    showToast('Složka připojena', 'success');
+                    saveToDisk();
+                }).catch(function(err) {
+                    showToast('Chyba při připojení složky', 'error');
+                });
+            } else {
+                showToast('File System Access API není podporováno', 'error');
+            }
+        }
+
+        function saveToDisk() {
+            if (!folderHandle) {
+                showToast('Nejdřív připojte složku', 'error');
+                return;
+            }
+
+            Object.keys(generatedDocuments).forEach(function(name) {
+                generatedDocuments[name].docx.then(function(blob) {
+                    folderHandle.getFileHandle(name, { create: true }).then(function(fileHandle) {
+                        return fileHandle.createWritable();
+                    }).then(function(writable) {
+                        return writable.write(blob).then(function() {
+                            return writable.close();
+                        });
+                    }).then(function() {
+                        showToast(name + ' uložen', 'success');
+                    }).catch(function(err) {
+                        showToast('Chyba při ukládání: ' + name, 'error');
+                    });
+                });
+            });
+        }
+
+        function toggleTheme() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'carbon';
+            var newTheme = isDark ? 'snow' : 'carbon';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon();
+        }
+
+        function loadTheme() {
+            var theme = localStorage.getItem('theme') || 'snow';
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'carbon';
+            document.getElementById('themeIcon').textContent = isDark ? '☀️' : '🌙';
+        }
+
+        function showToast(message, type) {
+            var toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(function() {
+                toast.remove();
+            }, 3000);
+        }
+
+        function escapeHtml(text) {
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        function escapeXml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        }
+
+        window.addEventListener('click', function(e) {
+            var modal = document.getElementById('importModal');
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
