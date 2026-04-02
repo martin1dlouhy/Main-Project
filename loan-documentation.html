@@ -114,45 +114,6 @@
             letter-spacing: 0.5px;
         }
 
-        .header-controls {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .back-link {
-            text-decoration: none;
-            color: var(--accent);
-            font-size: 0.9375rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: var(--transition);
-        }
-
-        .back-link:hover { opacity: 0.8; }
-
-        .btn-icon {
-            width: 36px;
-            height: 36px;
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-surface);
-            color: var(--text-secondary);
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: var(--transition);
-        }
-
-        .btn-icon:hover {
-            color: var(--accent);
-            border-color: var(--accent);
-        }
-
         /* ─── CONTENT ─── */
         .content {
             flex: 1;
@@ -875,30 +836,104 @@
     </div>
 
     <!-- MAIN APP -->
-    <div class="app-container" id="appContainer" style="display: none;">
-        <!-- SIDEBAR -->
-        <div class="sidebar">
-            <div class="sidebar-title">Uložené sady</div>
-            <div id="documentSetList"></div>
-        </div>
-
-        <!-- MAIN -->
-        <div class="main-content">
-            <div class="app-header">
-                <div class="header-title">
-                    <h1>Úvěrová dokumentace</h1>
-                    <span class="profilend-badge">ProfiLend</span>
-                </div>
-                <div class="header-controls">
-                    <a href="apps.html#profilend" class="back-link">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                        Zpět
+    <div id="appContainer" style="display: none;">
+        <!-- NAVIGATION -->
+        <nav class="top-nav">
+            <div class="nav-container">
+                <div class="nav-left">
+                    <a href="index.html" class="logo">
+                        <div class="logo-icon">
+                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="logoBar1" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.5"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.25"/>
+                                    </linearGradient>
+                                    <linearGradient id="logoBar2" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white" stop-opacity="0.75"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.45"/>
+                                    </linearGradient>
+                                    <linearGradient id="logoBar3" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="white"/>
+                                        <stop offset="100%" stop-color="white" stop-opacity="0.7"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="4" y="20" width="6" height="8" rx="1.5" fill="url(#logoBar1)"/>
+                                <rect x="13" y="13" width="6" height="15" rx="1.5" fill="url(#logoBar2)"/>
+                                <rect x="22" y="4" width="6" height="24" rx="1.5" fill="url(#logoBar3)"/>
+                                <path d="M6 18L15 10L21 14L28 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+                                <circle cx="28" cy="4" r="2" fill="white" opacity="0.8"/>
+                            </svg>
+                        </div>
+                        <span>Investment Tools</span>
                     </a>
-                    <button class="btn-icon" onclick="toggleTheme()" title="Přepnout motiv">
-                        <span id="themeIcon">🌙</span>
-                    </button>
+                    <div class="nav-menu">
+                        <div class="nav-item">
+                            <a href="index.html" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                    <polyline points="9 22 9 12 15 12 15 22"/>
+                                </svg>
+                                Domů
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="apps.html#osobni" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                Osobní
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="apps.html#pracovni" class="nav-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                                Pracovní
+                            </a>
+                        </div>
+                        <div class="nav-item">
+                            <a href="apps.html#profilend" class="nav-link active">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                ProfiLend
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-right">
+                    <div class="theme-toggle">
+                        <button class="theme-btn theme-btn-snow active" onclick="setTheme('snow')" title="Light Mode">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="5"/>
+                                <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                                <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                            </svg>
+                        </button>
+                        <button class="theme-btn theme-btn-carbon" onclick="setTheme('carbon')" title="Dark Mode">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
+        </nav>
+
+        <!-- APP BODY -->
+        <div class="app-container" style="min-height: calc(100vh - 64px);">
+            <!-- SIDEBAR -->
+            <div class="sidebar">
+                <div class="sidebar-title">Uložené sady</div>
+                <div id="documentSetList"></div>
+            </div>
+
+            <!-- MAIN -->
+            <div class="main-content">
+                <div class="app-header">
+                    <div class="header-title">
+                        <h1>Úvěrová dokumentace</h1>
+                        <span class="profilend-badge">ProfiLend</span>
+                    </div>
+                </div>
 
             <div class="content" id="formContent">
                 <form id="documentForm" onsubmit="return false;">
@@ -1225,7 +1260,8 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div><!-- /app-container -->
+    </div><!-- /appContainer -->
 
     <!-- IMPORT MODAL -->
     <div class="modal-overlay" id="importModal">
@@ -1319,7 +1355,6 @@
         function initializeApp() {
             openDB();
             setupEventListeners();
-            loadTheme();
         }
 
         function openDB() {
@@ -1878,34 +1913,7 @@
             });
         }
 
-        /* ─── THEME ─── */
-        function toggleTheme() {
-            var isDark = document.documentElement.classList.contains('carbon');
-            if (isDark) {
-                document.documentElement.classList.remove('carbon');
-                document.body.classList.remove('carbon');
-                localStorage.setItem('daynight-theme', 'snow');
-            } else {
-                document.documentElement.classList.add('carbon');
-                document.body.classList.add('carbon');
-                localStorage.setItem('daynight-theme', 'carbon');
-            }
-            updateThemeIcon();
-        }
-
-        function loadTheme() {
-            var theme = localStorage.getItem('daynight-theme') || 'snow';
-            if (theme === 'carbon') {
-                document.documentElement.classList.add('carbon');
-                document.body.classList.add('carbon');
-            }
-            updateThemeIcon();
-        }
-
-        function updateThemeIcon() {
-            var isDark = document.documentElement.classList.contains('carbon');
-            document.getElementById('themeIcon').textContent = isDark ? '☀️' : '🌙';
-        }
+        /* Theme je řešen přes script.js (setTheme) */
 
         /* ─── TOAST ─── */
         function showToast(message, type) {
@@ -1937,5 +1945,6 @@
             }
         });
     </script>
+    <script src="script.js"></script>
 </body>
 </html>
