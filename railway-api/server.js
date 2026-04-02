@@ -39,22 +39,9 @@ app.get('/health', function (req, res) {
     res.json({ status: 'ok' });
 });
 
-// TEMPORARY DEBUG — remove after confirming PIN_HASH works
-app.get('/api/debug-pin-hash', function (req, res) {
-    var raw = process.env.PIN_HASH || '(not set)';
-    res.json({
-        length: raw.length,
-        first6: raw.substring(0, 6),
-        last6: raw.substring(raw.length - 6),
-        startsWithDollar: raw.charAt(0) === '$',
-        containsDollar: raw.indexOf('$') !== -1,
-        expected: '22a281...430448'
-    });
-});
-
 // =============================================
 // POST /api/verify-pin — Server-side PIN verification
-// PIN hash stored in env variable PIN_HASH (bcrypt)
+// PIN hash stored in env variable PIN_HASH (SHA-256)
 // Rate limited: max 5 attempts per IP per 5 minutes
 // =============================================
 var pinAttempts = {}; // { ip: { count, firstAttempt } }
