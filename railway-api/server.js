@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
-const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -61,10 +61,6 @@ setInterval(cleanupAttempts, 10 * 60 * 1000);
 
 app.post('/api/verify-pin', async function (req, res) {
     var pinHash = (process.env.PIN_HASH || '').trim();
-    // Auto-fix common copy-paste mistake: "PIN_HASH = $2b$12$..." → "$2b$12$..."
-    if (pinHash.indexOf('PIN_HASH') === 0) {
-        pinHash = pinHash.replace(/^PIN_HASH\s*=\s*/, '').trim();
-    }
     if (!pinHash) {
         return res.status(500).json({ error: 'PIN_HASH is not configured on server.' });
     }
@@ -99,18 +95,14 @@ app.post('/api/verify-pin', async function (req, res) {
 
     record.count++;
 
-    try {
-        var match = await bcrypt.compare(pin, pinHash);
-        if (match) {
-            // Reset attempts on success
-            delete pinAttempts[ip];
-            return res.status(200).json({ success: true });
-        } else {
-            return res.status(200).json({ success: false, error: 'Nesprávný PIN.' });
-        }
-    } catch (err) {
-        console.error('PIN verification error:', err.message);
-        return res.status(500).json({ success: false, error: 'Chyba při ověřování PINu.' });
+    // SHA-256 comparison (no $ characters — safe for Railway env vars)
+    var inputHash = crypto.createHash('sha256').update(pin).digest('hex');
+    if (inputHash === pinHash) {
+        // Reset attempts on success
+        delete pinAttempts[ip];
+        return res.status(200).json({ success: true });
+    } else {
+        return res.status(200).json({ success: false, error: 'Nesprávný PIN.' });
     }
 });
 
