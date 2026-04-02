@@ -60,7 +60,11 @@ function cleanupAttempts() {
 setInterval(cleanupAttempts, 10 * 60 * 1000);
 
 app.post('/api/verify-pin', async function (req, res) {
-    var pinHash = process.env.PIN_HASH;
+    var pinHash = (process.env.PIN_HASH || '').trim();
+    // Auto-fix common copy-paste mistake: "PIN_HASH = $2b$12$..." → "$2b$12$..."
+    if (pinHash.indexOf('PIN_HASH') === 0) {
+        pinHash = pinHash.replace(/^PIN_HASH\s*=\s*/, '').trim();
+    }
     if (!pinHash) {
         return res.status(500).json({ error: 'PIN_HASH is not configured on server.' });
     }
