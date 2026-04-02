@@ -1528,9 +1528,7 @@
         }
     }
 
-    // ===== PIN AUTHENTICATION =====
-    const APP_PIN = '0409';
-
+    // ===== PIN AUTHENTICATION (server-side) =====
     (function initPIN() {
         if (sessionStorage.getItem('ts-auth') === 'true') {
             document.getElementById('pin-overlay').classList.add('hidden');
@@ -1540,10 +1538,19 @@
         digits.forEach(function(d, i) {
             d.addEventListener('input', function() {
                 if (d.value.length === 1 && i < 3) digits[i + 1].focus();
-                checkPIN();
+                if (i === 3 && d.value.length === 1) checkPIN();
             });
             d.addEventListener('keydown', function(e) {
                 if (e.key === 'Backspace' && d.value === '' && i > 0) digits[i - 1].focus();
+            });
+            d.addEventListener('paste', function(e) {
+                e.preventDefault();
+                var pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+                for (var j = 0; j < Math.min(pasted.length, digits.length); j++) {
+                    digits[j].value = pasted[j];
+                }
+                if (pasted.length >= digits.length) checkPIN();
+                else if (pasted.length > 0) digits[Math.min(pasted.length, digits.length - 1)].focus();
             });
         });
     })();
@@ -1552,17 +1559,37 @@
         var digits = document.querySelectorAll('.pin-digit');
         var pin = '';
         digits.forEach(function(d) { pin += d.value; });
-        if (pin.length === 4) {
-            if (pin === APP_PIN) {
+        if (pin.length !== 4) return;
+
+        // Disable inputs during verification
+        digits.forEach(function(d) { d.disabled = true; });
+
+        fetch(LV_API_BASE + '/api/verify-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: pin })
+        })
+        .then(function(resp) { return resp.json(); })
+        .then(function(data) {
+            if (data.success) {
                 sessionStorage.setItem('ts-auth', 'true');
                 document.getElementById('pin-overlay').classList.add('hidden');
                 document.getElementById('pin-error').style.display = 'none';
+                digits.forEach(function(d) { d.value = ''; d.disabled = false; });
             } else {
+                document.getElementById('pin-error').textContent = data.error || 'Nesprávný PIN.';
                 document.getElementById('pin-error').style.display = 'block';
-                digits.forEach(function(d) { d.value = ''; });
+                digits.forEach(function(d) { d.value = ''; d.disabled = false; });
                 digits[0].focus();
             }
-        }
+        })
+        .catch(function(err) {
+            console.error('PIN verification error:', err);
+            document.getElementById('pin-error').textContent = 'Chyba připojení k serveru.';
+            document.getElementById('pin-error').style.display = 'block';
+            digits.forEach(function(d) { d.value = ''; d.disabled = false; });
+            digits[0].focus();
+        });
     }
 
     // ===== VIEW MANAGEMENT =====

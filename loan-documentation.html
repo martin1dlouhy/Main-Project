@@ -1387,7 +1387,7 @@
 
     <script>
         var LOAN_API_BASE = 'https://main-project-production-b048.up.railway.app';
-        var CORRECT_PIN = '0409';
+        /* PIN is verified server-side — no client-side secret */
         var db = null;
         var generatedDocuments = {};
         var folderHandle = null;
@@ -1442,20 +1442,48 @@
             var digits = document.querySelectorAll('.pin-digit');
             var pin = '';
             digits.forEach(function(d) { pin += d.value; });
+            if (pin.length !== 4) return;
 
-            if (pin === CORRECT_PIN) {
-                document.getElementById('pinOverlay').classList.add('hidden');
-                document.getElementById('appContainer').style.display = '';
-                digits.forEach(function(d) { d.value = ''; });
-                initializeApp();
-            } else {
+            // Disable inputs during verification
+            digits.forEach(function(d) { d.disabled = true; });
+            var pinBtn = document.querySelector('.pin-button');
+            if (pinBtn) { pinBtn.disabled = true; pinBtn.textContent = 'Ověřuji...'; }
+
+            fetch(LOAN_API_BASE + '/api/verify-pin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin: pin })
+            })
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    document.getElementById('pinOverlay').classList.add('hidden');
+                    document.getElementById('appContainer').style.display = '';
+                    digits.forEach(function(d) { d.value = ''; d.disabled = false; });
+                    if (pinBtn) { pinBtn.disabled = false; pinBtn.textContent = 'Pokračovat'; }
+                    initializeApp();
+                } else {
+                    document.getElementById('pinError').textContent = data.error || 'Nesprávný PIN.';
+                    document.getElementById('pinError').style.display = 'block';
+                    digits.forEach(function(d) { d.value = ''; d.disabled = false; });
+                    digits[0].focus();
+                    if (pinBtn) { pinBtn.disabled = false; pinBtn.textContent = 'Pokračovat'; }
+                    setTimeout(function() {
+                        document.getElementById('pinError').style.display = 'none';
+                    }, 3000);
+                }
+            })
+            .catch(function(err) {
+                console.error('PIN verification error:', err);
+                document.getElementById('pinError').textContent = 'Chyba připojení k serveru.';
                 document.getElementById('pinError').style.display = 'block';
-                digits.forEach(function(d) { d.value = ''; });
+                digits.forEach(function(d) { d.value = ''; d.disabled = false; });
                 digits[0].focus();
+                if (pinBtn) { pinBtn.disabled = false; pinBtn.textContent = 'Pokračovat'; }
                 setTimeout(function() {
                     document.getElementById('pinError').style.display = 'none';
-                }, 2000);
-            }
+                }, 3000);
+            });
         }
 
         /* ─── VIEW MANAGEMENT ─── */

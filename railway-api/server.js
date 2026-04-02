@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,6 +37,77 @@ app.get('/', function (req, res) {
 
 app.get('/health', function (req, res) {
     res.json({ status: 'ok' });
+});
+
+// =============================================
+// POST /api/verify-pin — Server-side PIN verification
+// PIN hash stored in env variable PIN_HASH (bcrypt)
+// Rate limited: max 5 attempts per IP per 5 minutes
+// =============================================
+var pinAttempts = {}; // { ip: { count, firstAttempt } }
+
+function cleanupAttempts() {
+    var now = Date.now();
+    var keys = Object.keys(pinAttempts);
+    for (var i = 0; i < keys.length; i++) {
+        if (now - pinAttempts[keys[i]].firstAttempt > 5 * 60 * 1000) {
+            delete pinAttempts[keys[i]];
+        }
+    }
+}
+
+// Cleanup every 10 minutes
+setInterval(cleanupAttempts, 10 * 60 * 1000);
+
+app.post('/api/verify-pin', async function (req, res) {
+    var pinHash = process.env.PIN_HASH;
+    if (!pinHash) {
+        return res.status(500).json({ error: 'PIN_HASH is not configured on server.' });
+    }
+
+    var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+    var now = Date.now();
+
+    // Rate limiting
+    if (!pinAttempts[ip]) {
+        pinAttempts[ip] = { count: 0, firstAttempt: now };
+    }
+    var record = pinAttempts[ip];
+
+    // Reset window after 5 minutes
+    if (now - record.firstAttempt > 5 * 60 * 1000) {
+        record.count = 0;
+        record.firstAttempt = now;
+    }
+
+    if (record.count >= 5) {
+        var remaining = Math.ceil((5 * 60 * 1000 - (now - record.firstAttempt)) / 1000);
+        return res.status(429).json({
+            success: false,
+            error: 'Příliš mnoho pokusů. Zkuste to za ' + remaining + ' sekund.'
+        });
+    }
+
+    var pin = req.body && req.body.pin;
+    if (!pin || typeof pin !== 'string' || pin.length !== 4) {
+        return res.status(400).json({ success: false, error: 'Neplatný PIN.' });
+    }
+
+    record.count++;
+
+    try {
+        var match = await bcrypt.compare(pin, pinHash);
+        if (match) {
+            // Reset attempts on success
+            delete pinAttempts[ip];
+            return res.status(200).json({ success: true });
+        } else {
+            return res.status(200).json({ success: false, error: 'Nesprávný PIN.' });
+        }
+    } catch (err) {
+        console.error('PIN verification error:', err.message);
+        return res.status(500).json({ success: false, error: 'Chyba při ověřování PINu.' });
+    }
 });
 
 // =============================================
