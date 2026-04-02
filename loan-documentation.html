@@ -24,7 +24,13 @@
 
         .app-container {
             display: flex;
+            flex-direction: column;
             min-height: 100vh;
+        }
+        .app-body {
+            display: flex;
+            flex: 1;
+            min-height: 0;
         }
 
         /* ─── SIDEBAR ─── */
@@ -78,6 +84,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            overflow-y: auto;
         }
 
         /* ─── HEADER ─── */
@@ -112,6 +119,24 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+
+        .app-header-left { display: flex; align-items: center; gap: 1rem; }
+        .app-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        .app-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
         /* ─── CONTENT ─── */
@@ -811,6 +836,30 @@
             .result-actions { width: 100%; }
             .result-actions .btn { flex: 1; }
         }
+
+        /* ─── ARES AUTOCOMPLETE ─── */
+        .ares-wrapper { position: relative; }
+        .ares-status { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; pointer-events: none; }
+        .ares-status .ares-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: aresSpin 0.6s linear infinite; }
+        .ares-status .ares-ok { color: #2ecc71; font-size: 1.1rem; }
+        .ares-status .ares-fail { color: #e74c3c; font-size: 0.8rem; }
+        .ares-dropdown { position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 0 0 10px 10px; box-shadow: var(--shadow-md); max-height: 240px; overflow-y: auto; display: none; }
+        .ares-dropdown.open { display: block; }
+        .ares-dropdown-item { padding: 0.625rem 0.75rem; cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background 0.15s; }
+        .ares-dropdown-item:last-child { border-bottom: none; }
+        .ares-dropdown-item:hover { background: var(--accent-glow); }
+        .ares-dropdown-item .ares-item-name { font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
+        .ares-dropdown-item .ares-item-detail { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+        .ares-wrapper .form-input { padding-right: 36px; }
+        @keyframes aresSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .btn.folder-connected {
+            border-color: var(--success);
+            color: var(--success);
+        }
+        .btn.folder-connected svg {
+            stroke: var(--success);
+        }
     </style>
 </head>
 <body>
@@ -836,7 +885,7 @@
     </div>
 
     <!-- MAIN APP -->
-    <div id="appContainer" style="display: none;">
+    <div id="appContainer" class="app-container" style="display: none;">
         <!-- NAVIGATION -->
         <nav class="top-nav">
             <div class="nav-container">
@@ -919,7 +968,7 @@
         </nav>
 
         <!-- APP BODY -->
-        <div class="app-container" style="min-height: calc(100vh - 64px);">
+        <div class="app-body">
             <!-- SIDEBAR -->
             <div class="sidebar">
                 <div class="sidebar-title">Uložené sady</div>
@@ -929,9 +978,20 @@
             <!-- MAIN -->
             <div class="main-content">
                 <div class="app-header">
-                    <div class="header-title">
-                        <h1>Úvěrová dokumentace</h1>
-                        <span class="profilend-badge">ProfiLend</span>
+                    <div class="app-header-left">
+                        <div>
+                            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.25rem;">
+                                <h1 class="app-title">Úvěrová dokumentace</h1>
+                                <span class="profilend-badge">ProfiLend</span>
+                            </div>
+                            <p class="app-subtitle">Generování smluvní dokumentace z Word šablon</p>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-outline" onclick="connectFolder()" id="btn-folder" title="Připojit složku pro ukládání na disk">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            <span id="folder-status-text">Připojit složku</span>
+                        </button>
                     </div>
                 </div>
 
@@ -977,11 +1037,18 @@
                         <div class="form-grid">
                             <div class="form-group form-group-single">
                                 <label class="form-label required">Úvěrovaný (jméno)</label>
-                                <input type="text" id="uvereovany" class="form-input" placeholder="Jméno dlužníka">
+                                <div class="ares-wrapper" id="ares-wrap-borrower">
+                                    <input type="text" id="uvereovany" class="form-input" placeholder="Jméno dlužníka" autocomplete="off">
+                                    <div class="ares-status" id="ares-status-borrower"></div>
+                                    <div class="ares-dropdown" id="ares-dropdown-borrower"></div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">IČO</label>
-                                <input type="text" id="ico" class="form-input" placeholder="12345678">
+                                <div class="ares-wrapper" id="ares-wrap-ico">
+                                    <input type="text" id="ico" class="form-input" placeholder="12345678" autocomplete="off">
+                                    <div class="ares-status" id="ares-status-ico"></div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Spisová značka</label>
@@ -1233,10 +1300,6 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                     Reset
                 </button>
-                <button class="btn btn-outline" onclick="connectFolder()" title="Připojit složku pro ukládání na disk">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                    Složka
-                </button>
             </div>
 
             <!-- RESULTS -->
@@ -1260,7 +1323,7 @@
                 </div>
             </div>
         </div>
-    </div><!-- /app-container -->
+    </div><!-- /app-body -->
     </div><!-- /appContainer -->
 
     <!-- IMPORT MODAL -->
@@ -1338,7 +1401,7 @@
 
             if (pin === CORRECT_PIN) {
                 document.getElementById('pinOverlay').classList.add('hidden');
-                document.getElementById('appContainer').style.display = 'flex';
+                document.getElementById('appContainer').style.display = '';
                 digits.forEach(function(d) { d.value = ''; });
                 initializeApp();
             } else {
@@ -1355,6 +1418,7 @@
         function initializeApp() {
             openDB();
             setupEventListeners();
+            initAresAutocomplete();
         }
 
         function openDB() {
@@ -1887,6 +1951,10 @@
             if (window.showDirectoryPicker) {
                 window.showDirectoryPicker().then(function(handle) {
                     folderHandle = handle;
+                    var btn = document.getElementById('btn-folder');
+                    if (btn) { btn.classList.add('folder-connected'); }
+                    var statusText = document.getElementById('folder-status-text');
+                    if (statusText) statusText.textContent = handle.name;
                     showToast('Složka připojena: ' + handle.name, 'success');
                     if (Object.keys(generatedDocuments).length > 0) saveToDisk();
                 }).catch(function() {});
@@ -1937,6 +2005,153 @@
 
         function escapeXml(text) {
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+        }
+
+        /* ─── ARES AUTOCOMPLETE ─── */
+        var aresDebounceTimer = null;
+        var aresAbortController = null;
+
+        function initAresAutocomplete() {
+            var icoInput = document.getElementById('ico');
+            var borrowerInput = document.getElementById('uvereovany');
+
+            icoInput.addEventListener('input', function() {
+                var val = this.value.replace(/\s/g, '');
+                if (/^\d{8}$/.test(val)) {
+                    aresLookupByICO(val);
+                } else {
+                    setAresStatus('ico', '');
+                }
+            });
+
+            borrowerInput.addEventListener('input', function() {
+                var val = this.value.trim();
+                if (aresDebounceTimer) clearTimeout(aresDebounceTimer);
+                if (val.length < 3) {
+                    closeAresDropdown();
+                    setAresStatus('borrower', '');
+                    return;
+                }
+                setAresStatus('borrower', 'loading');
+                aresDebounceTimer = setTimeout(function() {
+                    aresSearchByName(val);
+                }, 500);
+            });
+
+            document.addEventListener('click', function(e) {
+                var wrap = document.getElementById('ares-wrap-borrower');
+                if (wrap && !wrap.contains(e.target)) {
+                    closeAresDropdown();
+                }
+            });
+        }
+
+        async function aresLookupByICO(ico) {
+            if (aresAbortController) aresAbortController.abort();
+            aresAbortController = new AbortController();
+            setAresStatus('ico', 'loading');
+            try {
+                var response = await fetch('/api/ares?ico=' + encodeURIComponent(ico), {
+                    signal: aresAbortController.signal
+                });
+                var result = await response.json();
+                if (result.success && result.data && result.data.length > 0) {
+                    fillAresData(result.data[0]);
+                    setAresStatus('ico', 'ok');
+                } else {
+                    setAresStatus('ico', 'fail');
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('ARES ICO lookup error:', err);
+                    setAresStatus('ico', 'fail');
+                }
+            }
+        }
+
+        async function aresSearchByName(name) {
+            if (aresAbortController) aresAbortController.abort();
+            aresAbortController = new AbortController();
+            try {
+                var response = await fetch('/api/ares?name=' + encodeURIComponent(name), {
+                    signal: aresAbortController.signal
+                });
+                var result = await response.json();
+                if (result.success && result.data && result.data.length > 0) {
+                    renderAresDropdown(result.data);
+                    setAresStatus('borrower', '');
+                } else {
+                    closeAresDropdown();
+                    setAresStatus('borrower', 'fail');
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('ARES name search error:', err);
+                    setAresStatus('borrower', 'fail');
+                }
+            }
+        }
+
+        var aresLastResults = [];
+
+        function renderAresDropdown(subjects) {
+            aresLastResults = subjects;
+            var dropdown = document.getElementById('ares-dropdown-borrower');
+            var html = '';
+            subjects.forEach(function(subj, idx) {
+                var detailParts = [];
+                if (subj.ico) detailParts.push('IČO: ' + escapeHtml(subj.ico));
+                if (subj.sidlo) detailParts.push(escapeHtml(subj.sidlo));
+                html += '<div class="ares-dropdown-item" data-ares-idx="' + idx + '">' +
+                        '<div class="ares-item-name">' + escapeHtml(subj.nazev || '') + '</div>' +
+                        '<div class="ares-item-detail">' + detailParts.join(' · ') + '</div>' +
+                        '</div>';
+            });
+            dropdown.innerHTML = html;
+            dropdown.classList.add('open');
+
+            dropdown.querySelectorAll('.ares-dropdown-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    var idx = parseInt(this.getAttribute('data-ares-idx'));
+                    var data = aresLastResults[idx];
+                    if (data) {
+                        fillAresData(data);
+                        closeAresDropdown();
+                        setAresStatus('borrower', 'ok');
+                    }
+                });
+            });
+        }
+
+        function closeAresDropdown() {
+            var dropdown = document.getElementById('ares-dropdown-borrower');
+            if (dropdown) {
+                dropdown.classList.remove('open');
+                dropdown.innerHTML = '';
+            }
+        }
+
+        function fillAresData(subj) {
+            if (subj.nazev) document.getElementById('uvereovany').value = subj.nazev;
+            if (subj.ico) document.getElementById('ico').value = subj.ico;
+            if (subj.spisovaZnacka) document.getElementById('spisovaZnacka').value = subj.spisovaZnacka;
+            if (subj.sidlo) document.getElementById('sidlo').value = subj.sidlo;
+        }
+
+        function setAresStatus(field, state) {
+            var el = document.getElementById('ares-status-' + field);
+            if (!el) return;
+            if (state === 'loading') {
+                el.innerHTML = '<span class="ares-spinner"></span>';
+            } else if (state === 'ok') {
+                el.innerHTML = '<span class="ares-ok">✓</span>';
+                setTimeout(function() { if (el.querySelector('.ares-ok')) el.innerHTML = ''; }, 3000);
+            } else if (state === 'fail') {
+                el.innerHTML = '<span class="ares-fail">Nenalezeno</span>';
+                setTimeout(function() { if (el.querySelector('.ares-fail')) el.innerHTML = ''; }, 3000);
+            } else {
+                el.innerHTML = '';
+            }
         }
 
         window.addEventListener('click', function(e) {
