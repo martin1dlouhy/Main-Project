@@ -459,7 +459,7 @@ app.post('/api/marketing/generate', async function (req, res) {
     }
 
     var genAI = new GoogleGenerativeAI(geminiKey);
-    var model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    var modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
     // Build ProfiLend knowledge context
     var knowledgeBase = 'ZNALOSTNÍ BÁZE — ProfiLend:\n' +
@@ -535,18 +535,34 @@ app.post('/api/marketing/generate', async function (req, res) {
     console.log('Marketing generate request:', { channel: channel, theme: theme, batchCount: batchCount, generateImage: generateImage });
 
     try {
-        var result = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            generationConfig: {
-                temperature: 0.9,
-                maxOutputTokens: 4096,
-                responseMimeType: 'application/json'
+        var responseText = null;
+        var usedModel = null;
+        for (var mi = 0; mi < modelsToTry.length; mi++) {
+            var modelName = modelsToTry[mi];
+            try {
+                console.log('Trying model:', modelName);
+                var model = genAI.getGenerativeModel({ model: modelName });
+                var genConfig = {
+                    temperature: 0.9,
+                    maxOutputTokens: 4096
+                };
+                if (modelName.indexOf('2.5') !== -1 || modelName.indexOf('2.0') !== -1) {
+                    genConfig.responseMimeType = 'application/json';
+                }
+                var result = await model.generateContent({
+                    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: genConfig
+                });
+                responseText = result.response.text();
+                usedModel = modelName;
+                console.log('Success with model:', modelName, 'response length:', responseText.length);
+                break;
+            } catch (modelErr) {
+                console.warn('Model', modelName, 'failed:', modelErr.message);
+                if (mi === modelsToTry.length - 1) throw modelErr;
             }
-        });
-
-        var responseText = result.response.text();
-        console.log('Gemini response length:', responseText.length);
+        }
 
         var parsed = null;
         try {
@@ -586,7 +602,7 @@ app.post('/api/marketing/generate', async function (req, res) {
             return res.status(200).json({
                 success: true,
                 posts: posts,
-                model: 'gemini-2.5-flash',
+                model: usedModel || 'gemini-2.5-flash',
                 cached: false
             });
         } else {
