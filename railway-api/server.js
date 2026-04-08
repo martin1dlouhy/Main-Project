@@ -434,6 +434,26 @@ app.post('/api/generate-loan-doc', async function (req, res) {
 // =============================================
 var { GoogleGenerativeAI } = require('@google/generative-ai');
 
+// Debug endpoint - list available Gemini models
+app.get('/api/marketing/models', async function (req, res) {
+    var geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) {
+        return res.status(500).json({ error: 'GEMINI_API_KEY is not set.' });
+    }
+    try {
+        var response = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + geminiKey);
+        var data = await response.json();
+        var models = (data.models || []).filter(function(m) {
+            return m.supportedGenerationMethods && m.supportedGenerationMethods.indexOf('generateContent') !== -1;
+        }).map(function(m) {
+            return { name: m.name, displayName: m.displayName, methods: m.supportedGenerationMethods };
+        });
+        res.json({ models: models });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/marketing/generate', async function (req, res) {
     var geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) {
