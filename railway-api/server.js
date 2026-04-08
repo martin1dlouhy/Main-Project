@@ -427,6 +427,235 @@ app.post('/api/generate-loan-doc', async function (req, res) {
     }
 });
 
+// =============================================
+// POST /api/marketing/generate — Marketing Agent text + image generation
+// Uses Gemini 2.5 Flash (free tier) for text generation
+// Uses Gemini Imagen for image generation (optional)
+// =============================================
+var { GoogleGenerativeAI } = require('@google/generative-ai');
+
+app.post('/api/marketing/generate', async function (req, res) {
+    var geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) {
+        return res.status(500).json({ error: 'GEMINI_API_KEY is not set. Add it in Railway → Variables.' });
+    }
+
+    var body = req.body || {};
+    var channel = body.channel || 'linkedin';
+    var audience = body.audience || 'owners';
+    var pillar = body.pillar || 'product';
+    var postType = body.postType || 'social-post';
+    var goal = body.goal || 'awareness';
+    var theme = body.theme;
+    var tone = body.tone || 'factual';
+    var emojiLevel = body.emojiLevel || 'few';
+    var hashtagLevel = body.hashtagLevel || 'few';
+    var batchCount = Math.min(Math.max(parseInt(body.batchCount) || 1, 1), 5);
+    var generateImage = body.generateImage || false;
+    var imageSettings = body.imageSettings || {};
+
+    if (!theme || theme.trim().length < 3) {
+        return res.status(400).json({ error: 'Téma příspěvku je povinné (min. 3 znaky).' });
+    }
+
+    var genAI = new GoogleGenerativeAI(geminiKey);
+    var model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' });
+
+    // Build ProfiLend knowledge context
+    var knowledgeBase = 'ZNALOSTNÍ BÁZE — ProfiLend:\n' +
+        '- ProfiLend poskytuje nebankovní financování zajištěné nemovitostmi v ČR\n' +
+        '- Objem: 10–250 mil. Kč, LTV max 70%, sazba od 9% p.a., splatnost 1–20 let\n' +
+        '- Portfolio přesáhlo 1,3 mld. Kč, rozhodnutí do 48 hodin\n' +
+        '- Pouze právnické osoby, pouze české nemovitosti\n' +
+        '- Tón komunikace: věcný, sebevědomý, lidský, přímý, expertní\n' +
+        '- Obsahové pilíře: Produkt/proces 30%, Případovka 25%, Edukace 25%, Značka 20%\n' +
+        '- Schválené CTA: "Zjistit více na ProfiLend.cz", "Napište nám", "Konzultace zdarma", "Začněte s ProfiLend dnes", "Nezávazná konzultace"\n' +
+        '- ZAKÁZANÁ slova: "nejlevnější", "garantujeme", "bez rizika", "100%", "okamžitě", "senzační", "revoluční", "převratný", "bombastický", "neuvěřitelný", "fantastický", "zázračný", "exkluzivní nabídka"\n' +
+        '- Web: profilend.cz\n';
+
+    var channelRules = {
+        instagram: 'Kanál Instagram: tykání, max 2200 znaků, emoji přípustné dle nastavení, hashtagy na konci.',
+        linkedin: 'Kanál LinkedIn: vykání, profesionální tón, bez emoji pokud není výslovně povoleno, minimální hashtagy.',
+        facebook: 'Kanál Facebook: mix tykání/vykání dle kontextu, delší posty OK, emotivnější tón.',
+        youtube: 'Kanál YouTube: scénář pro krátké video, hook v prvních 3 sekundách, CTA na konci.'
+    };
+
+    var emojiRules = {
+        none: 'ŽÁDNÉ emoji v celém textu.',
+        few: 'Maximálně 1–2 emoji v celém příspěvku, pouze na klíčových místech.',
+        moderate: 'Přiměřeně 2–3 emoji, pro zvýraznění klíčových bodů.'
+    };
+
+    var hashtagRules = {
+        none: 'Žádné hashtagy.',
+        few: 'Na konec příspěvku přidej 3–5 relevantních hashtagů (vždy #ProfiLend jako první).',
+        many: 'Na konec příspěvku přidej 5–8 hashtagů (vždy #ProfiLend jako první).'
+    };
+
+    var goalMap = {
+        awareness: 'Cíl: zvýšit povědomí o značce ProfiLend.',
+        leads: 'Cíl: získat poptávky a leady — příspěvek musí motivovat k akci.',
+        trust: 'Cíl: budovat důvěru a expertizu — ukázat odbornost.',
+        educate: 'Cíl: edukovat publikum o financování nemovitostí.',
+        engagement: 'Cíl: zvýšit zapojení — otázky, ankety, interakce.',
+        partners: 'Cíl: oslovit potenciální partnery (makléře, poradce, právníky).'
+    };
+
+    var systemPrompt = 'Jsi marketingový copywriter pro ProfiLend. Generuješ příspěvky na sociální sítě.\n\n' +
+        knowledgeBase + '\n' +
+        (channelRules[channel] || '') + '\n' +
+        (emojiRules[emojiLevel] || '') + '\n' +
+        (hashtagRules[hashtagLevel] || '') + '\n' +
+        (goalMap[goal] || '') + '\n\n' +
+        'PRAVIDLA:\n' +
+        '- Piš přirozeně, NE jako AI. Žádné fráze jako "V dnešní době", "Věděli jste, že".\n' +
+        '- Nepoužívej zakázaná slova.\n' +
+        '- Každý příspěvek MUSÍ obsahovat jedno z povolených CTA.\n' +
+        '- Formát: hook (první věta chytlavá) → hlavní sdělení → CTA.\n' +
+        '- DŮLEŽITÉ: Vrať POUZE platný JSON, žádný markdown.\n';
+
+    var userPrompt = 'Vygeneruj ' + batchCount + ' ' + (batchCount === 1 ? 'příspěvek' : 'příspěvky') +
+        ' na téma: "' + theme + '".\n' +
+        'Tón: ' + tone + '\n' +
+        'Typ obsahu: ' + postType + '\n' +
+        'Cílová skupina: ' + audience + '\n' +
+        'Obsahový pilíř: ' + pillar + '\n\n' +
+        'Vrať JSON v tomto formátu:\n' +
+        '{\n' +
+        '  "posts": [\n' +
+        '    {\n' +
+        '      "text": "plný text příspěvku včetně hashtagů",\n' +
+        '      "hook": "první věta / hook",\n' +
+        '      "cta": "použité CTA"\n' +
+        '    }\n' +
+        '  ]\n' +
+        '}\n' +
+        'Každý příspěvek musí být ODLIŠNÝ — jiný úhel pohledu, jiné CTA, jiný hook.';
+
+    console.log('Marketing generate request:', { channel: channel, theme: theme, batchCount: batchCount, generateImage: generateImage });
+
+    try {
+        var result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: {
+                temperature: 0.9,
+                maxOutputTokens: 4096,
+                responseMimeType: 'application/json'
+            }
+        });
+
+        var responseText = result.response.text();
+        console.log('Gemini response length:', responseText.length);
+
+        var parsed = null;
+        try {
+            parsed = JSON.parse(responseText);
+        } catch (e) {
+            // Try to extract JSON
+            var startObj = responseText.indexOf('{');
+            if (startObj !== -1) {
+                try {
+                    parsed = JSON.parse(responseText.substring(startObj, responseText.lastIndexOf('}') + 1));
+                } catch (e2) { }
+            }
+        }
+
+        if (parsed && parsed.posts && Array.isArray(parsed.posts)) {
+            // Generate image prompts if requested
+            var posts = parsed.posts.map(function(post, idx) {
+                var imgPrompt = null;
+                if (generateImage) {
+                    var visualType = imageSettings.visualType || 'typ1';
+                    var people = imageSettings.people || 'none';
+                    var scene = imageSettings.scene || 'abstract';
+                    var mood = imageSettings.mood || 'professional';
+                    var format = imageSettings.format || '1:1';
+
+                    imgPrompt = buildServerImagePrompt(visualType, people, scene, mood, format, theme, idx);
+                }
+                return {
+                    index: idx + 1,
+                    text: post.text,
+                    hook: post.hook || '',
+                    cta: post.cta || '',
+                    imagePrompt: imgPrompt
+                };
+            });
+
+            return res.status(200).json({
+                success: true,
+                posts: posts,
+                model: 'gemini-2.5-flash',
+                cached: false
+            });
+        } else {
+            console.error('Invalid Gemini response:', responseText.substring(0, 500));
+            return res.status(200).json({ success: false, error: 'AI nevrátilo platný formát. Zkuste to znovu.' });
+        }
+    } catch (err) {
+        console.error('Gemini API error:', err.message);
+        var errorMsg = err.message || 'Neznámá chyba';
+        var statusCode = 500;
+        if (err.message && err.message.includes('API_KEY')) {
+            errorMsg = 'Neplatný Gemini API klíč. Zkontrolujte GEMINI_API_KEY v Railway Variables.';
+            statusCode = 401;
+        } else if (err.message && err.message.includes('quota')) {
+            errorMsg = 'Vyčerpán denní limit Gemini API. Zkuste to zítra nebo přejděte na placený tier.';
+            statusCode = 429;
+        }
+        return res.status(statusCode).json({ error: errorMsg });
+    }
+});
+
+function buildServerImagePrompt(visualType, people, scene, mood, format, theme, variationIdx) {
+    var typeMap = {
+        'typ1': 'clean minimalist banner design with headline text area, subtle geometric corner elements in turquoise, ',
+        'typ2': 'structured infographic layout with timeline, numbered cards, connecting lines, ',
+        'typ3': 'educational single-concept card with turquoise accent stripe at top, centered typography, ',
+        'typ4': 'myth vs reality split layout with turquoise vertical stripe dividing two zones, ',
+        'typ5a': 'professional photograph with clean text strip at bottom, ',
+        'typ5b': 'full-bleed photograph with headline overlay in bottom corner, semi-transparent dark gradient, '
+    };
+    var peopleMap = {
+        'none': 'no people, purely typographic and geometric design, ',
+        'silhouette': 'abstract silhouetted figure, no facial features, ',
+        'realistic': 'professional businessperson, realistic photography style, '
+    };
+    var sceneMap = {
+        'office': 'modern office interior, ',
+        'property': 'commercial property exterior, ',
+        'construction': 'construction site, ',
+        'city': 'Prague cityscape, ',
+        'abstract': 'abstract geometric background, ',
+        'typo': 'pure typography layout, '
+    };
+    var moodMap = {
+        'professional': 'calm professional atmosphere, ',
+        'dynamic': 'energetic dynamic composition, ',
+        'calm': 'serene stable composition, '
+    };
+    var variations = [
+        'primary composition, balanced. ',
+        'different angle, depth and perspective. ',
+        'closer crop, detail-focused. ',
+        'wider view, architectural lines. ',
+        'editorial style, bold typography. '
+    ];
+
+    return 'Professional B2B financial services ' +
+        (typeMap[visualType] || '') +
+        (peopleMap[people] || '') +
+        (sceneMap[scene] || '') +
+        (moodMap[mood] || '') +
+        'Color palette: turquoise #00B4D8, navy #1A2B4A, white, light gray. ' +
+        'Format: ' + format + '. ' +
+        'Sans-serif typography, clean modern design. ' +
+        'No stock photo clichés, no neon colors. ' +
+        'Topic: "' + theme + '". ' +
+        variations[variationIdx % variations.length];
+}
+
 app.listen(PORT, function () {
     console.log('Investment Tools API running on port ' + PORT);
 });

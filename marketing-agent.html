@@ -2300,8 +2300,11 @@
             btn.textContent = count === 1 ? 'Generovat příspěvek' : `Generovat ${count} příspěvky`;
         }
 
+        // ================== API CONFIG ==================
+        const API_BASE = 'https://main-project-production-b048.up.railway.app';
+
         // ================== POST GENERATION (BATCH) ==================
-        function generateBatch() {
+        async function generateBatch() {
             const theme = document.getElementById('theme').value;
             if (!theme.trim()) {
                 showToast('Prosím vyplňte téma příspěvku', 'error');
@@ -2313,22 +2316,77 @@
             const targetAudience = document.querySelector('[data-name="targetAudience"] .custom-dropdown-trigger').getAttribute('data-value');
             const contentPillar = document.querySelector('[data-name="contentPillar"] .custom-dropdown-trigger').getAttribute('data-value');
             const postType = document.querySelector('[data-name="postType"] .custom-dropdown-trigger').getAttribute('data-value');
+            const goal = document.querySelector('[data-name="postGoal"] .custom-dropdown-trigger').getAttribute('data-value');
             const tone = document.querySelector('[data-name="tone"] .custom-dropdown-trigger').getAttribute('data-value');
             const emojiLevel = document.querySelector('[data-name="emojiLevel"] .custom-dropdown-trigger').getAttribute('data-value');
             const hashtagLevel = document.querySelector('[data-name="hashtagLevel"] .custom-dropdown-trigger').getAttribute('data-value');
             const wantImage = document.getElementById('generateImage').checked;
 
-            generatedPosts = [];
+            // Show loading state
+            const btn = document.getElementById('generateBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Generuji přes AI...';
+            btn.style.opacity = '0.7';
 
+            // Collect image settings if needed
+            let imageSettings = {};
+            if (wantImage) {
+                imageSettings = {
+                    visualType: document.querySelector('[data-name="visualType"] .custom-dropdown-trigger').getAttribute('data-value'),
+                    people: document.querySelector('input[name="people"]:checked').value,
+                    scene: document.querySelector('[data-name="scene"] .custom-dropdown-trigger').getAttribute('data-value'),
+                    mood: document.querySelector('[data-name="mood"] .custom-dropdown-trigger').getAttribute('data-value'),
+                    format: document.querySelector('[data-name="format"] .custom-dropdown-trigger').getAttribute('data-value')
+                };
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/marketing/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        channel, audience: targetAudience, pillar: contentPillar,
+                        postType, goal, theme: theme.trim(), tone,
+                        emojiLevel, hashtagLevel, batchCount: count,
+                        generateImage: wantImage, imageSettings
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.posts) {
+                    generatedPosts = data.posts;
+                    renderBatchPreview(generatedPosts, wantImage);
+                    const label = count === 1 ? 'Příspěvek vygenerován přes AI' : `${count} příspěvky vygenerovány přes AI`;
+                    showToast(label, 'success');
+                } else {
+                    // API returned error — fall back to local generation
+                    console.warn('API error, falling back to local:', data.error);
+                    showToast('API nedostupné — použit lokální generátor', 'info');
+                    generateBatchLocal(count, channel, targetAudience, contentPillar, postType, theme, tone, emojiLevel, hashtagLevel, wantImage);
+                }
+            } catch (err) {
+                // Network error — fall back to local generation
+                console.warn('Network error, falling back to local:', err.message);
+                showToast('API nedostupné — použit lokální generátor', 'info');
+                generateBatchLocal(count, channel, targetAudience, contentPillar, postType, theme, tone, emojiLevel, hashtagLevel, wantImage);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                btn.style.opacity = '1';
+            }
+        }
+
+        // Local fallback generator (template-based, no API needed)
+        function generateBatchLocal(count, channel, targetAudience, contentPillar, postType, theme, tone, emojiLevel, hashtagLevel, wantImage) {
+            generatedPosts = [];
             for (let i = 0; i < count; i++) {
                 const textPost = generateTextPost(channel, targetAudience, contentPillar, postType, theme, tone, emojiLevel, hashtagLevel, i);
                 const imagePrompt = wantImage ? buildImagePrompt(i) : null;
                 generatedPosts.push({ index: i + 1, text: textPost, imagePrompt: imagePrompt });
             }
-
             renderBatchPreview(generatedPosts, wantImage);
-            const label = count === 1 ? 'Příspěvek úspěšně generován' : `${count} příspěvky úspěšně generovány`;
-            showToast(label, 'success');
         }
 
         function generateTextPost(channel, targetAudience, contentPillar, postType, theme, tone, emojiLevel, hashtagLevel, variationIndex) {
