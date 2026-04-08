@@ -1,0 +1,2595 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketing Agent - ProfiLend</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8FAFC;
+            --bg-surface: #F1F5F9;
+            --border-color: #E2E8F0;
+            --text-primary: #1E293B;
+            --text-secondary: #64748B;
+            --accent: #38BDF8;
+            --accent-hover: #0EA5E9;
+            --accent-light: rgba(56, 189, 248, 0.1);
+            --accent-glow: rgba(56, 189, 248, 0.12);
+            --success: #22C55E;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        html.carbon {
+            --bg-primary: #0B1120;
+            --bg-secondary: #111827;
+            --bg-surface: #1E293B;
+            --border-color: #1E293B;
+            --text-primary: #F1F5F9;
+            --text-secondary: #94A3B8;
+            --accent: #38BDF8;
+            --accent-hover: #7DD3FC;
+            --accent-light: rgba(56, 189, 248, 0.15);
+            --accent-glow: rgba(56, 189, 248, 0.2);
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* ===================== TOP NAVIGATION ===================== */
+        .top-nav {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+            flex: 1;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #38BDF8, #0EA5E9);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover {
+            background-color: var(--accent-light);
+            color: var(--accent);
+        }
+
+        .nav-links a.active {
+            background-color: var(--accent-light);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggles {
+            display: flex;
+            gap: 0.5rem;
+            background-color: var(--bg-surface);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .theme-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .theme-btn.active {
+            background-color: var(--bg-primary);
+            color: var(--accent);
+        }
+
+        .theme-btn:hover {
+            color: var(--accent);
+        }
+
+        /* ===================== MAIN LAYOUT ===================== */
+        .app-container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        .sidebar {
+            width: 240px;
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .sidebar-item:hover {
+            background-color: var(--accent-light);
+            color: var(--accent);
+        }
+
+        .sidebar-item.active {
+            background-color: var(--accent-light);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .sidebar-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow:
+                0 6px 16px rgba(0, 0, 0, 0.25),
+                0 2px 4px rgba(0, 0, 0, 0.15),
+                0 0 0 0.5px rgba(255, 255, 255, 0.1),
+                inset 0 1px 1px rgba(255, 255, 255, 0.4),
+                inset 0 -1px 1px rgba(0, 0, 0, 0.15);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar-item:hover .sidebar-icon {
+            box-shadow:
+                0 8px 24px rgba(0, 0, 0, 0.3),
+                0 3px 6px rgba(0, 0, 0, 0.18),
+                0 0 0 0.5px rgba(255, 255, 255, 0.12),
+                inset 0 1px 1px rgba(255, 255, 255, 0.45),
+                inset 0 -1px 1px rgba(0, 0, 0, 0.18);
+            transform: scale(1.08) translateY(-1px);
+        }
+
+        .sidebar-item.active .sidebar-icon {
+            box-shadow:
+                0 6px 20px rgba(56, 189, 248, 0.35),
+                0 3px 6px rgba(0, 0, 0, 0.15),
+                0 0 0 0.5px rgba(255, 255, 255, 0.12),
+                inset 0 1px 1px rgba(255, 255, 255, 0.45),
+                inset 0 -1px 1px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Glossy 3D highlight — top shine */
+        .sidebar-icon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg,
+                rgba(255,255,255,0.45) 0%,
+                rgba(255,255,255,0.2) 30%,
+                rgba(255,255,255,0.05) 60%,
+                rgba(255,255,255,0) 100%);
+            border-radius: 12px 12px 0 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Bottom edge highlight for depth */
+        .sidebar-icon::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 8%;
+            right: 8%;
+            height: 1px;
+            background: linear-gradient(90deg,
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.2) 50%,
+                rgba(255,255,255,0) 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .sidebar-icon svg {
+            width: 21px;
+            height: 21px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            position: relative;
+            z-index: 3;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+        }
+
+        /* Category header in dropdown */
+        .dropdown-category {
+            padding: 0.5rem 0.875rem 0.25rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            pointer-events: none;
+            user-select: none;
+        }
+        .dropdown-category:not(:first-child) {
+            margin-top: 0.375rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* "Jiné" custom input inside dropdown */
+        .dropdown-custom-input {
+            margin: 4px;
+            padding: 0.5rem 0.75rem;
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-family: inherit;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            width: calc(100% - 8px);
+            transition: all 0.2s;
+            display: none;
+        }
+        .dropdown-custom-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+            background: var(--bg-primary);
+        }
+        .dropdown-custom-input.visible {
+            display: block;
+        }
+
+        .sidebar-label {
+            display: block;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            background-color: var(--bg-primary);
+            padding: 2rem;
+        }
+
+        .module {
+            display: none;
+        }
+
+        .module.active {
+            display: block;
+        }
+
+        /* ===================== CUSTOM DROPDOWNS ===================== */
+        .form-select {
+            display: none !important;
+        }
+
+        .custom-dropdown {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-dropdown-trigger {
+            width: 100%;
+            padding: 0.75rem 2.5rem 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.9375rem;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            position: relative;
+            user-select: none;
+        }
+
+        .custom-dropdown-trigger::after {
+            content: '';
+            position: absolute;
+            right: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%) rotate(0deg);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid var(--text-secondary);
+            transition: transform 0.25s ease;
+        }
+
+        .custom-dropdown.open .custom-dropdown-trigger::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        .custom-dropdown-trigger:hover,
+        .custom-dropdown.open .custom-dropdown-trigger {
+            border-color: var(--accent);
+            background: var(--bg-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .custom-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: var(--bg-primary);
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15), 0 0 0 1px var(--accent-glow);
+            z-index: 500;
+            max-height: 360px;
+            overflow-y: auto;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-4px);
+            transition: all 0.2s ease;
+            padding: 4px;
+        }
+
+        .custom-dropdown.open .custom-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .custom-dropdown-option {
+            padding: 0.625rem 0.875rem;
+            font-size: 0.9375rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 7px;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .custom-dropdown-option:hover {
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+
+        .custom-dropdown-option.selected {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+        }
+
+        .custom-dropdown-option.selected:hover {
+            background: var(--accent-hover);
+            color: white;
+        }
+
+        .carbon .custom-dropdown-menu {
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--accent-glow);
+        }
+
+        .custom-dropdown-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-dropdown-menu::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-dropdown-menu::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        /* ===================== GENERÁTOR MODULE ===================== */
+        .generator-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .form-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .preview-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-section {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .form-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-label.required::after {
+            content: " *";
+            color: var(--danger);
+        }
+
+        textarea,
+        input[type="text"] {
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.75rem;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        textarea:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-size: 13px;
+        }
+
+        /* ===================== RADIO GROUP WITH VISUAL CARDS ===================== */
+        .radio-group {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .radio-card {
+            position: relative;
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: var(--bg-primary);
+        }
+
+        .radio-card input[type="radio"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            background-color: var(--bg-primary);
+        }
+
+        .radio-card input[type="radio"]:checked {
+            border-color: var(--accent);
+            box-shadow: inset 0 0 0 4px var(--accent);
+        }
+
+        .radio-card:has(input[type="radio"]:checked) {
+            border-color: var(--accent);
+            background-color: var(--accent-light);
+        }
+
+        .radio-card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .radio-card-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .radio-card-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* ===================== THEME SUGGEST ===================== */
+        .theme-input-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .theme-input-wrapper textarea {
+            width: 100%;
+        }
+
+        .suggest-theme-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: linear-gradient(135deg, var(--accent-light) 0%, rgba(56, 189, 248, 0.05) 100%);
+            border: 1.5px dashed var(--accent);
+            border-radius: 9px;
+            color: var(--accent);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            align-self: flex-start;
+        }
+
+        .suggest-theme-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-style: solid;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+        }
+
+        .suggest-theme-btn:hover svg {
+            stroke: white;
+        }
+
+        .suggest-theme-btn.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .theme-suggestions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .theme-chip {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 10px 12px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: left;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .theme-chip:hover {
+            border-color: var(--accent);
+            background-color: var(--accent-light);
+        }
+
+        .theme-chip-icon {
+            font-size: 14px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .theme-chip-text {
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--text-primary);
+        }
+
+        .theme-chip-goal {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* ===================== BATCH SELECTOR ===================== */
+        .batch-selector {
+            display: flex;
+            gap: 6px;
+        }
+
+        .batch-btn {
+            width: 42px;
+            height: 42px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            background-color: var(--bg-primary);
+            color: var(--text-secondary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .batch-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .batch-btn.active {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: white;
+            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+        }
+
+        /* ===================== BATCH PREVIEW CARDS ===================== */
+        .batch-post-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .batch-post-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .batch-post-number {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent);
+            background-color: var(--accent-light);
+            padding: 3px 10px;
+            border-radius: 6px;
+        }
+
+        .batch-post-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .batch-post-actions button {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-primary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.15s ease;
+        }
+
+        .batch-post-actions button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .batch-post-text {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+
+        .batch-post-prompt {
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .download-all-btn {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 0.5rem;
+        }
+
+        .download-all-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(56, 189, 248, 0.3);
+        }
+
+        /* ===================== CHECKBOX TOGGLE ===================== */
+        .checkbox-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .check-visual {
+            width: 20px;
+            height: 20px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-primary);
+            transition: all 0.2s;
+        }
+
+        input[type="checkbox"] {
+            display: none;
+        }
+
+        input[type="checkbox"]:checked + .check-visual {
+            border-color: var(--accent);
+            background-color: var(--accent);
+        }
+
+        input[type="checkbox"]:checked + .check-visual::after {
+            content: "✓";
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .checkbox-toggle-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* ===================== BUTTONS ===================== */
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #38BDF8, #0EA5E9);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 8px 16px rgba(14, 165, 233, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--accent-light);
+            color: var(--accent);
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 13px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* ===================== CARDS ===================== */
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-body {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .card-body pre {
+            background-color: var(--bg-surface);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            margin-top: 0.75rem;
+        }
+
+        /* ===================== MOCKUP PREVIEW ===================== */
+        .mockup {
+            background: linear-gradient(135deg, #1A2B4A 0%, #0F1A2E 100%);
+            border-radius: 12px;
+            padding: 2rem;
+            color: white;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            justify-content: flex-start;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mockup::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .mockup-header {
+            font-size: 20px;
+            font-weight: 700;
+            color: #00B4D8;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .mockup-placeholder {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px dashed rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===================== SETTINGS MODULE ===================== */
+        .settings-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .setting-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .setting-card h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.5rem 0.875rem;
+            background-color: var(--accent-light);
+            color: var(--accent);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .tag.danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .progress-bar-container {
+            margin-bottom: 1.25rem;
+        }
+
+        .progress-bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: var(--bg-surface);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #38BDF8, #0EA5E9);
+            border-radius: 4px;
+        }
+
+        .color-swatch {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .color-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .color-code {
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: var(--bg-primary);
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent);
+            background-color: var(--accent-light);
+        }
+
+        .upload-icon {
+            font-size: 32px;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* ===================== PLACEHOLDER MODULES ===================== */
+        .placeholder-module {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            text-align: center;
+            gap: 1.5rem;
+        }
+
+        .placeholder-icon {
+            font-size: 64px;
+            opacity: 0.3;
+        }
+
+        .placeholder-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .placeholder-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            max-width: 400px;
+        }
+
+        /* ===================== TOAST NOTIFICATIONS ===================== */
+        .toast-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .toast {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 320px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+
+        .toast.info {
+            border-left: 4px solid var(--accent);
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .toast-message {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .spin-icon {
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* ===================== COPY BUTTON ===================== */
+        .copy-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background-color: var(--accent-light);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .card .copy-btn {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+        }
+
+        /* ===================== RESPONSIVE ===================== */
+        @media (max-width: 1200px) {
+            .generator-container {
+                grid-template-columns: 1fr;
+            }
+
+            .settings-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .top-nav {
+                padding: 0 1rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+            }
+
+            .nav-links a {
+                display: none;
+            }
+
+            .nav-links a.active {
+                display: inline-block;
+            }
+
+            .sidebar {
+                width: 60px;
+                padding: 1rem 0.5rem;
+            }
+
+            .sidebar-item {
+                justify-content: center;
+                padding: 0.875rem;
+            }
+
+            .sidebar-item span {
+                display: none;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .form-section {
+                padding: 1rem;
+            }
+
+            .toast-container {
+                right: 1rem;
+                left: 1rem;
+            }
+
+            .toast {
+                min-width: auto;
+            }
+        }
+    </style>
+    <script>
+        if (localStorage.getItem("daynight-theme") === "carbon") {
+            document.documentElement.classList.add("carbon");
+        }
+    </script>
+</head>
+<body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="nav-left">
+            <div class="logo">
+                <div class="logo-icon">IT</div>
+                <span>Investment Tools</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Domů</a></li>
+                <li><a href="apps.html#osobni">Osobní</a></li>
+                <li><a href="apps.html#pracovni">Pracovní</a></li>
+                <li><a href="apps.html#profilend" class="active">ProfiLend</a></li>
+            </ul>
+        </div>
+        <div class="nav-right">
+            <div class="theme-toggles">
+                <button class="theme-btn active" id="themeSnow" data-theme="snow" title="Light mode">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                </button>
+                <button class="theme-btn" id="themeCarbon" data-theme="carbon" title="Dark mode">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main App Container -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <button class="sidebar-item active" data-module="studio">
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #67E8F9 0%, #22D3EE 25%, #06B6D4 55%, #0891B2 100%);">
+                    <svg viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+                </div>
+                <span class="sidebar-label">Studio</span>
+            </button>
+            <button class="sidebar-item" data-module="nastaveni">
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #CBD5E1 0%, #94A3B8 25%, #64748B 55%, #475569 100%);">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </div>
+                <span class="sidebar-label">Nastavení</span>
+            </button>
+            <button class="sidebar-item" data-module="kalendar">
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #FDE68A 0%, #FBBF24 25%, #F59E0B 55%, #D97706 100%);">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
+                <span class="sidebar-label">Kalendář</span>
+            </button>
+            <button class="sidebar-item" data-module="kampane">
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #C4B5FD 0%, #A78BFA 25%, #8B5CF6 55%, #7C3AED 100%);">
+                    <svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </div>
+                <span class="sidebar-label">Kampaně</span>
+            </button>
+            <button class="sidebar-item" data-module="partneri">
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #6EE7B7 0%, #34D399 25%, #10B981 55%, #059669 100%);">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <span class="sidebar-label">Partneři</span>
+            </button>
+            <button class="sidebar-item" data-module="analytika">
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #FCA5A5 0%, #F87171 25%, #EF4444 55%, #DC2626 100%);">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                </div>
+                <span class="sidebar-label">Analytika</span>
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- GENERÁTOR MODULE -->
+            <div class="module active" id="module-studio">
+                <div class="generator-container">
+                    <!-- Left Column: Form -->
+                    <div class="form-column">
+                        <!-- Základní nastavení -->
+                        <div class="form-section">
+                            <h3>Základní nastavení</h3>
+
+                            <div class="form-group">
+                                <label class="form-label required">Kanál</label>
+                                <div class="custom-dropdown" data-name="channel">
+                                    <div class="custom-dropdown-trigger" data-value="linkedin">LinkedIn</div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="custom-dropdown-option" data-value="instagram">Instagram</div>
+                                        <div class="custom-dropdown-option selected" data-value="linkedin">LinkedIn</div>
+                                        <div class="custom-dropdown-option" data-value="facebook">Facebook</div>
+                                        <div class="custom-dropdown-option" data-value="youtube">YouTube Shorts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required">Cílová skupina</label>
+                                <div class="custom-dropdown" data-name="targetAudience">
+                                    <div class="custom-dropdown-trigger" data-value="owners">Jednatelé a vlastníci firem</div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="custom-dropdown-option selected" data-value="owners">Jednatelé a vlastníci firem</div>
+                                        <div class="custom-dropdown-option" data-value="developers">Developeři a investoři</div>
+                                        <div class="custom-dropdown-option" data-value="cfo">CFO / finance manažeři</div>
+                                        <div class="custom-dropdown-option" data-value="brokers">Makléři a poradci</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required">Obsahový pilíř</label>
+                                <div class="custom-dropdown" data-name="contentPillar">
+                                    <div class="custom-dropdown-trigger" data-value="product">Produkt a proces (30%)</div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="custom-dropdown-option selected" data-value="product">Produkt a proces (30%)</div>
+                                        <div class="custom-dropdown-option" data-value="case">Případovka / scénář (25%)</div>
+                                        <div class="custom-dropdown-option" data-value="education">Edukace (25%)</div>
+                                        <div class="custom-dropdown-option" data-value="brand">Značka a důvěra (20%)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required">Co chcete vytvořit?</label>
+                                <div class="custom-dropdown" data-name="postType">
+                                    <div class="custom-dropdown-trigger" data-value="social-post">Příspěvek na sociální sítě</div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="dropdown-category">Sociální sítě</div>
+                                        <div class="custom-dropdown-option selected" data-value="social-post">Příspěvek (statický banner)</div>
+                                        <div class="custom-dropdown-option" data-value="social-carousel">Carousel (série slidů)</div>
+                                        <div class="custom-dropdown-option" data-value="social-reel">Reel / Short (scénář + cover)</div>
+                                        <div class="custom-dropdown-option" data-value="social-story">Story (9:16 vizuál)</div>
+                                        <div class="custom-dropdown-option" data-value="social-myth">Mýtus vs. realita</div>
+                                        <div class="custom-dropdown-option" data-value="social-glossary">Slovník investora</div>
+                                        <div class="custom-dropdown-option" data-value="social-case">Case study (anonymizovaná)</div>
+                                        <div class="custom-dropdown-option" data-value="social-tip">Tip / edukace</div>
+                                        <div class="dropdown-category">Obchodní materiály</div>
+                                        <div class="custom-dropdown-option" data-value="biz-email">Obchodní email / oslovení</div>
+                                        <div class="custom-dropdown-option" data-value="biz-letter">Reklamní dopis</div>
+                                        <div class="custom-dropdown-option" data-value="biz-offer">Nabídka financování</div>
+                                        <div class="custom-dropdown-option" data-value="biz-followup">Follow-up zpráva</div>
+                                        <div class="dropdown-category">Tiskové materiály</div>
+                                        <div class="custom-dropdown-option" data-value="print-flyer">Leták / flyer</div>
+                                        <div class="custom-dropdown-option" data-value="print-onepager">One-pager (shrnutí služby)</div>
+                                        <div class="custom-dropdown-option" data-value="print-brochure">Brožura / katalog</div>
+                                        <div class="custom-dropdown-option" data-value="print-partner">Materiál pro partnery</div>
+                                        <div class="dropdown-category">Web & PR</div>
+                                        <div class="custom-dropdown-option" data-value="web-article">Článek na web / blog</div>
+                                        <div class="custom-dropdown-option" data-value="web-press">Tisková zpráva</div>
+                                        <div class="custom-dropdown-option" data-value="web-newsletter">Newsletter / email kampaň</div>
+                                        <div class="custom-dropdown-option" data-value="web-landing">Text pro landing page</div>
+                                        <div class="dropdown-category">Vlastní</div>
+                                        <div class="custom-dropdown-option" data-value="custom">Jiné — popsat vlastními slovy</div>
+                                        <input type="text" class="dropdown-custom-input" id="customTypeInput" placeholder="Popište, co chcete vytvořit...">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Obsah -->
+                        <div class="form-section">
+                            <h3>Obsah</h3>
+
+                            <div class="form-group">
+                                <label class="form-label">Cíl příspěvku</label>
+                                <div class="custom-dropdown" data-name="postGoal">
+                                    <div class="custom-dropdown-trigger" data-value="awareness">Zvýšit povědomí o značce</div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="custom-dropdown-option selected" data-value="awareness">Zvýšit povědomí o značce</div>
+                                        <div class="custom-dropdown-option" data-value="leads">Získat poptávky / leady</div>
+                                        <div class="custom-dropdown-option" data-value="trust">Budovat důvěru a expertizu</div>
+                                        <div class="custom-dropdown-option" data-value="educate">Edukovat publikum</div>
+                                        <div class="custom-dropdown-option" data-value="engagement">Zvýšit zapojení / interakce</div>
+                                        <div class="custom-dropdown-option" data-value="partners">Oslovit nové partnery</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required">Téma / hlavní myšlenka</label>
+                                <div class="theme-input-wrapper">
+                                    <textarea id="theme" placeholder="Zadejte vlastní téma, nebo klikněte na 'Navrhnout téma'..."></textarea>
+                                    <button type="button" class="suggest-theme-btn" id="suggestThemeBtn" onclick="suggestThemes()">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                        Navrhnout téma
+                                    </button>
+                                </div>
+                                <div id="themeSuggestions" class="theme-suggestions" style="display: none;"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required">Tón</label>
+                                <div class="custom-dropdown" data-name="tone">
+                                    <div class="custom-dropdown-trigger" data-value="factual">Věcný</div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="custom-dropdown-option selected" data-value="factual">Věcný</div>
+                                        <div class="custom-dropdown-option" data-value="confident">Sebevědomý</div>
+                                        <div class="custom-dropdown-option" data-value="human">Lidský</div>
+                                        <div class="custom-dropdown-option" data-value="direct">Přímý</div>
+                                        <div class="custom-dropdown-option" data-value="expert">Expertní</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Emoji</label>
+                                <div class="custom-dropdown" data-name="emojiLevel">
+                                    <div class="custom-dropdown-trigger" data-value="few">Málo (1–2 na příspěvek)</div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="custom-dropdown-option" data-value="none">Žádné</div>
+                                        <div class="custom-dropdown-option selected" data-value="few">Málo (1–2 na příspěvek)</div>
+                                        <div class="custom-dropdown-option" data-value="moderate">Středně (2–3 na příspěvek)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Hashtagy</label>
+                                <div class="custom-dropdown" data-name="hashtagLevel">
+                                    <div class="custom-dropdown-trigger" data-value="few">3–5 hashtagů</div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="custom-dropdown-option" data-value="none">Žádné</div>
+                                        <div class="custom-dropdown-option selected" data-value="few">3–5 hashtagů</div>
+                                        <div class="custom-dropdown-option" data-value="many">5–8 hashtagů</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Počet příspěvků</label>
+                                <div class="batch-selector">
+                                    <button type="button" class="batch-btn active" data-count="1">1</button>
+                                    <button type="button" class="batch-btn" data-count="2">2</button>
+                                    <button type="button" class="batch-btn" data-count="3">3</button>
+                                    <button type="button" class="batch-btn" data-count="4">4</button>
+                                    <button type="button" class="batch-btn" data-count="5">5</button>
+                                </div>
+                                <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">Tip: Pro týdenní plán zvolte 3 příspěvky</span>
+                            </div>
+                        </div>
+
+                        <!-- Vizuál -->
+                        <div class="form-section">
+                            <h3>Vizuál — nastavení obrázku</h3>
+
+                            <div class="form-group">
+                                <label class="checkbox-toggle">
+                                    <input type="checkbox" id="generateImage" onchange="toggleImageSettings()">
+                                    <span class="check-visual"></span>
+                                    <span class="checkbox-toggle-label">Generovat obrázek</span>
+                                </label>
+                            </div>
+
+                            <div id="imageSettings" style="display: none;">
+                                <div class="form-group">
+                                    <label class="form-label required">Typ vizuálu</label>
+                                    <div class="custom-dropdown" data-name="visualType">
+                                        <div class="custom-dropdown-trigger" data-value="typ1">Typ 1 - Statický banner</div>
+                                        <div class="custom-dropdown-menu">
+                                            <div class="custom-dropdown-option selected" data-value="typ1">Typ 1 - Statický banner</div>
+                                            <div class="custom-dropdown-option" data-value="typ2">Typ 2 - Infografika</div>
+                                            <div class="custom-dropdown-option" data-value="typ3">Typ 3 - Slovník investora</div>
+                                            <div class="custom-dropdown-option" data-value="typ4">Typ 4 - Mýtus vs. realita</div>
+                                            <div class="custom-dropdown-option" data-value="typ5a">Typ 5A - Podnikatel (pruh dole)</div>
+                                            <div class="custom-dropdown-option" data-value="typ5b">Typ 5B - Podnikatel (text přes fotku)</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label required">Zobrazení osob</label>
+                                    <div class="radio-group">
+                                        <label class="radio-card">
+                                            <input type="radio" name="people" value="none" checked>
+                                            <div class="radio-card-content">
+                                                <span class="radio-card-title">Bez lidí</span>
+                                                <span class="radio-card-desc">čistá grafika, typografie, geometrické prvky</span>
+                                            </div>
+                                        </label>
+                                        <label class="radio-card">
+                                            <input type="radio" name="people" value="silhouette">
+                                            <div class="radio-card-content">
+                                                <span class="radio-card-title">Silueta / abstrakce</span>
+                                                <span class="radio-card-desc">naznačená postava bez konkrétních rysů</span>
+                                            </div>
+                                        </label>
+                                        <label class="radio-card">
+                                            <input type="radio" name="people" value="realistic">
+                                            <div class="radio-card-content">
+                                                <span class="radio-card-title">Realistická osoba</span>
+                                                <span class="radio-card-desc">profesionální byznys fotografie (s AI upozorněním)</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label required">Scéna / prostředí</label>
+                                    <div class="custom-dropdown" data-name="scene">
+                                        <div class="custom-dropdown-trigger" data-value="office">Kancelář / jednací místnost</div>
+                                        <div class="custom-dropdown-menu">
+                                            <div class="custom-dropdown-option selected" data-value="office">Kancelář / jednací místnost</div>
+                                            <div class="custom-dropdown-option" data-value="property">Exteriér nemovitosti</div>
+                                            <div class="custom-dropdown-option" data-value="construction">Stavba / development</div>
+                                            <div class="custom-dropdown-option" data-value="city">Městské prostředí (Praha)</div>
+                                            <div class="custom-dropdown-option" data-value="abstract">Abstraktní / minimalistické</div>
+                                            <div class="custom-dropdown-option" data-value="typo">Čistě typografické</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label required">Nálada</label>
+                                    <div class="custom-dropdown" data-name="mood">
+                                        <div class="custom-dropdown-trigger" data-value="professional">Profesionální a důvěryhodná</div>
+                                        <div class="custom-dropdown-menu">
+                                            <div class="custom-dropdown-option selected" data-value="professional">Profesionální a důvěryhodná</div>
+                                            <div class="custom-dropdown-option" data-value="dynamic">Dynamická a energická</div>
+                                            <div class="custom-dropdown-option" data-value="calm">Klidná a stabilní</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Formát</label>
+                                    <div class="custom-dropdown" data-name="format">
+                                        <div class="custom-dropdown-trigger" data-value="4:5">4:5 Portrait (IG)</div>
+                                        <div class="custom-dropdown-menu">
+                                            <div class="custom-dropdown-option selected" data-value="4:5">4:5 Portrait (IG)</div>
+                                            <div class="custom-dropdown-option" data-value="1:1">1:1 Square (LinkedIn/FB)</div>
+                                            <div class="custom-dropdown-option" data-value="9:16">9:16 Stories/Reels</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Provider -->
+                        <div class="form-section">
+                            <h3>AI Provider</h3>
+
+                            <div class="form-group">
+                                <label class="form-label required">Provider</label>
+                                <div class="custom-dropdown" data-name="aiProvider">
+                                    <div class="custom-dropdown-trigger" data-value="openai">OpenAI (GPT-4o + DALL-E 3)</div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="custom-dropdown-option selected" data-value="openai">OpenAI (GPT-4o + DALL-E 3)</div>
+                                        <div class="custom-dropdown-option" data-value="google">Google Gemini (2.5 Pro + Imagen)</div>
+                                        <div class="custom-dropdown-option" data-value="claude">Claude (Opus/Sonnet)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="font-size: 12px; color: var(--text-secondary); padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px;">
+                                💡 <strong>API klíče se nastavují na backendu</strong>
+                            </div>
+                        </div>
+
+                        <!-- Generate Button -->
+                        <button class="btn btn-primary" id="generateBtn" style="width: 100%; padding: 1rem; font-size: 15px;" onclick="generateBatch()">
+                            Generovat příspěvek
+                        </button>
+                    </div>
+
+                    <!-- Right Column: Preview -->
+                    <div class="preview-column">
+                        <div id="previewContainer" style="display: none;">
+                            <!-- Batch posts will be rendered here dynamically -->
+                            <div id="batchPostsContainer"></div>
+
+                            <!-- Action Buttons -->
+                            <div class="btn-group" style="width: 100%;">
+                                <button class="btn btn-secondary" style="flex: 1;" onclick="generateBatch()">♻️ Regenerovat</button>
+                                <button class="btn btn-secondary" style="flex: 1;" onclick="showToast('Funkce bude dostupná v příští verzi', 'info')">📅 Uložit do kalendáře</button>
+                            </div>
+                            <button class="download-all-btn" onclick="downloadAll()">⬇️ Stáhnout vše</button>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="emptyState">
+                            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                <div style="font-size: 48px; margin-bottom: 1rem;">✨</div>
+                                <p style="font-size: 14px;">Vyplňte formulář a klikněte na "Generovat" pro náhled</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NASTAVENÍ MODULE -->
+            <div class="module" id="module-nastaveni">
+                <div class="settings-container">
+                    <!-- Brand Identity -->
+                    <div class="setting-card">
+                        <h4>Identita značky</h4>
+                        <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                            ProfiLend je inovativní finanční platform poskytující moderní řešení pro investory, developery a podnikatele v segmentu nemovitostí a real estate financování. Naše mise je demokratizovat přístup k dlouhodobému financování a vytvořit transparentní, důvěryhodný ekosystém.
+                        </p>
+                    </div>
+
+                    <!-- Tone of Voice -->
+                    <div class="setting-card">
+                        <h4>Tón komunikace</h4>
+                        <div class="tags">
+                            <span class="tag">Věcný</span>
+                            <span class="tag">Sebevědomý</span>
+                            <span class="tag">Lidský</span>
+                            <span class="tag">Přímý</span>
+                            <span class="tag">Expertní</span>
+                        </div>
+                    </div>
+
+                    <!-- Target Audiences -->
+                    <div class="setting-card">
+                        <h4>Cílové skupiny</h4>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
+                                <div style="font-weight: 600; font-size: 13px; color: var(--text-primary); margin-bottom: 0.25rem;">Jednatelé a vlastníci</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">Vlastníci a manažeři SME s dlouhodobou vizi</div>
+                            </div>
+                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
+                                <div style="font-weight: 600; font-size: 13px; color: var(--text-primary); margin-bottom: 0.25rem;">Developeři a investoři</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">Profesionálové v real estate se zkušeností</div>
+                            </div>
+                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
+                                <div style="font-weight: 600; font-size: 13px; color: var(--text-primary); margin-bottom: 0.25rem;">CFO / Finance manažeři</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">Finančníci odpovídající za alokaci kapitálu</div>
+                            </div>
+                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
+                                <div style="font-weight: 600; font-size: 13px; color: var(--text-primary); margin-bottom: 0.25rem;">Makléři a poradci</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">Profesionálové s přístupem k NWI klientům</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content Pillars -->
+                    <div class="setting-card">
+                        <h4>Obsahové pilíře</h4>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div>
+                                <div class="progress-bar-label">
+                                    <span>Produkt a proces</span>
+                                    <span style="font-weight: 600;">30%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 30%;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="progress-bar-label">
+                                    <span>Případovka / scénář</span>
+                                    <span style="font-weight: 600;">25%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 25%;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="progress-bar-label">
+                                    <span>Edukace</span>
+                                    <span style="font-weight: 600;">25%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 25%;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="progress-bar-label">
+                                    <span>Značka a důvěra</span>
+                                    <span style="font-weight: 600;">20%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 20%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Banned Words -->
+                    <div class="setting-card">
+                        <h4>Zakázaná slova</h4>
+                        <div class="tags">
+                            <span class="tag danger">Revoluční</span>
+                            <span class="tag danger">Garantujeme zisk</span>
+                            <span class="tag danger">Jednoduše bohatnout</span>
+                            <span class="tag danger">Zlatá příležitost</span>
+                            <span class="tag danger">Poslední šance</span>
+                            <span class="tag danger">Bez rizika</span>
+                            <span class="tag danger">Dokonalý systém</span>
+                            <span class="tag danger">Tajný vzorec</span>
+                            <span class="tag danger">Okamžité výsledky</span>
+                            <span class="tag danger">Super trik</span>
+                            <span class="tag danger">Experimentátoři vítězí</span>
+                            <span class="tag danger">Zázrační řešení</span>
+                            <span class="tag danger">Nejlepší investice</span>
+                        </div>
+                    </div>
+
+                    <!-- CTA Library -->
+                    <div class="setting-card">
+                        <h4>CTA knihovna</h4>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">→ Zjistit více na ProfiLend.cz</div>
+                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">→ Chcete vědět více? Napište nám</div>
+                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">→ Naplánujte si konzultaci zdarma</div>
+                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">→ Začněte s ProfiLend dnes</div>
+                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">→ Pozijte výhody transparentního financování</div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Identity -->
+                    <div class="setting-card">
+                        <h4>Vizuální identita</h4>
+                        <div>
+                            <div class="color-swatch">
+                                <div class="color-box" style="background-color: #00B4D8;"></div>
+                                <span class="color-code">#00B4D8 — Turquoise</span>
+                            </div>
+                            <div class="color-swatch">
+                                <div class="color-box" style="background-color: #1A2B4A;"></div>
+                                <span class="color-code">#1A2B4A — Navy</span>
+                            </div>
+                            <div class="color-swatch">
+                                <div class="color-box" style="background-color: #FFFFFF; border: 2px solid var(--border-color);"></div>
+                                <span class="color-code">#FFFFFF — White</span>
+                            </div>
+                            <div class="color-swatch">
+                                <div class="color-box" style="background-color: #F0F0F0;"></div>
+                                <span class="color-code">#F0F0F0 — Light Gray</span>
+                            </div>
+                            <div class="color-swatch">
+                                <div class="color-box" style="background-color: #6B7280;"></div>
+                                <span class="color-code">#6B7280 — Medium Gray</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Document Upload -->
+                    <div class="setting-card" style="grid-column: 1 / -1;">
+                        <h4>Nahrané dokumenty</h4>
+                        <div class="upload-area">
+                            <div class="upload-icon">📄</div>
+                            <div class="upload-text">Přetáhněte dokumenty sem nebo klikněte pro výběr</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KALENDÁŘ MODULE -->
+            <div class="module" id="module-kalendar">
+                <div class="placeholder-module">
+                    <div class="placeholder-icon">📅</div>
+                    <div class="placeholder-title">Kalendář</div>
+                    <div class="placeholder-text">Tento modul bude dostupný v další verzi. Zde budete moci plánovat publikaci příspěvků a spravovat obsah po kanálu.</div>
+                </div>
+            </div>
+
+            <!-- KAMPANĚ MODULE -->
+            <div class="module" id="module-kampane">
+                <div class="placeholder-module">
+                    <div class="placeholder-icon">📢</div>
+                    <div class="placeholder-title">Kampaně</div>
+                    <div class="placeholder-text">Tento modul bude dostupný v další verzi. Zde budete moci vytvářet a spravovat marketingové kampaně.</div>
+                </div>
+            </div>
+
+            <!-- PARTNEŘI MODULE -->
+            <div class="module" id="module-partneri">
+                <div class="placeholder-module">
+                    <div class="placeholder-icon">👥</div>
+                    <div class="placeholder-title">Partneři</div>
+                    <div class="placeholder-text">Tento modul bude dostupný v další verzi. Zde budete moci spravovat své partnery a příslušné údaje.</div>
+                </div>
+            </div>
+
+            <!-- ANALYTIKA MODULE -->
+            <div class="module" id="module-analytika">
+                <div class="placeholder-module">
+                    <div class="placeholder-icon">📊</div>
+                    <div class="placeholder-title">Analytika</div>
+                    <div class="placeholder-text">Tento modul bude dostupný v další verzi. Zde budete moci sledovat výkon svých příspěvků a kampání.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Global store for generated posts (for download)
+        let generatedPosts = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupThemeToggle();
+            setupModuleNavigation();
+            updateFormatBasedOnChannel();
+            initCustomDropdowns();
+            initBatchSelector();
+        });
+
+        // ================== THEME TOGGLE ==================
+        function setupThemeToggle() {
+            const themeSnow = document.getElementById('themeSnow');
+            const themeCarbon = document.getElementById('themeCarbon');
+
+            themeSnow.addEventListener('click', function() {
+                document.documentElement.classList.remove('carbon');
+                document.body.classList.remove('carbon');
+                localStorage.setItem('daynight-theme', 'snow');
+                updateThemeButtons('snow');
+            });
+
+            themeCarbon.addEventListener('click', function() {
+                document.documentElement.classList.add('carbon');
+                document.body.classList.add('carbon');
+                localStorage.setItem('daynight-theme', 'carbon');
+                updateThemeButtons('carbon');
+            });
+
+            const savedTheme = localStorage.getItem('daynight-theme');
+            if (savedTheme === 'carbon') {
+                updateThemeButtons('carbon');
+            }
+        }
+
+        function updateThemeButtons(theme) {
+            const themeSnow = document.getElementById('themeSnow');
+            const themeCarbon = document.getElementById('themeCarbon');
+            themeSnow.classList.remove('active');
+            themeCarbon.classList.remove('active');
+            if (theme === 'snow') {
+                themeSnow.classList.add('active');
+            } else {
+                themeCarbon.classList.add('active');
+            }
+        }
+
+        // ================== CUSTOM DROPDOWNS ==================
+        function initCustomDropdowns() {
+            document.querySelectorAll('.custom-dropdown').forEach(dd => {
+                const trigger = dd.querySelector('.custom-dropdown-trigger');
+                const menu = dd.querySelector('.custom-dropdown-menu');
+                const options = dd.querySelectorAll('.custom-dropdown-option');
+                const customInput = dd.querySelector('.dropdown-custom-input');
+
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.custom-dropdown.open').forEach(other => {
+                        if (other !== dd) other.classList.remove('open');
+                    });
+                    dd.classList.toggle('open');
+                });
+
+                // Prevent menu close when clicking inside menu
+                if (menu) {
+                    menu.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
+                }
+
+                options.forEach(opt => {
+                    opt.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const val = opt.getAttribute('data-value');
+                        options.forEach(o => o.classList.remove('selected'));
+                        opt.classList.add('selected');
+
+                        // Handle "Jiné" option — show custom input
+                        if (val === 'custom' && customInput) {
+                            customInput.classList.add('visible');
+                            customInput.focus();
+                            trigger.textContent = 'Jiné — vlastní zadání';
+                            trigger.setAttribute('data-value', 'custom');
+                        } else {
+                            if (customInput) {
+                                customInput.classList.remove('visible');
+                                customInput.value = '';
+                            }
+                            trigger.textContent = opt.textContent;
+                            trigger.setAttribute('data-value', val);
+                            dd.classList.remove('open');
+                        }
+                        dd.dispatchEvent(new Event('change'));
+                    });
+                });
+
+                // Handle Enter on custom input
+                if (customInput) {
+                    customInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' && customInput.value.trim()) {
+                            trigger.textContent = customInput.value.trim();
+                            trigger.setAttribute('data-value', 'custom');
+                            trigger.setAttribute('data-custom-text', customInput.value.trim());
+                            dd.classList.remove('open');
+                            showToast('Typ obsahu nastaven: ' + customInput.value.trim(), 'success');
+                        }
+                    });
+                    customInput.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
+                }
+            });
+
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.custom-dropdown.open').forEach(dd => {
+                    dd.classList.remove('open');
+                });
+            });
+        }
+
+        // ================== MODULE NAVIGATION ==================
+        function setupModuleNavigation() {
+            const sidebarItems = document.querySelectorAll('.sidebar-item');
+            sidebarItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const moduleId = this.getAttribute('data-module');
+                    switchModule(moduleId);
+                });
+            });
+        }
+
+        function switchModule(moduleId) {
+            const modules = document.querySelectorAll('.module');
+            const sidebarItems = document.querySelectorAll('.sidebar-item');
+
+            modules.forEach(module => module.classList.remove('active'));
+            sidebarItems.forEach(item => item.classList.remove('active'));
+
+            document.getElementById(`module-${moduleId}`).classList.add('active');
+            document.querySelector(`[data-module="${moduleId}"]`).classList.add('active');
+        }
+
+        // ================== FORMAT AUTO-UPDATE ==================
+        function updateFormatBasedOnChannel() {
+            const channelDropdown = document.querySelector('[data-name="channel"]');
+            const formatDropdown = document.querySelector('[data-name="format"]');
+
+            if (channelDropdown) {
+                channelDropdown.addEventListener('change', function() {
+                    const value = this.querySelector('.custom-dropdown-trigger').getAttribute('data-value');
+                    if (value === 'instagram') {
+                        updateDropdownValue(formatDropdown, '4:5');
+                    } else if (value === 'youtube') {
+                        updateDropdownValue(formatDropdown, '9:16');
+                    } else {
+                        updateDropdownValue(formatDropdown, '1:1');
+                    }
+                });
+            }
+        }
+
+        function updateDropdownValue(dropdown, value) {
+            const option = dropdown.querySelector(`[data-value="${value}"]`);
+            if (option) {
+                const options = dropdown.querySelectorAll('.custom-dropdown-option');
+                options.forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                const trigger = dropdown.querySelector('.custom-dropdown-trigger');
+                trigger.textContent = option.textContent;
+                trigger.setAttribute('data-value', value);
+                dropdown.dispatchEvent(new Event('change'));
+            }
+        }
+
+        // ================== IMAGE SETTINGS TOGGLE ==================
+        function toggleImageSettings() {
+            const checkbox = document.getElementById('generateImage');
+            const settings = document.getElementById('imageSettings');
+            if (checkbox.checked) {
+                settings.style.display = 'block';
+            } else {
+                settings.style.display = 'none';
+            }
+        }
+
+        // ================== THEME SUGGESTIONS (AI-POWERED) ==================
+        function suggestThemes() {
+            const channel = document.querySelector('[data-name="channel"] .custom-dropdown-trigger').getAttribute('data-value');
+            const audience = document.querySelector('[data-name="targetAudience"] .custom-dropdown-trigger').getAttribute('data-value');
+            const pillar = document.querySelector('[data-name="contentPillar"] .custom-dropdown-trigger').getAttribute('data-value');
+            const postType = document.querySelector('[data-name="postType"] .custom-dropdown-trigger').getAttribute('data-value');
+            const goal = document.querySelector('[data-name="postGoal"] .custom-dropdown-trigger').getAttribute('data-value');
+            const btn = document.getElementById('suggestThemeBtn');
+
+            btn.classList.add('loading');
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin-icon"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Generuji návrhy...';
+
+            // Knowledge base for smart suggestions
+            const themeBank = {
+                product: {
+                    awareness: [
+                        'Jak ProfiLend zrychluje financování nemovitostí na 48 hodin',
+                        'Portfolio 1,3 mld. Kč — proč developeři volí ProfiLend',
+                        'LTV až 70 % — jak získat maximum z hodnoty nemovitosti',
+                        'Transparentní financování bez skrytých poplatků'
+                    ],
+                    leads: [
+                        'Potřebujete financování 10–250 mil. Kč? Takhle to funguje',
+                        'Proč s námi váš projekt získá financování rychleji',
+                        'Case: Developer získal 85 mil. Kč za 5 pracovních dní',
+                        '3 kroky k rychlému schválení financování nemovitosti'
+                    ],
+                    trust: [
+                        'Jak hodnotíme rizika — náš přístup k LTV a zajištění',
+                        'Proč pracujeme výhradně s právnickými osobami',
+                        'Náš investiční výbor: jak rozhodujeme o financování',
+                        'Transparentnost jako základ — co všechno uvádíme v nabídce'
+                    ],
+                    educate: [
+                        'Co je LTV a proč je klíčový parametr vašeho financování',
+                        'Rozdíl mezi bankovním a nebankovním financováním nemovitostí',
+                        'Jak správně připravit žádost o financování',
+                        'Zajištění nemovitostí — co potřebujete vědět'
+                    ],
+                    engagement: [
+                        'Jaký je váš největší problém při získávání financování?',
+                        'Anketa: Banka vs. nebankovní financování — co preferujete?',
+                        'Tip týdne: Na co se ptát při výběru poskytovatele financování',
+                        'Quiz: Víte, kolik stojí pozdní financování projektu?'
+                    ],
+                    partners: [
+                        'Partnerský program ProfiLend — jak vydělat na zprostředkování',
+                        'Proč makléři doporučují ProfiLend svým klientům',
+                        'Spolupráce s finančními poradci — náš model provizí',
+                        'Připojte se k síti 50+ partnerů ProfiLend'
+                    ]
+                },
+                case: {
+                    awareness: [
+                        'Jak developer financoval rezidenční projekt za 120 mil. Kč',
+                        'Z nuly k hotovému projektu za 14 měsíců díky ProfiLend',
+                        'Reálný příběh: Refinancování hotelu v centru Prahy'
+                    ],
+                    leads: [
+                        'Tento developer ušetřil 3 měsíce čekání na banku',
+                        'Když banka řekne ne — příběh úspěšného přefinancování',
+                        'Jak získat financování na akvizici komerční nemovitosti'
+                    ],
+                    trust: [
+                        'Klient roku: proč se k nám vracejí developeři',
+                        'Transparentní spolupráce — ohlédnutí za společným projektem',
+                        'Z prvního hovoru k výplatě za 48 hodin — skutečný případ'
+                    ],
+                    educate: [
+                        'Lekce z praxe: 5 chyb, kterým se vyhnout při financování',
+                        'Jak vypadá proces financování krok za krokem (reálný případ)',
+                        'Případovka: Proč splatnost 20 let dávala smysl u tohoto projektu'
+                    ],
+                    engagement: [
+                        'Co byste udělali vy? Dilema financování projektu',
+                        'Hádejte: Kolik trvalo schválení tohoto financování?',
+                        'Před a po: transformace objektu díky správnému financování'
+                    ],
+                    partners: [
+                        'Jak makléř Jan K. doporučil ProfiLend a klient získal 45 mil.',
+                        'Partnerská spolupráce v praxi — příběh poradce a developera',
+                        'Zprostředkováno partnerem: financování logistického parku'
+                    ]
+                },
+                education: {
+                    awareness: [
+                        'Slovník investora: Co znamená LTV, cap rate a yield',
+                        'Nebankovní financování v číslech — fakta, ne mýty',
+                        '5 trendů ve financování nemovitostí pro rok 2026'
+                    ],
+                    leads: [
+                        'Checklist: Je váš projekt připraven na financování?',
+                        'Kalkulačka: Kolik stojí financování vašeho projektu?',
+                        'Průvodce: Jak vybrat správný typ financování'
+                    ],
+                    trust: [
+                        'Mýtus vs. realita: Nebankovní úvěry jsou drahé',
+                        'Regulace nebankovního sektoru — jak je to doopravdy',
+                        'Proč se nebát nebankovního financování'
+                    ],
+                    educate: [
+                        'Jak funguje zástavní právo k nemovitosti',
+                        'Co je bridge loan a kdy ho využít',
+                        'DSCR vs. LTV — dva klíčové parametry financování',
+                        'Jak se počítá úroková sazba u development financování'
+                    ],
+                    engagement: [
+                        'Mýtus nebo fakt? Otestujte své znalosti o financování',
+                        'Jaký typ financování by vyhovoval vašemu projektu?',
+                        'AMA: Zeptejte se nás na cokoliv o financování nemovitostí'
+                    ],
+                    partners: [
+                        'Edukace pro partnery: Jak představit ProfiLend klientovi',
+                        'Webinář: Možnosti financování nemovitostí 2026',
+                        'FAQ pro partnery — nejčastější dotazy klientů'
+                    ]
+                },
+                brand: {
+                    awareness: [
+                        'Proč jsme založili ProfiLend — náš příběh',
+                        'ProfiLend v číslech: portfolio, klienti, úspěšnost',
+                        'Za oponou: Náš investiční tým a jeho zkušenosti'
+                    ],
+                    leads: [
+                        'Proč si vybrat ProfiLend? 5 důvodů od skutečných klientů',
+                        'Srovnání: ProfiLend vs. tradiční bankovní financování',
+                        'Kde končí banka, začíná ProfiLend'
+                    ],
+                    trust: [
+                        'Naše hodnoty: transparentnost, rychlost, odbornost',
+                        'Členství v AČSS — co to znamená pro klienty',
+                        'Jak chráníme zájmy investorů i dlužníků'
+                    ],
+                    educate: [
+                        'Jak funguje ProfiLend — celý proces ve 3 minutách',
+                        'Kdo je typický klient ProfiLend?',
+                        'FAQ: 10 nejčastějších otázek o ProfiLend'
+                    ],
+                    engagement: [
+                        'Co je pro vás nejdůležitější u poskytovatele financování?',
+                        'Za scénou: Jeden den v ProfiLend',
+                        'Oslavte s námi — ProfiLend milestone: 1,3 mld. Kč!'
+                    ],
+                    partners: [
+                        'Staňte se partnerem ProfiLend — co vám nabízíme',
+                        'Partner spotlight: Příběhy našich nejúspěšnějších partnerů',
+                        'Partnerský event: Setkání ProfiLend Partners 2026'
+                    ]
+                }
+            };
+
+            // Simulate AI delay (in production = Railway API call)
+            setTimeout(() => {
+                const bank = themeBank[pillar] || themeBank.product;
+                const goalThemes = bank[goal] || bank.awareness;
+
+                // Pick 3 random + relevant themes
+                const shuffled = [...goalThemes].sort(() => 0.5 - Math.random());
+                const selected = shuffled.slice(0, 3);
+
+                const goalLabels = {
+                    awareness: 'Povědomí', leads: 'Leady', trust: 'Důvěra',
+                    educate: 'Edukace', engagement: 'Zapojení', partners: 'Partneři'
+                };
+
+                const icons = ['💡', '🎯', '✨'];
+
+                const container = document.getElementById('themeSuggestions');
+                container.innerHTML = '';
+                container.style.display = 'flex';
+
+                selected.forEach((theme, idx) => {
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'theme-chip';
+                    chip.innerHTML = `
+                        <span class="theme-chip-icon">${icons[idx]}</span>
+                        <div>
+                            <div class="theme-chip-text">${theme}</div>
+                            <div class="theme-chip-goal">${goalLabels[goal] || 'Obecné'} · ${channelLabel(channel)}</div>
+                        </div>
+                    `;
+                    chip.addEventListener('click', () => {
+                        document.getElementById('theme').value = theme;
+                        container.style.display = 'none';
+                        showToast('Téma vybráno', 'success');
+                    });
+                    container.appendChild(chip);
+                });
+
+                btn.classList.remove('loading');
+                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Navrhnout jiná témata';
+
+                showToast('3 návrhy témat připraveny', 'success');
+            }, 800);
+        }
+
+        function channelLabel(ch) {
+            const map = { instagram: 'Instagram', linkedin: 'LinkedIn', facebook: 'Facebook', youtube: 'YouTube' };
+            return map[ch] || ch;
+        }
+
+        // ================== BATCH SELECTOR ==================
+        function initBatchSelector() {
+            const btns = document.querySelectorAll('.batch-btn');
+            btns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    btns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    updateGenerateButtonLabel();
+                });
+            });
+        }
+
+        function getBatchCount() {
+            const active = document.querySelector('.batch-btn.active');
+            return active ? parseInt(active.getAttribute('data-count')) : 1;
+        }
+
+        function updateGenerateButtonLabel() {
+            const count = getBatchCount();
+            const btn = document.getElementById('generateBtn');
+            btn.textContent = count === 1 ? 'Generovat příspěvek' : `Generovat ${count} příspěvky`;
+        }
+
+        // ================== POST GENERATION (BATCH) ==================
+        function generateBatch() {
+            const theme = document.getElementById('theme').value;
+            if (!theme.trim()) {
+                showToast('Prosím vyplňte téma příspěvku', 'error');
+                return;
+            }
+
+            const count = getBatchCount();
+            const channel = document.querySelector('[data-name="channel"] .custom-dropdown-trigger').getAttribute('data-value');
+            const targetAudience = document.querySelector('[data-name="targetAudience"] .custom-dropdown-trigger').getAttribute('data-value');
+            const contentPillar = document.querySelector('[data-name="contentPillar"] .custom-dropdown-trigger').getAttribute('data-value');
+            const postType = document.querySelector('[data-name="postType"] .custom-dropdown-trigger').getAttribute('data-value');
+            const tone = document.querySelector('[data-name="tone"] .custom-dropdown-trigger').getAttribute('data-value');
+            const emojiLevel = document.querySelector('[data-name="emojiLevel"] .custom-dropdown-trigger').getAttribute('data-value');
+            const hashtagLevel = document.querySelector('[data-name="hashtagLevel"] .custom-dropdown-trigger').getAttribute('data-value');
+            const wantImage = document.getElementById('generateImage').checked;
+
+            generatedPosts = [];
+
+            for (let i = 0; i < count; i++) {
+                const textPost = generateTextPost(channel, targetAudience, contentPillar, postType, theme, tone, emojiLevel, hashtagLevel, i);
+                const imagePrompt = wantImage ? buildImagePrompt(i) : null;
+                generatedPosts.push({ index: i + 1, text: textPost, imagePrompt: imagePrompt });
+            }
+
+            renderBatchPreview(generatedPosts, wantImage);
+            const label = count === 1 ? 'Příspěvek úspěšně generován' : `${count} příspěvky úspěšně generovány`;
+            showToast(label, 'success');
+        }
+
+        function generateTextPost(channel, targetAudience, contentPillar, postType, theme, tone, emojiLevel, hashtagLevel, variationIndex) {
+            const factsClean = [
+                'Portfolio ProfiLend přesáhlo 1,3 mld. Kč',
+                'Financování do 48 hodin',
+                'LTV až 70% hodnoty nemovitosti',
+                'Transparentní podmínky bez skrytých poplatků',
+                'Desítky úspěšných projektů realizováno'
+            ];
+
+            const emojiMap = {
+                'none': { rocket: '', wave: '', bullet: '•', check: '-', factPrefix: '' },
+                'few':  { rocket: '🚀 ', wave: '👋 ', bullet: '•', check: '✓', factPrefix: '💡 ' },
+                'moderate': { rocket: '🚀 ', wave: '👋 ', bullet: '✅', check: '✓', factPrefix: '💰 ' }
+            };
+            const em = emojiMap[emojiLevel] || emojiMap['few'];
+
+            const ctas = [
+                'Zjistit více na ProfiLend.cz',
+                'Chcete vědět více? Napište nám',
+                'Naplánujte si konzultaci zdarma',
+                'Začněte s ProfiLend dnes',
+                'Domluvte si nezávaznou konzultaci'
+            ];
+
+            // Vary content by picking different facts/ctas per variation
+            const factIdx = (variationIndex || 0) % factsClean.length;
+            const ctaIdx = (variationIndex || 0) % ctas.length;
+            const fact = em.factPrefix + factsClean[factIdx];
+            const cta = '→ ' + ctas[ctaIdx];
+
+            // Hashtags based on channel and setting
+            let hashtags = '';
+            if (hashtagLevel !== 'none') {
+                const allTags = ['#ProfiLend', '#Financování', '#RealEstate', '#Investice', '#FinTech', '#Nemovitosti', '#Úvěr', '#BusinessFinance'];
+                const tagCount = hashtagLevel === 'few' ? 4 : 7;
+                // Shuffle deterministically based on variation
+                const shuffled = [...allTags].sort(() => 0.5 - Math.random());
+                hashtags = '\n\n' + shuffled.slice(0, tagCount).join(' ');
+            }
+
+            let post = '';
+
+            if (channel === 'instagram') {
+                post += `${em.rocket}${theme}\n\n`;
+                post += `${fact}\n\n`;
+                post += `ProfiLend je tvůj partner pro financování nemovitostí. Důvěra a rychlost v každém kroku.\n\n`;
+                post += cta + hashtags;
+            } else if (channel === 'linkedin') {
+                post += `${theme}\n\n`;
+                post += `V oblasti financování nemovitostí se stále více firem obrací na moderní řešení.\n${fact}\n\n`;
+                post += `ProfiLend nabízí:\n`;
+                post += `${em.check} Transparentní podmínky\n`;
+                post += `${em.check} Rychlé schválení\n`;
+                post += `${em.check} Odborný tým\n\n`;
+                post += cta + hashtags;
+            } else if (channel === 'facebook') {
+                post += `${em.wave}${theme}\n\n`;
+                post += `Přemýšlíte o financování vašeho projektu? ProfiLend má řešení!\n\n`;
+                post += `${fact}\n\n`;
+                post += `S ProfiLend můžete počítat na:\n`;
+                post += `${em.bullet} Rychlý proces\n`;
+                post += `${em.bullet} Konkurenční podmínky\n`;
+                post += `${em.bullet} Spolehlivého partnera\n\n`;
+                post += cta + hashtags;
+            } else if (channel === 'youtube') {
+                post += `${theme}\n\n`;
+                post += `V tomto videu se podíváme na:\n\n`;
+                post += `${fact}\n\n`;
+                post += `ProfiLend vám pomůže dosáhnout vašich cílů v real estate financování.\n\n`;
+                post += cta + hashtags;
+            }
+
+            return post;
+        }
+
+        function buildImagePrompt(variationIndex) {
+            const visualType = document.querySelector('[data-name="visualType"] .custom-dropdown-trigger').getAttribute('data-value');
+            const people = document.querySelector('input[name="people"]:checked').value;
+            const scene = document.querySelector('[data-name="scene"] .custom-dropdown-trigger').getAttribute('data-value');
+            const mood = document.querySelector('[data-name="mood"] .custom-dropdown-trigger').getAttribute('data-value');
+            const format = document.querySelector('[data-name="format"] .custom-dropdown-trigger').getAttribute('data-value');
+            const theme = document.getElementById('theme').value;
+
+            const typeMap = {
+                'typ1': 'clean minimalist banner design with headline text area, subtle geometric corner elements in turquoise, ',
+                'typ2': 'structured infographic layout with timeline, numbered cards, connecting lines, data visualization, ',
+                'typ3': 'educational single-concept card with turquoise accent stripe at top, generous white space, centered typography, ',
+                'typ4': 'myth vs reality split layout with turquoise vertical stripe on left dividing two distinct zones, ',
+                'typ5a': 'professional photograph in upper portion with clean text strip at bottom containing key information, ',
+                'typ5b': 'full-bleed professional photograph with headline and data overlay in bottom corner, semi-transparent dark gradient, '
+            };
+
+            const peopleMap = {
+                'none': 'no people, purely typographic and geometric design elements, abstract shapes and patterns, ',
+                'silhouette': 'abstract silhouetted figure, no facial features visible, geometric human form silhouette, ',
+                'realistic': 'professional businessperson in natural office setting, realistic photography style, authentic business person, no stock photo cliché, '
+            };
+
+            const sceneMap = {
+                'office': 'modern office interior, contemporary meeting room, clean desk environment with plant, ',
+                'property': 'exterior of commercial or residential property, architectural photography, modern building facade, ',
+                'construction': 'construction site or development project, construction equipment, crane and scaffolding visible, ',
+                'city': 'Prague cityscape with modern architecture, urban environment, European city setting, ',
+                'abstract': 'abstract geometric background with subtle grid pattern, clean minimalist background, ',
+                'typo': 'pure typography layout, no photographic elements, typographic design focus, '
+            };
+
+            const moodMap = {
+                'professional': 'calm confident professional atmosphere, muted sophisticated tones, stable composition, ',
+                'dynamic': 'energetic dynamic composition, bold angles, movement in design, vibrant energy, ',
+                'calm': 'serene stable composition, balanced symmetry, peaceful atmosphere, zen-like qualities, '
+            };
+
+            // Slight variation for batch: rotate scene/mood emphasis
+            const variations = [
+                'Variation: primary composition, balanced layout. ',
+                'Variation: slightly different angle, emphasize depth and perspective. ',
+                'Variation: closer crop, detail-focused, stronger foreground. ',
+                'Variation: wider view, environmental context, architectural lines. ',
+                'Variation: editorial style, bold typography emphasis, less photographic. '
+            ];
+
+            let prompt = 'Professional B2B financial services ';
+            prompt += typeMap[visualType] || '';
+            prompt += peopleMap[people] || '';
+            prompt += sceneMap[scene] || '';
+            prompt += moodMap[mood] || '';
+            prompt += `Color palette: turquoise #00B4D8, navy #1A2B4A, white #FFFFFF, light gray #F0F0F0. `;
+            prompt += `Format: ${format}. `;
+            prompt += `Sans-serif typography, clean modern design, high contrast text readable on mobile. `;
+            prompt += `No stock photo clichés, no neon colors, no excessive gradients, no decorative fonts. `;
+            prompt += `No logo unless explicitly requested. Real estate and financial services professional aesthetic. `;
+            prompt += `Topic/context: "${theme}". Minimal decorative elements, focus on clarity and impact. `;
+            prompt += variations[variationIndex % variations.length];
+
+            return prompt;
+        }
+
+        // ================== BATCH PREVIEW RENDER ==================
+        function renderBatchPreview(posts, showImage) {
+            const container = document.getElementById('batchPostsContainer');
+            const previewContainer = document.getElementById('previewContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            emptyState.style.display = 'none';
+            previewContainer.style.display = 'block';
+            container.innerHTML = '';
+
+            posts.forEach((post, idx) => {
+                const card = document.createElement('div');
+                card.className = 'batch-post-card';
+
+                let html = `
+                    <div class="batch-post-header">
+                        <span class="batch-post-number">Příspěvek ${post.index}${posts.length > 1 ? ' / ' + posts.length : ''}</span>
+                        <div class="batch-post-actions">
+                            <button onclick="copyPostText(${idx})">Kopírovat text</button>
+                            ${showImage ? `<button onclick="copyPostPrompt(${idx})">Kopírovat prompt</button>` : ''}
+                        </div>
+                    </div>
+                    <div class="batch-post-text" id="batchText_${idx}">${escapeHtml(post.text)}</div>
+                `;
+
+                if (showImage && post.imagePrompt) {
+                    html += `<div class="batch-post-prompt" id="batchPrompt_${idx}">${escapeHtml(post.imagePrompt)}</div>`;
+                }
+
+                card.innerHTML = html;
+                container.appendChild(card);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyPostText(idx) {
+            if (generatedPosts[idx]) {
+                navigator.clipboard.writeText(generatedPosts[idx].text).then(() => {
+                    showToast(`Text příspěvku ${idx + 1} zkopírován`, 'success');
+                });
+            }
+        }
+
+        function copyPostPrompt(idx) {
+            if (generatedPosts[idx] && generatedPosts[idx].imagePrompt) {
+                navigator.clipboard.writeText(generatedPosts[idx].imagePrompt).then(() => {
+                    showToast(`Image prompt ${idx + 1} zkopírován`, 'success');
+                });
+            }
+        }
+
+        // ================== DOWNLOAD ALL ==================
+        function downloadAll() {
+            if (generatedPosts.length === 0) {
+                showToast('Nejprve vygenerujte příspěvky', 'error');
+                return;
+            }
+
+            const channel = document.querySelector('[data-name="channel"] .custom-dropdown-trigger').getAttribute('data-value');
+            const today = new Date().toISOString().slice(0, 10);
+            let allContent = '';
+
+            generatedPosts.forEach((post, idx) => {
+                allContent += `========================================\n`;
+                allContent += `PŘÍSPĚVEK ${post.index} — ${channel.toUpperCase()} — ${today}\n`;
+                allContent += `========================================\n\n`;
+                allContent += `--- TEXT ---\n`;
+                allContent += post.text + '\n\n';
+                if (post.imagePrompt) {
+                    allContent += `--- IMAGE PROMPT ---\n`;
+                    allContent += post.imagePrompt + '\n\n';
+                }
+                allContent += '\n';
+            });
+
+            const blob = new Blob([allContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ProfiLend_${channel}_${today}_${generatedPosts.length}x.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast(`${generatedPosts.length} příspěvků staženo`, 'success');
+        }
+
+        // ================== TOAST NOTIFICATIONS ==================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <div class="toast-title">${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ================== COPY TO CLIPBOARD ==================
+        function copyToClipboard(elementId, label) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`${label} zkopírován do schránky`, 'success');
+            }).catch(() => {
+                showToast('Chyba při kopírování', 'error');
+            });
+        }
+    </script>
+</body>
+</html>
