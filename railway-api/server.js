@@ -459,7 +459,7 @@ app.post('/api/marketing/generate', async function (req, res) {
     }
 
     var genAI = new GoogleGenerativeAI(geminiKey);
-    var model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' });
+    var model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Build ProfiLend knowledge context
     var knowledgeBase = 'ZNALOSTNÍ BÁZE — ProfiLend:\n' +
