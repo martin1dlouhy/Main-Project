@@ -1232,6 +1232,159 @@
             right: 1.5rem;
         }
 
+        /* ===================== ONEDRIVE & SETTINGS ===================== */
+        .onedrive-connection {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            background: var(--bg-surface);
+            border: 1.5px dashed var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .onedrive-connection.connected {
+            border-style: solid;
+            border-color: var(--success);
+            background: rgba(34, 197, 94, 0.05);
+        }
+
+        .onedrive-status {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .onedrive-connection.connected .onedrive-status {
+            color: var(--success);
+        }
+
+        .btn-connect {
+            padding: 0.5rem 1.25rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-connect:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .settings-save-bar {
+            position: sticky;
+            bottom: 0;
+            padding: 1rem 1.5rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            z-index: 10;
+        }
+
+        .setting-card-editable {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .setting-card-editable h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .setting-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: vertical;
+            transition: all 0.3s;
+        }
+
+        .setting-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+            background: var(--bg-primary);
+        }
+
+        .editable-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .editable-tag.danger {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #EF4444;
+        }
+
+        .editable-tag .remove-tag {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .editable-tag .remove-tag:hover {
+            color: var(--danger);
+        }
+
+        .add-tag-input {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .add-tag-input input {
+            width: 150px;
+            padding: 0.375rem 0.75rem;
+            border: 1.5px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        .add-tag-btn {
+            padding: 0.375rem 0.75rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
         /* ===================== RESPONSIVE ===================== */
         @media (max-width: 1200px) {
             .generator-container {
@@ -1690,159 +1843,120 @@
 
             <!-- NASTAVENÍ MODULE -->
             <div class="module" id="module-nastaveni">
-                <div class="settings-container">
-                    <!-- Brand Identity -->
-                    <div class="setting-card">
-                        <h4>Identita značky</h4>
-                        <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
-                            ProfiLend je inovativní finanční platform poskytující moderní řešení pro investory, developery a podnikatele v segmentu nemovitostí a real estate financování. Naše mise je demokratizovat přístup k dlouhodobému financování a vytvořit transparentní, důvěryhodný ekosystém.
-                        </p>
-                    </div>
+                <div style="padding: 2rem; max-width: 900px; margin: 0 auto;">
+                    <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem;">AI Nastavení</h2>
 
-                    <!-- Tone of Voice -->
-                    <div class="setting-card">
-                        <h4>Tón komunikace</h4>
-                        <div class="tags">
-                            <span class="tag">Věcný</span>
-                            <span class="tag">Sebevědomý</span>
-                            <span class="tag">Lidský</span>
-                            <span class="tag">Přímý</span>
-                            <span class="tag">Expertní</span>
+                    <!-- OneDrive Connection -->
+                    <div class="onedrive-connection" id="onedriveBar">
+                        <div class="onedrive-status">
+                            <span style="font-size: 20px;">📁</span>
+                            <span id="onedriveStatusText">Nepřipojeno k OneDrive</span>
                         </div>
+                        <button class="btn-connect" id="btnConnectOnedrive" onclick="connectOneDriveFolder()">Připojit složku</button>
                     </div>
 
-                    <!-- Target Audiences -->
-                    <div class="setting-card">
-                        <h4>Cílové skupiny</h4>
-                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <div style="font-weight: 600; font-size: 13px; color: var(--text-primary); margin-bottom: 0.25rem;">Jednatelé a vlastníci</div>
-                                <div style="font-size: 12px; color: var(--text-secondary);">Vlastníci a manažeři SME s dlouhodobou vizi</div>
+                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        <!-- System Prompt -->
+                        <div class="setting-card-editable">
+                            <h4>AI System Prompt</h4>
+                            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 0.75rem;">Hlavní instrukce pro AI při generování příspěvků. Tento text se posílá jako systémový prompt.</p>
+                            <textarea class="setting-textarea" id="settingSystemPrompt" style="min-height: 180px;" placeholder="Zadejte instrukce pro AI...">Jsi zkušený marketingový specialista pro ProfiLend — nebankovní financování zajištěné nemovitostmi v ČR. Generuješ příspěvky na sociální sítě podle nastavení kanálu, cílové skupiny a tónu komunikace. Vždy dodržuj brand voice: věcný, sebevědomý, lidský, přímý, expertní. Nikdy nepoužívej zakázaná slova.</textarea>
+                        </div>
+
+                        <!-- Tone Tags -->
+                        <div class="setting-card-editable">
+                            <h4>Tón komunikace</h4>
+                            <div id="toneTags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <span class="editable-tag">Věcný <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag">Sebevědomý <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag">Lidský <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag">Přímý <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag">Expertní <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
                             </div>
-                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <div style="font-weight: 600; font-size: 13px; color: var(--text-primary); margin-bottom: 0.25rem;">Developeři a investoři</div>
-                                <div style="font-size: 12px; color: var(--text-secondary);">Profesionálové v real estate se zkušeností</div>
-                            </div>
-                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <div style="font-weight: 600; font-size: 13px; color: var(--text-primary); margin-bottom: 0.25rem;">CFO / Finance manažeři</div>
-                                <div style="font-size: 12px; color: var(--text-secondary);">Finančníci odpovídající za alokaci kapitálu</div>
-                            </div>
-                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color);">
-                                <div style="font-weight: 600; font-size: 13px; color: var(--text-primary); margin-bottom: 0.25rem;">Makléři a poradci</div>
-                                <div style="font-size: 12px; color: var(--text-secondary);">Profesionálové s přístupem k NWI klientům</div>
+                            <div class="add-tag-input">
+                                <input type="text" id="toneInput" placeholder="Nový tón..." onkeydown="if(event.key==='Enter'){addTag('toneTags','toneInput');event.preventDefault();}">
+                                <button class="add-tag-btn" onclick="addTag('toneTags','toneInput')">+ Přidat</button>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Content Pillars -->
-                    <div class="setting-card">
-                        <h4>Obsahové pilíře</h4>
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div>
-                                <div class="progress-bar-label">
-                                    <span>Produkt a proces</span>
-                                    <span style="font-weight: 600;">30%</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 30%;"></div>
-                                </div>
+                        <!-- Banned Words -->
+                        <div class="setting-card-editable">
+                            <h4>Zakázaná slova</h4>
+                            <div id="bannedTags" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <span class="editable-tag danger">Revoluční <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Garantujeme zisk <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Jednoduše bohatnout <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Zlatá příležitost <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Poslední šance <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Bez rizika <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Dokonalý systém <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Tajný vzorec <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Okamžité výsledky <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Super trik <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Zázračné řešení <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
+                                <span class="editable-tag danger">Nejlepší investice <span class="remove-tag" onclick="this.parentElement.remove()">×</span></span>
                             </div>
-                            <div>
-                                <div class="progress-bar-label">
-                                    <span>Případovka / scénář</span>
-                                    <span style="font-weight: 600;">25%</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 25%;"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="progress-bar-label">
-                                    <span>Edukace</span>
-                                    <span style="font-weight: 600;">25%</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 25%;"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="progress-bar-label">
-                                    <span>Značka a důvěra</span>
-                                    <span style="font-weight: 600;">20%</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 20%;"></div>
-                                </div>
+                            <div class="add-tag-input">
+                                <input type="text" id="bannedInput" placeholder="Nové slovo..." onkeydown="if(event.key==='Enter'){addTag('bannedTags','bannedInput','danger');event.preventDefault();}">
+                                <button class="add-tag-btn" onclick="addTag('bannedTags','bannedInput','danger')">+ Přidat</button>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Banned Words -->
-                    <div class="setting-card">
-                        <h4>Zakázaná slova</h4>
-                        <div class="tags">
-                            <span class="tag danger">Revoluční</span>
-                            <span class="tag danger">Garantujeme zisk</span>
-                            <span class="tag danger">Jednoduše bohatnout</span>
-                            <span class="tag danger">Zlatá příležitost</span>
-                            <span class="tag danger">Poslední šance</span>
-                            <span class="tag danger">Bez rizika</span>
-                            <span class="tag danger">Dokonalý systém</span>
-                            <span class="tag danger">Tajný vzorec</span>
-                            <span class="tag danger">Okamžité výsledky</span>
-                            <span class="tag danger">Super trik</span>
-                            <span class="tag danger">Experimentátoři vítězí</span>
-                            <span class="tag danger">Zázrační řešení</span>
-                            <span class="tag danger">Nejlepší investice</span>
+                        <!-- CTA Library -->
+                        <div class="setting-card-editable">
+                            <h4>CTA knihovna</h4>
+                            <div id="ctaList">
+                                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                                    <input type="text" class="cta-item-text" value="Zjistit více na ProfiLend.cz" style="flex: 1; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit; font-size: 13px;">
+                                    <button onclick="this.parentElement.remove()" style="padding: 0.5rem; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;">×</button>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                                    <input type="text" class="cta-item-text" value="Chcete vědět více? Napište nám" style="flex: 1; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit; font-size: 13px;">
+                                    <button onclick="this.parentElement.remove()" style="padding: 0.5rem; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;">×</button>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                                    <input type="text" class="cta-item-text" value="Naplánujte si konzultaci zdarma" style="flex: 1; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit; font-size: 13px;">
+                                    <button onclick="this.parentElement.remove()" style="padding: 0.5rem; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;">×</button>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                                    <input type="text" class="cta-item-text" value="Začněte s ProfiLend dnes" style="flex: 1; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit; font-size: 13px;">
+                                    <button onclick="this.parentElement.remove()" style="padding: 0.5rem; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;">×</button>
+                                </div>
+                            </div>
+                            <button onclick="addCTA()" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: var(--bg-surface); border: 1.5px dashed var(--border-color); border-radius: 8px; color: var(--accent); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;">+ Přidat CTA</button>
                         </div>
-                    </div>
 
-                    <!-- CTA Library -->
-                    <div class="setting-card">
-                        <h4>CTA knihovna</h4>
-                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">→ Zjistit více na ProfiLend.cz</div>
-                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">→ Chcete vědět více? Napište nám</div>
-                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">→ Naplánujte si konzultaci zdarma</div>
-                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">→ Začněte s ProfiLend dnes</div>
-                            <div style="padding: 0.75rem; background-color: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">→ Pozijte výhody transparentního financování</div>
-                        </div>
-                    </div>
-
-                    <!-- Visual Identity -->
-                    <div class="setting-card">
-                        <h4>Vizuální identita</h4>
-                        <div>
-                            <div class="color-swatch">
-                                <div class="color-box" style="background-color: #00B4D8;"></div>
-                                <span class="color-code">#00B4D8 — Turquoise</span>
-                            </div>
-                            <div class="color-swatch">
-                                <div class="color-box" style="background-color: #1A2B4A;"></div>
-                                <span class="color-code">#1A2B4A — Navy</span>
-                            </div>
-                            <div class="color-swatch">
-                                <div class="color-box" style="background-color: #FFFFFF; border: 2px solid var(--border-color);"></div>
-                                <span class="color-code">#FFFFFF — White</span>
-                            </div>
-                            <div class="color-swatch">
-                                <div class="color-box" style="background-color: #F0F0F0;"></div>
-                                <span class="color-code">#F0F0F0 — Light Gray</span>
-                            </div>
-                            <div class="color-swatch">
-                                <div class="color-box" style="background-color: #6B7280;"></div>
-                                <span class="color-code">#6B7280 — Medium Gray</span>
+                        <!-- Content Pillars -->
+                        <div class="setting-card-editable">
+                            <h4>Obsahové pilíře</h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <span style="flex: 1; font-size: 13px;">Produkt a proces</span>
+                                    <input type="number" data-pillar="Produkt a proces" value="30" min="0" max="100" style="width: 60px; padding: 0.375rem; text-align: center; border: 1.5px solid var(--border-color); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit;">
+                                    <span style="font-size: 13px; color: var(--text-secondary);">%</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <span style="flex: 1; font-size: 13px;">Případovka / scénář</span>
+                                    <input type="number" data-pillar="Případovka / scénář" value="25" min="0" max="100" style="width: 60px; padding: 0.375rem; text-align: center; border: 1.5px solid var(--border-color); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit;">
+                                    <span style="font-size: 13px; color: var(--text-secondary);">%</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <span style="flex: 1; font-size: 13px;">Edukace</span>
+                                    <input type="number" data-pillar="Edukace" value="25" min="0" max="100" style="width: 60px; padding: 0.375rem; text-align: center; border: 1.5px solid var(--border-color); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit;">
+                                    <span style="font-size: 13px; color: var(--text-secondary);">%</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <span style="flex: 1; font-size: 13px;">Značka a důvěra</span>
+                                    <input type="number" data-pillar="Značka a důvěra" value="20" min="0" max="100" style="width: 60px; padding: 0.375rem; text-align: center; border: 1.5px solid var(--border-color); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit;">
+                                    <span style="font-size: 13px; color: var(--text-secondary);">%</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Document Upload -->
-                    <div class="setting-card" style="grid-column: 1 / -1;">
-                        <h4>Nahrané dokumenty</h4>
-                        <div class="upload-area">
-                            <div class="upload-icon">📄</div>
-                            <div class="upload-text">Přetáhněte dokumenty sem nebo klikněte pro výběr</div>
-                        </div>
+                    <!-- Save Bar -->
+                    <div class="settings-save-bar">
+                        <button class="btn-connect" onclick="saveSettingsToOneDrive()" style="padding: 0.75rem 2rem;">💾 Uložit nastavení</button>
                     </div>
                 </div>
             </div>
@@ -1898,6 +2012,7 @@
             updateFormatBasedOnChannel();
             initCustomDropdowns();
             initBatchSelector();
+            tryReconnectOneDrive();
         });
 
         // ================== THEME TOGGLE ==================
@@ -2342,6 +2457,7 @@
             }
 
             try {
+                var customSettings = getSettingsForAPI();
                 const response = await fetch(`${API_BASE}/api/marketing/generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2349,7 +2465,11 @@
                         channel, audience: targetAudience, pillar: contentPillar,
                         postType, goal, theme: theme.trim(), tone,
                         emojiLevel, hashtagLevel, batchCount: count,
-                        generateImage: wantImage, imageSettings
+                        generateImage: wantImage, imageSettings,
+                        customSystemPrompt: customSettings.systemPrompt,
+                        customBannedWords: customSettings.bannedWords,
+                        customCTAs: customSettings.ctas,
+                        customTone: customSettings.tone
                     })
                 });
 
@@ -2547,6 +2667,7 @@
                         <div class="batch-post-actions">
                             <button onclick="copyPostText(${idx})">Kopírovat text</button>
                             ${showImage ? `<button onclick="copyPostPrompt(${idx})">Kopírovat prompt</button>` : ''}
+                            ${showImage && post.imagePrompt ? `<button onclick="generateImageForPost(${idx})" class="btn-connect">🎨 Generovat obrázek</button>` : ''}
                         </div>
                     </div>
                     <div class="batch-post-text" id="batchText_${idx}">${escapeHtml(post.text)}</div>
@@ -2554,17 +2675,84 @@
 
                 if (showImage && post.imagePrompt) {
                     html += `<div class="batch-post-prompt" id="batchPrompt_${idx}">${escapeHtml(post.imagePrompt)}</div>`;
+                    html += `<div class="post-image-container" id="postImage${idx}" style="display: none; margin-top: 1rem;">
+                        <img style="width: 100%; border-radius: 10px; border: 1px solid var(--border-color);" />
+                        <button class="btn btn-secondary" style="margin-top: 0.5rem; width: 100%;" onclick="downloadPostImage(${idx})">⬇ Stáhnout obrázek</button>
+                    </div>`;
                 }
 
                 card.innerHTML = html;
                 container.appendChild(card);
             });
+
+            if (oneDriveDirHandle) {
+                posts.forEach(function(post, idx) {
+                    savePostToOneDrive(post, idx);
+                });
+            }
         }
 
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        async function generateImageForPost(idx) {
+            var post = generatedPosts[idx];
+            if (!post || !post.imagePrompt) {
+                showToast('Tento příspěvek nemá image prompt', 'error');
+                return;
+            }
+
+            var btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Generuji obrázek...';
+
+            try {
+                var sizeMap = { '1:1': '1024x1024', '4:5': '1024x1792', '16:9': '1792x1024' };
+                var format = document.getElementById('imageFormatSelect') ? document.getElementById('imageFormatSelect').value : '1:1';
+                var size = sizeMap[format] || '1024x1024';
+
+                var response = await fetch(API_BASE + '/api/marketing/generate-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: post.imagePrompt,
+                        size: size,
+                        quality: 'standard'
+                    })
+                });
+
+                var data = await response.json();
+                if (data.success && data.image) {
+                    var container = document.getElementById('postImage' + idx);
+                    if (container) {
+                        container.style.display = 'block';
+                        container.querySelector('img').src = 'data:image/png;base64,' + data.image;
+                        container.dataset.base64 = data.image;
+                    }
+                    showToast('Obrázek vygenerován', 'success');
+
+                    await saveImageToOneDrive(data.image, idx);
+                } else {
+                    showToast(data.error || 'Chyba při generování obrázku', 'error');
+                }
+            } catch(err) {
+                showToast('Chyba: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎨 Generovat obrázek';
+            }
+        }
+
+        function downloadPostImage(idx) {
+            var container = document.getElementById('postImage' + idx);
+            if (!container || !container.dataset.base64) return;
+            var link = document.createElement('a');
+            link.href = 'data:image/png;base64,' + container.dataset.base64;
+            link.download = 'profilend-post-' + (idx + 1) + '.png';
+            link.click();
         }
 
         function copyPostText(idx) {
@@ -2647,6 +2835,264 @@
             }).catch(() => {
                 showToast('Chyba při kopírování', 'error');
             });
+        }
+
+        // ================== ONEDRIVE FILE SYSTEM ACCESS ==================
+        var oneDriveDirHandle = null;
+        var appSettings = null;
+
+        var DEFAULT_SETTINGS = {
+            systemPrompt: 'Jsi zkušený marketingový specialista pro ProfiLend — nebankovní financování zajištěné nemovitostmi v ČR. Generuješ příspěvky na sociální sítě podle nastavení kanálu, cílové skupiny a tónu komunikace. Vždy dodržuj brand voice: věcný, sebevědomý, lidský, přímý, expertní. Nikdy nepoužívej zakázaná slova.',
+            tone: ['Věcný', 'Sebevědomý', 'Lidský', 'Přímý', 'Expertní'],
+            audiences: [
+                { name: 'Jednatelé a vlastníci', desc: 'Vlastníci a manažeři SME s dlouhodobou vizí' },
+                { name: 'Developeři a investoři', desc: 'Profesionálové v real estate se zkušeností' },
+                { name: 'CFO / Finance manažeři', desc: 'Finančníci odpovídající za alokaci kapitálu' },
+                { name: 'Makléři a poradci', desc: 'Profesionálové s přístupem k NWI klientům' }
+            ],
+            contentPillars: { 'Produkt a proces': 30, 'Případovka / scénář': 25, 'Edukace': 25, 'Značka a důvěra': 20 },
+            bannedWords: ['Revoluční', 'Garantujeme zisk', 'Jednoduše bohatnout', 'Zlatá příležitost', 'Poslední šance', 'Bez rizika', 'Dokonalý systém', 'Tajný vzorec', 'Okamžité výsledky', 'Super trik', 'Zázračné řešení', 'Nejlepší investice'],
+            ctas: ['Zjistit více na ProfiLend.cz', 'Chcete vědět více? Napište nám', 'Naplánujte si konzultaci zdarma', 'Začněte s ProfiLend dnes', 'Využijte výhod transparentního financování'],
+            colors: { primary: '#00B4D8', secondary: '#1A2B4A', white: '#FFFFFF', lightGray: '#F0F0F0' }
+        };
+
+        async function connectOneDriveFolder() {
+            try {
+                oneDriveDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                document.getElementById('onedriveBar').classList.add('connected');
+                document.getElementById('onedriveStatusText').textContent = 'Připojeno: ' + oneDriveDirHandle.name;
+                document.getElementById('btnConnectOnedrive').textContent = 'Změnit složku';
+                showToast('Složka OneDrive připojena', 'success');
+
+                try {
+                    var db = await openSettingsDB();
+                    var tx = db.transaction('handles', 'readwrite');
+                    tx.objectStore('handles').put({ id: 'onedrive', handle: oneDriveDirHandle });
+                } catch(e) { console.warn('Could not persist handle:', e); }
+
+                await loadSettingsFromOneDrive();
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    showToast('Chyba při připojení složky: ' + e.message, 'error');
+                }
+            }
+        }
+
+        function openSettingsDB() {
+            return new Promise(function(resolve, reject) {
+                var request = indexedDB.open('MarketingAgentDB', 1);
+                request.onupgradeneeded = function(e) {
+                    var db = e.target.result;
+                    if (!db.objectStoreNames.contains('handles')) {
+                        db.createObjectStore('handles', { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = function(e) { resolve(e.target.result); };
+                request.onerror = function(e) { reject(e.target.error); };
+            });
+        }
+
+        async function tryReconnectOneDrive() {
+            try {
+                var db = await openSettingsDB();
+                var tx = db.transaction('handles', 'readonly');
+                var request = tx.objectStore('handles').get('onedrive');
+                request.onsuccess = async function() {
+                    if (request.result && request.result.handle) {
+                        var handle = request.result.handle;
+                        var perm = await handle.queryPermission({ mode: 'readwrite' });
+                        if (perm === 'granted') {
+                            oneDriveDirHandle = handle;
+                            document.getElementById('onedriveBar').classList.add('connected');
+                            document.getElementById('onedriveStatusText').textContent = 'Připojeno: ' + handle.name;
+                            document.getElementById('btnConnectOnedrive').textContent = 'Změnit složku';
+                            await loadSettingsFromOneDrive();
+                        }
+                    }
+                };
+            } catch(e) { console.warn('Auto-reconnect failed:', e); }
+        }
+
+        async function loadSettingsFromOneDrive() {
+            if (!oneDriveDirHandle) return;
+            try {
+                var fileHandle = await oneDriveDirHandle.getFileHandle('settings.json');
+                var file = await fileHandle.getFile();
+                var text = await file.text();
+                appSettings = JSON.parse(text);
+                renderSettingsEditor(appSettings);
+                showToast('Nastavení načteno z OneDrive', 'success');
+            } catch (e) {
+                if (e.name === 'NotFoundError') {
+                    appSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+                    renderSettingsEditor(appSettings);
+                    showToast('Vytvořeno výchozí nastavení', 'info');
+                } else {
+                    showToast('Chyba při čtení nastavení: ' + e.message, 'error');
+                }
+            }
+        }
+
+        async function saveSettingsToOneDrive() {
+            if (!oneDriveDirHandle) {
+                showToast('Nejdříve připojte OneDrive složku', 'error');
+                return;
+            }
+            collectSettingsFromUI();
+            try {
+                var fileHandle = await oneDriveDirHandle.getFileHandle('settings.json', { create: true });
+                var writable = await fileHandle.createWritable();
+                await writable.write(JSON.stringify(appSettings, null, 2));
+                await writable.close();
+                showToast('Nastavení uloženo do OneDrive', 'success');
+            } catch (e) {
+                showToast('Chyba při ukládání: ' + e.message, 'error');
+            }
+        }
+
+        async function savePostToOneDrive(post, index) {
+            if (!oneDriveDirHandle) return;
+            try {
+                var genDir;
+                try {
+                    genDir = await oneDriveDirHandle.getDirectoryHandle('generated', { create: true });
+                } catch(e) { return; }
+
+                var now = new Date();
+                var dateStr = now.toISOString().slice(0, 10);
+                var timeStr = now.toISOString().slice(11, 16).replace(':', '-');
+                var fileName = dateStr + '_' + timeStr + '_post' + (index + 1) + '.txt';
+
+                var fileHandle = await genDir.getFileHandle(fileName, { create: true });
+                var writable = await fileHandle.createWritable();
+                var content = '=== Marketing Agent — Vygenerovaný příspěvek ===\n';
+                content += 'Datum: ' + now.toLocaleString('cs-CZ') + '\n';
+                content += 'Kanál: ' + (document.getElementById('channelSelect') ? document.getElementById('channelSelect').value : '') + '\n';
+                content += '=========================================\n\n';
+                content += post.text + '\n';
+                if (post.hook) content += '\nHook: ' + post.hook + '\n';
+                if (post.cta) content += 'CTA: ' + post.cta + '\n';
+                if (post.imagePrompt) content += '\nImage Prompt:\n' + post.imagePrompt + '\n';
+                await writable.write(content);
+                await writable.close();
+            } catch(e) { console.warn('Could not save post to OneDrive:', e); }
+        }
+
+        async function saveImageToOneDrive(base64Data, index) {
+            if (!oneDriveDirHandle) return;
+            try {
+                var genDir = await oneDriveDirHandle.getDirectoryHandle('generated', { create: true });
+                var now = new Date();
+                var dateStr = now.toISOString().slice(0, 10);
+                var timeStr = now.toISOString().slice(11, 16).replace(':', '-');
+                var fileName = dateStr + '_' + timeStr + '_image' + (index + 1) + '.png';
+
+                var fileHandle = await genDir.getFileHandle(fileName, { create: true });
+                var writable = await fileHandle.createWritable();
+                var byteChars = atob(base64Data);
+                var byteArr = new Uint8Array(byteChars.length);
+                for (var i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+                await writable.write(new Blob([byteArr], { type: 'image/png' }));
+                await writable.close();
+                showToast('Obrázek uložen do OneDrive', 'success');
+            } catch(e) { console.warn('Could not save image to OneDrive:', e); }
+        }
+
+        function collectSettingsFromUI() {
+            if (!appSettings) appSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+
+            var promptEl = document.getElementById('settingSystemPrompt');
+            if (promptEl) appSettings.systemPrompt = promptEl.value;
+
+            var toneTags = document.querySelectorAll('#toneTags .editable-tag');
+            appSettings.tone = [];
+            toneTags.forEach(function(tag) {
+                var text = tag.childNodes[0].textContent.trim();
+                if (text) appSettings.tone.push(text);
+            });
+
+            var bannedTags = document.querySelectorAll('#bannedTags .editable-tag');
+            appSettings.bannedWords = [];
+            bannedTags.forEach(function(tag) {
+                var text = tag.childNodes[0].textContent.trim();
+                if (text) appSettings.bannedWords.push(text);
+            });
+
+            var ctaItems = document.querySelectorAll('#ctaList .cta-item-text');
+            appSettings.ctas = [];
+            ctaItems.forEach(function(item) {
+                if (item.value && item.value.trim()) appSettings.ctas.push(item.value.trim());
+            });
+        }
+
+        function renderSettingsEditor(settings) {
+            if (!settings) return;
+
+            var promptEl = document.getElementById('settingSystemPrompt');
+            if (promptEl) promptEl.value = settings.systemPrompt || '';
+
+            renderEditableTags('toneTags', settings.tone || [], 'toneInput');
+            renderEditableTags('bannedTags', settings.bannedWords || [], 'bannedInput', 'danger');
+            renderCTAList(settings.ctas || []);
+
+            if (settings.contentPillars) {
+                Object.keys(settings.contentPillars).forEach(function(key) {
+                    var el = document.querySelector('[data-pillar="' + key + '"]');
+                    if (el) el.value = settings.contentPillars[key];
+                });
+            }
+        }
+
+        function renderEditableTags(containerId, tags, inputId, tagClass) {
+            var container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+            tags.forEach(function(tag) {
+                var el = document.createElement('span');
+                el.className = 'editable-tag' + (tagClass ? ' ' + tagClass : '');
+                el.innerHTML = tag + ' <span class="remove-tag" onclick="this.parentElement.remove()">×</span>';
+                container.appendChild(el);
+            });
+        }
+
+        function addTag(containerId, inputId, tagClass) {
+            var input = document.getElementById(inputId);
+            if (!input || !input.value.trim()) return;
+            var container = document.getElementById(containerId);
+            var el = document.createElement('span');
+            el.className = 'editable-tag' + (tagClass ? ' ' + tagClass : '');
+            el.innerHTML = input.value.trim() + ' <span class="remove-tag" onclick="this.parentElement.remove()">×</span>';
+            container.appendChild(el);
+            input.value = '';
+        }
+
+        function renderCTAList(ctas) {
+            var container = document.getElementById('ctaList');
+            if (!container) return;
+            container.innerHTML = '';
+            ctas.forEach(function(cta, idx) {
+                var div = document.createElement('div');
+                div.style.cssText = 'display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;';
+                div.innerHTML = '<input type="text" class="cta-item-text" value="' + cta.replace(/"/g, '&quot;') + '" style="flex: 1; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit; font-size: 13px;">' +
+                    '<button onclick="this.parentElement.remove()" style="padding: 0.5rem; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;">×</button>';
+                container.appendChild(div);
+            });
+        }
+
+        function addCTA() {
+            var container = document.getElementById('ctaList');
+            if (!container) return;
+            var div = document.createElement('div');
+            div.style.cssText = 'display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;';
+            div.innerHTML = '<input type="text" class="cta-item-text" placeholder="Nové CTA..." style="flex: 1; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit; font-size: 13px;">' +
+                '<button onclick="this.parentElement.remove()" style="padding: 0.5rem; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;">×</button>';
+            container.appendChild(div);
+            div.querySelector('input').focus();
+        }
+
+        function getSettingsForAPI() {
+            if (appSettings) return appSettings;
+            return DEFAULT_SETTINGS;
         }
     </script>
 </body>

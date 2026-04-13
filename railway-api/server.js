@@ -433,6 +433,8 @@ app.post('/api/generate-loan-doc', async function (req, res) {
 // Uses Gemini Imagen for image generation (optional)
 // =============================================
 var { GoogleGenerativeAI } = require('@google/generative-ai');
+var OpenAI;
+try { OpenAI = require('openai'); } catch(e) { console.warn('openai package not available, image generation disabled'); }
 
 // Debug endpoint - list available Gemini models
 app.get('/api/marketing/models', async function (req, res) {
@@ -451,6 +453,57 @@ app.get('/api/marketing/models', async function (req, res) {
         res.json({ models: models });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// DALL-E Image Generation endpoint
+app.post('/api/marketing/generate-image', async function (req, res) {
+    var openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) {
+        return res.status(500).json({ error: 'OPENAI_API_KEY is not set. Add it in Railway → Variables.' });
+    }
+    if (!OpenAI) {
+        return res.status(500).json({ error: 'openai package not installed.' });
+    }
+
+    var body = req.body || {};
+    var prompt = body.prompt || '';
+    var size = body.size || '1024x1024';
+    var quality = body.quality || 'standard';
+
+    if (!prompt || prompt.length < 10) {
+        return res.status(400).json({ error: 'Image prompt is required (min 10 chars).' });
+    }
+
+    try {
+        var openai = new OpenAI({ apiKey: openaiKey });
+        var response = await openai.images.generate({
+            model: 'dall-e-3',
+            prompt: prompt,
+            n: 1,
+            size: size,
+            quality: quality,
+            response_format: 'b64_json'
+        });
+
+        var imageData = response.data[0];
+        res.json({
+            success: true,
+            image: imageData.b64_json,
+            revisedPrompt: imageData.revised_prompt
+        });
+    } catch (err) {
+        console.error('DALL-E error:', err.message);
+        var errorMsg = err.message || 'Unknown error';
+        var statusCode = 500;
+        if (err.message && err.message.includes('billing')) {
+            errorMsg = 'OpenAI account needs billing setup. Visit platform.openai.com/billing';
+            statusCode = 402;
+        } else if (err.message && err.message.includes('rate')) {
+            errorMsg = 'Rate limit exceeded. Try again in a moment.';
+            statusCode = 429;
+        }
+        res.status(statusCode).json({ error: errorMsg });
     }
 });
 

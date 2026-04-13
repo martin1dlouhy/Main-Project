@@ -1394,6 +1394,58 @@
         var selectedTemplates = {};
         var lastGenerationTracked = false;
 
+        /* ─── FOLDER HANDLE PERSISTENCE (IndexedDB) ─── */
+        function openLoanFolderDB() {
+            return new Promise(function(resolve, reject) {
+                var req = indexedDB.open('LoanDocFolderDB', 1);
+                req.onupgradeneeded = function(e) {
+                    e.target.result.createObjectStore('handles');
+                };
+                req.onsuccess = function(e) { resolve(e.target.result); };
+                req.onerror = function(e) { reject(e); };
+            });
+        }
+
+        async function saveLoanFolderHandle(handle) {
+            try {
+                var fdb = await openLoanFolderDB();
+                var tx = fdb.transaction('handles', 'readwrite');
+                tx.objectStore('handles').put(handle, 'loanFolder');
+                await new Promise(function(resolve, reject) {
+                    tx.oncomplete = resolve;
+                    tx.onerror = reject;
+                });
+            } catch (e) { console.warn('Could not save loan folder handle:', e); }
+        }
+
+        async function loadLoanFolderHandle() {
+            try {
+                var fdb = await openLoanFolderDB();
+                var tx = fdb.transaction('handles', 'readonly');
+                var req = tx.objectStore('handles').get('loanFolder');
+                return new Promise(function(resolve) {
+                    req.onsuccess = function() { resolve(req.result || null); };
+                    req.onerror = function() { resolve(null); };
+                });
+            } catch (e) { return null; }
+        }
+
+        async function restoreLoanFolderHandle() {
+            var handle = await loadLoanFolderHandle();
+            if (!handle) return;
+            try {
+                var perm = await handle.requestPermission({ mode: 'readwrite' });
+                if (perm === 'granted') {
+                    folderHandle = handle;
+                    var btn = document.getElementById('btn-folder');
+                    if (btn) btn.classList.add('folder-connected');
+                    var statusText = document.getElementById('folder-status-text');
+                    if (statusText) statusText.textContent = handle.name;
+                    console.log('Loan folder restored from IndexedDB');
+                }
+            } catch (e) { console.warn('Loan folder restore failed:', e); }
+        }
+
         /* ─── NUMBER FORMATTING ─── */
         function formatAmount(input) {
             var raw = input.value.replace(/[^\d]/g, '');
@@ -1562,6 +1614,7 @@
             openDB();
             setupEventListeners();
             initAresAutocomplete();
+            restoreLoanFolderHandle();
         }
 
         function openDB() {
@@ -2071,17 +2124,21 @@
         }
 
         /* ─── FOLDER ─── */
-        function connectFolder() {
+        async function connectFolder() {
             if (window.showDirectoryPicker) {
-                window.showDirectoryPicker().then(function(handle) {
+                try {
+                    var handle = await window.showDirectoryPicker({ mode: 'readwrite' });
                     folderHandle = handle;
                     var btn = document.getElementById('btn-folder');
                     if (btn) { btn.classList.add('folder-connected'); }
                     var statusText = document.getElementById('folder-status-text');
                     if (statusText) statusText.textContent = handle.name;
                     showToast('Složka připojena: ' + handle.name, 'success');
+                    await saveLoanFolderHandle(handle);
                     if (Object.keys(generatedDocuments).length > 0) saveToDisk();
-                }).catch(function() {});
+                } catch(e) {
+                    if (e.name !== 'AbortError') showToast('Chyba: ' + e.message, 'error');
+                }
             } else {
                 showToast('File System Access API není podporováno tímto prohlížečem', 'error');
             }
