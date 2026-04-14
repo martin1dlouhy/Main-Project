@@ -2477,6 +2477,7 @@
         </div>
     </div>
 
+    <script src="google-drive-sync.js"></script>
     <script>
         let currentStep = 1;
         let propertyType = '';
@@ -5208,6 +5209,57 @@
                 formDataUpdated();
             }
         });
+
+        // ===== Google Drive Sync =====
+        if (window.GDriveSync) {
+            GDriveSync.init({
+                appName: 'R-E Prompt Generator',
+                onReady: async function() {
+                    try {
+                        var stateJson = await GDriveSync.loadFile('state.json');
+                        if (stateJson) {
+                            localStorage.setItem('prompt-gen-state', stateJson);
+                            GDriveSync.showToast('Stav načten z Google Drive', 'success');
+                        }
+                        var valJson = await GDriveSync.loadFile('valuations.json');
+                        if (valJson) {
+                            var valData = JSON.parse(valJson);
+                            await saveToIndexedDB(valData);
+                        }
+                    } catch (e) { console.warn('GDrive load failed:', e); }
+                }
+            });
+        }
+
+        // Wrap saveState to also push to Google Drive
+        if (typeof saveState === 'function') {
+            var _origSaveState = saveState;
+            var _gdriveSaveTimer = null;
+            window.saveState = function() {
+                _origSaveState.apply(this, arguments);
+                if (window.GDriveSync && GDriveSync.isConnected()) {
+                    // Debounce — save to Drive at most every 2s
+                    clearTimeout(_gdriveSaveTimer);
+                    _gdriveSaveTimer = setTimeout(function() {
+                        var s = localStorage.getItem('prompt-gen-state');
+                        if (s) GDriveSync.saveFile('state.json', s, 'application/json').catch(function(e){ console.warn(e); });
+                    }, 2000);
+                }
+            };
+        }
+
+        // Wrap saveToIndexedDB to sync to Drive
+        if (typeof saveToIndexedDB === 'function') {
+            var _origSaveToIDB = saveToIndexedDB;
+            window.saveToIndexedDB = async function(data) {
+                await _origSaveToIDB(data);
+                if (window.GDriveSync && GDriveSync.isConnected()) {
+                    try {
+                        await GDriveSync.saveFile('valuations.json', JSON.stringify(data, null, 2), 'application/json');
+                    } catch (e) { console.warn('GDrive valuations save failed:', e); }
+                }
+            };
+        }
     </script>
 </body>
 </html>

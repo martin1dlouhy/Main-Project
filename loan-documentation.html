@@ -2340,7 +2340,54 @@
                 e.target.classList.remove('visible');
             }
         });
+
+        // ===== Google Drive Sync =====
+        window.addEventListener('DOMContentLoaded', function() {
+            if (!window.GDriveSync) return;
+            GDriveSync.init({
+                appName: 'Uverova dokumentace',
+                onReady: async function() {
+                    try {
+                        var txt = await GDriveSync.loadFile('documents.json');
+                        if (txt) {
+                            var cloudDocs = JSON.parse(txt);
+                            if (Array.isArray(cloudDocs)) {
+                                // Merge into local IndexedDB
+                                getAllFromDB('documents', function(localDocs) {
+                                    var localIds = new Set((localDocs || []).map(function(d){ return d.id; }));
+                                    var added = 0;
+                                    cloudDocs.forEach(function(d) {
+                                        if (!localIds.has(d.id)) {
+                                            saveToDb('documents', d, function(){});
+                                            added++;
+                                        }
+                                    });
+                                    if (added > 0) GDriveSync.showToast('Načteno z Google Drive: ' + added + ' dokumentů', 'success');
+                                    if (typeof renderDocList === 'function') renderDocList();
+                                });
+                            }
+                        }
+                    } catch (e) { console.warn('GDrive load failed:', e); }
+                }
+            });
+        });
+
+        // Wrap saveDocumentSet to sync to Google Drive
+        if (typeof saveDocumentSet === 'function') {
+            var _origSaveDocumentSet = saveDocumentSet;
+            window.saveDocumentSet = function() {
+                _origSaveDocumentSet.apply(this, arguments);
+                if (window.GDriveSync && GDriveSync.isConnected()) {
+                    getAllFromDB('documents', function(docs) {
+                        if (!docs) return;
+                        GDriveSync.saveFile('documents.json', JSON.stringify(docs, null, 2), 'application/json')
+                            .catch(function(e){ console.warn('GDrive sync failed:', e); });
+                    });
+                }
+            };
+        }
     </script>
     <script src="script.js"></script>
+    <script src="google-drive-sync.js"></script>
 </body>
 </html>

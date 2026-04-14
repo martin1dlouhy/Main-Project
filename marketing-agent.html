@@ -3094,6 +3094,92 @@
             if (appSettings) return appSettings;
             return DEFAULT_SETTINGS;
         }
+
+        // ================== GOOGLE DRIVE SYNC ==================
+        // Initialize Google Drive — OneDrive code above is kept as fallback
+        // but all primary save/load now goes through Google Drive.
+        window.addEventListener('DOMContentLoaded', function() {
+            if (!window.GDriveSync) return;
+            // Hide OneDrive bar — replaced by global GDrive button
+            var odBar = document.getElementById('onedriveBar');
+            if (odBar) odBar.style.display = 'none';
+
+            GDriveSync.init({
+                appName: 'Marketing Agent',
+                onReady: async function() {
+                    try {
+                        var txt = await GDriveSync.loadFile('settings.json');
+                        if (txt) {
+                            appSettings = JSON.parse(txt);
+                            renderSettingsEditor(appSettings);
+                            GDriveSync.showToast('Nastavení načteno z Google Drive', 'success');
+                        } else {
+                            appSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+                            renderSettingsEditor(appSettings);
+                        }
+                    } catch (e) {
+                        console.error('Load settings failed:', e);
+                    }
+                }
+            });
+        });
+
+        // Override OneDrive functions to use Google Drive transparently
+        window.saveSettingsToOneDrive = async function() {
+            if (!window.GDriveSync || !GDriveSync.isConnected()) {
+                showToast('Nejdříve se připojte ke Google Drive (tlačítko vpravo dole)', 'error');
+                return;
+            }
+            collectSettingsFromUI();
+            try {
+                await GDriveSync.saveFile('settings.json', JSON.stringify(appSettings, null, 2), 'application/json');
+                showToast('Nastavení uloženo do Google Drive', 'success');
+            } catch (e) {
+                showToast('Chyba při ukládání: ' + e.message, 'error');
+            }
+        };
+
+        window.savePostToOneDrive = async function(post, index) {
+            if (!window.GDriveSync || !GDriveSync.isConnected()) return;
+            try {
+                var now = new Date();
+                var dateStr = now.toISOString().slice(0, 10);
+                var timeStr = now.toISOString().slice(11, 16).replace(':', '-');
+                var fileName = 'generated/' + dateStr + '_' + timeStr + '_post' + (index + 1) + '.txt';
+                var content = '=== Marketing Agent — Vygenerovaný příspěvek ===\n';
+                content += 'Datum: ' + now.toLocaleString('cs-CZ') + '\n';
+                var chSel = document.getElementById('channelSelect');
+                content += 'Kanál: ' + (chSel ? chSel.value : '') + '\n';
+                content += '=========================================\n\n';
+                content += post.text + '\n';
+                if (post.hook) content += '\nHook: ' + post.hook + '\n';
+                if (post.cta) content += 'CTA: ' + post.cta + '\n';
+                if (post.imagePrompt) content += '\nImage Prompt:\n' + post.imagePrompt + '\n';
+                // Save in app root as single file (GDrive doesn't have subfolders per saveFile)
+                await GDriveSync.saveFile(fileName.replace('/', '_'), content, 'text/plain');
+            } catch (e) {
+                console.warn('Could not save post to Google Drive:', e);
+            }
+        };
+
+        window.saveImageToOneDrive = async function(base64Data, index) {
+            if (!window.GDriveSync || !GDriveSync.isConnected()) return;
+            try {
+                var now = new Date();
+                var dateStr = now.toISOString().slice(0, 10);
+                var timeStr = now.toISOString().slice(11, 16).replace(':', '-');
+                var fileName = 'generated_' + dateStr + '_' + timeStr + '_image' + (index + 1) + '.png';
+                var byteChars = atob(base64Data);
+                var byteArr = new Uint8Array(byteChars.length);
+                for (var i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+                var blob = new Blob([byteArr], { type: 'image/png' });
+                await GDriveSync.saveBinary(fileName, blob, 'image/png');
+                showToast('Obrázek uložen do Google Drive', 'success');
+            } catch (e) {
+                console.warn('Could not save image to Google Drive:', e);
+            }
+        };
     </script>
+    <script src="google-drive-sync.js"></script>
 </body>
 </html>

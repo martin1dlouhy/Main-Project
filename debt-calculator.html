@@ -941,6 +941,7 @@
     <!-- Toast notification -->
     <div class="toast" id="toast"></div>
 
+    <script src="google-drive-sync.js"></script>
     <script>
         // Global currency state
         let currentCurrency = 'CZK';
@@ -2868,6 +2869,79 @@
         }
 
         updateDebtSyncBar();
+
+        // ===== Google Drive Sync =====
+        function collectDebtCalcData() {
+            var items = [];
+            for (var key in localStorage) {
+                if (key.indexOf('debtcalc-') === 0) {
+                    try {
+                        items.push({ key: key, data: JSON.parse(localStorage.getItem(key)) });
+                    } catch (e) {}
+                }
+            }
+            return items;
+        }
+
+        function restoreDebtCalcData(items) {
+            if (!Array.isArray(items)) return 0;
+            var added = 0;
+            items.forEach(function(item) {
+                if (item.key && item.data && !localStorage.getItem(item.key)) {
+                    try {
+                        localStorage.setItem(item.key, JSON.stringify(item.data));
+                        added++;
+                    } catch (e) {}
+                }
+            });
+            return added;
+        }
+
+        if (window.GDriveSync) {
+            GDriveSync.init({
+                appName: 'Debt Calculator',
+                onReady: async function() {
+                    try {
+                        var txt = await GDriveSync.loadFile('calculations.json');
+                        if (txt) {
+                            var cloudItems = JSON.parse(txt);
+                            var added = restoreDebtCalcData(cloudItems);
+                            if (added > 0) {
+                                GDriveSync.showToast('Načteno z Google Drive: ' + added + ' výpočtů', 'success');
+                                if (typeof renderSavedSidebar === 'function') renderSavedSidebar();
+                                if (typeof updateDebtSyncBar === 'function') updateDebtSyncBar();
+                            }
+                        }
+                    } catch (e) { console.warn('GDrive load failed:', e); }
+                }
+            });
+        }
+
+        // Watch localStorage changes and push to Drive (debounced)
+        var _debtGdriveTimer = null;
+        function scheduleDriveSync() {
+            if (!window.GDriveSync || !GDriveSync.isConnected()) return;
+            clearTimeout(_debtGdriveTimer);
+            _debtGdriveTimer = setTimeout(function() {
+                var items = collectDebtCalcData();
+                GDriveSync.saveFile('calculations.json', JSON.stringify(items, null, 2), 'application/json')
+                    .catch(function(e){ console.warn('GDrive sync failed:', e); });
+            }, 2000);
+        }
+
+        // Hook into localStorage.setItem to auto-sync
+        (function() {
+            var _origSetItem = localStorage.setItem.bind(localStorage);
+            var _origRemoveItem = localStorage.removeItem.bind(localStorage);
+            localStorage.setItem = function(k, v) {
+                _origSetItem(k, v);
+                if (k && k.indexOf('debtcalc-') === 0) scheduleDriveSync();
+            };
+            localStorage.removeItem = function(k) {
+                _origRemoveItem(k);
+                if (k && k.indexOf('debtcalc-') === 0) scheduleDriveSync();
+            };
+        })();
     </script>
 </body>
 </html>

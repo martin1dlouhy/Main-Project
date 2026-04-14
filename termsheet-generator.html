@@ -1451,6 +1451,7 @@
 
     <!-- ===== SCRIPTS ===== -->
     <script src="script.js"></script>
+    <script src="google-drive-sync.js"></script>
     <script>
     /* ================================================
        TERM SHEET GENERATOR — ProfiLend
@@ -2942,6 +2943,49 @@
 
         // Restore previously connected folder
         restoreFolderHandle();
+
+        // ===== Google Drive Sync =====
+        if (window.GDriveSync) {
+            GDriveSync.init({
+                appName: 'Term Sheet Generator',
+                onReady: async function() {
+                    try {
+                        var txt = await GDriveSync.loadFile('termsheets.json');
+                        if (txt) {
+                            var cloudData = JSON.parse(txt);
+                            if (Array.isArray(cloudData) && cloudData.length > 0) {
+                                // Merge: prefer cloud for matching IDs
+                                var localIds = new Set(termSheets.map(function(t){ return t.id; }));
+                                var merged = termSheets.slice();
+                                for (var i = 0; i < cloudData.length; i++) {
+                                    var c = cloudData[i];
+                                    if (!localIds.has(c.id)) {
+                                        merged.push(c);
+                                        await saveToDB(c);
+                                    }
+                                }
+                                termSheets = await getAllFromDB();
+                                if (typeof renderList === 'function') renderList();
+                                GDriveSync.showToast('Načteno z Google Drive: ' + cloudData.length + ' term sheetů', 'success');
+                            }
+                        }
+                    } catch (e) { console.warn('GDrive load failed:', e); }
+                }
+            });
+        }
+    }
+
+    // Wrap saveTermSheet to also sync to Google Drive
+    if (typeof saveTermSheet === 'function') {
+        var _origSaveTermSheet = saveTermSheet;
+        window.saveTermSheet = async function() {
+            await _origSaveTermSheet.apply(this, arguments);
+            if (window.GDriveSync && GDriveSync.isConnected()) {
+                try {
+                    await GDriveSync.saveFile('termsheets.json', JSON.stringify(termSheets, null, 2), 'application/json');
+                } catch (e) { console.warn('GDrive save failed:', e); }
+            }
+        };
     }
 
     init().catch(function(e) { console.error('Init failed:', e); showToast('Chyba při inicializaci databáze', 'error'); });
