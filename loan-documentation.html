@@ -808,10 +808,48 @@
             display: flex;
             gap: 0.75rem;
             flex-wrap: wrap;
+            align-items: center;
             padding: 1.5rem 2rem;
             background: var(--bg-primary);
             border-top: 1px solid var(--border-color);
             flex-shrink: 0;
+        }
+
+        /* ─── GENERATE MODE TOGGLE ─── */
+        .generate-mode-toggle {
+            display: inline-flex;
+            background: var(--bg-surface);
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            padding: 3px;
+            gap: 2px;
+        }
+        .generate-mode-toggle .mode-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.55rem 0.9rem;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .generate-mode-toggle .mode-option svg {
+            width: 16px;
+            height: 16px;
+        }
+        .generate-mode-toggle .mode-option:hover {
+            color: var(--text-primary);
+        }
+        .generate-mode-toggle .mode-option.active {
+            background: var(--bg-primary);
+            color: var(--accent);
+            box-shadow: var(--shadow);
         }
 
         /* ─── RESULTS ─── */
@@ -1194,6 +1232,14 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                         <span id="folder-status-text">Připojit složku</span>
                     </button>
+                    <button class="btn btn-outline" onclick="refreshTemplatesFromDrive()" id="btn-templates-drive" title="Šablony na Google Drive: obnovit seznam">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span id="drive-templates-status">Šablony: —</span>
+                    </button>
+                    <button class="btn btn-outline" onclick="openDriveTemplatesFolder()" id="btn-open-drive-folder" title="Otevřít složku Šablony/Úvěrová dokumentace v novém tabu">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        Otevřít na Drive
+                    </button>
                     <button class="btn btn-outline" onclick="showView('list')" id="btn-show-list">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                         Přehled
@@ -1508,13 +1554,19 @@
 
             <!-- ACTION BAR -->
             <div class="action-bar">
-                <button class="btn btn-generate" onclick="generateDocuments(false)">
+                <div class="generate-mode-toggle" title="Přepínač: čistý dokument vs. s revizemi (track changes)">
+                    <button type="button" class="mode-option active" data-mode="clean" onclick="setGenerateMode('clean')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Clean verze
+                    </button>
+                    <button type="button" class="mode-option" data-mode="tracked" onclick="setGenerateMode('tracked')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        S revizemi
+                    </button>
+                </div>
+                <button class="btn btn-generate" onclick="generateDocuments(generateModeIsTracked())">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
                     Generovat dokumenty
-                </button>
-                <button class="btn btn-save" onclick="generateDocuments(true)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    Generovat se změnami
                 </button>
                 <button class="btn btn-outline" onclick="saveDocumentSet()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -1535,13 +1587,9 @@
                     </div>
                     <div id="resultsList"></div>
                     <div style="display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
-                        <button class="btn btn-generate" onclick="downloadAllDocuments(false)">
+                        <button class="btn btn-generate" onclick="downloadAllDocuments(lastGenerationTracked)" id="btn-download-all">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            Stáhnout vše (čisté)
-                        </button>
-                        <button class="btn btn-save" onclick="downloadAllDocuments(true)">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            Stáhnout vše (se změnami)
+                            <span id="btn-download-all-label">Stáhnout vše</span>
                         </button>
                     </div>
                 </div>
@@ -1573,6 +1621,10 @@
         var folderHandle = null;
         var selectedTemplates = {};
         var lastGenerationTracked = false;
+        // 'clean' | 'tracked' — globální přepínač režimu generování
+        var generateMode = 'clean';
+        // URL Drive složky se šablonami (nastaví se po syncu)
+        var driveTemplatesFolderUrl = null;
 
         /* ─── FOLDER HANDLE PERSISTENCE (IndexedDB) ─── */
         function openLoanFolderDB() {
@@ -2165,6 +2217,83 @@
             reader.readAsArrayBuffer(file);
         }
 
+        /* ─── GENERATE MODE (clean vs. tracked changes) ─── */
+        function setGenerateMode(mode) {
+            generateMode = (mode === 'tracked') ? 'tracked' : 'clean';
+            document.querySelectorAll('.generate-mode-toggle .mode-option').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.mode === generateMode);
+            });
+        }
+        function generateModeIsTracked() {
+            return generateMode === 'tracked';
+        }
+
+        /* ─── DRIVE TEMPLATES STATUS (header panel) ─── */
+        async function updateDriveTemplatesStatus() {
+            var el = document.getElementById('drive-templates-status');
+            var btn = document.getElementById('btn-templates-drive');
+            if (!el) return;
+            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) {
+                el.textContent = 'Drive odpojen';
+                if (btn) btn.classList.remove('folder-connected');
+                return;
+            }
+            try {
+                var files = await GDriveSync.listShared('Šablony/Úvěrová dokumentace');
+                var docx = (files || []).filter(function(f) { return /\.docx$/i.test(f.name); });
+                el.textContent = 'Šablony: ' + docx.length + ' na Drive';
+                if (btn) btn.classList.add('folder-connected');
+                // Ulož folder URL pro "Otevřít na Drive"
+                if (GDriveSync.getFolderUrl) {
+                    try { driveTemplatesFolderUrl = await GDriveSync.getFolderUrl('Šablony/Úvěrová dokumentace'); }
+                    catch (e) { console.warn('getFolderUrl:', e); }
+                }
+            } catch (e) {
+                console.warn('updateDriveTemplatesStatus:', e);
+                el.textContent = 'Drive: chyba';
+                if (btn) btn.classList.remove('folder-connected');
+            }
+        }
+
+        async function refreshTemplatesFromDrive() {
+            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) {
+                showToast('Nejdřív se přihlas do Google Drive', 'error');
+                return;
+            }
+            showToast('Synchronizuji šablony z Drive…', 'info');
+            try {
+                await syncTemplatesFromDrive();
+                await updateDriveTemplatesStatus();
+            } catch (e) {
+                console.warn('refreshTemplatesFromDrive:', e);
+                showToast('Synchronizace selhala', 'error');
+            }
+        }
+
+        async function openDriveTemplatesFolder() {
+            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) {
+                showToast('Nejdřív se přihlas do Google Drive', 'error');
+                return;
+            }
+            try {
+                var url = driveTemplatesFolderUrl;
+                if (!url && GDriveSync.getFolderUrl) {
+                    url = await GDriveSync.getFolderUrl('Šablony/Úvěrová dokumentace');
+                    driveTemplatesFolderUrl = url;
+                }
+                if (url) {
+                    window.open(url, '_blank');
+                } else {
+                    // Fallback: obecný Drive
+                    window.open('https://drive.google.com/', '_blank');
+                    showToast('Specifickou složku se nepodařilo otevřít — otevřen je Drive', 'info');
+                }
+            } catch (e) {
+                console.warn('openDriveTemplatesFolder:', e);
+                window.open('https://drive.google.com/', '_blank');
+            }
+        }
+
         // Načtení šablon z Google Drive do IndexedDB (po přihlášení)
         async function syncTemplatesFromDrive() {
             if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return;
@@ -2667,12 +2796,13 @@
         function applyReplacementsWithTracking(originalXml, replacements) {
             var xml = originalXml;
             var date = new Date().toISOString();
+            var author = 'ProfiLend Investment Tools';
             var id = 0;
             replacements.forEach(function(r) {
                 var find = escapeXml(r.find);
                 var replace = escapeXml(r.replace);
-                var del = '<w:del w:id="' + (id * 2) + '" w:author="Claude" w:date="' + date + '"><w:r><w:delText>' + find + '</w:delText></w:r></w:del>';
-                var ins = '<w:ins w:id="' + (id * 2 + 1) + '" w:author="Claude" w:date="' + date + '"><w:r><w:t>' + replace + '</w:t></w:r></w:ins>';
+                var del = '<w:del w:id="' + (id * 2) + '" w:author="' + author + '" w:date="' + date + '"><w:r><w:delText>' + find + '</w:delText></w:r></w:del>';
+                var ins = '<w:ins w:id="' + (id * 2 + 1) + '" w:author="' + author + '" w:date="' + date + '"><w:r><w:t>' + replace + '</w:t></w:r></w:ins>';
                 xml = xml.split(r.find).join(del + ins);
                 id++;
             });
@@ -2702,8 +2832,13 @@
 
             document.getElementById('resultsList').innerHTML = html;
             document.getElementById('resultContainer').style.display = 'block';
+            // Aktualizuj label u "Stáhnout vše" podle režimu
+            var dlLabel = document.getElementById('btn-download-all-label');
+            if (dlLabel) {
+                dlLabel.textContent = lastGenerationTracked ? 'Stáhnout vše (s revizemi)' : 'Stáhnout vše (clean)';
+            }
             if (Object.keys(generatedDocuments).length > 0) {
-                showToast('Dokumenty vygenerovány', 'success');
+                showToast('Dokumenty vygenerovány' + (lastGenerationTracked ? ' s revizemi' : ''), 'success');
             }
         }
 
@@ -2990,6 +3125,8 @@
                     try { await loadCategoriesFromDrive(); } catch (e) { console.warn('loadCategoriesFromDrive:', e); }
                     // Synchronizace šablon z Drive → IndexedDB
                     try { await syncTemplatesFromDrive(); } catch (e) { console.warn('syncTemplatesFromDrive:', e); }
+                    // Status v header panelu
+                    try { await updateDriveTemplatesStatus(); } catch (e) { console.warn('updateDriveTemplatesStatus:', e); }
                     try {
                         var txt = await GDriveSync.loadFile('documents.json');
                         if (txt) {

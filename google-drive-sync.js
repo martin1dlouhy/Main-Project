@@ -488,6 +488,24 @@ window.GDriveSync = (function() {
         return listFolderById(targetId);
     }
 
+    // Vrátí URL Drive složky (pro otevření v novém tabu), např. "Sablony/Úvěrová dokumentace"
+    async function getFolderUrl(subfolder) {
+        if (!accessToken) return null;
+        if (!rootFolderId) await ensureFolders();
+        let targetId = rootFolderId;
+        if (subfolder) {
+            const parts = subfolder.split('/').filter(Boolean);
+            let current = rootFolderId;
+            for (let i = 0; i < parts.length; i++) {
+                const id = await findFolder(parts[i], current);
+                if (!id) return null;
+                current = id;
+            }
+            targetId = current;
+        }
+        return 'https://drive.google.com/drive/folders/' + targetId;
+    }
+
     async function deleteFile(filename) {
         if (!accessToken) return false;
         const file = await findFile(filename);
@@ -551,6 +569,7 @@ window.GDriveSync = (function() {
         loadSharedBinary: loadSharedBinary,
         listFiles: listFiles,
         listShared: listShared,
+        getFolderUrl: getFolderUrl,
         deleteFile: deleteFile,
         isConnected: () => !!accessToken,
         showToast: showToast
