@@ -1286,7 +1286,13 @@
                             </div>
                         </div>
                         <div style="margin-top: 1rem;">
-                            <label class="form-label">Nahrát šablony DOCX</label>
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem;">
+                                <label class="form-label" style="margin: 0;">Nahrát šablony DOCX</label>
+                                <button type="button" class="btn btn-outline btn-small" onclick="pushAllTemplatesToDrive()" id="btn-push-all-templates" title="Nahraje všechny lokální šablony na Google Drive (přepíše stejně pojmenované)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    <span id="btn-push-all-templates-label">Nahrát vše na Drive</span>
+                                </button>
+                            </div>
                             <div class="upload-zone" id="uploadZone">
                                 <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                 <div class="upload-zone-text">Přetáhněte soubory nebo <span class="upload-link">klikněte pro výběr</span></div>
@@ -2238,6 +2244,55 @@
                 });
             };
             reader.readAsArrayBuffer(file);
+        }
+
+        /* ─── BULK PUSH TEMPLATES TO DRIVE ─── */
+        async function pushAllTemplatesToDrive() {
+            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) {
+                showToast('Nejdřív se přihlas do Google Drive', 'error');
+                return;
+            }
+            var btn = document.getElementById('btn-push-all-templates');
+            var lbl = document.getElementById('btn-push-all-templates-label');
+            if (btn) btn.disabled = true;
+            var origLabel = lbl ? lbl.textContent : '';
+            if (lbl) lbl.textContent = 'Nahrávám…';
+            try {
+                var templates = await new Promise(function(resolve) {
+                    getAllFromDB('templates', function(rows) { resolve(rows || []); });
+                });
+                if (templates.length === 0) {
+                    showToast('Žádné lokální šablony k nahrání', 'info');
+                    return;
+                }
+                var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                var ok = 0, fail = 0;
+                for (var i = 0; i < templates.length; i++) {
+                    var t = templates[i];
+                    if (!t || !t.data || !t.name) { fail++; continue; }
+                    if (lbl) lbl.textContent = 'Nahrávám… ' + (i + 1) + '/' + templates.length;
+                    try {
+                        var blob = (t.data instanceof Blob) ? t.data : new Blob([t.data], { type: mime });
+                        await GDriveSync.saveShared('Šablony/Úvěrová dokumentace/' + t.name, blob, mime);
+                        ok++;
+                    } catch (err) {
+                        console.warn('Push failed for ' + t.name, err);
+                        fail++;
+                    }
+                }
+                var msg = 'Nahráno ' + ok + '/' + templates.length + ' šablon na Drive';
+                if (fail > 0) msg += ' (' + fail + ' selhalo)';
+                showToast(msg, fail > 0 ? 'error' : 'success');
+                if (typeof updateDriveTemplatesStatus === 'function') {
+                    try { await updateDriveTemplatesStatus(); } catch (e) {}
+                }
+            } catch (e) {
+                console.warn('pushAllTemplatesToDrive:', e);
+                showToast('Hromadné nahrání selhalo', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                if (lbl) lbl.textContent = origLabel || 'Nahrát vše na Drive';
+            }
         }
 
         /* ─── GENERATE MODE (clean vs. tracked changes) ─── */
