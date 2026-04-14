@@ -1108,6 +1108,14 @@
         .btn.folder-connected svg {
             stroke: var(--success);
         }
+        .btn.active-toggle {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg-primary);
+        }
+        .btn.active-toggle svg {
+            stroke: var(--bg-primary);
+        }
     </style>
 </head>
 <body>
@@ -1236,13 +1244,9 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         <span id="drive-templates-status">Šablony: —</span>
                     </button>
-                    <button class="btn btn-outline" onclick="openDriveTemplatesFolder()" id="btn-open-drive-folder" title="Otevřít složku Šablony/Úvěrová dokumentace v novém tabu">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                        Otevřít na Drive
-                    </button>
-                    <button class="btn btn-outline" onclick="showView('list')" id="btn-show-list">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                        Přehled
+                    <button class="btn btn-outline" onclick="toggleListView()" id="btn-show-list" title="Přepnout mezi přehledem uložených sad a aktuálním formulářem">
+                        <svg id="btn-show-list-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                        <span id="btn-show-list-label">Přehled</span>
                     </button>
                     <button class="btn btn-save" onclick="newDocumentSet()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1623,8 +1627,6 @@
         var lastGenerationTracked = false;
         // 'clean' | 'tracked' — globální přepínač režimu generování
         var generateMode = 'clean';
-        // URL Drive složky se šablonami (nastaví se po syncu)
-        var driveTemplatesFolderUrl = null;
 
         /* ─── FOLDER HANDLE PERSISTENCE (IndexedDB) ─── */
         function openLoanFolderDB() {
@@ -1775,6 +1777,27 @@
             document.getElementById('view-form').style.display = view === 'form' ? 'block' : 'none';
             document.getElementById('view-list').style.display = view === 'list' ? 'block' : 'none';
             if (view === 'list') renderDocList();
+            // Update toggle button (Přehled ↔ Zpět)
+            var btn = document.getElementById('btn-show-list');
+            var label = document.getElementById('btn-show-list-label');
+            var icon = document.getElementById('btn-show-list-icon');
+            if (btn && label && icon) {
+                if (view === 'list') {
+                    btn.classList.add('active-toggle');
+                    label.textContent = 'Zpět na formulář';
+                    icon.innerHTML = '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>';
+                } else {
+                    btn.classList.remove('active-toggle');
+                    label.textContent = 'Přehled';
+                    icon.innerHTML = '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>';
+                }
+            }
+        }
+
+        function toggleListView() {
+            var listEl = document.getElementById('view-list');
+            var isListOpen = listEl && listEl.style.display !== 'none';
+            showView(isListOpen ? 'form' : 'list');
         }
 
         function newDocumentSet() {
@@ -2243,11 +2266,6 @@
                 var docx = (files || []).filter(function(f) { return /\.docx$/i.test(f.name); });
                 el.textContent = 'Šablony: ' + docx.length + ' na Drive';
                 if (btn) btn.classList.add('folder-connected');
-                // Ulož folder URL pro "Otevřít na Drive"
-                if (GDriveSync.getFolderUrl) {
-                    try { driveTemplatesFolderUrl = await GDriveSync.getFolderUrl('Šablony/Úvěrová dokumentace'); }
-                    catch (e) { console.warn('getFolderUrl:', e); }
-                }
             } catch (e) {
                 console.warn('updateDriveTemplatesStatus:', e);
                 el.textContent = 'Drive: chyba';
@@ -2267,30 +2285,6 @@
             } catch (e) {
                 console.warn('refreshTemplatesFromDrive:', e);
                 showToast('Synchronizace selhala', 'error');
-            }
-        }
-
-        async function openDriveTemplatesFolder() {
-            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) {
-                showToast('Nejdřív se přihlas do Google Drive', 'error');
-                return;
-            }
-            try {
-                var url = driveTemplatesFolderUrl;
-                if (!url && GDriveSync.getFolderUrl) {
-                    url = await GDriveSync.getFolderUrl('Šablony/Úvěrová dokumentace');
-                    driveTemplatesFolderUrl = url;
-                }
-                if (url) {
-                    window.open(url, '_blank');
-                } else {
-                    // Fallback: obecný Drive
-                    window.open('https://drive.google.com/', '_blank');
-                    showToast('Specifickou složku se nepodařilo otevřít — otevřen je Drive', 'info');
-                }
-            } catch (e) {
-                console.warn('openDriveTemplatesFolder:', e);
-                window.open('https://drive.google.com/', '_blank');
             }
         }
 
