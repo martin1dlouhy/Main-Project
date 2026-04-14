@@ -489,6 +489,186 @@
             background: rgba(239, 68, 68, 0.2);
         }
 
+        /* ─── KATEGORIE ─── */
+        .category-manager {
+            background: var(--bg-surface-elevated, var(--bg-surface));
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.75rem 0.875rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .category-manager-title {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .category-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .category-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.3125rem 0.625rem;
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: var(--accent);
+            border-radius: 999px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+        }
+
+        .chip-action {
+            border: none;
+            background: transparent;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 0 0.125rem;
+            border-radius: 4px;
+            line-height: 1;
+            transition: var(--transition);
+        }
+
+        .chip-action:hover {
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .chip-action-danger {
+            color: var(--danger);
+        }
+
+        .chip-action-danger:hover {
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .category-add-btn {
+            border: 1px dashed var(--border-color);
+            background: transparent;
+            color: var(--text-secondary);
+            padding: 0.3125rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8125rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .category-add-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .template-group {
+            margin-top: 0.75rem;
+        }
+
+        .template-group-header {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 0.375rem 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .template-group-count {
+            color: var(--text-tertiary, var(--text-secondary));
+            font-weight: 400;
+            font-size: 0.75rem;
+        }
+
+        .template-group-empty {
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            padding: 0.5rem 0.75rem;
+            font-style: italic;
+            opacity: 0.7;
+        }
+
+        .template-category-select {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            max-width: 180px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .template-category-select:hover,
+        .template-category-select:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .checkbox-group-section {
+            margin-bottom: 0.75rem;
+        }
+
+        .checkbox-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.375rem;
+            padding: 0.25rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .checkbox-group-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .checkbox-group-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .btn-mini {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.6875rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-mini:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .checkbox-group-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.375rem;
+        }
+
+        .checkbox-group-empty {
+            color: var(--text-secondary);
+            font-size: 0.8125rem;
+            padding: 0.75rem;
+            text-align: center;
+            font-style: italic;
+            opacity: 0.7;
+        }
+
         /* ─── CHECKBOXES ─── */
         .checkbox-group {
             display: grid;
@@ -1060,7 +1240,7 @@
                             <div class="upload-zone" id="uploadZone">
                                 <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                 <div class="upload-zone-text">Přetáhněte soubory nebo <span class="upload-link">klikněte pro výběr</span></div>
-                                <div class="upload-zone-hint">Podporovány jsou soubory .docx (úvěrová smlouva, zástavní smlouva, plná moc)</div>
+                                <div class="upload-zone-hint">Podporovány jsou soubory .docx. Kategorie se rozpozná automaticky z názvu (nebo ji později přeřaď).</div>
                                 <input type="file" id="fileInput" accept=".docx" multiple style="display: none;">
                             </div>
                         </div>
@@ -1618,13 +1798,15 @@
         }
 
         function openDB() {
-            var request = indexedDB.open('loanDocDB', 2);
+            var request = indexedDB.open('loanDocDB', 3);
             request.onerror = function() {
                 showToast('Chyba připojení k databázi', 'error');
             };
             request.onsuccess = function(event) {
                 db = event.target.result;
-                renderTemplateList();
+                ensureDefaultCategories(function() {
+                    renderTemplateList();
+                });
             };
             request.onupgradeneeded = function(event) {
                 var database = event.target.result;
@@ -1633,6 +1815,9 @@
                 }
                 if (!database.objectStoreNames.contains('templates')) {
                     database.createObjectStore('templates', { keyPath: 'id', autoIncrement: true });
+                }
+                if (!database.objectStoreNames.contains('categories')) {
+                    database.createObjectStore('categories', { keyPath: 'id', autoIncrement: true });
                 }
             };
         }
@@ -1664,6 +1849,256 @@
             request.onerror = function() { if (callback) callback(false); };
         }
 
+        // Update / upsert - použije put() místo add() => zachová ID, přepíše záznam
+        function putToDb(storeName, data, callback) {
+            if (!db) { if (callback) callback(null); return; }
+            var transaction = db.transaction([storeName], 'readwrite');
+            var store = transaction.objectStore(storeName);
+            var request = store.put(data);
+            request.onsuccess = function() { if (callback) callback(request.result); };
+            request.onerror = function() { if (callback) callback(null); };
+        }
+
+        /* ─── KATEGORIE ŠABLON ─── */
+        var DEFAULT_CATEGORIES = [
+            { name: 'Úvěrové smlouvy', order: 1 },
+            { name: 'Zástavní smlouvy', order: 2 },
+            { name: 'Plná moc k přímému prodeji', order: 3 }
+        ];
+
+        function ensureDefaultCategories(callback) {
+            getAllFromDB('categories', function(cats) {
+                if (cats && cats.length > 0) {
+                    migrateUncategorizedTemplates(cats, function() {
+                        if (callback) callback(cats);
+                    });
+                    return;
+                }
+                // Prázdný store → vytvoříme defaultní
+                var remaining = DEFAULT_CATEGORIES.length;
+                DEFAULT_CATEGORIES.forEach(function(c) {
+                    saveToDb('categories', {
+                        name: c.name,
+                        order: c.order,
+                        createdAt: new Date().toISOString()
+                    }, function() {
+                        remaining--;
+                        if (remaining === 0) {
+                            getAllFromDB('categories', function(allCats) {
+                                syncCategoriesToDrive();
+                                migrateUncategorizedTemplates(allCats, function() {
+                                    if (callback) callback(allCats);
+                                });
+                            });
+                        }
+                    });
+                });
+            });
+        }
+
+        // Jednorázová migrace: šablony bez kategorie → zkusit auto-detekci
+        function migrateUncategorizedTemplates(categories, callback) {
+            getAllFromDB('templates', function(templates) {
+                var toUpdate = (templates || []).filter(function(t) {
+                    if (t.category) return false;
+                    var det = detectCategory(t.name, categories);
+                    if (det) { t._detected = det.name; return true; }
+                    return false;
+                });
+                if (toUpdate.length === 0) { if (callback) callback(); return; }
+                var rem = toUpdate.length;
+                toUpdate.forEach(function(t) {
+                    t.category = t._detected;
+                    delete t._detected;
+                    putToDb('templates', t, function() {
+                        rem--;
+                        if (rem === 0) { if (callback) callback(); }
+                    });
+                });
+            });
+        }
+
+        // Auto-detekce kategorie podle názvu souboru
+        function detectCategory(filename, categories) {
+            if (!categories || categories.length === 0) return null;
+            var lower = filename.toLowerCase();
+            // Normalizace diakritiky
+            var norm = lower
+                .replace(/[áä]/g, 'a').replace(/[éěë]/g, 'e').replace(/[íï]/g, 'i')
+                .replace(/[óöô]/g, 'o').replace(/[úůü]/g, 'u').replace(/[ýÿ]/g, 'y')
+                .replace(/č/g, 'c').replace(/ď/g, 'd').replace(/ň/g, 'n').replace(/ř/g, 'r')
+                .replace(/š/g, 's').replace(/ť/g, 't').replace(/ž/g, 'z');
+
+            // Heuristiky
+            var rules = [
+                { re: /\b(uver|uverov)/i, match: 'uver' },
+                { re: /\bzastav/i, match: 'zastav' },
+                { re: /\b(plna moc|pln moc|prodej|moc k prodeji)/i, match: 'plna moc' }
+            ];
+            var detected = null;
+            for (var i = 0; i < rules.length; i++) {
+                if (rules[i].re.test(norm)) {
+                    detected = rules[i].match;
+                    break;
+                }
+            }
+            if (!detected) return null;
+
+            // Najdi kategorii, která obsahuje klíčové slovo
+            var match = null;
+            for (var j = 0; j < categories.length; j++) {
+                var cName = (categories[j].name || '').toLowerCase()
+                    .replace(/[áä]/g, 'a').replace(/[éěë]/g, 'e').replace(/[íï]/g, 'i')
+                    .replace(/[óöô]/g, 'o').replace(/[úůü]/g, 'u').replace(/[ýÿ]/g, 'y')
+                    .replace(/č/g, 'c').replace(/ď/g, 'd').replace(/ň/g, 'n').replace(/ř/g, 'r')
+                    .replace(/š/g, 's').replace(/ť/g, 't').replace(/ž/g, 'z');
+                if (cName.indexOf(detected) >= 0) { match = categories[j]; break; }
+            }
+            return match;
+        }
+
+        function addCategory() {
+            var name = prompt('Název nové kategorie:');
+            if (!name || !name.trim()) return;
+            name = name.trim();
+            getAllFromDB('categories', function(cats) {
+                var exists = cats.some(function(c) { return c.name.toLowerCase() === name.toLowerCase(); });
+                if (exists) {
+                    showToast('Kategorie s tímto názvem již existuje', 'error');
+                    return;
+                }
+                var maxOrder = cats.reduce(function(m, c) { return Math.max(m, c.order || 0); }, 0);
+                saveToDb('categories', {
+                    name: name,
+                    order: maxOrder + 1,
+                    createdAt: new Date().toISOString()
+                }, function(id) {
+                    if (id) {
+                        showToast('Kategorie "' + name + '" přidána', 'success');
+                        renderTemplateList();
+                        syncCategoriesToDrive();
+                    }
+                });
+            });
+        }
+
+        function renameCategory(id) {
+            getAllFromDB('categories', function(cats) {
+                var cat = cats.find(function(c) { return c.id === id; });
+                if (!cat) return;
+                var newName = prompt('Přejmenovat kategorii:', cat.name);
+                if (!newName || !newName.trim() || newName.trim() === cat.name) return;
+                newName = newName.trim();
+                var duplicate = cats.some(function(c) { return c.id !== id && c.name.toLowerCase() === newName.toLowerCase(); });
+                if (duplicate) {
+                    showToast('Kategorie s tímto názvem již existuje', 'error');
+                    return;
+                }
+                var oldName = cat.name;
+                cat.name = newName;
+                putToDb('categories', cat, function() {
+                    // Aktualizuj všechny šablony, které používaly starý název
+                    getAllFromDB('templates', function(templates) {
+                        var toUpdate = templates.filter(function(t) { return t.category === oldName; });
+                        var rem = toUpdate.length;
+                        if (rem === 0) { finish(); return; }
+                        toUpdate.forEach(function(t) {
+                            t.category = newName;
+                            putToDb('templates', t, function() {
+                                rem--;
+                                if (rem === 0) finish();
+                            });
+                        });
+                    });
+                });
+                function finish() {
+                    showToast('Kategorie přejmenována', 'success');
+                    renderTemplateList();
+                    syncCategoriesToDrive();
+                }
+            });
+        }
+
+        function deleteCategory(id) {
+            getAllFromDB('categories', function(cats) {
+                var cat = cats.find(function(c) { return c.id === id; });
+                if (!cat) return;
+                getAllFromDB('templates', function(templates) {
+                    var inUse = templates.filter(function(t) { return t.category === cat.name; });
+                    var msg = 'Smazat kategorii "' + cat.name + '"?';
+                    if (inUse.length > 0) {
+                        msg += '\n\nŠablony v této kategorii (' + inUse.length + ') budou přeřazeny do "Nezařazeno".\nSoubory se z Drive NEMAŽOU.';
+                    }
+                    if (!confirm(msg)) return;
+                    deleteFromDB('categories', id, function(ok) {
+                        if (!ok) { showToast('Smazání selhalo', 'error'); return; }
+                        var rem = inUse.length;
+                        if (rem === 0) { finish(); return; }
+                        inUse.forEach(function(t) {
+                            t.category = null;
+                            putToDb('templates', t, function() {
+                                rem--;
+                                if (rem === 0) finish();
+                            });
+                        });
+                    });
+                    function finish() {
+                        showToast('Kategorie smazána', 'success');
+                        renderTemplateList();
+                        syncCategoriesToDrive();
+                    }
+                });
+            });
+        }
+
+        function changeTemplateCategory(templateId, newCategoryName) {
+            getAllFromDB('templates', function(templates) {
+                var t = templates.find(function(x) { return x.id === templateId; });
+                if (!t) return;
+                t.category = newCategoryName || null;
+                putToDb('templates', t, function() {
+                    showToast('Šablona přeřazena', 'success');
+                    renderTemplateList();
+                });
+            });
+        }
+
+        async function syncCategoriesToDrive() {
+            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return;
+            try {
+                getAllFromDB('categories', function(cats) {
+                    GDriveSync.saveFile('categories.json', JSON.stringify(cats, null, 2), 'application/json')
+                        .catch(function(e) { console.warn('GDrive categories sync failed:', e); });
+                });
+            } catch (e) { console.warn('syncCategoriesToDrive:', e); }
+        }
+
+        async function loadCategoriesFromDrive() {
+            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return;
+            try {
+                var txt = await GDriveSync.loadFile('categories.json');
+                if (!txt) return;
+                var cloudCats = JSON.parse(txt);
+                if (!Array.isArray(cloudCats) || cloudCats.length === 0) return;
+                getAllFromDB('categories', function(localCats) {
+                    var localNames = new Set((localCats || []).map(function(c) { return (c.name || '').toLowerCase(); }));
+                    var toAdd = cloudCats.filter(function(c) { return !localNames.has((c.name || '').toLowerCase()); });
+                    if (toAdd.length === 0) return;
+                    var rem = toAdd.length;
+                    toAdd.forEach(function(c) {
+                        saveToDb('categories', {
+                            name: c.name,
+                            order: c.order || 999,
+                            createdAt: c.createdAt || new Date().toISOString()
+                        }, function() {
+                            rem--;
+                            if (rem === 0) renderTemplateList();
+                        });
+                    });
+                });
+            } catch (e) { console.warn('loadCategoriesFromDrive:', e); }
+        }
+
         /* ─── EVENT LISTENERS ─── */
         function setupEventListeners() {
             var uploadZone = document.getElementById('uploadZone');
@@ -1689,33 +2124,42 @@
         function uploadTemplate(file) {
             var reader = new FileReader();
             reader.onload = function(e) {
-                saveToDb('templates', {
-                    name: file.name,
-                    data: e.target.result,
-                    uploadedAt: new Date().toISOString()
-                }, function(id) {
-                    if (id) {
-                        showToast('Šablona ' + file.name + ' nahrána', 'success');
-                        renderTemplateList();
-                        // Also push to Google Drive (shared Šablony folder)
-                        if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
-                            try {
-                                var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-                                var blob = new Blob([e.target.result], { type: mime });
-                                GDriveSync.saveShared('Šablony/Úvěrová dokumentace/' + file.name, blob, mime)
-                                    .then(function() {
-                                        GDriveSync.showToast && GDriveSync.showToast('Šablona nahrána na Drive: ' + file.name, 'success');
-                                    })
-                                    .catch(function(err) {
-                                        console.warn('GDrive template upload failed:', err);
-                                    });
-                            } catch (err) {
-                                console.warn('GDrive template upload error:', err);
+                // Auto-detekce kategorie
+                getAllFromDB('categories', function(cats) {
+                    var detected = detectCategory(file.name, cats);
+                    var record = {
+                        name: file.name,
+                        data: e.target.result,
+                        category: detected ? detected.name : null,
+                        uploadedAt: new Date().toISOString()
+                    };
+                    saveToDb('templates', record, function(id) {
+                        if (id) {
+                            var catNote = detected
+                                ? ' → kategorie "' + detected.name + '"'
+                                : ' → "Nezařazeno" (přiřaď kategorii ručně)';
+                            showToast('Šablona ' + file.name + ' nahrána' + catNote, 'success');
+                            renderTemplateList();
+                            // Also push to Google Drive (shared Šablony folder)
+                            if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
+                                try {
+                                    var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                                    var blob = new Blob([e.target.result], { type: mime });
+                                    GDriveSync.saveShared('Šablony/Úvěrová dokumentace/' + file.name, blob, mime)
+                                        .then(function() {
+                                            GDriveSync.showToast && GDriveSync.showToast('Šablona nahrána na Drive: ' + file.name, 'success');
+                                        })
+                                        .catch(function(err) {
+                                            console.warn('GDrive template upload failed:', err);
+                                        });
+                                } catch (err) {
+                                    console.warn('GDrive template upload error:', err);
+                                }
                             }
+                        } else {
+                            showToast('Chyba při nahrávání šablony', 'error');
                         }
-                    } else {
-                        showToast('Chyba při nahrávání šablony', 'error');
-                    }
+                    });
                 });
             };
             reader.readAsArrayBuffer(file);
@@ -1727,34 +2171,38 @@
             try {
                 var driveFiles = await GDriveSync.listShared('Šablony/Úvěrová dokumentace');
                 if (!driveFiles || driveFiles.length === 0) return;
-                getAllFromDB('templates', function(localTemplates) {
-                    var localNames = new Set((localTemplates || []).map(function(t){ return t.name; }));
-                    var added = 0;
-                    var pending = 0;
-                    driveFiles.forEach(function(f) {
-                        if (!/\.docx$/i.test(f.name)) return;
-                        if (localNames.has(f.name)) return;
-                        pending++;
-                        GDriveSync.loadSharedBinary('Šablony/Úvěrová dokumentace/' + f.name).then(function(buf) {
-                            if (buf) {
-                                saveToDb('templates', {
-                                    name: f.name,
-                                    data: buf,
-                                    uploadedAt: f.modifiedTime || new Date().toISOString()
-                                }, function(id) {
-                                    if (id) added++;
+                getAllFromDB('categories', function(cats) {
+                    getAllFromDB('templates', function(localTemplates) {
+                        var localNames = new Set((localTemplates || []).map(function(t){ return t.name; }));
+                        var added = 0;
+                        var pending = 0;
+                        driveFiles.forEach(function(f) {
+                            if (!/\.docx$/i.test(f.name)) return;
+                            if (localNames.has(f.name)) return;
+                            pending++;
+                            GDriveSync.loadSharedBinary('Šablony/Úvěrová dokumentace/' + f.name).then(function(buf) {
+                                if (buf) {
+                                    var detected = detectCategory(f.name, cats);
+                                    saveToDb('templates', {
+                                        name: f.name,
+                                        data: buf,
+                                        category: detected ? detected.name : null,
+                                        uploadedAt: f.modifiedTime || new Date().toISOString()
+                                    }, function(id) {
+                                        if (id) added++;
+                                        pending--;
+                                        if (pending === 0) {
+                                            renderTemplateList();
+                                            if (added > 0) showToast('Načteno z Drive: ' + added + ' šablon', 'success');
+                                        }
+                                    });
+                                } else {
                                     pending--;
-                                    if (pending === 0) {
-                                        renderTemplateList();
-                                        if (added > 0) showToast('Načteno z Drive: ' + added + ' šablon', 'success');
-                                    }
-                                });
-                            } else {
+                                }
+                            }).catch(function(err) {
+                                console.warn('loadSharedBinary failed for ' + f.name, err);
                                 pending--;
-                            }
-                        }).catch(function(err) {
-                            console.warn('loadSharedBinary failed for ' + f.name, err);
-                            pending--;
+                            });
                         });
                     });
                 });
@@ -1764,29 +2212,125 @@
         }
 
         function renderTemplateList() {
-            getAllFromDB('templates', function(templates) {
-                var html = '';
-                var checkboxHtml = '';
-                selectedTemplates = {};
+            getAllFromDB('categories', function(categories) {
+                getAllFromDB('templates', function(templates) {
+                    selectedTemplates = {};
+                    // Seřaď kategorie dle order
+                    var sortedCats = (categories || []).slice().sort(function(a, b) { return (a.order || 999) - (b.order || 999); });
 
-                templates.forEach(function(template) {
-                    html += '<div class="template-item">';
-                    html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
-                    html += '<span class="template-name">' + escapeHtml(template.name) + '</span>';
-                    html += '<button type="button" class="template-delete" onclick="deleteTemplate(' + template.id + ')" title="Smazat šablonu">✕</button>';
+                    // Seskup šablony podle kategorie (název kategorie je klíč, "Nezařazeno" = null/undefined)
+                    var grouped = {};
+                    sortedCats.forEach(function(c) { grouped[c.name] = []; });
+                    grouped['__unassigned__'] = [];
+                    templates.forEach(function(t) {
+                        var key = t.category && grouped.hasOwnProperty(t.category) ? t.category : '__unassigned__';
+                        grouped[key].push(t);
+                    });
+
+                    // Options pro dropdown přeřazení
+                    function categoryOptions(currentName) {
+                        var opts = '<option value="">— Nezařazeno —</option>';
+                        sortedCats.forEach(function(c) {
+                            var sel = (currentName === c.name) ? ' selected' : '';
+                            opts += '<option value="' + escapeHtml(c.name) + '"' + sel + '>' + escapeHtml(c.name) + '</option>';
+                        });
+                        return opts;
+                    }
+
+                    // HTML: seznam šablon (seskupený)
+                    var html = '';
+                    // Panel správy kategorií
+                    html += '<div class="category-manager">';
+                    html += '<div class="category-manager-title">Kategorie šablon</div>';
+                    html += '<div class="category-chips">';
+                    sortedCats.forEach(function(c) {
+                        html += '<span class="category-chip">';
+                        html += escapeHtml(c.name);
+                        html += '<button type="button" class="chip-action" onclick="renameCategory(' + c.id + ')" title="Přejmenovat">✎</button>';
+                        html += '<button type="button" class="chip-action chip-action-danger" onclick="deleteCategory(' + c.id + ')" title="Smazat kategorii">✕</button>';
+                        html += '</span>';
+                    });
+                    html += '<button type="button" class="category-add-btn" onclick="addCategory()">+ Přidat kategorii</button>';
+                    html += '</div>';
                     html += '</div>';
 
-                    var docName = template.name.replace('.docx', '');
-                    checkboxHtml += '<label class="checkbox-item">';
-                    checkboxHtml += '<input type="checkbox" data-id="' + template.id + '" data-name="' + escapeHtml(docName) + '" onchange="updateSelectedDocs()">';
-                    checkboxHtml += '<span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>';
-                    checkboxHtml += '<span class="checkbox-label">' + escapeHtml(docName) + '</span>';
-                    checkboxHtml += '</label>';
-                });
+                    // Šablony seskupené
+                    function renderGroup(catLabel, items, emptyHint) {
+                        if (items.length === 0 && !emptyHint) return '';
+                        var s = '<div class="template-group">';
+                        s += '<div class="template-group-header">' + escapeHtml(catLabel) + ' <span class="template-group-count">(' + items.length + ')</span></div>';
+                        if (items.length === 0) {
+                            s += '<div class="template-group-empty">' + escapeHtml(emptyHint) + '</div>';
+                        } else {
+                            items.forEach(function(template) {
+                                s += '<div class="template-item">';
+                                s += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+                                s += '<span class="template-name">' + escapeHtml(template.name) + '</span>';
+                                s += '<select class="template-category-select" onchange="changeTemplateCategory(' + template.id + ', this.value)">' + categoryOptions(template.category) + '</select>';
+                                s += '<button type="button" class="template-delete" onclick="deleteTemplate(' + template.id + ')" title="Smazat šablonu">✕</button>';
+                                s += '</div>';
+                            });
+                        }
+                        s += '</div>';
+                        return s;
+                    }
 
-                document.getElementById('templateList').innerHTML = html;
-                document.getElementById('documentCheckboxes').innerHTML = checkboxHtml;
+                    sortedCats.forEach(function(c) {
+                        html += renderGroup(c.name, grouped[c.name], 'Žádné šablony v této kategorii');
+                    });
+                    if (grouped['__unassigned__'].length > 0) {
+                        html += renderGroup('Nezařazeno', grouped['__unassigned__'], '');
+                    }
+
+                    // HTML: checkboxy pro generování (seskupené)
+                    var checkboxHtml = '';
+                    function renderCheckboxGroup(catLabel, items) {
+                        if (items.length === 0) return '';
+                        var groupId = 'cbg-' + catLabel.replace(/[^a-z0-9]/gi, '_');
+                        var s = '<div class="checkbox-group-section">';
+                        s += '<div class="checkbox-group-header">';
+                        s += '<span class="checkbox-group-title">' + escapeHtml(catLabel) + '</span>';
+                        s += '<div class="checkbox-group-actions">';
+                        s += '<button type="button" class="btn-mini" onclick="toggleCategoryCheckboxes(\'' + groupId + '\', true)">Vše</button>';
+                        s += '<button type="button" class="btn-mini" onclick="toggleCategoryCheckboxes(\'' + groupId + '\', false)">Nic</button>';
+                        s += '</div>';
+                        s += '</div>';
+                        s += '<div class="checkbox-group-items" data-group="' + groupId + '">';
+                        items.forEach(function(template) {
+                            var docName = template.name.replace(/\.docx$/i, '');
+                            s += '<label class="checkbox-item">';
+                            s += '<input type="checkbox" data-id="' + template.id + '" data-name="' + escapeHtml(docName) + '" onchange="updateSelectedDocs()">';
+                            s += '<span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>';
+                            s += '<span class="checkbox-label">' + escapeHtml(docName) + '</span>';
+                            s += '</label>';
+                        });
+                        s += '</div>';
+                        s += '</div>';
+                        return s;
+                    }
+
+                    sortedCats.forEach(function(c) {
+                        checkboxHtml += renderCheckboxGroup(c.name, grouped[c.name]);
+                    });
+                    if (grouped['__unassigned__'].length > 0) {
+                        checkboxHtml += renderCheckboxGroup('Nezařazeno', grouped['__unassigned__']);
+                    }
+
+                    if (!checkboxHtml) {
+                        checkboxHtml = '<div class="checkbox-group-empty">Zatím nejsou nahrány žádné šablony.</div>';
+                    }
+
+                    document.getElementById('templateList').innerHTML = html;
+                    document.getElementById('documentCheckboxes').innerHTML = checkboxHtml;
+                });
             });
+        }
+
+        function toggleCategoryCheckboxes(groupId, checked) {
+            document.querySelectorAll('#documentCheckboxes [data-group="' + groupId + '"] input[type="checkbox"]').forEach(function(cb) {
+                cb.checked = !!checked;
+            });
+            updateSelectedDocs();
         }
 
         function updateSelectedDocs() {
@@ -2442,6 +2986,8 @@
             GDriveSync.init({
                 appName: 'Úvěrová dokumentace',
                 onReady: async function() {
+                    // Nejdřív kategorie, pak šablony (kategorie jsou potřeba pro auto-detekci)
+                    try { await loadCategoriesFromDrive(); } catch (e) { console.warn('loadCategoriesFromDrive:', e); }
                     // Synchronizace šablon z Drive → IndexedDB
                     try { await syncTemplatesFromDrive(); } catch (e) { console.warn('syncTemplatesFromDrive:', e); }
                     try {
