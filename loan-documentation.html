@@ -1697,12 +1697,70 @@
                     if (id) {
                         showToast('Šablona ' + file.name + ' nahrána', 'success');
                         renderTemplateList();
+                        // Also push to Google Drive (shared Šablony folder)
+                        if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
+                            try {
+                                var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                                var blob = new Blob([e.target.result], { type: mime });
+                                GDriveSync.saveShared('Šablony/' + file.name, blob, mime)
+                                    .then(function() {
+                                        GDriveSync.showToast && GDriveSync.showToast('Šablona nahrána na Drive: ' + file.name, 'success');
+                                    })
+                                    .catch(function(err) {
+                                        console.warn('GDrive template upload failed:', err);
+                                    });
+                            } catch (err) {
+                                console.warn('GDrive template upload error:', err);
+                            }
+                        }
                     } else {
                         showToast('Chyba při nahrávání šablony', 'error');
                     }
                 });
             };
             reader.readAsArrayBuffer(file);
+        }
+
+        // Načtení šablon z Google Drive do IndexedDB (po přihlášení)
+        async function syncTemplatesFromDrive() {
+            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return;
+            try {
+                var driveFiles = await GDriveSync.listShared('Šablony');
+                if (!driveFiles || driveFiles.length === 0) return;
+                getAllFromDB('templates', function(localTemplates) {
+                    var localNames = new Set((localTemplates || []).map(function(t){ return t.name; }));
+                    var added = 0;
+                    var pending = 0;
+                    driveFiles.forEach(function(f) {
+                        if (!/\.docx$/i.test(f.name)) return;
+                        if (localNames.has(f.name)) return;
+                        pending++;
+                        GDriveSync.loadSharedBinary('Šablony/' + f.name).then(function(buf) {
+                            if (buf) {
+                                saveToDb('templates', {
+                                    name: f.name,
+                                    data: buf,
+                                    uploadedAt: f.modifiedTime || new Date().toISOString()
+                                }, function(id) {
+                                    if (id) added++;
+                                    pending--;
+                                    if (pending === 0) {
+                                        renderTemplateList();
+                                        if (added > 0) showToast('Načteno z Drive: ' + added + ' šablon', 'success');
+                                    }
+                                });
+                            } else {
+                                pending--;
+                            }
+                        }).catch(function(err) {
+                            console.warn('loadSharedBinary failed for ' + f.name, err);
+                            pending--;
+                        });
+                    });
+                });
+            } catch (e) {
+                console.warn('syncTemplatesFromDrive failed:', e);
+            }
         }
 
         function renderTemplateList() {
@@ -1970,12 +2028,49 @@
                             processed++;
                             if (processed === total) {
                                 displayResults();
-                                if (Object.keys(generatedDocuments).length > 0) saveDocumentSet();
+                                if (Object.keys(generatedDocuments).length > 0) {
+                                    saveDocumentSet();
+                                    saveGeneratedToDrive(formData, withTrackedChanges);
+                                }
                             }
                         });
                     }
                 });
             });
+        }
+
+        // Uložení vygenerovaných dokumentů na Google Drive do složky klienta
+        async function saveGeneratedToDrive(formData, withChanges) {
+            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return;
+            try {
+                var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                var client = (formData && formData.uvereovany) ? formData.uvereovany : 'Neznamy klient';
+                var safeClient = client.replace(/[\\/:*?"<>|]/g, '_').trim() || 'Neznamy klient';
+                var now = new Date();
+                var dateStr = now.getFullYear() + '-' +
+                              String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                              String(now.getDate()).padStart(2, '0');
+                var names = Object.keys(generatedDocuments);
+                var saved = 0;
+                for (var i = 0; i < names.length; i++) {
+                    var n = names[i];
+                    var doc = generatedDocuments[n];
+                    if (!doc || !doc.docx) continue;
+                    var filename = n.replace(/\.docx$/, '') + (withChanges ? '_zmeny' : '') + '.docx';
+                    var drivePath = safeClient + '/' + dateStr + '_' + filename;
+                    try {
+                        await GDriveSync.saveBinary(drivePath, doc.docx, mime);
+                        saved++;
+                    } catch (e) {
+                        console.warn('GDrive save failed for ' + drivePath, e);
+                    }
+                }
+                if (saved > 0) {
+                    showToast('Uloženo na Google Drive (' + safeClient + '): ' + saved + ' dokument' + (saved > 1 ? 'ů' : ''), 'success');
+                }
+            } catch (e) {
+                console.warn('saveGeneratedToDrive error:', e);
+            }
         }
 
         function processTemplate(template, formData, withTrackedChanges, callback) {
@@ -2347,6 +2442,8 @@
             GDriveSync.init({
                 appName: 'Uverova dokumentace',
                 onReady: async function() {
+                    // Synchronizace šablon z Drive → IndexedDB
+                    try { await syncTemplatesFromDrive(); } catch (e) { console.warn('syncTemplatesFromDrive:', e); }
                     try {
                         var txt = await GDriveSync.loadFile('documents.json');
                         if (txt) {

@@ -1069,6 +1069,11 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                         <span id="folder-status-text">Připojit složku</span>
                     </button>
+                    <button class="btn btn-outline" onclick="document.getElementById('gdrive-template-input').click()" id="btn-upload-template" title="Nahrát DOCX šablonu na Google Drive (ProfiLend Investment Tools/Šablony)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span id="gdrive-template-status">Nahrát šablonu na Drive</span>
+                    </button>
+                    <input type="file" id="gdrive-template-input" accept=".docx" style="display:none;" onchange="uploadTemplateToDrive(this.files[0]); this.value='';">
                     <button class="btn btn-outline" onclick="showView('list')" id="btn-show-list">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                         Přehled
@@ -2319,6 +2324,24 @@
                 }
             }
 
+            // Save to Google Drive per-client folder
+            if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
+                try {
+                    var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                    var clientFolder = sanitizeFileName(data.borrower || 'Neznámý klient');
+                    var now = new Date();
+                    var dateStr = now.getFullYear() + '-' +
+                                  String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                                  String(now.getDate()).padStart(2, '0');
+                    var drivePath = clientFolder + '/' + dateStr + '_' + fileName;
+                    await GDriveSync.saveBinary(drivePath, blob, mime);
+                    showToast('Uloženo na Google Drive: ' + drivePath, 'success');
+                } catch (e) {
+                    console.warn('GDrive save DOCX failed:', e);
+                    showToast('Uložení na Google Drive selhalo: ' + e.message, 'error');
+                }
+            }
+
             // Also offer browser download
             saveAs(blob, fileName);
             if (!saved) {
@@ -2357,21 +2380,38 @@
     }
 
     async function loadTemplateAsZip() {
+        if (typeof PizZip === 'undefined') {
+            console.error('PizZip knihovna není načtena!');
+            showToast('Chyba: PizZip knihovna se nenačetla. Zkuste obnovit stránku.', 'error');
+            return null;
+        }
+
+        // 1) Prefer Google Drive template (ProfiLend Investment Tools / Šablony / Šablona - Term sheet.docx)
+        if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
+            try {
+                var driveBuf = await GDriveSync.loadSharedBinary('Šablony/' + TEMPLATE_FILENAME);
+                if (driveBuf) {
+                    var zipDrive = new PizZip(driveBuf);
+                    console.log('Template načtena z Google Drive, souborů v ZIP:', Object.keys(zipDrive.files).length);
+                    return zipDrive;
+                }
+            } catch (e) {
+                console.warn('Template: Google Drive načtení selhalo, zkouším lokální složku:', e);
+            }
+        }
+
+        // 2) Fallback: lokální File System Access API
         if (!templateFolderHandle) {
-            console.warn('Template: složka není připojena');
+            console.warn('Template: není dostupná šablona (Drive ani lokální složka)');
+            showToast('Šablona nebyla nalezena. Nahrajte ji na Google Drive nebo připojte lokální složku.', 'error');
             return null;
         }
         try {
             var fileHandle = await templateFolderHandle.getFileHandle(TEMPLATE_FILENAME);
             var file = await fileHandle.getFile();
             var arrayBuf = await file.arrayBuffer();
-            if (typeof PizZip === 'undefined') {
-                console.error('PizZip knihovna není načtena!');
-                showToast('Chyba: PizZip knihovna se nenačetla. Zkuste obnovit stránku.', 'error');
-                return null;
-            }
             var zip = new PizZip(arrayBuf);
-            console.log('Template úspěšně načtena, souborů v ZIP:', Object.keys(zip.files).length);
+            console.log('Template úspěšně načtena (lokální), souborů v ZIP:', Object.keys(zip.files).length);
             return zip;
         } catch (e) {
             console.error('Template load failed:', e);
@@ -2379,6 +2419,57 @@
             return null;
         }
     }
+
+    // ===== GOOGLE DRIVE: TEMPLATE UPLOAD =====
+    async function uploadTemplateToDrive(file) {
+        if (!file) return;
+        if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) {
+            showToast('Nejdřív se přihlaste k Google Drive (tlačítko v záhlaví).', 'error');
+            return;
+        }
+        if (!/\.docx$/i.test(file.name)) {
+            showToast('Šablona musí být .docx soubor.', 'error');
+            return;
+        }
+        var statusEl = document.getElementById('gdrive-template-status');
+        var origText = statusEl ? statusEl.textContent : '';
+        if (statusEl) statusEl.textContent = 'Nahrávám...';
+        try {
+            var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            // Vždy ukládáme pod standardizovaným názvem, aby generátor uměl načíst
+            await GDriveSync.saveShared('Šablony/' + TEMPLATE_FILENAME, file, mime);
+            if (statusEl) statusEl.textContent = 'Šablona na Drive ✓';
+            var btn = document.getElementById('btn-upload-template');
+            if (btn) btn.classList.add('folder-connected');
+            showToast('Šablona nahrána na Google Drive (Šablony/' + TEMPLATE_FILENAME + ')', 'success');
+        } catch (e) {
+            console.error('Upload template failed:', e);
+            if (statusEl) statusEl.textContent = origText || 'Nahrát šablonu na Drive';
+            showToast('Nahrání šablony selhalo: ' + e.message, 'error');
+        }
+    }
+
+    // Po přihlášení zkontrolujeme, zda je šablona na Drive
+    async function checkDriveTemplateStatus() {
+        if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return;
+        try {
+            var buf = await GDriveSync.loadSharedBinary('Šablony/' + TEMPLATE_FILENAME);
+            var statusEl = document.getElementById('gdrive-template-status');
+            var btn = document.getElementById('btn-upload-template');
+            if (buf) {
+                if (statusEl) statusEl.textContent = 'Šablona na Drive ✓';
+                if (btn) btn.classList.add('folder-connected');
+            } else {
+                if (statusEl) statusEl.textContent = 'Nahrát šablonu na Drive';
+                if (btn) btn.classList.remove('folder-connected');
+            }
+        } catch (e) {
+            console.warn('checkDriveTemplateStatus:', e);
+        }
+    }
+
+    // Expose globally for inline onchange
+    window.uploadTemplateToDrive = uploadTemplateToDrive;
 
     // ===== TOAST =====
     function showToast(msg, type) {
@@ -2949,6 +3040,8 @@
             GDriveSync.init({
                 appName: 'Term Sheet Generator',
                 onReady: async function() {
+                    // Check template status on Drive
+                    try { await checkDriveTemplateStatus(); } catch (e) { console.warn(e); }
                     try {
                         var txt = await GDriveSync.loadFile('termsheets.json');
                         if (txt) {

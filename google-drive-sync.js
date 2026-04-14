@@ -310,14 +310,40 @@ window.GDriveSync = (function() {
         return { rootFolderId, appFolderId };
     }
 
-    async function findFile(name) {
-        if (!appFolderId) await ensureFolders();
+    async function findFile(name, parentId) {
+        parentId = parentId || appFolderId;
+        if (!parentId) await ensureFolders();
         const q = encodeURIComponent(
-            `name='${name.replace(/'/g, "\\'")}' and '${appFolderId}' in parents and trashed=false`
+            `name='${name.replace(/'/g, "\\'")}' and '${parentId || appFolderId}' in parents and trashed=false`
         );
-        const res = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&spaces=drive`);
+        const res = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime,mimeType)&spaces=drive`);
         const data = await res.json();
         return data.files && data.files.length > 0 ? data.files[0] : null;
+    }
+
+    // Navigate/create nested folder path like "Klient XYZ/subfolder"
+    // Returns leaf folder ID.
+    async function findOrCreateFolderPath(pathParts, startFromId) {
+        let currentId = startFromId;
+        for (let i = 0; i < pathParts.length; i++) {
+            const name = pathParts[i];
+            if (!name) continue;
+            let id = await findFolder(name, currentId);
+            if (!id) id = await createFolder(name, currentId);
+            currentId = id;
+        }
+        return currentId;
+    }
+
+    // Resolve a path (possibly "subfolder/file.ext") within a base folder.
+    // Returns { parentId, filename }.
+    async function resolvePath(path, baseId) {
+        const parts = path.split('/').filter(Boolean);
+        const filename = parts.pop();
+        const parentId = parts.length > 0
+            ? await findOrCreateFolderPath(parts, baseId)
+            : baseId;
+        return { parentId, filename };
     }
 
     async function saveFile(filename, content, mimeType = 'text/plain') {
@@ -357,16 +383,16 @@ window.GDriveSync = (function() {
         return data;
     }
 
-    async function saveBinary(filename, blob, mimeType) {
+    async function saveBinaryIn(baseFolderId, path, blob, mimeType) {
         if (!accessToken) throw new Error('Not authenticated');
-        if (!appFolderId) await ensureFolders();
+        const resolved = await resolvePath(path, baseFolderId);
+        const existing = await findFile(resolved.filename, resolved.parentId);
+        const finalMime = mimeType || blob.type || 'application/octet-stream';
 
-        const existing = await findFile(filename);
         const metadata = existing
-            ? { name: filename, mimeType: mimeType || blob.type }
-            : { name: filename, mimeType: mimeType || blob.type, parents: [appFolderId] };
+            ? { name: resolved.filename, mimeType: finalMime }
+            : { name: resolved.filename, mimeType: finalMime, parents: [resolved.parentId] };
 
-        // Step 1: create/update metadata
         const metaUrl = existing
             ? `https://www.googleapis.com/drive/v3/files/${existing.id}`
             : 'https://www.googleapis.com/drive/v3/files';
@@ -377,36 +403,89 @@ window.GDriveSync = (function() {
         });
         const fileData = await metaRes.json();
 
-        // Step 2: upload content
         const uploadRes = await driveFetch(
             `https://www.googleapis.com/upload/drive/v3/files/${fileData.id}?uploadType=media`,
             {
                 method: 'PATCH',
-                headers: { 'Content-Type': mimeType || blob.type },
+                headers: { 'Content-Type': finalMime },
                 body: blob
             }
         );
         return await uploadRes.json();
     }
 
-    async function loadFile(filename) {
-        if (!accessToken) return null;
+    async function saveBinary(path, blob, mimeType) {
         if (!appFolderId) await ensureFolders();
-        const file = await findFile(filename);
+        return saveBinaryIn(appFolderId, path, blob, mimeType);
+    }
+
+    // Save to a folder relative to ROOT (shared across apps), e.g. "Sablony/x.docx"
+    async function saveShared(path, blob, mimeType) {
+        if (!rootFolderId) await ensureFolders();
+        return saveBinaryIn(rootFolderId, path, blob, mimeType);
+    }
+
+    async function loadFileIn(baseFolderId, path, asText) {
+        if (!accessToken) return null;
+        const resolved = await resolvePath(path, baseFolderId);
+        const file = await findFile(resolved.filename, resolved.parentId);
         if (!file) return null;
         const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
-        return await res.text();
+        return asText ? await res.text() : await res.arrayBuffer();
+    }
+
+    async function loadFile(path) {
+        if (!appFolderId) await ensureFolders();
+        return loadFileIn(appFolderId, path, true);
+    }
+
+    async function loadBinary(path) {
+        if (!appFolderId) await ensureFolders();
+        return loadFileIn(appFolderId, path, false);
+    }
+
+    // Load from shared root folder, e.g. "Sablony/x.docx"
+    async function loadShared(path) {
+        if (!rootFolderId) await ensureFolders();
+        return loadFileIn(rootFolderId, path, true);
+    }
+
+    async function loadSharedBinary(path) {
+        if (!rootFolderId) await ensureFolders();
+        return loadFileIn(rootFolderId, path, false);
+    }
+
+    async function listFolderById(folderId) {
+        const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+        const res = await driveFetch(
+            `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime,mimeType,size)&orderBy=modifiedTime desc&spaces=drive&pageSize=200`
+        );
+        const data = await res.json();
+        return data.files || [];
     }
 
     async function listFiles() {
         if (!accessToken) return [];
         if (!appFolderId) await ensureFolders();
-        const q = encodeURIComponent(`'${appFolderId}' in parents and trashed=false`);
-        const res = await driveFetch(
-            `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime,mimeType,size)&orderBy=modifiedTime desc&spaces=drive&pageSize=100`
-        );
-        const data = await res.json();
-        return data.files || [];
+        return listFolderById(appFolderId);
+    }
+
+    // List files in a shared subfolder under the root, e.g. "Sablony"
+    async function listShared(subfolder) {
+        if (!accessToken) return [];
+        if (!rootFolderId) await ensureFolders();
+        let targetId = rootFolderId;
+        if (subfolder) {
+            const parts = subfolder.split('/').filter(Boolean);
+            let current = rootFolderId;
+            for (let i = 0; i < parts.length; i++) {
+                const id = await findFolder(parts[i], current);
+                if (!id) return [];
+                current = id;
+            }
+            targetId = current;
+        }
+        return listFolderById(targetId);
     }
 
     async function deleteFile(filename) {
@@ -465,8 +544,13 @@ window.GDriveSync = (function() {
         signOut: signOut,
         saveFile: saveFile,
         saveBinary: saveBinary,
+        saveShared: saveShared,
         loadFile: loadFile,
+        loadBinary: loadBinary,
+        loadShared: loadShared,
+        loadSharedBinary: loadSharedBinary,
         listFiles: listFiles,
+        listShared: listShared,
         deleteFile: deleteFile,
         isConnected: () => !!accessToken,
         showToast: showToast
