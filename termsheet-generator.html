@@ -1069,7 +1069,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                         <span id="folder-status-text">Připojit složku</span>
                     </button>
-                    <button class="btn btn-outline" onclick="document.getElementById('gdrive-template-input').click()" id="btn-upload-template" title="Nahrát DOCX šablonu na Google Drive (ProfiLend Investment Tools/Šablony)">
+                    <button class="btn btn-outline" onclick="document.getElementById('gdrive-template-input').click()" id="btn-upload-template" title="Nahrát DOCX šablonu na Google Drive (ProfiLend Investment Tools/Šablony/Term Sheet Generator)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         <span id="gdrive-template-status">Nahrát šablonu na Drive</span>
                     </button>
@@ -2386,10 +2386,10 @@
             return null;
         }
 
-        // 1) Prefer Google Drive template (ProfiLend Investment Tools / Šablony / Šablona - Term sheet.docx)
+        // 1) Prefer Google Drive template (ProfiLend Investment Tools / Šablony / Term Sheet Generator / Šablona - Term sheet.docx)
         if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
             try {
-                var driveBuf = await GDriveSync.loadSharedBinary('Šablony/' + TEMPLATE_FILENAME);
+                var driveBuf = await GDriveSync.loadSharedBinary('Šablony/Term Sheet Generator/' + TEMPLATE_FILENAME);
                 if (driveBuf) {
                     var zipDrive = new PizZip(driveBuf);
                     console.log('Template načtena z Google Drive, souborů v ZIP:', Object.keys(zipDrive.files).length);
@@ -2437,11 +2437,11 @@
         try {
             var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
             // Vždy ukládáme pod standardizovaným názvem, aby generátor uměl načíst
-            await GDriveSync.saveShared('Šablony/' + TEMPLATE_FILENAME, file, mime);
+            await GDriveSync.saveShared('Šablony/Term Sheet Generator/' + TEMPLATE_FILENAME, file, mime);
             if (statusEl) statusEl.textContent = 'Šablona na Drive ✓';
             var btn = document.getElementById('btn-upload-template');
             if (btn) btn.classList.add('folder-connected');
-            showToast('Šablona nahrána na Google Drive (Šablony/' + TEMPLATE_FILENAME + ')', 'success');
+            showToast('Šablona nahrána na Google Drive (Šablony/Term Sheet Generator/' + TEMPLATE_FILENAME + ')', 'success');
         } catch (e) {
             console.error('Upload template failed:', e);
             if (statusEl) statusEl.textContent = origText || 'Nahrát šablonu na Drive';
@@ -2453,7 +2453,7 @@
     async function checkDriveTemplateStatus() {
         if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return;
         try {
-            var buf = await GDriveSync.loadSharedBinary('Šablony/' + TEMPLATE_FILENAME);
+            var buf = await GDriveSync.loadSharedBinary('Šablony/Term Sheet Generator/' + TEMPLATE_FILENAME);
             var statusEl = document.getElementById('gdrive-template-status');
             var btn = document.getElementById('btn-upload-template');
             if (buf) {

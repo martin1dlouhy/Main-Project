@@ -1702,7 +1702,7 @@
                             try {
                                 var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
                                 var blob = new Blob([e.target.result], { type: mime });
-                                GDriveSync.saveShared('Šablony/' + file.name, blob, mime)
+                                GDriveSync.saveShared('Šablony/Úvěrová dokumentace/' + file.name, blob, mime)
                                     .then(function() {
                                         GDriveSync.showToast && GDriveSync.showToast('Šablona nahrána na Drive: ' + file.name, 'success');
                                     })
@@ -1725,7 +1725,7 @@
         async function syncTemplatesFromDrive() {
             if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return;
             try {
-                var driveFiles = await GDriveSync.listShared('Šablony');
+                var driveFiles = await GDriveSync.listShared('Šablony/Úvěrová dokumentace');
                 if (!driveFiles || driveFiles.length === 0) return;
                 getAllFromDB('templates', function(localTemplates) {
                     var localNames = new Set((localTemplates || []).map(function(t){ return t.name; }));
@@ -1735,7 +1735,7 @@
                         if (!/\.docx$/i.test(f.name)) return;
                         if (localNames.has(f.name)) return;
                         pending++;
-                        GDriveSync.loadSharedBinary('Šablony/' + f.name).then(function(buf) {
+                        GDriveSync.loadSharedBinary('Šablony/Úvěrová dokumentace/' + f.name).then(function(buf) {
                             if (buf) {
                                 saveToDb('templates', {
                                     name: f.name,
@@ -2440,7 +2440,7 @@
         window.addEventListener('DOMContentLoaded', function() {
             if (!window.GDriveSync) return;
             GDriveSync.init({
-                appName: 'Uverova dokumentace',
+                appName: 'Úvěrová dokumentace',
                 onReady: async function() {
                     // Synchronizace šablon z Drive → IndexedDB
                     try { await syncTemplatesFromDrive(); } catch (e) { console.warn('syncTemplatesFromDrive:', e); }
