@@ -5221,10 +5221,71 @@
                             localStorage.setItem('prompt-gen-state', stateJson);
                             GDriveSync.showToast('Stav načten z Google Drive', 'success');
                         }
+
+                        // valuations: sloučení lokálních a cloudových dat (first-time migrace)
                         var valJson = await GDriveSync.loadFile('valuations.json');
+                        var cloudArr = [];
                         if (valJson) {
-                            var valData = JSON.parse(valJson);
-                            await saveToIndexedDB(valData);
+                            try {
+                                var parsedCloud = JSON.parse(valJson);
+                                // Recover starý formát: wrapper dřív dvojitě stringifikoval → parsedCloud může být string
+                                if (typeof parsedCloud === 'string') {
+                                    try { parsedCloud = JSON.parse(parsedCloud); } catch (e2) {}
+                                }
+                                if (Array.isArray(parsedCloud)) cloudArr = parsedCloud;
+                            } catch (e) { console.warn('valuations.json parse:', e); }
+                        }
+                        var localRaw = localStorage.getItem('saved-valuations') || '[]';
+                        var localArr = [];
+                        try {
+                            var parsedLocal = JSON.parse(localRaw);
+                            if (Array.isArray(parsedLocal)) localArr = parsedLocal;
+                        } catch (e) { console.warn('saved-valuations parse:', e); }
+
+                        // Heuristika sloučení: unique podle timestampu/id/názvu
+                        function valKey(v) {
+                            if (!v || typeof v !== 'object') return null;
+                            return v.id || v.timestamp || v.savedAt || v.createdAt ||
+                                   ((v.name || '') + '|' + (v.address || '') + '|' + (v.date || ''));
+                        }
+                        var seen = {};
+                        var merged = [];
+                        cloudArr.concat(localArr).forEach(function(v) {
+                            var k = valKey(v);
+                            if (!k) { merged.push(v); return; }
+                            if (seen[k]) return;
+                            seen[k] = true;
+                            merged.push(v);
+                        });
+
+                        var localCount = localArr.length;
+                        var cloudCount = cloudArr.length;
+                        var mergedCount = merged.length;
+                        var mergedStr = JSON.stringify(merged);
+
+                        // Update localStorage, pokud se něco přidalo (z cloudu nebo z mergu)
+                        if (mergedCount !== localCount) {
+                            localStorage.setItem('saved-valuations', mergedStr);
+                            if (typeof renderSavedValuationsPanel === 'function') renderSavedValuationsPanel();
+                            if (typeof updateSyncBarVisibility === 'function') updateSyncBarVisibility();
+                        }
+
+                        // Push na Drive, pokud lokálně máme novinky oproti cloudu (first-time migrace historických ocenění)
+                        if (mergedCount > cloudCount) {
+                            try {
+                                await GDriveSync.saveFile('valuations.json', JSON.stringify(merged, null, 2), 'application/json');
+                                // IndexedDB backup — přímo přes openBackupDB, aby nedošlo k re-pushi přes wrapper
+                                try {
+                                    var db2 = await openBackupDB();
+                                    var tx2 = db2.transaction('valuations', 'readwrite');
+                                    tx2.objectStore('valuations').put({ key: 'saved-valuations', value: mergedStr, updatedAt: new Date().toISOString() });
+                                    await new Promise(function(res, rej) { tx2.oncomplete = res; tx2.onerror = rej; });
+                                    db2.close();
+                                } catch (ie) { console.warn('IDB mirror failed:', ie); }
+                                GDriveSync.showToast('Nahráno ' + (mergedCount - cloudCount) + ' ocenění na Drive', 'success');
+                            } catch (e) { console.warn('GDrive first-time push failed:', e); }
+                        } else if (mergedCount > localCount) {
+                            GDriveSync.showToast('Načteno ' + (mergedCount - localCount) + ' ocenění z Drive', 'success');
                         }
                     } catch (e) { console.warn('GDrive load failed:', e); }
                 }
@@ -5255,7 +5316,20 @@
                 await _origSaveToIDB(data);
                 if (window.GDriveSync && GDriveSync.isConnected()) {
                     try {
-                        await GDriveSync.saveFile('valuations.json', JSON.stringify(data, null, 2), 'application/json');
+                        // Normalizace: data můžou přijít jako string (z autoBackup) nebo array (z onReady merge)
+                        var payload;
+                        if (typeof data === 'string') {
+                            // Ověř že je to validní JSON; pokud ano, hezky naformátuj
+                            try {
+                                var parsed = JSON.parse(data);
+                                payload = JSON.stringify(parsed, null, 2);
+                            } catch (e) {
+                                payload = data; // fallback: ulož tak jak přišlo
+                            }
+                        } else {
+                            payload = JSON.stringify(data, null, 2);
+                        }
+                        await GDriveSync.saveFile('valuations.json', payload, 'application/json');
                     } catch (e) { console.warn('GDrive valuations save failed:', e); }
                 }
             };
