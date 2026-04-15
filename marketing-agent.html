@@ -1681,6 +1681,18 @@
                             </div>
 
                             <div class="form-group">
+                                <label class="form-label">AI model (text)</label>
+                                <div class="custom-dropdown" data-name="textModel">
+                                    <div class="custom-dropdown-trigger" data-value="gpt-4o-mini">GPT-4o-mini (rychlý, levný)</div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="custom-dropdown-option selected" data-value="gpt-4o-mini">GPT-4o-mini (rychlý, levný)</div>
+                                        <div class="custom-dropdown-option" data-value="gpt-4o">GPT-4o (nejlepší kvalita)</div>
+                                    </div>
+                                </div>
+                                <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">Tip: Pro běžnou tvorbu stačí GPT-4o-mini. GPT-4o použijte pro důležité kampaně.</span>
+                            </div>
+
+                            <div class="form-group">
                                 <label class="form-label">Počet příspěvků</label>
                                 <div class="batch-selector">
                                     <button type="button" class="batch-btn active" data-count="1">1</button>
@@ -2458,6 +2470,8 @@
 
             try {
                 var customSettings = getSettingsForAPI();
+                var textModelEl = document.querySelector('[data-name="textModel"] .custom-dropdown-trigger');
+                var textModel = textModelEl ? textModelEl.getAttribute('data-value') : 'gpt-4o-mini';
                 const response = await fetch(`${API_BASE}/api/marketing/generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2465,6 +2479,7 @@
                         channel, audience: targetAudience, pillar: contentPillar,
                         postType, goal, theme: theme.trim(), tone,
                         emojiLevel, hashtagLevel, batchCount: count,
+                        textModel,
                         generateImage: wantImage, imageSettings,
                         customSystemPrompt: customSettings.systemPrompt,
                         customBannedWords: customSettings.bannedWords,

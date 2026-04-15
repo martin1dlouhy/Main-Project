@@ -470,6 +470,9 @@ app.post('/api/marketing/generate-image', async function (req, res) {
     var prompt = body.prompt || '';
     var size = body.size || '1024x1024';
     var quality = body.quality || 'standard';
+    // Povolené modely — default gpt-image-1 (novější, umí text v obrázku), fallback dall-e-3
+    var allowedImageModels = ['gpt-image-1', 'dall-e-3'];
+    var imageModel = allowedImageModels.indexOf(body.imageModel) !== -1 ? body.imageModel : 'gpt-image-1';
 
     if (!prompt || prompt.length < 10) {
         return res.status(400).json({ error: 'Image prompt is required (min 10 chars).' });
@@ -477,23 +480,36 @@ app.post('/api/marketing/generate-image', async function (req, res) {
 
     try {
         var openai = new OpenAI({ apiKey: openaiKey });
-        var response = await openai.images.generate({
-            model: 'dall-e-3',
+        // Quality mapping — gpt-image-1 používá 'low'/'medium'/'high', dall-e-3 používá 'standard'/'hd'
+        var effectiveQuality = quality;
+        if (imageModel === 'gpt-image-1') {
+            if (quality === 'standard') effectiveQuality = 'medium';
+            else if (quality === 'hd') effectiveQuality = 'high';
+        }
+
+        var genParams = {
+            model: imageModel,
             prompt: prompt,
             n: 1,
             size: size,
-            quality: quality,
-            response_format: 'b64_json'
-        });
+            quality: effectiveQuality
+        };
+        // dall-e-3 podporuje response_format, gpt-image-1 vrací b64_json defaultně
+        if (imageModel === 'dall-e-3') {
+            genParams.response_format = 'b64_json';
+        }
+
+        var response = await openai.images.generate(genParams);
 
         var imageData = response.data[0];
         res.json({
             success: true,
             image: imageData.b64_json,
-            revisedPrompt: imageData.revised_prompt
+            revisedPrompt: imageData.revised_prompt || null,
+            model: imageModel
         });
     } catch (err) {
-        console.error('DALL-E error:', err.message);
+        console.error('OpenAI image error:', err.message);
         var errorMsg = err.message || 'Unknown error';
         var statusCode = 500;
         if (err.message && err.message.includes('billing')) {
@@ -508,9 +524,12 @@ app.post('/api/marketing/generate-image', async function (req, res) {
 });
 
 app.post('/api/marketing/generate', async function (req, res) {
-    var geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey) {
-        return res.status(500).json({ error: 'GEMINI_API_KEY is not set. Add it in Railway → Variables.' });
+    var openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) {
+        return res.status(500).json({ error: 'OPENAI_API_KEY is not set. Add it in Railway → Variables.' });
+    }
+    if (!OpenAI) {
+        return res.status(500).json({ error: 'openai package not installed.' });
     }
 
     var body = req.body || {};
@@ -526,13 +545,15 @@ app.post('/api/marketing/generate', async function (req, res) {
     var batchCount = Math.min(Math.max(parseInt(body.batchCount) || 1, 1), 5);
     var generateImage = body.generateImage || false;
     var imageSettings = body.imageSettings || {};
+    // Výběr OpenAI modelu pro text — default gpt-4o-mini, povolené i gpt-4o
+    var allowedTextModels = ['gpt-4o-mini', 'gpt-4o'];
+    var textModel = allowedTextModels.indexOf(body.textModel) !== -1 ? body.textModel : 'gpt-4o-mini';
 
     if (!theme || theme.trim().length < 3) {
         return res.status(400).json({ error: 'Téma příspěvku je povinné (min. 3 znaky).' });
     }
 
-    var genAI = new GoogleGenerativeAI(geminiKey);
-    var modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+    var openai = new OpenAI({ apiKey: openaiKey });
 
     // Build ProfiLend knowledge context
     var knowledgeBase = 'ZNALOSTNÍ BÁZE — ProfiLend:\n' +
@@ -587,61 +608,58 @@ app.post('/api/marketing/generate', async function (req, res) {
         '- Formát: hook (první věta chytlavá) → hlavní sdělení → CTA.\n' +
         '- DŮLEŽITÉ: Vrať POUZE platný JSON, žádný markdown.\n';
 
+    // Image-related pole jen když uživatel chce obrázek
+    var imageFieldSpec = generateImage
+        ? ',\n' +
+          '      "visualHook": "KRÁTKÁ hláška 3–8 slov určená k vložení PŘÍMO DO OBRÁZKU (bez hashtagů, bez CTA; konkrétní, čitelná, bez diakritiky pokud to zlepší čitelnost)",\n' +
+          '      "imagePrompt": "ANGLICKÝ popis obrázku pro DALL·E/gpt-image-1 (1–3 věty). MUSÍ obsahovat pokyn, že text \\"VISUAL_HOOK\\" má být vysazen jako typografie uvnitř kompozice (bold sans-serif). Styl: profesionální B2B finanční služby, minimalistický design, barvy tyrkysová (#00B4D8), navy (#1A2B4A), bílá. Bez stock photo klišé, bez neonových barev."'
+        : '';
+
+    var imageInstructions = generateImage
+        ? '\n\nOBRÁZEK: Ke každému příspěvku VRAŤ pole "visualHook" a "imagePrompt". visualHook = krátká, úderná věta/slogan, která se vloží PŘÍMO do obrázku jako viditelný text (např. "Rozhodnutí do 48 hodin", "Financování do 250 mil. Kč"). imagePrompt = anglický popis kompozice pro image generátor, který EXPLICITNĚ řekne modelu, že "VISUAL_HOOK" má být vysazen jako typografie v obrázku.'
+        : '';
+
     var userPrompt = 'Vygeneruj ' + batchCount + ' ' + (batchCount === 1 ? 'příspěvek' : 'příspěvky') +
         ' na téma: "' + theme + '".\n' +
         'Tón: ' + tone + '\n' +
         'Typ obsahu: ' + postType + '\n' +
         'Cílová skupina: ' + audience + '\n' +
-        'Obsahový pilíř: ' + pillar + '\n\n' +
+        'Obsahový pilíř: ' + pillar + '\n' +
+        imageInstructions + '\n\n' +
         'Vrať JSON v tomto formátu:\n' +
         '{\n' +
         '  "posts": [\n' +
         '    {\n' +
         '      "text": "plný text příspěvku včetně hashtagů",\n' +
         '      "hook": "první věta / hook",\n' +
-        '      "cta": "použité CTA"\n' +
+        '      "cta": "použité CTA"' +
+        imageFieldSpec + '\n' +
         '    }\n' +
         '  ]\n' +
         '}\n' +
         'Každý příspěvek musí být ODLIŠNÝ — jiný úhel pohledu, jiné CTA, jiný hook.';
 
-    console.log('Marketing generate request:', { channel: channel, theme: theme, batchCount: batchCount, generateImage: generateImage });
+    console.log('Marketing generate request:', { channel: channel, theme: theme, batchCount: batchCount, generateImage: generateImage, textModel: textModel });
 
     try {
-        var responseText = null;
-        var usedModel = null;
-        for (var mi = 0; mi < modelsToTry.length; mi++) {
-            var modelName = modelsToTry[mi];
-            try {
-                console.log('Trying model:', modelName);
-                var model = genAI.getGenerativeModel({ model: modelName });
-                var genConfig = {
-                    temperature: 0.9,
-                    maxOutputTokens: 4096
-                };
-                if (modelName.indexOf('2.5') !== -1 || modelName.indexOf('2.0') !== -1) {
-                    genConfig.responseMimeType = 'application/json';
-                }
-                var result = await model.generateContent({
-                    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
-                    generationConfig: genConfig
-                });
-                responseText = result.response.text();
-                usedModel = modelName;
-                console.log('Success with model:', modelName, 'response length:', responseText.length);
-                break;
-            } catch (modelErr) {
-                console.warn('Model', modelName, 'failed:', modelErr.message);
-                if (mi === modelsToTry.length - 1) throw modelErr;
-            }
-        }
+        var completion = await openai.chat.completions.create({
+            model: textModel,
+            temperature: 0.9,
+            max_tokens: 4096,
+            response_format: { type: 'json_object' },
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ]
+        });
+
+        var responseText = (completion.choices && completion.choices[0] && completion.choices[0].message && completion.choices[0].message.content) || '';
+        console.log('OpenAI response length:', responseText.length, 'model:', textModel);
 
         var parsed = null;
         try {
             parsed = JSON.parse(responseText);
         } catch (e) {
-            // Try to extract JSON
             var startObj = responseText.indexOf('{');
             if (startObj !== -1) {
                 try {
@@ -651,23 +669,33 @@ app.post('/api/marketing/generate', async function (req, res) {
         }
 
         if (parsed && parsed.posts && Array.isArray(parsed.posts)) {
-            // Generate image prompts if requested
+            // Příspěvky + imagePrompt (preferenčně z GPT, fallback na pravidlové složení)
             var posts = parsed.posts.map(function(post, idx) {
                 var imgPrompt = null;
+                var visualHook = post.visualHook || post.hook || '';
                 if (generateImage) {
-                    var visualType = imageSettings.visualType || 'typ1';
-                    var people = imageSettings.people || 'none';
-                    var scene = imageSettings.scene || 'abstract';
-                    var mood = imageSettings.mood || 'professional';
-                    var format = imageSettings.format || '1:1';
-
-                    imgPrompt = buildServerImagePrompt(visualType, people, scene, mood, format, theme, idx);
+                    if (post.imagePrompt && String(post.imagePrompt).length > 20) {
+                        // Nahradíme placeholder VISUAL_HOOK, pokud ho GPT ponechalo
+                        imgPrompt = String(post.imagePrompt).replace(/VISUAL_HOOK/g, visualHook);
+                    } else {
+                        // Fallback — sestavíme deterministický prompt ze settings + visualHook
+                        var visualType = imageSettings.visualType || 'typ1';
+                        var people = imageSettings.people || 'none';
+                        var scene = imageSettings.scene || 'abstract';
+                        var mood = imageSettings.mood || 'professional';
+                        var format = imageSettings.format || '1:1';
+                        imgPrompt = buildServerImagePrompt(visualType, people, scene, mood, format, theme, idx);
+                        if (visualHook) {
+                            imgPrompt += ' Include the text "' + visualHook + '" prominently as bold sans-serif typography within the composition.';
+                        }
+                    }
                 }
                 return {
                     index: idx + 1,
                     text: post.text,
                     hook: post.hook || '',
                     cta: post.cta || '',
+                    visualHook: visualHook,
                     imagePrompt: imgPrompt
                 };
             });
@@ -675,23 +703,26 @@ app.post('/api/marketing/generate', async function (req, res) {
             return res.status(200).json({
                 success: true,
                 posts: posts,
-                model: usedModel || 'gemini-2.5-flash',
+                model: textModel,
                 cached: false
             });
         } else {
-            console.error('Invalid Gemini response:', responseText.substring(0, 500));
+            console.error('Invalid OpenAI response:', responseText.substring(0, 500));
             return res.status(200).json({ success: false, error: 'AI nevrátilo platný formát. Zkuste to znovu.' });
         }
     } catch (err) {
-        console.error('Gemini API error:', err.message);
+        console.error('OpenAI API error:', err.message);
         var errorMsg = err.message || 'Neznámá chyba';
         var statusCode = 500;
-        if (err.message && err.message.includes('API_KEY')) {
-            errorMsg = 'Neplatný Gemini API klíč. Zkontrolujte GEMINI_API_KEY v Railway Variables.';
+        if (err.status === 401 || (err.message && err.message.toLowerCase().includes('api key'))) {
+            errorMsg = 'Neplatný OpenAI API klíč. Zkontrolujte OPENAI_API_KEY v Railway Variables.';
             statusCode = 401;
-        } else if (err.message && err.message.includes('quota')) {
-            errorMsg = 'Vyčerpán denní limit Gemini API. Zkuste to zítra nebo přejděte na placený tier.';
+        } else if (err.status === 429 || (err.message && err.message.toLowerCase().includes('rate'))) {
+            errorMsg = 'OpenAI rate limit nebo kvóta vyčerpána. Zkuste to za chvíli nebo navyšte limity.';
             statusCode = 429;
+        } else if (err.message && err.message.toLowerCase().includes('billing')) {
+            errorMsg = 'OpenAI účet vyžaduje platbu. Nabijte kredit na platform.openai.com/billing.';
+            statusCode = 402;
         }
         return res.status(statusCode).json({ error: errorMsg });
     }
