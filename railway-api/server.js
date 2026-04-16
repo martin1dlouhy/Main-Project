@@ -545,6 +545,8 @@ app.post('/api/marketing/generate', async function (req, res) {
     var batchCount = Math.min(Math.max(parseInt(body.batchCount) || 1, 1), 5);
     // Reference posts from Google Drive (for style consistency)
     var referencePosts = Array.isArray(body.referencePosts) ? body.referencePosts.slice(0, 5) : [];
+    var brandId = typeof body.brandId === 'string' ? body.brandId : 'profilend';
+    var brandName = typeof body.brandName === 'string' ? body.brandName : 'ProfiLend';
     // Custom settings from frontend (user-configured in Nastavení)
     var customSystemPrompt = typeof body.customSystemPrompt === 'string' ? body.customSystemPrompt.trim() : '';
     var customBannedWords = Array.isArray(body.customBannedWords) ? body.customBannedWords : [];
@@ -603,7 +605,7 @@ app.post('/api/marketing/generate', async function (req, res) {
     };
 
     // Build system prompt — combine base instructions with custom settings
-    var baseSystemPrompt = customSystemPrompt || 'Jsi marketingový copywriter pro ProfiLend. Generuješ příspěvky na sociální sítě.';
+    var baseSystemPrompt = customSystemPrompt || ('Jsi marketingový copywriter pro ' + brandName + '. Generuješ příspěvky na sociální sítě.');
     
     // Custom banned words override or extend defaults
     var bannedWordsText = '';
@@ -681,7 +683,7 @@ app.post('/api/marketing/generate', async function (req, res) {
         '}\n' +
         'Každý příspěvek musí být ODLIŠNÝ — jiný úhel pohledu, jiné CTA, jiný hook.';
 
-    console.log('Marketing generate request:', { channel: channel, theme: theme, batchCount: batchCount, generateImage: generateImage, textModel: textModel, referencePosts: referencePosts.length, hasCustomPrompt: !!customSystemPrompt });
+    console.log('Marketing generate request:', { channel: channel, theme: theme, batchCount: batchCount, generateImage: generateImage, textModel: textModel, brandId: brandId, brandName: brandName, referencePosts: referencePosts.length, hasCustomPrompt: !!customSystemPrompt });
 
     try {
         var completion = await openai.chat.completions.create({

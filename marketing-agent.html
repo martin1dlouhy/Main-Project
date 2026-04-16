@@ -1729,6 +1729,16 @@
                             <h3>Základní nastavení</h3>
 
                             <div class="form-group">
+                                <label class="form-label required">Brand / Profil</label>
+                                <div class="custom-dropdown" data-name="brandProfile" id="brandDropdown">
+                                    <div class="custom-dropdown-trigger" data-value="profilend">ProfiLend</div>
+                                    <div class="custom-dropdown-menu" id="brandDropdownMenu">
+                                        <div class="custom-dropdown-option selected" data-value="profilend">ProfiLend</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
                                 <label class="form-label required">Kanál</label>
                                 <div class="custom-dropdown" data-name="channel">
                                     <div class="custom-dropdown-trigger" data-value="linkedin">LinkedIn</div>
@@ -2606,6 +2616,9 @@
             initBatchSelector();
             initBrandKit();
             initBrandPresets();
+            initBrandDropdownListener();
+            populateBrandDropdown();
+            renderBrandList();
             tryReconnectOneDrive();
         });
 
@@ -2680,6 +2693,144 @@
                     dd.classList.remove('open');
                 });
             });
+        }
+
+
+        // ================== BRAND SWITCHER ==================
+        function switchBrand(brandId) {
+            if ( !brandProfiles[brandId]) return;
+            activeBrandId = brandId;
+            appSettings = JSON.parse(JSON.stringify(brandProfiles[brandId]));
+            renderSettingsEditor(appSettings);
+            console.log('[Brand] Switched to:', brandId, brandProfiles[brandId].name);
+        }
+
+        function populateBrandDropdown() {
+            var menu = document.getElementById('brandDropdownMenu');
+            var trigger = document.querySelector('#brandDropdown .custom-dropdown-trigger');
+            if ( !menu ||  !trigger) return;
+
+            menu.innerHTML = '';
+            var brandIds = Object.keys(brandProfiles);
+            brandIds.forEach(function(id) {
+                var brand = brandProfiles[id];
+                var opt = document.createElement('div');
+                opt.className = 'custom-dropdown-option' + (id === activeBrandId ? ' selected' : '');
+                opt.setAttribute('data-value', id);
+                opt.textContent = brand.name;
+                menu.appendChild(opt);
+            });
+
+            // Update trigger text
+            var active = brandProfiles[activeBrandId];
+            if (active) {
+                trigger.textContent = active.name;
+                trigger.setAttribute('data-value', activeBrandId);
+            }
+        }
+
+        function initBrandDropdownListener() {
+            var dd = document.getElementById('brandDropdown');
+            if ( !dd) return;
+            // Listen for changes on brand dropdown
+            dd.addEventListener('change', function() {
+                var trigger = dd.querySelector('.custom-dropdown-trigger');
+                var newBrandId = trigger ? trigger.getAttribute('data-value') : null;
+                if (newBrandId && newBrandId  !== activeBrandId) {
+                    switchBrand(newBrandId);
+                }
+            });
+        }
+
+        // ================== BRAND MANAGEMENT IN SETTINGS ==================
+        function addNewBrand() {
+            var nameInput = document.getElementById('newBrandName');
+            var name = nameInput ? nameInput.value.trim() : '';
+            if ( !name) { showToast('Zadejte název brandu', 'error'); return; }
+
+            // Create ID from name (lowercase, no diacritics, dashes)
+            var id = name.toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+            if (brandProfiles[id]) { showToast('Brand s tímto ID již existuje', 'error'); return; }
+
+            brandProfiles[id] = {
+                id: id,
+                name: name,
+                systemPrompt: 'Jsi marketingový specialista pro ' + name + '. Generuješ příspěvky na sociální sítě.',
+                tone: ['Profesionální'],
+                audiences: [],
+                contentPillars: {},
+                bannedWords: [],
+                ctas: [],
+                colors: { primary: '#38BDF8', secondary: '#1E293B', white: '#FFFFFF', lightGray: '#F0F0F0' }
+            };
+
+            // Save to GDrive
+            saveBrandProfilesToGDrive();
+            populateBrandDropdown();
+            switchBrand(id);
+            renderBrandList();
+            if (nameInput) nameInput.value = '';
+            showToast('Brand "' + name + '" vytvořen', 'success');
+        }
+
+        function deleteBrand(brandId) {
+            if (brandId === 'profilend') { showToast('Výchozí brand ProfiLend nelze smazat', 'error'); return; }
+            if ( !brandProfiles[brandId]) return;
+            var name = brandProfiles[brandId].name;
+            delete brandProfiles[brandId];
+            if (activeBrandId === brandId) switchBrand('profilend');
+            saveBrandProfilesToGDrive();
+            populateBrandDropdown();
+            renderBrandList();
+            showToast('Brand "' + name + '" odstraněn', 'info');
+        }
+
+        function renderBrandList() {
+            var container = document.getElementById('brandListContainer');
+            if ( !container) return;
+            container.innerHTML = '';
+            Object.keys(brandProfiles).forEach(function(id) {
+                var brand = brandProfiles[id];
+                var div = document.createElement('div');
+                div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;background:var(--bg-surface);border-radius:10px;border:1px solid ' + (id === activeBrandId ? 'var(--accent)' : 'var(--border-color)') + ';';
+                var left = '<div style="display:flex;align-items:center;gap:0.75rem;">';
+                left += '<div style="width:10px;height:10px;border-radius:50%;background:' + (brand.colors ? brand.colors.primary : '#38BDF8') + ';"></div>';
+                left += '<span style="font-weight:600;color:var(--text-primary);">' + brand.name + '</span>';
+                if (id === activeBrandId) left += '<span style="font-size:11px;color:var(--accent);font-weight:500;">aktivní</span>';
+                left += '</div>';
+                var right = '<div style="display:flex;gap:0.5rem;">';
+                right += '<button onclick="switchBrand(\''+id+'\');renderBrandList();" style="padding:0.375rem 0.75rem;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);cursor:pointer;font-size:12px;">' + (id === activeBrandId ? 'Aktivní' : 'Přepnout') + '</button>';
+                if (id  !== 'profilend') right += '<button onclick="deleteBrand(\''+id+'\');" style="padding:0.375rem 0.75rem;border-radius:6px;border:1px solid var(--danger);background:none;color:var(--danger);cursor:pointer;font-size:12px;">Smazat</button>';
+                right += '</div>';
+                div.innerHTML = left + right;
+                container.appendChild(div);
+            });
+        }
+
+        async function saveBrandProfilesToGDrive() {
+            if ( !window.GDriveSync ||  !GDriveSync.isConnected()) return;
+            try {
+                await GDriveSync.saveFile('brand-profiles.json', JSON.stringify(brandProfiles, null, 2), 'application/json');
+            } catch(e) { console.warn('[Brands] GDrive save err:', e); }
+        }
+
+        async function loadBrandProfilesFromGDrive() {
+            if ( !window.GDriveSync ||  !GDriveSync.isConnected()) return;
+            try {
+                var txt = await GDriveSync.loadFile('brand-profiles.json');
+                if (txt) {
+                    var loaded = JSON.parse(txt);
+                    // Merge with defaults (keep profilend if missing)
+                    if ( !loaded['profilend']) loaded['profilend'] = JSON.parse(JSON.stringify(DEFAULT_BRANDS['profilend']));
+                    brandProfiles = loaded;
+                    populateBrandDropdown();
+                    renderBrandList();
+                    console.log('[Brands] Loaded', Object.keys(brandProfiles).length, 'brands from GDrive');
+                }
+            } catch(e) { console.warn('[Brands] GDrive load err:', e); }
         }
 
         // ================== MODULE NAVIGATION ==================
@@ -3042,6 +3193,8 @@
                         customBannedWords: customSettings.bannedWords,
                         customCTAs: customSettings.ctas,
                         customTone: customSettings.tone,
+                        brandId: activeBrandId,
+                        brandName: getActiveBrand().name,
                         referencePosts: referencePosts
                     })
                 });
@@ -3414,20 +3567,40 @@
         var oneDriveDirHandle = null;
         var appSettings = null;
 
-        var DEFAULT_SETTINGS = {
-            systemPrompt: 'Jsi zkušený marketingový specialista pro ProfiLend — nebankovní financování zajištěné nemovitostmi v ČR. Generuješ příspěvky na sociální sítě podle nastavení kanálu, cílové skupiny a tónu komunikace. Vždy dodržuj brand voice: věcný, sebevědomý, lidský, přímý, expertní. Nikdy nepoužívej zakázaná slova.',
-            tone: ['Věcný', 'Sebevědomý', 'Lidský', 'Přímý', 'Expertní'],
-            audiences: [
-                { name: 'Jednatelé a vlastníci', desc: 'Vlastníci a manažeři SME s dlouhodobou vizí' },
-                { name: 'Developeři a investoři', desc: 'Profesionálové v real estate se zkušeností' },
-                { name: 'CFO / Finance manažeři', desc: 'Finančníci odpovídající za alokaci kapitálu' },
-                { name: 'Makléři a poradci', desc: 'Profesionálové s přístupem k NWI klientům' }
-            ],
-            contentPillars: { 'Produkt a proces': 30, 'Případovka / scénář': 25, 'Edukace': 25, 'Značka a důvěra': 20 },
-            bannedWords: ['Revoluční', 'Garantujeme zisk', 'Jednoduše bohatnout', 'Zlatá příležitost', 'Poslední šance', 'Bez rizika', 'Dokonalý systém', 'Tajný vzorec', 'Okamžité výsledky', 'Super trik', 'Zázračné řešení', 'Nejlepší investice'],
-            ctas: ['Zjistit více na ProfiLend.cz', 'Chcete vědět více? Napište nám', 'Naplánujte si konzultaci zdarma', 'Začněte s ProfiLend dnes', 'Využijte výhod transparentního financování'],
-            colors: { primary: '#00B4D8', secondary: '#1A2B4A', white: '#FFFFFF', lightGray: '#F0F0F0' }
+        // ================== MULTI-BRAND ARCHITECTURE ==================
+        var activeBrandId = 'profilend';
+
+        var DEFAULT_BRANDS = {
+            'profilend': {
+                id: 'profilend',
+                name: 'ProfiLend',
+                systemPrompt: 'Jsi zkušený marketingový specialista pro ProfiLend — nebankovní financování zajištěné nemovitostmi v ČR. Generuješ příspěvky na sociální sítě podle nastavení kanálu, cílové skupiny a tónu komunikace. Vždy dodržuj brand voice: věcný, sebevědomý, lidský, přímý, expertní. Nikdy nepoužívej zakázaná slova.',
+                tone: ['Věcný', 'Sebevědomý', 'Lidský', 'Přímý', 'Expertní'],
+                audiences: [
+                    { name: 'Jednatelé a vlastníci', desc: 'Vlastníci a manažeři SME s dlouhodobou vizí' },
+                    { name: 'Developeři a investoři', desc: 'Profesionálové v real estate se zkušeností' },
+                    { name: 'CFO / Finance manažeři', desc: 'Finančníci odpovídající za alokaci kapitálu' },
+                    { name: 'Makléři a poradci', desc: 'Profesionálové s přístupem k NWI klientům' }
+                ],
+                contentPillars: { 'Produkt a proces': 30, 'Případovka / scénář': 25, 'Edukace': 25, 'Značka a důvěra': 20 },
+                bannedWords: ['Revoluční', 'Garantujeme zisk', 'Jednoduše bohatnout', 'Zlatá příležitost', 'Poslední šance', 'Bez rizika', 'Dokonalý systém', 'Tajný vzorec', 'Okamžité výsledky', 'Super trik', 'Zázračné řešení', 'Nejlepší investice'],
+                ctas: ['Zjistit více na ProfiLend.cz', 'Chcete vědět více? Napište nám', 'Naplánujte si konzultaci zdarma', 'Začněte s ProfiLend dnes', 'Využijte výhod transparentního financování'],
+                colors: { primary: '#00B4D8', secondary: '#1A2B4A', white: '#FFFFFF', lightGray: '#F0F0F0' }
+            }
         };
+
+        var brandProfiles = JSON.parse(JSON.stringify(DEFAULT_BRANDS));
+
+        // Backward compat: single settings alias points to active brand
+        var DEFAULT_SETTINGS = DEFAULT_BRANDS['profilend'];
+
+        function getActiveBrand() {
+            return brandProfiles[activeBrandId] || brandProfiles['profilend'] || DEFAULT_BRANDS['profilend'];
+        }
+
+        function getBrandGDrivePrefix(brandId) {
+            return 'brands/' + (brandId || activeBrandId) + '/';
+        }
 
         async function connectOneDriveFolder() {
             try {
@@ -3716,8 +3889,11 @@
         }
 
         function getSettingsForAPI() {
-            if (appSettings) return appSettings;
-            return DEFAULT_SETTINGS;
+            // Always use the active brand's settings
+            var brand = getActiveBrand();
+            // If appSettings was loaded and matches the active brand, use it
+            if (appSettings && appSettings.id === activeBrandId) return appSettings;
+            return brand;
         }
 
         // ================== GOOGLE DRIVE SYNC ==================
@@ -3732,14 +3908,20 @@
             GDriveSync.init({
                 appName: 'Marketing Agent',
                 onReady: async function() {
+                    // Load brand profiles first
+                    try { await loadBrandProfilesFromGDrive(); } catch(e) { console.warn('[GDrive] Brand profiles load err:', e); }
+
                     try {
-                        var txt = await GDriveSync.loadFile('settings.json');
+                        // Try brand-specific settings first, fallback to legacy settings.json
+                        var brandPrefix = getBrandGDrivePrefix();
+                        var txt = await GDriveSync.loadFile(brandPrefix + 'settings.json');
+                        if ( !txt) txt = await GDriveSync.loadFile('settings.json');
                         if (txt) {
                             appSettings = JSON.parse(txt);
                             renderSettingsEditor(appSettings);
                             GDriveSync.showToast('Nastavení načteno z Google Drive', 'success');
                         } else {
-                            appSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+                            appSettings = JSON.parse(JSON.stringify(getActiveBrand()));
                             renderSettingsEditor(appSettings);
                         }
                     } catch (e) {
@@ -3771,7 +3953,7 @@
                 var now = new Date();
                 var dateStr = now.toISOString().slice(0, 10);
                 var timeStr = now.toISOString().slice(11, 16).replace(':', '-');
-                var fileName = 'generated/' + dateStr + '_' + timeStr + '_post' + (index + 1) + '.txt';
+                var fileName = getBrandGDrivePrefix() + 'generated_' + dateStr + '_' + timeStr + '_post' + (index + 1) + '.txt';
                 var content = '=== Marketing Agent — Vygenerovaný příspěvek ===\n';
                 content += 'Datum: ' + now.toLocaleString('cs-CZ') + '\n';
                 var chSel = document.getElementById('channelSelect');
