@@ -543,6 +543,13 @@ app.post('/api/marketing/generate', async function (req, res) {
     var emojiLevel = body.emojiLevel || 'few';
     var hashtagLevel = body.hashtagLevel || 'few';
     var batchCount = Math.min(Math.max(parseInt(body.batchCount) || 1, 1), 5);
+    // Reference posts from Google Drive (for style consistency)
+    var referencePosts = Array.isArray(body.referencePosts) ? body.referencePosts.slice(0, 5) : [];
+    // Custom settings from frontend (user-configured in Nastavení)
+    var customSystemPrompt = typeof body.customSystemPrompt === 'string' ? body.customSystemPrompt.trim() : '';
+    var customBannedWords = Array.isArray(body.customBannedWords) ? body.customBannedWords : [];
+    var customCTAs = Array.isArray(body.customCTAs) ? body.customCTAs : [];
+    var customTone = Array.isArray(body.customTone) ? body.customTone : [];
     var generateImage = body.generateImage || false;
     var imageSettings = body.imageSettings || {};
     // Výběr OpenAI modelu pro text — default gpt-4o-mini, povolené i gpt-4o
@@ -595,12 +602,47 @@ app.post('/api/marketing/generate', async function (req, res) {
         partners: 'Cíl: oslovit potenciální partnery (makléře, poradce, právníky).'
     };
 
-    var systemPrompt = 'Jsi marketingový copywriter pro ProfiLend. Generuješ příspěvky na sociální sítě.\n\n' +
+    // Build system prompt — combine base instructions with custom settings
+    var baseSystemPrompt = customSystemPrompt || 'Jsi marketingový copywriter pro ProfiLend. Generuješ příspěvky na sociální sítě.';
+    
+    // Custom banned words override or extend defaults
+    var bannedWordsText = '';
+    if (customBannedWords.length > 0) {
+        bannedWordsText = '\nZAKÁZANÁ SLOVA (přesný seznam od klienta): ' + customBannedWords.join(', ') + '\n';
+    }
+    
+    // Custom CTAs override defaults
+    var ctaText = '';
+    if (customCTAs.length > 0) {
+        ctaText = '\nPOVOLENÁ CTA (používej POUZE tato): ' + customCTAs.join(' | ') + '\n';
+    }
+    
+    // Custom tone
+    var toneText = '';
+    if (customTone.length > 0) {
+        toneText = '\nTÓN KOMUNIKACE: ' + customTone.join(', ') + '\n';
+    }
+    
+    // Reference posts for style consistency
+    var referenceText = '';
+    if (referencePosts.length > 0) {
+        referenceText = '\n\nREFERENČNÍ PŘÍSPĚVKY — Toto jsou dříve schválené příspěvky. ' +
+            'Zachovej jejich styl, tón a strukturu. Nový příspěvek musí vypadat jako by patřil do stejné série. ' +
+            'NEKOPÍRUJ je doslovně, ale inspiruj se stylem, délkou a formátem:\n\n';
+        referencePosts.forEach(function(post, idx) {
+            // Truncate each post to max 500 chars to save tokens
+            var truncated = post.length > 500 ? post.substring(0, 500) + '...' : post;
+            referenceText += '--- Příspěvek ' + (idx + 1) + ' ---\n' + truncated + '\n\n';
+        });
+    }
+
+    var systemPrompt = baseSystemPrompt + '\n\n' +
         knowledgeBase + '\n' +
         (channelRules[channel] || '') + '\n' +
         (emojiRules[emojiLevel] || '') + '\n' +
         (hashtagRules[hashtagLevel] || '') + '\n' +
-        (goalMap[goal] || '') + '\n\n' +
+        (goalMap[goal] || '') + '\n' +
+        toneText + bannedWordsText + ctaText + referenceText + '\n' +
         'PRAVIDLA:\n' +
         '- Piš přirozeně, NE jako AI. Žádné fráze jako "V dnešní době", "Věděli jste, že".\n' +
         '- Nepoužívej zakázaná slova.\n' +
@@ -639,7 +681,7 @@ app.post('/api/marketing/generate', async function (req, res) {
         '}\n' +
         'Každý příspěvek musí být ODLIŠNÝ — jiný úhel pohledu, jiné CTA, jiný hook.';
 
-    console.log('Marketing generate request:', { channel: channel, theme: theme, batchCount: batchCount, generateImage: generateImage, textModel: textModel });
+    console.log('Marketing generate request:', { channel: channel, theme: theme, batchCount: batchCount, generateImage: generateImage, textModel: textModel, referencePosts: referencePosts.length, hasCustomPrompt: !!customSystemPrompt });
 
     try {
         var completion = await openai.chat.completions.create({

@@ -3017,6 +3017,18 @@
                 var customSettings = getSettingsForAPI();
                 var textModelEl = document.querySelector('[data-name="textModel"] .custom-dropdown-trigger');
                 var textModel = textModelEl ? textModelEl.getAttribute('data-value') : 'gpt-4o-mini';
+
+                // Load recent posts from Google Drive as style reference
+                var referencePosts = [];
+                try {
+                    referencePosts = await loadRecentPostsFromGDrive(5);
+                    if (referencePosts.length > 0) {
+                        console.log('[Marketing] Loaded ' + referencePosts.length + ' reference posts from GDrive');
+                    }
+                } catch (refErr) {
+                    console.warn('[Marketing] Could not load reference posts:', refErr);
+                }
+
                 const response = await fetch(`${API_BASE}/api/marketing/generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3029,7 +3041,8 @@
                         customSystemPrompt: customSettings.systemPrompt,
                         customBannedWords: customSettings.bannedWords,
                         customCTAs: customSettings.ctas,
-                        customTone: customSettings.tone
+                        customTone: customSettings.tone,
+                        referencePosts: referencePosts
                     })
                 });
 
@@ -3654,6 +3667,52 @@
                 '<button onclick="this.parentElement.remove()" style="padding: 0.5rem; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;">×</button>';
             container.appendChild(div);
             div.querySelector('input').focus();
+        }
+
+
+        // ================== REFERENCE POSTS — LOAD FROM GOOGLE DRIVE ==================
+        async function loadRecentPostsFromGDrive(maxPosts) {
+            maxPosts = maxPosts || 10;
+            if (\!window.GDriveSync || \!GDriveSync.isConnected()) return [];
+
+            try {
+                var fileList = await GDriveSync.listFiles();
+                if (\!fileList || \!Array.isArray(fileList)) return [];
+
+                // Filter only generated post files, sort by name desc (newest first)
+                var postFiles = fileList.filter(function(f) {
+                    return f.name && (f.name.indexOf('generated_') === 0 || f.name.indexOf('generated/') === 0) && f.name.indexOf('.txt') \!== -1;
+                }).sort(function(a, b) {
+                    return (b.name || '').localeCompare(a.name || '');
+                }).slice(0, maxPosts);
+
+                var posts = [];
+                for (var i = 0; i < postFiles.length; i++) {
+                    try {
+                        var text = await GDriveSync.loadFile(postFiles[i].name);
+                        if (text && text.length > 20) {
+                            // Extract just the post content (skip header lines)
+                            var lines = text.split('\n');
+                            var contentStart = -1;
+                            for (var j = 0; j < lines.length; j++) {
+                                if (lines[j].indexOf('=====') \!== -1 && j > 0) {
+                                    contentStart = j + 1;
+                                }
+                            }
+                            var postContent = contentStart > 0 ? lines.slice(contentStart).join('\n').trim() : text.trim();
+                            if (postContent.length > 10) {
+                                posts.push(postContent);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[ReferencePosts] Could not load:', postFiles[i].name, e);
+                    }
+                }
+                return posts;
+            } catch (e) {
+                console.warn('[ReferencePosts] Error listing files:', e);
+                return [];
+            }
         }
 
         function getSettingsForAPI() {
