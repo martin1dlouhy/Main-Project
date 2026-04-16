@@ -203,19 +203,19 @@
         }
 
         .sidebar-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
+            width: 46px;
+            height: 46px;
+            border-radius: 13px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
             box-shadow:
-                0 6px 16px rgba(0, 0, 0, 0.25),
-                0 2px 4px rgba(0, 0, 0, 0.15),
-                0 0 0 0.5px rgba(255, 255, 255, 0.1),
-                inset 0 1px 1px rgba(255, 255, 255, 0.4),
-                inset 0 -1px 1px rgba(0, 0, 0, 0.15);
+                0 8px 20px rgba(0, 0, 0, 0.3),
+                0 2px 6px rgba(0, 0, 0, 0.2),
+                0 0 0 0.5px rgba(255, 255, 255, 0.15),
+                inset 0 1.5px 1px rgba(255, 255, 255, 0.5),
+                inset 0 -1.5px 2px rgba(0, 0, 0, 0.2);
             position: relative;
             overflow: hidden;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -275,16 +275,13 @@
         }
 
         .sidebar-icon svg {
-            width: 21px;
-            height: 21px;
-            stroke: white;
-            fill: none;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
+            width: 22px;
+            height: 22px;
+            fill: white;
+            stroke: none;
             position: relative;
             z-index: 3;
-            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
         }
 
         /* Category header in dropdown */
@@ -1281,15 +1278,13 @@
         }
 
         .settings-save-bar {
-            position: sticky;
-            bottom: 0;
-            padding: 1rem 1.5rem;
-            background: var(--bg-secondary);
+            position: relative;
+            padding: 1.5rem 0 0.5rem 0;
+            margin-top: 1.5rem;
             border-top: 1px solid var(--border-color);
             display: flex;
             justify-content: flex-end;
             gap: 1rem;
-            z-index: 10;
         }
 
         .setting-card-editable {
@@ -1591,44 +1586,44 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <button class="sidebar-item active" data-module="studio">
-                <div class="sidebar-icon" style="background: linear-gradient(135deg, #67E8F9 0%, #22D3EE 25%, #06B6D4 55%, #0891B2 100%);">
-                    <svg viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #7DD3FC 0%, #38BDF8 30%, #0EA5E9 65%, #0284C7 100%);">
+                    <svg viewBox="0 0 24 24"><path d="M20.7 3.3a1 1 0 0 0-1.4 0L12 10.6 9.7 8.3a1 1 0 0 0-1.4 0l-5 5A1 1 0 0 0 3 14v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V4.7a1 1 0 0 0-.3-.7z" fill-opacity="0.3"/><path d="M3 17l5.3-5.3a1 1 0 0 1 1.4 0L12 14l6.3-6.3a1 1 0 0 1 1.4 0L21 9" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="8.5" cy="8.5" r="2" fill="white" fill-opacity="0.9"/><path d="M4 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4z" stroke="white" stroke-width="1.5" fill="none"/></svg>
                 </div>
                 <span class="sidebar-label">Studio</span>
             </button>
             <button class="sidebar-item" data-module="nastaveni">
-                <div class="sidebar-icon" style="background: linear-gradient(135deg, #CBD5E1 0%, #94A3B8 25%, #64748B 55%, #475569 100%);">
-                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #A1A1AA 0%, #71717A 30%, #52525B 65%, #3F3F46 100%);">
+                    <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" fill-opacity="0.85"/></svg>
                 </div>
                 <span class="sidebar-label">Nastavení</span>
             </button>
             <button class="sidebar-item" data-module="brandkit">
-                <div class="sidebar-icon" style="background: linear-gradient(135deg, #FDA4AF 0%, #FB7185 25%, #F43F5E 55%, #E11D48 100%);">
-                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #FCA5A5 0%, #F87171 30%, #EF4444 65%, #DC2626 100%);">
+                    <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="3" fill="white" fill-opacity="0.25"/><circle cx="7.5" cy="10" r="2.5" fill="white" fill-opacity="0.9"/><circle cx="16.5" cy="10" r="2.5" fill="white" fill-opacity="0.9"/><rect x="5" y="7" width="5" height="6" rx="2.5" fill="white" fill-opacity="0.5"/><rect x="14" y="7" width="5" height="6" rx="2.5" fill="white" fill-opacity="0.5"/><path d="M6 17h12" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
                 </div>
                 <span class="sidebar-label">Brand Kit</span>
             </button>
             <button class="sidebar-item" data-module="kalendar">
-                <div class="sidebar-icon" style="background: linear-gradient(135deg, #FDE68A 0%, #FBBF24 25%, #F59E0B 55%, #D97706 100%);">
-                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #FDE68A 0%, #FBBF24 30%, #F59E0B 65%, #D97706 100%);">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3" fill="white" fill-opacity="0.25"/><rect x="3" y="4" width="18" height="6" rx="3" fill="white" fill-opacity="0.45"/><line x1="8" y1="2.5" x2="8" y2="5.5" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="2.5" x2="16" y2="5.5" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="14" r="1.2" fill="white"/><circle cx="12" cy="14" r="1.2" fill="white"/><circle cx="16" cy="14" r="1.2" fill="white"/><circle cx="8" cy="18" r="1.2" fill="white"/><circle cx="12" cy="18" r="1.2" fill="white"/></svg>
                 </div>
                 <span class="sidebar-label">Kalendář</span>
             </button>
             <button class="sidebar-item" data-module="kampane">
-                <div class="sidebar-icon" style="background: linear-gradient(135deg, #C4B5FD 0%, #A78BFA 25%, #8B5CF6 55%, #7C3AED 100%);">
-                    <svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #C4B5FD 0%, #A78BFA 30%, #8B5CF6 65%, #7C3AED 100%);">
+                    <svg viewBox="0 0 24 24"><path d="M21.4 4.6c.8.8.8 2 0 2.8L10.7 18.1a2 2 0 0 1-1 .5l-4.2 1.1 1.1-4.2a2 2 0 0 1 .5-1L18.6 3.2c.8-.8 2-.8 2.8 0z" fill="white" fill-opacity="0.9"/><path d="M3 21h18" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/><path d="M16.5 5.5l2 2" stroke="white" stroke-opacity="0.3" stroke-width="1.5"/></svg>
                 </div>
                 <span class="sidebar-label">Kampaně</span>
             </button>
             <button class="sidebar-item" data-module="partneri">
-                <div class="sidebar-icon" style="background: linear-gradient(135deg, #6EE7B7 0%, #34D399 25%, #10B981 55%, #059669 100%);">
-                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #6EE7B7 0%, #34D399 30%, #10B981 65%, #059669 100%);">
+                    <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3.5" fill="white" fill-opacity="0.9"/><circle cx="16.5" cy="7.5" r="2.5" fill="white" fill-opacity="0.65"/><path d="M2 20c0-3.3 2.7-6 6-6h2c3.3 0 6 2.7 6 6" fill="white" fill-opacity="0.5"/><path d="M15 14.5c2.5 0 4.5 2 4.5 4.5v1" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.5"/></svg>
                 </div>
                 <span class="sidebar-label">Partneři</span>
             </button>
             <button class="sidebar-item" data-module="analytika">
-                <div class="sidebar-icon" style="background: linear-gradient(135deg, #FCA5A5 0%, #F87171 25%, #EF4444 55%, #DC2626 100%);">
-                    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #FF9A9E 0%, #F87171 30%, #EF4444 65%, #B91C1C 100%);">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="9" rx="1.5" fill="white" fill-opacity="0.6"/><rect x="10" y="6" width="4" height="15" rx="1.5" fill="white" fill-opacity="0.8"/><rect x="17" y="3" width="4" height="18" rx="1.5" fill="white" fill-opacity="0.95"/><path d="M4 8l5-3 5 2 5-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.5"/></svg>
                 </div>
                 <span class="sidebar-label">Analytika</span>
             </button>
