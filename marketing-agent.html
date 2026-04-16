@@ -1385,33 +1385,7 @@
             cursor: pointer;
         }
 
-        /* ===================== SETTINGS TABS ===================== */
-        .settings-tabs {
-            display: flex;
-            gap: 0;
-            border-bottom: 2px solid var(--border-color);
-            margin-bottom: 1.5rem;
-        }
-        .settings-tab {
-            padding: 0.75rem 1.5rem;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            background: none;
-            border: none;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-        .settings-tab:hover { color: var(--text-primary); }
-        .settings-tab.active {
-            color: var(--accent);
-            border-bottom-color: var(--accent);
-        }
-        .settings-tab-content { display: none; }
-        .settings-tab-content.active { display: block; }
+
         /* IG REFERENCE GALLERY */
         .ig-gallery {
             display: grid;
@@ -1464,6 +1438,26 @@
             font-size: 11px; font-weight: 600;
         }
         .preset-indicator.active { background: rgba(34,197,94,0.15); color: #22C55E; }
+
+        /* ===================== SETTINGS TABS ===================== */
+        .settings-tabs { display:flex; gap:0; border-bottom:2px solid var(--border-color); margin-bottom:1.5rem; }
+        .settings-tab { padding:0.75rem 1.5rem; font-size:13px; font-weight:600; color:var(--text-secondary); background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer; transition:all 0.2s; font-family:inherit; }
+        .settings-tab:hover { color:var(--text-primary); }
+        .settings-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+        .settings-tab-content { display:none; }
+        .settings-tab-content.active { display:block; }
+        .ig-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.75rem; margin-top:0.75rem; }
+        .ig-gallery-item { position:relative; border-radius:10px; overflow:hidden; border:1.5px solid var(--border-color); aspect-ratio:1; background:var(--bg-surface); }
+        .ig-gallery-item img { width:100%; height:100%; object-fit:cover; }
+        .ig-gallery-item .ig-remove { position:absolute; top:4px; right:4px; width:24px; height:24px; border-radius:50%; background:rgba(0,0,0,0.65); color:white; border:none; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s; }
+        .ig-gallery-item:hover .ig-remove { opacity:1; }
+        .ig-upload-zone { border:2px dashed var(--border-color); border-radius:10px; aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:all 0.3s; color:var(--text-secondary); font-size:12px; gap:0.25rem; }
+        .ig-upload-zone:hover { border-color:var(--accent); background:var(--accent-light); color:var(--accent); }
+        .style-desc-textarea { width:100%; min-height:100px; padding:0.75rem; border:1.5px solid var(--border-color); border-radius:8px; background:var(--bg-surface); color:var(--text-primary); font-family:inherit; font-size:13px; resize:vertical; }
+        .style-desc-textarea:focus { outline:none; border-color:var(--accent); }
+        .preset-indicator { display:inline-flex; align-items:center; gap:0.35rem; padding:0.25rem 0.75rem; border-radius:20px; font-size:11px; font-weight:600; }
+        .preset-indicator.active { background:rgba(34,197,94,0.15); color:#22C55E; }
+        .preset-indicator.inactive { background:rgba(245,158,11,0.15); color:#F59E0B; }
 
         /* ===================== BRAND KIT ===================== */
         .logo-upload-area {
@@ -2311,6 +2305,143 @@
         // Global store for generated posts (for download)
         let generatedPosts = [];
 
+        // ================== SETTINGS TABS ==================
+        document.querySelectorAll('.settings-tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.settings-tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelectorAll('.settings-tab-content').forEach(function(c) { c.classList.remove('active'); });
+                this.classList.add('active');
+                document.getElementById('settingsTab-' + this.getAttribute('data-settings-tab')).classList.add('active');
+            });
+        });
+
+        // ================== UTILITY: blob <-> dataURL ==================
+        function blobToDataURL(blob) {
+            return new Promise(function(resolve) {
+                var r = new FileReader(); r.onload = function() { resolve(r.result); }; r.readAsDataURL(blob);
+            });
+        }
+        function dataURLtoBlob(dataUrl) {
+            var p = dataUrl.split(','), mime = p[0].match(/:(.*?);/)[1], b = atob(p[1]), u = new Uint8Array(b.length);
+            for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+            return new Blob([u], { type: mime });
+        }
+
+        // ================== PROFILEND BRAND PRESETS (Google Drive) ==================
+        var brandPresets = {
+            styleMain: '', layoutDescA: '', layoutDescB: '', layoutDescC: '', layoutDescD: '', layoutDescE: '',
+            colors: { navy: '#0C2340', teal: '#00B4D8', white: '#FFFFFF', gray: '#F0F4F8' },
+            igScreenshots: [], igScreenshotCount: 0
+        };
+        var _bpTimer = null;
+        function debounceSaveBrandPresets() { if(_bpTimer)clearTimeout(_bpTimer); _bpTimer=setTimeout(saveBrandPresets,1500); }
+
+        function initBrandPresets() {
+            loadBrandPresets();
+            ['Navy','Teal','White','Gray'].forEach(function(n) {
+                var inp = document.getElementById('brandColor'+n);
+                if(inp) inp.addEventListener('input', function() {
+                    var h=document.getElementById('brandColor'+n+'Hex'); if(h) h.textContent=this.value.toUpperCase();
+                    brandPresets.colors[n.toLowerCase()]=this.value.toUpperCase(); debounceSaveBrandPresets();
+                });
+            });
+            ['brandStyleMain','layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id) {
+                var el=document.getElementById(id);
+                if(el) el.addEventListener('change', function() {
+                    if(id==='brandStyleMain') brandPresets.styleMain=this.value; else brandPresets[id]=this.value;
+                    debounceSaveBrandPresets();
+                });
+            });
+        }
+
+        async function saveBrandPresets() {
+            var m=document.getElementById('brandStyleMain'); if(m) brandPresets.styleMain=m.value;
+            ['layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id) { var e=document.getElementById(id); if(e) brandPresets[id]=e.value; });
+            if(window.GDriveSync&&GDriveSync.isConnected()) {
+                try {
+                    var d={styleMain:brandPresets.styleMain,layoutDescA:brandPresets.layoutDescA,layoutDescB:brandPresets.layoutDescB,layoutDescC:brandPresets.layoutDescC,layoutDescD:brandPresets.layoutDescD,layoutDescE:brandPresets.layoutDescE,colors:brandPresets.colors,igScreenshotCount:brandPresets.igScreenshots.length};
+                    await GDriveSync.saveFile('brand-presets.json',JSON.stringify(d,null,2),'application/json');
+                } catch(e) { console.warn('[BP] GDrive save err:',e); }
+            }
+            try { var r=indexedDB.open('MarketingAgentDB',2); r.onupgradeneeded=function(e){var db=e.target.result;if(\!db.objectStoreNames.contains('brandkit'))db.createObjectStore('brandkit',{keyPath:'id'});if(\!db.objectStoreNames.contains('brandpresets'))db.createObjectStore('brandpresets',{keyPath:'id'});}; r.onsuccess=function(e){var db=e.target.result;if(\!db.objectStoreNames.contains('brandpresets'))return;db.transaction('brandpresets','readwrite').objectStore('brandpresets').put({id:'presets',data:brandPresets});}; } catch(e){}
+        }
+
+        async function loadBrandPresets() {
+            var loaded=false;
+            if(window.GDriveSync&&GDriveSync.isConnected()) {
+                try {
+                    var txt=await GDriveSync.loadFile('brand-presets.json');
+                    if(txt) {
+                        var d=JSON.parse(txt); brandPresets.styleMain=d.styleMain||'';
+                        ['layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id){brandPresets[id]=d[id]||'';});
+                        if(d.colors) brandPresets.colors=d.colors;
+                        brandPresets.igScreenshotCount=d.igScreenshotCount||0; brandPresets.igScreenshots=[];
+                        for(var i=0;i<brandPresets.igScreenshotCount;i++) { try { var bl=await GDriveSync.loadBinary('brand-assets/ig-ref-'+i+'.png'); if(bl){var du=await blobToDataURL(bl);brandPresets.igScreenshots.push({name:'ig-ref-'+i+'.png',dataUrl:du});} } catch(e2){} }
+                        loaded=true;
+                    }
+                } catch(e) { console.warn('[BP] GDrive load err:',e); }
+            }
+            if(\!loaded) { try { await new Promise(function(res){var r=indexedDB.open('MarketingAgentDB',2);r.onupgradeneeded=function(e){var db=e.target.result;if(\!db.objectStoreNames.contains('brandkit'))db.createObjectStore('brandkit',{keyPath:'id'});if(\!db.objectStoreNames.contains('brandpresets'))db.createObjectStore('brandpresets',{keyPath:'id'});};r.onsuccess=function(e){var db=e.target.result;if(\!db.objectStoreNames.contains('brandpresets')){res();return;}var g=db.transaction('brandpresets','readonly').objectStore('brandpresets').get('presets');g.onsuccess=function(){if(g.result&&g.result.data){var dd=g.result.data;brandPresets.styleMain=dd.styleMain||'';['layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id){brandPresets[id]=dd[id]||'';});if(dd.colors)brandPresets.colors=dd.colors;if(dd.igScreenshots&&dd.igScreenshots.length>0)brandPresets.igScreenshots=dd.igScreenshots.map(function(it,ix){return typeof it==='string'?{name:'ig-ref-'+ix+'.png',dataUrl:it}:it;});}res();};g.onerror=function(){res();};};r.onerror=function(){res();};}); } catch(e){} }
+            applyBrandPresetsToDOM();
+        }
+
+        function applyBrandPresetsToDOM() {
+            var m=document.getElementById('brandStyleMain'); if(m&&brandPresets.styleMain)m.value=brandPresets.styleMain;
+            ['layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id){var e=document.getElementById(id);if(e&&brandPresets[id])e.value=brandPresets[id];});
+            if(brandPresets.colors){['Navy','Teal','White','Gray'].forEach(function(n){var i=document.getElementById('brandColor'+n),h=document.getElementById('brandColor'+n+'Hex'),v=brandPresets.colors[n.toLowerCase()];if(i&&v){i.value=v;if(h)h.textContent=v;}});}
+            renderIGGallery();
+            var st=document.getElementById('brandPresetStatus');
+            if(st&&window.GDriveSync&&GDriveSync.isConnected()){st.className='preset-indicator active';st.innerHTML='\u25cf Google Drive';}
+            else if(st){st.className='preset-indicator inactive';st.innerHTML='\u25cf Offline (IDB)';}
+        }
+
+        async function handleIGUpload(event) {
+            var files=event.target.files; if(\!files||files.length===0)return;
+            for(var fi=0;fi<files.length;fi++){var file=files[fi];if(\!file.type.startsWith('image/'))continue;
+                var du=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
+                var idx=brandPresets.igScreenshots.length,nm='ig-ref-'+idx+'.png';
+                brandPresets.igScreenshots.push({name:nm,dataUrl:du});
+                if(window.GDriveSync&&GDriveSync.isConnected()){try{await GDriveSync.saveBinary('brand-assets/'+nm,dataURLtoBlob(du),'image/png');showToast('Screenshot uložen na Google Drive','success');}catch(e){showToast('Screenshot uložen lokálně','info');}}
+            }
+            renderIGGallery(); saveBrandPresets(); event.target.value='';
+        }
+        async function removeIGScreenshot(index) {
+            var item=brandPresets.igScreenshots[index]; brandPresets.igScreenshots.splice(index,1);
+            if(window.GDriveSync&&GDriveSync.isConnected()&&item&&item.name){try{await GDriveSync.deleteFile('brand-assets/'+item.name);}catch(e){}}
+            renderIGGallery(); saveBrandPresets();
+        }
+        function renderIGGallery() {
+            var g=document.getElementById('igGallery'); if(\!g)return; g.innerHTML='';
+            (brandPresets.igScreenshots||[]).forEach(function(item,i){var du=typeof item==='string'?item:item.dataUrl;if(\!du)return;var el=document.createElement('div');el.className='ig-gallery-item';el.innerHTML='<img src="'+du+'" alt="IG '+(i+1)+'"><button class="ig-remove" onclick="removeIGScreenshot('+i+')">\u00d7</button>';g.appendChild(el);});
+            var z=document.createElement('div');z.className='ig-upload-zone';z.onclick=function(){document.getElementById('igFileInput').click();};z.innerHTML='<span style="font-size:24px;">+</span><span>Nahrát</span>';g.appendChild(z);
+        }
+
+        function getBrandStylePrompt(templateKey) {
+            var parts=[],m=document.getElementById('brandStyleMain'),ms=(m&&m.value.trim())||brandPresets.styleMain||'';
+            if(ms)parts.push('BRAND STYLE REFERENCE: '+ms);
+            var lid='layoutDesc'+templateKey.replace('template',''),le=document.getElementById(lid),ld=(le&&le.value.trim())||brandPresets[lid]||'';
+            if(ld)parts.push('LAYOUT DETAILS: '+ld);
+            var nv=(brandPresets.colors&&brandPresets.colors.navy)||'#0C2340',tl=(brandPresets.colors&&brandPresets.colors.teal)||'#00B4D8',wh=(brandPresets.colors&&brandPresets.colors.white)||'#FFFFFF',gr=(brandPresets.colors&&brandPresets.colors.gray)||'#F0F4F8';
+            parts.push('STRICT color palette: teal '+tl+' (accents, CTA), navy '+nv+' (headings), white '+wh+' (backgrounds), gray '+gr+' (section bg). Red #E53935 myth only. Green #43A047 reality only. No other colors.');
+            return parts.join(' ');
+        }
+
+        // ================== BRAND LOGO (Google Drive + IDB fallback) ==================
+        async function saveBrandLogoToIDB() {
+            if(window.GDriveSync&&GDriveSync.isConnected()){try{var meta={position:brandLogo.position,sizePercent:brandLogo.sizePercent,paddingPercent:brandLogo.paddingPercent,hasLogo:\!\!brandLogo.dataUrl};await GDriveSync.saveFile('brand-assets/logo-meta.json',JSON.stringify(meta,null,2),'application/json');if(brandLogo.dataUrl)await GDriveSync.saveBinary('brand-assets/logo.png',dataURLtoBlob(brandLogo.dataUrl),'image/png');}catch(e){console.warn('[Logo] GDrive err:',e);}}
+            try{var r=indexedDB.open('MarketingAgentDB',2);r.onupgradeneeded=function(e){var db=e.target.result;if(\!db.objectStoreNames.contains('handles'))db.createObjectStore('handles',{keyPath:'id'});if(\!db.objectStoreNames.contains('brandkit'))db.createObjectStore('brandkit',{keyPath:'id'});};r.onsuccess=function(e){var db=e.target.result;if(\!db.objectStoreNames.contains('brandkit'))return;db.transaction('brandkit','readwrite').objectStore('brandkit').put({id:'logo',data:brandLogo});};}catch(e){}
+        }
+        async function loadBrandLogoFromIDB() {
+            var loaded=false;
+            if(window.GDriveSync&&GDriveSync.isConnected()){try{var mt=await GDriveSync.loadFile('brand-assets/logo-meta.json');if(mt){var m=JSON.parse(mt);brandLogo.position=m.position||'top-right';brandLogo.sizePercent=m.sizePercent||15;brandLogo.paddingPercent=m.paddingPercent||5;if(m.hasLogo){var lb=await GDriveSync.loadBinary('brand-assets/logo.png');if(lb){brandLogo.dataUrl=await blobToDataURL(lb);loaded=true;}}}}catch(e){console.warn('[Logo] GDrive load err:',e);}}
+            if(\!loaded){try{await new Promise(function(res){var r=indexedDB.open('MarketingAgentDB',2);r.onupgradeneeded=function(e){var db=e.target.result;if(\!db.objectStoreNames.contains('handles'))db.createObjectStore('handles',{keyPath:'id'});if(\!db.objectStoreNames.contains('brandkit'))db.createObjectStore('brandkit',{keyPath:'id'});};r.onsuccess=function(e){var db=e.target.result;if(\!db.objectStoreNames.contains('brandkit')){res();return;}var g=db.transaction('brandkit','readonly').objectStore('brandkit').get('logo');g.onsuccess=function(){if(g.result&&g.result.data)brandLogo=g.result.data;res();};g.onerror=function(){res();};};r.onerror=function(){res();};});}catch(e){}}
+            if(brandLogo.dataUrl){var img=document.getElementById('logoImg');if(img){img.src=brandLogo.dataUrl;img.style.display='block';document.getElementById('logoEmpty').style.display='none';document.getElementById('logoPreview').classList.add('has-logo');document.getElementById('removeLogo').style.display='inline-block';}}
+            var pb=document.querySelector('.pos-btn[data-pos="'+brandLogo.position+'"]');if(pb){document.querySelectorAll('.pos-btn').forEach(function(b){b.classList.remove('active');});pb.classList.add('active');}
+            var ss=document.getElementById('logoSize');if(ss&&brandLogo.sizePercent){ss.value=brandLogo.sizePercent;document.getElementById('logoSizeValue').textContent=brandLogo.sizePercent;}
+            var ps=document.getElementById('logoPadding');if(ps&&brandLogo.paddingPercent){ps.value=brandLogo.paddingPercent;document.getElementById('logoPaddingValue').textContent=brandLogo.paddingPercent;}
+        }
+
+
 
         // ================== SETTINGS TABS ==================
         document.querySelectorAll('.settings-tab').forEach(function(tab) {
@@ -2323,146 +2454,6 @@
                 if (target) target.classList.add('active');
             });
         });
-
-        // ================== PROFILEND BRAND PRESETS ==================
-        var brandPresets = {
-            styleMain: '', layoutDescA: '', layoutDescB: '', layoutDescC: '', layoutDescD: '', layoutDescE: '',
-            colors: { navy: '#0C2340', teal: '#00B4D8', white: '#FFFFFF', gray: '#F0F4F8' },
-            igScreenshots: []
-        };
-
-        function initBrandPresets() {
-            loadBrandPresetsFromIDB();
-            ['Navy','Teal','White','Gray'].forEach(function(name) {
-                var input = document.getElementById('brandColor' + name);
-                if (input) input.addEventListener('input', function() {
-                    var hex = document.getElementById('brandColor' + name + 'Hex');
-                    if (hex) hex.textContent = this.value.toUpperCase();
-                    brandPresets.colors[name.toLowerCase()] = this.value.toUpperCase();
-                    saveBrandPresetsToIDB();
-                });
-            });
-            ['brandStyleMain','layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el) el.addEventListener('change', function() {
-                    if (id === 'brandStyleMain') brandPresets.styleMain = this.value;
-                    else brandPresets[id] = this.value;
-                    saveBrandPresetsToIDB();
-                });
-            });
-        }
-
-        function saveBrandPresetsToIDB() {
-            var mainEl = document.getElementById('brandStyleMain');
-            if (mainEl) brandPresets.styleMain = mainEl.value;
-            ['layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id) {
-                var el = document.getElementById(id); if (el) brandPresets[id] = el.value;
-            });
-            var request = indexedDB.open('MarketingAgentDB', 2);
-            request.onupgradeneeded = function(e) {
-                var db = e.target.result;
-                if (\!db.objectStoreNames.contains('brandkit')) db.createObjectStore('brandkit', { keyPath: 'id' });
-                if (\!db.objectStoreNames.contains('brandpresets')) db.createObjectStore('brandpresets', { keyPath: 'id' });
-            };
-            request.onsuccess = function(e) {
-                var db = e.target.result;
-                if (\!db.objectStoreNames.contains('brandpresets')) return;
-                var tx = db.transaction('brandpresets', 'readwrite');
-                tx.objectStore('brandpresets').put({ id: 'presets', data: brandPresets });
-            };
-        }
-
-        function loadBrandPresetsFromIDB() {
-            var request = indexedDB.open('MarketingAgentDB', 2);
-            request.onupgradeneeded = function(e) {
-                var db = e.target.result;
-                if (\!db.objectStoreNames.contains('brandkit')) db.createObjectStore('brandkit', { keyPath: 'id' });
-                if (\!db.objectStoreNames.contains('brandpresets')) db.createObjectStore('brandpresets', { keyPath: 'id' });
-            };
-            request.onsuccess = function(e) {
-                var db = e.target.result;
-                if (\!db.objectStoreNames.contains('brandpresets')) return;
-                var tx = db.transaction('brandpresets', 'readonly');
-                var getReq = tx.objectStore('brandpresets').get('presets');
-                getReq.onsuccess = function() {
-                    if (getReq.result && getReq.result.data) {
-                        brandPresets = getReq.result.data;
-                        var mainEl = document.getElementById('brandStyleMain');
-                        if (mainEl && brandPresets.styleMain) mainEl.value = brandPresets.styleMain;
-                        ['layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id) {
-                            var el = document.getElementById(id); if (el && brandPresets[id]) el.value = brandPresets[id];
-                        });
-                        if (brandPresets.colors) {
-                            ['Navy','Teal','White','Gray'].forEach(function(name) {
-                                var input = document.getElementById('brandColor' + name);
-                                var hex = document.getElementById('brandColor' + name + 'Hex');
-                                var val = brandPresets.colors[name.toLowerCase()];
-                                if (input && val) { input.value = val; if (hex) hex.textContent = val; }
-                            });
-                        }
-                        if (brandPresets.igScreenshots && brandPresets.igScreenshots.length > 0) renderIGGallery();
-                    }
-                };
-            };
-        }
-
-        // IG Screenshot gallery
-        function handleIGUpload(event) {
-            var files = event.target.files;
-            if (\!files || files.length === 0) return;
-            Array.from(files).forEach(function(file) {
-                if (\!file.type.startsWith('image/')) return;
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    brandPresets.igScreenshots.push(e.target.result);
-                    renderIGGallery();
-                    saveBrandPresetsToIDB();
-                };
-                reader.readAsDataURL(file);
-            });
-            event.target.value = '';
-        }
-
-        function removeIGScreenshot(index) {
-            brandPresets.igScreenshots.splice(index, 1);
-            renderIGGallery();
-            saveBrandPresetsToIDB();
-        }
-
-        function renderIGGallery() {
-            var gallery = document.getElementById('igGallery');
-            if (\!gallery) return;
-            gallery.innerHTML = '';
-            (brandPresets.igScreenshots || []).forEach(function(dataUrl, i) {
-                var item = document.createElement('div');
-                item.className = 'ig-gallery-item';
-                item.innerHTML = '<img src="' + dataUrl + '" alt="IG ref ' + (i+1) + '"><button class="ig-remove" onclick="removeIGScreenshot(' + i + ')">\u00d7</button>';
-                gallery.appendChild(item);
-            });
-            var zone = document.createElement('div');
-            zone.className = 'ig-upload-zone';
-            zone.onclick = function() { document.getElementById('igFileInput').click(); };
-            zone.innerHTML = '<span style="font-size:24px;">+</span><span>Nahr\u00e1t</span>';
-            gallery.appendChild(zone);
-        }
-
-        // Get brand style for image prompt injection
-        function getBrandStylePrompt(templateKey) {
-            var parts = [];
-            var mainEl = document.getElementById('brandStyleMain');
-            var mainStyle = (mainEl && mainEl.value.trim()) || brandPresets.styleMain || '';
-            if (mainStyle) parts.push('BRAND STYLE REFERENCE: ' + mainStyle);
-            var layoutId = 'layoutDesc' + templateKey.replace('template', '');
-            var layoutEl = document.getElementById(layoutId);
-            var layoutDesc = (layoutEl && layoutEl.value.trim()) || brandPresets[layoutId] || '';
-            if (layoutDesc) parts.push('LAYOUT DETAILS: ' + layoutDesc);
-            var navy = (brandPresets.colors && brandPresets.colors.navy) || '#0C2340';
-            var teal = (brandPresets.colors && brandPresets.colors.teal) || '#00B4D8';
-            var white = (brandPresets.colors && brandPresets.colors.white) || '#FFFFFF';
-            var gray = (brandPresets.colors && brandPresets.colors.gray) || '#F0F4F8';
-            parts.push('STRICT color palette: teal ' + teal + ' (accents, CTA buttons, numbered circles), navy ' + navy + ' (headings, text blocks), white ' + white + ' (backgrounds), light gray ' + gray + ' (section backgrounds). Red #E53935 only for myth X icons. Green #43A047 only for reality checkmarks. No other colors allowed.');
-            return parts.join(' ');
-        }
 
         // ================== BRAND KIT — LOGO ==================
         var brandLogo = { dataUrl: null, position: 'top-right', sizePercent: 15, paddingPercent: 5 };
@@ -2551,73 +2542,7 @@
             reader.readAsDataURL(file);
         }
 
-        function saveBrandLogoToIDB() {
-            try {
-                var request = indexedDB.open('MarketingAgentDB', 2);
-                request.onupgradeneeded = function(e) {
-                    var db = e.target.result;
-                    if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles', { keyPath: 'id' });
-                    if (!db.objectStoreNames.contains('brandkit')) db.createObjectStore('brandkit', { keyPath: 'id' });
-                };
-                request.onsuccess = function(e) {
-                    var db = e.target.result;
-                    if (!db.objectStoreNames.contains('brandkit')) return;
-                    var tx = db.transaction('brandkit', 'readwrite');
-                    tx.objectStore('brandkit').put({ id: 'logo', data: brandLogo });
-                };
-            } catch(e) { console.warn('Cannot save logo to IDB:', e); }
-        }
-
-        function loadBrandLogoFromIDB() {
-            try {
-                var request = indexedDB.open('MarketingAgentDB', 2);
-                request.onupgradeneeded = function(e) {
-                    var db = e.target.result;
-                    if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles', { keyPath: 'id' });
-                    if (!db.objectStoreNames.contains('brandkit')) db.createObjectStore('brandkit', { keyPath: 'id' });
-                };
-                request.onsuccess = function(e) {
-                    var db = e.target.result;
-                    if (!db.objectStoreNames.contains('brandkit')) return;
-                    var tx = db.transaction('brandkit', 'readonly');
-                    var getReq = tx.objectStore('brandkit').get('logo');
-                    getReq.onsuccess = function() {
-                        if (getReq.result && getReq.result.data) {
-                            brandLogo = getReq.result.data;
-                            if (brandLogo.dataUrl) {
-                                var img = document.getElementById('logoImg');
-                                if (img) {
-                                    img.src = brandLogo.dataUrl;
-                                    img.style.display = 'block';
-                                    document.getElementById('logoEmpty').style.display = 'none';
-                                    document.getElementById('logoPreview').classList.add('has-logo');
-                                    document.getElementById('removeLogo').style.display = 'inline-block';
-                                }
-                            }
-                            // Restore position
-                            var posBtn = document.querySelector('.pos-btn[data-pos="' + brandLogo.position + '"]');
-                            if (posBtn) {
-                                document.querySelectorAll('.pos-btn').forEach(function(b) { b.classList.remove('active'); });
-                                posBtn.classList.add('active');
-                            }
-                            // Restore sliders
-                            var sizeSlider = document.getElementById('logoSize');
-                            if (sizeSlider && brandLogo.sizePercent) {
-                                sizeSlider.value = brandLogo.sizePercent;
-                                document.getElementById('logoSizeValue').textContent = brandLogo.sizePercent;
-                            }
-                            var paddingSlider = document.getElementById('logoPadding');
-                            if (paddingSlider && brandLogo.paddingPercent) {
-                                paddingSlider.value = brandLogo.paddingPercent;
-                                document.getElementById('logoPaddingValue').textContent = brandLogo.paddingPercent;
-                            }
-                        }
-                    };
-                };
-            } catch(e) { console.warn('Cannot load logo from IDB:', e); }
-        }
-
-        // Canvas overlay function — called after image generation
+// Canvas overlay function — called after image generation
         function applyLogoOverlay(base64Image) {
             return new Promise(function(resolve) {
                 if (!brandLogo.dataUrl) { resolve(base64Image); return; }
@@ -3776,6 +3701,7 @@
                     } catch (e) {
                         console.error('Load settings failed:', e);
                     }
+                    try { await loadBrandPresets(); await loadBrandLogoFromIDB(); } catch(e2) { console.warn('[GDrive] Brand load err:', e2); }
                 }
             });
         });
