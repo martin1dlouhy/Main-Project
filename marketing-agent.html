@@ -3270,7 +3270,19 @@
                         customTone: customSettings.tone,
                         brandId: activeBrandId,
                         brandName: getActiveBrand().name,
-                        referencePosts: referencePosts
+                        referencePosts: referencePosts,
+                        // Complete brand context
+                        brandAudiences: (customSettings.audiences || []).map(function(a) { return a.name + ': ' + a.desc; }),
+                        brandPillars: customSettings.contentPillars || {},
+                        brandColors: brandPresets.colors || {},
+                        brandStyleDesc: brandPresets.styleMain || '',
+                        brandLayoutDescs: {
+                            A: brandPresets.layoutDescA || '',
+                            B: brandPresets.layoutDescB || '',
+                            C: brandPresets.layoutDescC || '',
+                            D: brandPresets.layoutDescD || '',
+                            E: brandPresets.layoutDescE || ''
+                        }
                     })
                 });
 

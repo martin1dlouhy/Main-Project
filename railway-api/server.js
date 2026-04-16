@@ -604,6 +604,12 @@ app.post('/api/marketing/generate', async function (req, res) {
     var customTone = Array.isArray(body.customTone) ? body.customTone : [];
     var generateImage = body.generateImage || false;
     var imageSettings = body.imageSettings || {};
+    // Complete brand context from frontend
+    var brandAudiences = Array.isArray(body.brandAudiences) ? body.brandAudiences : [];
+    var brandPillars = body.brandPillars || {};
+    var brandColors = body.brandColors || {};
+    var brandStyleDesc = typeof body.brandStyleDesc === 'string' ? body.brandStyleDesc.trim() : '';
+    var brandLayoutDescs = body.brandLayoutDescs || {};
     // Výběr OpenAI modelu pro text — default gpt-4o-mini, povolené i gpt-4o
     var allowedTextModels = ['gpt-4o-mini', 'gpt-4o'];
     var textModel = allowedTextModels.indexOf(body.textModel) !== -1 ? body.textModel : 'gpt-4o-mini';
@@ -614,17 +620,51 @@ app.post('/api/marketing/generate', async function (req, res) {
 
     var openai = new OpenAI({ apiKey: openaiKey });
 
-    // Build ProfiLend knowledge context
-    var knowledgeBase = 'ZNALOSTNÍ BÁZE — ProfiLend:\n' +
-        '- ProfiLend poskytuje nebankovní financování zajištěné nemovitostmi v ČR\n' +
-        '- Objem: 10–250 mil. Kč, LTV max 70%, sazba od 9% p.a., splatnost 1–20 let\n' +
-        '- Portfolio přesáhlo 1,3 mld. Kč, rozhodnutí do 48 hodin\n' +
-        '- Pouze právnické osoby, pouze české nemovitosti\n' +
-        '- Tón komunikace: věcný, sebevědomý, lidský, přímý, expertní\n' +
-        '- Obsahové pilíře: Produkt/proces 30%, Případovka 25%, Edukace 25%, Značka 20%\n' +
-        '- Schválené CTA: "Zjistit více na ProfiLend.cz", "Napište nám", "Konzultace zdarma", "Začněte s ProfiLend dnes", "Nezávazná konzultace"\n' +
-        '- ZAKÁZANÁ slova: "nejlevnější", "garantujeme", "bez rizika", "100%", "okamžitě", "senzační", "revoluční", "převratný", "bombastický", "neuvěřitelný", "fantastický", "zázračný", "exkluzivní nabídka"\n' +
-        '- Web: profilend.cz\n';
+    // Build knowledge context from brand settings (dynamic, not hardcoded)
+    var knowledgeBase = 'ZNALOSTNÍ BÁZE — ' + brandName + ':\n';
+    
+    // Audiences from brand settings
+    if (brandAudiences.length > 0) {
+        knowledgeBase += 'CÍLOVÉ SKUPINY:\n';
+        brandAudiences.forEach(function(a) { knowledgeBase += '- ' + a + '\n'; });
+    }
+    
+    // Content pillars with percentages
+    var pillarKeys = Object.keys(brandPillars);
+    if (pillarKeys.length > 0) {
+        knowledgeBase += 'OBSAHOVÉ PILÍŘE: ';
+        knowledgeBase += pillarKeys.map(function(k) { return k + ' ' + brandPillars[k] + '%'; }).join(', ');
+        knowledgeBase += '\n';
+    }
+    
+    // Brand colors
+    if (brandColors && Object.keys(brandColors).length > 0) {
+        knowledgeBase += 'FIREMNÍ BARVY: ';
+        var colorParts = [];
+        if (brandColors.navy) colorParts.push('Navy ' + brandColors.navy);
+        if (brandColors.teal) colorParts.push('Teal ' + brandColors.teal);
+        if (brandColors.white) colorParts.push('White ' + brandColors.white);
+        if (brandColors.gray) colorParts.push('Gray ' + brandColors.gray);
+        if (brandColors.primary) colorParts.push('Primary ' + brandColors.primary);
+        if (brandColors.secondary) colorParts.push('Secondary ' + brandColors.secondary);
+        knowledgeBase += colorParts.join(', ') + '\n';
+    }
+    
+    // Visual style description from Brand Kit
+    if (brandStyleDesc) {
+        knowledgeBase += 'VIZUÁLNÍ STYL ZNAČKY: ' + brandStyleDesc + '\n';
+    }
+    
+    // Layout descriptions from Brand Kit
+    var layoutParts = [];
+    ['A','B','C','D','E'].forEach(function(key) {
+        if (brandLayoutDescs[key]) layoutParts.push('Layout ' + key + ': ' + brandLayoutDescs[key]);
+    });
+    if (layoutParts.length > 0) {
+        knowledgeBase += 'POPISY LAYOUTŮ PRO OBRÁZKY:\n' + layoutParts.join('\n') + '\n';
+    }
+    
+    knowledgeBase += '\n';
 
     var channelRules = {
         instagram: 'Kanál Instagram: tykání, max 2200 znaků, emoji přípustné dle nastavení, hashtagy na konci.',
@@ -706,7 +746,7 @@ app.post('/api/marketing/generate', async function (req, res) {
     var imageFieldSpec = generateImage
         ? ',\n' +
           '      "visualHook": "KRÁTKÁ hláška 3–8 slov určená k vložení PŘÍMO DO OBRÁZKU (bez hashtagů, bez CTA; konkrétní, čitelná, bez diakritiky pokud to zlepší čitelnost)",\n' +
-          '      "imagePrompt": "ANGLICKÝ popis obrázku pro DALL·E/gpt-image-1 (1–3 věty). MUSÍ obsahovat pokyn, že text \\"VISUAL_HOOK\\" má být vysazen jako typografie uvnitř kompozice (bold sans-serif). Styl: profesionální B2B finanční služby, minimalistický design, barvy tyrkysová (#00B4D8), navy (#1A2B4A), bílá. Bez stock photo klišé, bez neonových barev."'
+          '      "imagePrompt": "ANGLICKÝ popis obrázku pro DALL·E/gpt-image-1 (1–3 věty). MUSÍ obsahovat pokyn, že text \\"VISUAL_HOOK\\" má být vysazen jako typografie uvnitř kompozice (bold sans-serif). Styl: profesionální B2B design, minimalistický layout. Použij PŘESNÉ firemní barvy: ' + (brandColors.teal || '#00B4D8') + ' (akcenty), ' + (brandColors.navy || '#1A2B4A') + ' (nadpisy), bílá (pozadí). Bez stock photo klišé, bez neonových barev.' + (brandStyleDesc ? ' Vizuální styl: ' + brandStyleDesc.substring(0, 200) : '') + '"'
         : '';
 
     var imageInstructions = generateImage
