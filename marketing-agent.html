@@ -1385,6 +1385,86 @@
             cursor: pointer;
         }
 
+        /* ===================== SETTINGS TABS ===================== */
+        .settings-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+        .settings-tab {
+            padding: 0.75rem 1.5rem;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .settings-tab:hover { color: var(--text-primary); }
+        .settings-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+        .settings-tab-content { display: none; }
+        .settings-tab-content.active { display: block; }
+        /* IG REFERENCE GALLERY */
+        .ig-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+        .ig-gallery-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1.5px solid var(--border-color);
+            aspect-ratio: 1;
+            background: var(--bg-surface);
+        }
+        .ig-gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+        .ig-gallery-item .ig-remove {
+            position: absolute; top: 4px; right: 4px;
+            width: 24px; height: 24px; border-radius: 50%;
+            background: rgba(0,0,0,0.65); color: white;
+            border: none; cursor: pointer; font-size: 14px;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .ig-gallery-item:hover .ig-remove { opacity: 1; }
+        .ig-upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 10px; aspect-ratio: 1;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.3s;
+            color: var(--text-secondary); font-size: 12px; gap: 0.25rem;
+        }
+        .ig-upload-zone:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            color: var(--accent);
+        }
+        .style-desc-textarea {
+            width: 100%; min-height: 100px; padding: 0.75rem;
+            border: 1.5px solid var(--border-color); border-radius: 8px;
+            background: var(--bg-surface); color: var(--text-primary);
+            font-family: inherit; font-size: 13px; resize: vertical;
+            transition: border-color 0.2s;
+        }
+        .style-desc-textarea:focus { outline: none; border-color: var(--accent); }
+        .preset-indicator {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.25rem 0.75rem; border-radius: 20px;
+            font-size: 11px; font-weight: 600;
+        }
+        .preset-indicator.active { background: rgba(34,197,94,0.15); color: #22C55E; }
+
         /* ===================== BRAND KIT ===================== */
         .logo-upload-area {
             border: 2px dashed var(--border-color);
@@ -1944,9 +2024,18 @@
             <!-- NASTAVENÍ MODULE -->
             <div class="module" id="module-nastaveni">
                 <div style="padding: 2rem; max-width: 900px; margin: 0 auto;">
-                    <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem;">AI Nastavení</h2>
+                    <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">Nastavení</h2>
 
-                    <!-- OneDrive Connection -->
+                    <\!-- Settings Tabs -->
+                    <div class="settings-tabs">
+                        <button class="settings-tab active" data-settings-tab="ai">AI Nastavení</button>
+                        <button class="settings-tab" data-settings-tab="profilend">ProfiLend Brand</button>
+                    </div>
+
+                    <\!-- TAB: AI Nastavení -->
+                    <div class="settings-tab-content active" id="settingsTab-ai">
+
+                    <\!-- OneDrive Connection -->
                     <div class="onedrive-connection" id="onedriveBar">
                         <div class="onedrive-status">
                             <span style="font-size: 20px;">📁</span>
@@ -2053,6 +2142,60 @@
                             </div>
                         </div>
                     </div>
+
+                    </div><\!-- /settingsTab-ai -->
+
+                    <\!-- TAB: ProfiLend Brand -->
+                    <div class="settings-tab-content" id="settingsTab-profilend">
+                        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+
+                            <div class="setting-card-editable" style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <h4>ProfiLend Brand Preset</h4>
+                                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 0.25rem;">Vlastní styl a reference se automaticky zapracují do každého image promptu</p>
+                                </div>
+                                <span class="preset-indicator active" id="brandPresetStatus">● Aktivní</span>
+                            </div>
+
+                            <div class="setting-card-editable">
+                                <h4>Vizuální styl — hlavní popis</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 0.75rem;">Detailní popis vizuálního stylu pro image prompt.</p>
+                                <textarea class="style-desc-textarea" id="brandStyleMain" rows="5">Čistý, moderní korporátní design. Dominantní barvy: navy (#0C2340) a teal (#00B4D8). Bílé pozadí nebo jemně šedé (#F0F4F8). Infografický styl s číslovanými kroky (1, 2, 3, 4) v tealových kruzích. Velkorysý bílý prostor. Sans-serif typografie (DM Sans / Inter). Žádné stock fotky, žádné neonové barvy. Profesionální fintech estetika.</textarea>
+                            </div>
+
+                            <div class="setting-card-editable">
+                                <h4>Preferované layouty</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 0.75rem;">Popisy layoutů pro každou šablonu — zapracují se do AI promptu.</p>
+                                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">A — Procesní infografika</label><textarea class="style-desc-textarea" id="layoutDescA" rows="3">Číslované kroky (1-4) vertikálně. Každý krok má tealový kruh, tučný nadpis, krátký popis. Světle šedé pozadí. CTA tlačítko dole.</textarea></div>
+                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">B — Mýtus vs. Realita</label><textarea class="style-desc-textarea" id="layoutDescB" rows="3">Nahoře červený X s mýtem, dole zelený check s faktem. Bílé pozadí. Tučná sans-serif typografie.</textarea></div>
+                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">C — Srovnání</label><textarea class="style-desc-textarea" id="layoutDescC" rows="3">Dva sloupce s tealovým dělítkem. Každý má ikonu a body. Bílé pozadí se šedým panelem.</textarea></div>
+                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">D — Headline banner</label><textarea class="style-desc-textarea" id="layoutDescD" rows="3">Velký statement (max 8 slov). Navy/bílé pozadí. Tealové akcentní linie. CTA tlačítko.</textarea></div>
+                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">E — Foto s overlayem</label><textarea class="style-desc-textarea" id="layoutDescE" rows="3">Fotografie (35-50% průhlednost) s tmavým gradientem. Bílý headline. Datové body v tealových boxech.</textarea></div>
+                                </div>
+                            </div>
+
+                            <div class="setting-card-editable">
+                                <h4>Instagram reference</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 0.75rem;">Screenshoty nejlepších IG příspěvků jako vizuální reference.</p>
+                                <div class="ig-gallery" id="igGallery">
+                                    <div class="ig-upload-zone" onclick="document.getElementById('igFileInput').click()"><span style="font-size:24px;">+</span><span>Nahrát</span></div>
+                                </div>
+                                <input type="file" id="igFileInput" accept="image/*" multiple style="display:none;" onchange="handleIGUpload(event)">
+                            </div>
+
+                            <div class="setting-card-editable">
+                                <h4>Brand barvy</h4>
+                                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 0.75rem;">Automaticky se vkládají do image promptu.</p>
+                                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;">
+                                    <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorNavy" value="#0C2340" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Navy</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorNavyHex">#0C2340</div></div></div>
+                                    <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorTeal" value="#00B4D8" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Teal</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorTealHex">#00B4D8</div></div></div>
+                                    <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorWhite" value="#FFFFFF" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Bílá</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorWhiteHex">#FFFFFF</div></div></div>
+                                    <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorGray" value="#F0F4F8" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Sv. šedá</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorGrayHex">#F0F4F8</div></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div><\!-- /settingsTab-profilend -->
 
                     <!-- Save Bar -->
                     <div class="settings-save-bar">
@@ -2167,6 +2310,159 @@
     <script>
         // Global store for generated posts (for download)
         let generatedPosts = [];
+
+
+        // ================== SETTINGS TABS ==================
+        document.querySelectorAll('.settings-tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.settings-tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelectorAll('.settings-tab-content').forEach(function(c) { c.classList.remove('active'); });
+                this.classList.add('active');
+                var targetId = 'settingsTab-' + this.getAttribute('data-settings-tab');
+                var target = document.getElementById(targetId);
+                if (target) target.classList.add('active');
+            });
+        });
+
+        // ================== PROFILEND BRAND PRESETS ==================
+        var brandPresets = {
+            styleMain: '', layoutDescA: '', layoutDescB: '', layoutDescC: '', layoutDescD: '', layoutDescE: '',
+            colors: { navy: '#0C2340', teal: '#00B4D8', white: '#FFFFFF', gray: '#F0F4F8' },
+            igScreenshots: []
+        };
+
+        function initBrandPresets() {
+            loadBrandPresetsFromIDB();
+            ['Navy','Teal','White','Gray'].forEach(function(name) {
+                var input = document.getElementById('brandColor' + name);
+                if (input) input.addEventListener('input', function() {
+                    var hex = document.getElementById('brandColor' + name + 'Hex');
+                    if (hex) hex.textContent = this.value.toUpperCase();
+                    brandPresets.colors[name.toLowerCase()] = this.value.toUpperCase();
+                    saveBrandPresetsToIDB();
+                });
+            });
+            ['brandStyleMain','layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('change', function() {
+                    if (id === 'brandStyleMain') brandPresets.styleMain = this.value;
+                    else brandPresets[id] = this.value;
+                    saveBrandPresetsToIDB();
+                });
+            });
+        }
+
+        function saveBrandPresetsToIDB() {
+            var mainEl = document.getElementById('brandStyleMain');
+            if (mainEl) brandPresets.styleMain = mainEl.value;
+            ['layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id) {
+                var el = document.getElementById(id); if (el) brandPresets[id] = el.value;
+            });
+            var request = indexedDB.open('MarketingAgentDB', 2);
+            request.onupgradeneeded = function(e) {
+                var db = e.target.result;
+                if (\!db.objectStoreNames.contains('brandkit')) db.createObjectStore('brandkit', { keyPath: 'id' });
+                if (\!db.objectStoreNames.contains('brandpresets')) db.createObjectStore('brandpresets', { keyPath: 'id' });
+            };
+            request.onsuccess = function(e) {
+                var db = e.target.result;
+                if (\!db.objectStoreNames.contains('brandpresets')) return;
+                var tx = db.transaction('brandpresets', 'readwrite');
+                tx.objectStore('brandpresets').put({ id: 'presets', data: brandPresets });
+            };
+        }
+
+        function loadBrandPresetsFromIDB() {
+            var request = indexedDB.open('MarketingAgentDB', 2);
+            request.onupgradeneeded = function(e) {
+                var db = e.target.result;
+                if (\!db.objectStoreNames.contains('brandkit')) db.createObjectStore('brandkit', { keyPath: 'id' });
+                if (\!db.objectStoreNames.contains('brandpresets')) db.createObjectStore('brandpresets', { keyPath: 'id' });
+            };
+            request.onsuccess = function(e) {
+                var db = e.target.result;
+                if (\!db.objectStoreNames.contains('brandpresets')) return;
+                var tx = db.transaction('brandpresets', 'readonly');
+                var getReq = tx.objectStore('brandpresets').get('presets');
+                getReq.onsuccess = function() {
+                    if (getReq.result && getReq.result.data) {
+                        brandPresets = getReq.result.data;
+                        var mainEl = document.getElementById('brandStyleMain');
+                        if (mainEl && brandPresets.styleMain) mainEl.value = brandPresets.styleMain;
+                        ['layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id) {
+                            var el = document.getElementById(id); if (el && brandPresets[id]) el.value = brandPresets[id];
+                        });
+                        if (brandPresets.colors) {
+                            ['Navy','Teal','White','Gray'].forEach(function(name) {
+                                var input = document.getElementById('brandColor' + name);
+                                var hex = document.getElementById('brandColor' + name + 'Hex');
+                                var val = brandPresets.colors[name.toLowerCase()];
+                                if (input && val) { input.value = val; if (hex) hex.textContent = val; }
+                            });
+                        }
+                        if (brandPresets.igScreenshots && brandPresets.igScreenshots.length > 0) renderIGGallery();
+                    }
+                };
+            };
+        }
+
+        // IG Screenshot gallery
+        function handleIGUpload(event) {
+            var files = event.target.files;
+            if (\!files || files.length === 0) return;
+            Array.from(files).forEach(function(file) {
+                if (\!file.type.startsWith('image/')) return;
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    brandPresets.igScreenshots.push(e.target.result);
+                    renderIGGallery();
+                    saveBrandPresetsToIDB();
+                };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = '';
+        }
+
+        function removeIGScreenshot(index) {
+            brandPresets.igScreenshots.splice(index, 1);
+            renderIGGallery();
+            saveBrandPresetsToIDB();
+        }
+
+        function renderIGGallery() {
+            var gallery = document.getElementById('igGallery');
+            if (\!gallery) return;
+            gallery.innerHTML = '';
+            (brandPresets.igScreenshots || []).forEach(function(dataUrl, i) {
+                var item = document.createElement('div');
+                item.className = 'ig-gallery-item';
+                item.innerHTML = '<img src="' + dataUrl + '" alt="IG ref ' + (i+1) + '"><button class="ig-remove" onclick="removeIGScreenshot(' + i + ')">\u00d7</button>';
+                gallery.appendChild(item);
+            });
+            var zone = document.createElement('div');
+            zone.className = 'ig-upload-zone';
+            zone.onclick = function() { document.getElementById('igFileInput').click(); };
+            zone.innerHTML = '<span style="font-size:24px;">+</span><span>Nahr\u00e1t</span>';
+            gallery.appendChild(zone);
+        }
+
+        // Get brand style for image prompt injection
+        function getBrandStylePrompt(templateKey) {
+            var parts = [];
+            var mainEl = document.getElementById('brandStyleMain');
+            var mainStyle = (mainEl && mainEl.value.trim()) || brandPresets.styleMain || '';
+            if (mainStyle) parts.push('BRAND STYLE REFERENCE: ' + mainStyle);
+            var layoutId = 'layoutDesc' + templateKey.replace('template', '');
+            var layoutEl = document.getElementById(layoutId);
+            var layoutDesc = (layoutEl && layoutEl.value.trim()) || brandPresets[layoutId] || '';
+            if (layoutDesc) parts.push('LAYOUT DETAILS: ' + layoutDesc);
+            var navy = (brandPresets.colors && brandPresets.colors.navy) || '#0C2340';
+            var teal = (brandPresets.colors && brandPresets.colors.teal) || '#00B4D8';
+            var white = (brandPresets.colors && brandPresets.colors.white) || '#FFFFFF';
+            var gray = (brandPresets.colors && brandPresets.colors.gray) || '#F0F4F8';
+            parts.push('STRICT color palette: teal ' + teal + ' (accents, CTA buttons, numbered circles), navy ' + navy + ' (headings, text blocks), white ' + white + ' (backgrounds), light gray ' + gray + ' (section backgrounds). Red #E53935 only for myth X icons. Green #43A047 only for reality checkmarks. No other colors allowed.');
+            return parts.join(' ');
+        }
 
         // ================== BRAND KIT — LOGO ==================
         var brandLogo = { dataUrl: null, position: 'top-right', sizePercent: 15, paddingPercent: 5 };
@@ -2368,6 +2664,7 @@
             initCustomDropdowns();
             initBatchSelector();
             initBrandKit();
+            initBrandPresets();
             tryReconnectOneDrive();
         });
 
@@ -2994,7 +3291,7 @@
             prompt += peopleMap[people] || '';
             prompt += sceneMap[scene] || '';
             prompt += moodMap[mood] || '';
-            prompt += `STRICT color palette: teal/turquoise #00B4D8 (accents, CTA buttons, numbered circles), navy dark #0C2340 (headings, text blocks), white #FFFFFF (backgrounds), light gray #F0F4F8 (section backgrounds). Red #E53935 only for "myth" X icons. Green #43A047 only for "reality" checkmarks. No other colors allowed. `;
+            prompt += getBrandStylePrompt(visualType) + ' ';
             prompt += `Format: ${format}. `;
             prompt += `Sans-serif typography similar to DM Sans or Inter. Bold headings, clean modern design, high contrast text readable on mobile. Maximum 2 font sizes per design. `;
             prompt += `NEVER include any logo or brand text — logo will be added as overlay. No stock photo clichés, no neon colors, no excessive gradients, no decorative fonts, no 3D icons. `;
