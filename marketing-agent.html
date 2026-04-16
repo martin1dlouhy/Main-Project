@@ -4121,18 +4121,19 @@
                 var now = new Date();
                 var dateStr = now.toISOString().slice(0, 10);
                 var timeStr = now.toISOString().slice(11, 16).replace(':', '-');
-                var fileName = getBrandGDrivePrefix() + 'generated_' + dateStr + '_' + timeStr + '_post' + (index + 1) + '.txt';
+                var chEl = document.querySelector('[data-name="channel"] .custom-dropdown-trigger');
+                var channel = chEl ? chEl.getAttribute('data-value') : 'post';
+                var fileName = 'social-network-posts/' + dateStr + '_' + timeStr + '_' + channel + '_post' + (index + 1) + '.txt';
                 var content = '=== Marketing Agent — Vygenerovaný příspěvek ===\n';
                 content += 'Datum: ' + now.toLocaleString('cs-CZ') + '\n';
-                var chSel = document.getElementById('channelSelect');
-                content += 'Kanál: ' + (chSel ? chSel.value : '') + '\n';
+                content += 'Kanál: ' + channel + '\n';
                 content += '=========================================\n\n';
                 content += post.text + '\n';
                 if (post.hook) content += '\nHook: ' + post.hook + '\n';
                 if (post.cta) content += 'CTA: ' + post.cta + '\n';
+                if (post.visualHook) content += '\nVisual Hook: ' + post.visualHook + '\n';
                 if (post.imagePrompt) content += '\nImage Prompt:\n' + post.imagePrompt + '\n';
-                // Save in app root as single file (GDrive doesn't have subfolders per saveFile)
-                await GDriveSync.saveFile(fileName.replace('/', '_'), content, 'text/plain');
+                await GDriveSync.saveFile(fileName, content, 'text/plain');
             } catch (e) {
                 console.warn('Could not save post to Google Drive:', e);
             }
@@ -4144,13 +4145,15 @@
                 var now = new Date();
                 var dateStr = now.toISOString().slice(0, 10);
                 var timeStr = now.toISOString().slice(11, 16).replace(':', '-');
-                var fileName = 'generated_' + dateStr + '_' + timeStr + '_image' + (index + 1) + '.png';
+                var chEl = document.querySelector('[data-name="channel"] .custom-dropdown-trigger');
+                var channel = chEl ? chEl.getAttribute('data-value') : 'post';
+                var fileName = 'social-network-posts/' + dateStr + '_' + timeStr + '_' + channel + '_image' + (index + 1) + '.png';
                 var byteChars = atob(base64Data);
                 var byteArr = new Uint8Array(byteChars.length);
                 for (var i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
                 var blob = new Blob([byteArr], { type: 'image/png' });
                 await GDriveSync.saveBinary(fileName, blob, 'image/png');
-                showToast('Obrázek uložen do Google Drive', 'success');
+                showToast('Obrázek uložen na Google Drive', 'success');
             } catch (e) {
                 console.warn('Could not save image to Google Drive:', e);
             }
