@@ -1385,6 +1385,89 @@
             cursor: pointer;
         }
 
+        /* ===================== BRAND KIT ===================== */
+        .logo-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--bg-surface);
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo-upload-area:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+        .logo-upload-area.has-logo {
+            border-style: solid;
+            border-color: var(--accent);
+            background: var(--bg-primary);
+        }
+        .logo-position-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            max-width: 180px;
+            margin-top: 0.5rem;
+        }
+        .pos-btn {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pos-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .pos-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        /* Range slider styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-surface);
+            outline: none;
+            margin-top: 0.5rem;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
         /* ===================== RESPONSIVE ===================== */
         @media (max-width: 1200px) {
             .generator-container {
@@ -1497,6 +1580,12 @@
                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </div>
                 <span class="sidebar-label">Nastavení</span>
+            </button>
+            <button class="sidebar-item" data-module="brandkit">
+                <div class="sidebar-icon" style="background: linear-gradient(135deg, #FDA4AF 0%, #FB7185 25%, #F43F5E 55%, #E11D48 100%);">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+                </div>
+                <span class="sidebar-label">Brand Kit</span>
             </button>
             <button class="sidebar-item" data-module="kalendar">
                 <div class="sidebar-icon" style="background: linear-gradient(135deg, #FDE68A 0%, #FBBF24 25%, #F59E0B 55%, #D97706 100%);">
@@ -1721,14 +1810,13 @@
                                 <div class="form-group">
                                     <label class="form-label required">Typ vizuálu</label>
                                     <div class="custom-dropdown" data-name="visualType">
-                                        <div class="custom-dropdown-trigger" data-value="typ1">Typ 1 - Statický banner</div>
+                                        <div class="custom-dropdown-trigger" data-value="templateB">B — Mýtus vs. Realita</div>
                                         <div class="custom-dropdown-menu">
-                                            <div class="custom-dropdown-option selected" data-value="typ1">Typ 1 - Statický banner</div>
-                                            <div class="custom-dropdown-option" data-value="typ2">Typ 2 - Infografika</div>
-                                            <div class="custom-dropdown-option" data-value="typ3">Typ 3 - Slovník investora</div>
-                                            <div class="custom-dropdown-option" data-value="typ4">Typ 4 - Mýtus vs. realita</div>
-                                            <div class="custom-dropdown-option" data-value="typ5a">Typ 5A - Podnikatel (pruh dole)</div>
-                                            <div class="custom-dropdown-option" data-value="typ5b">Typ 5B - Podnikatel (text přes fotku)</div>
+                                            <div class="custom-dropdown-option" data-value="templateA">A — Procesní infografika (kroky 1-2-3-4)</div>
+                                            <div class="custom-dropdown-option selected" data-value="templateB">B — Mýtus vs. Realita</div>
+                                            <div class="custom-dropdown-option" data-value="templateC">C — Srovnání (dva sloupce)</div>
+                                            <div class="custom-dropdown-option" data-value="templateD">D — Headline banner (statistika/USP)</div>
+                                            <div class="custom-dropdown-option" data-value="templateE">E — Foto s textovým overlayem</div>
                                         </div>
                                     </div>
                                 </div>
@@ -1973,6 +2061,68 @@
                 </div>
             </div>
 
+            <!-- BRAND KIT MODULE -->
+            <div class="module" id="module-brandkit">
+                <div class="settings-container" style="max-width: 900px; margin: 0 auto;">
+                    <div class="form-column" style="grid-column: 1;">
+                        <!-- Logo Upload Section -->
+                        <div class="form-section">
+                            <h3>Logo ProfiLend</h3>
+                            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:1rem;">Nahrajte transparentní PNG logo. Logo se automaticky přidá na generované obrázky.</p>
+
+                            <!-- Logo preview area -->
+                            <div id="logoPreview" class="logo-upload-area" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-surface); min-height: 120px; display: flex; align-items: center; justify-content: center;">
+                                <div id="logoEmpty">Klikněte nebo přetáhněte PNG logo</div>
+                                <img id="logoImg" style="display:none; max-width:200px; max-height:80px;" />
+                            </div>
+                            <input type="file" id="logoUpload" accept="image/png" style="display:none" />
+
+                            <!-- Logo position selector -->
+                            <div class="form-group" style="margin-top:1rem;">
+                                <label class="form-label">Pozice loga</label>
+                                <div class="logo-position-grid">
+                                    <button data-pos="top-left" class="pos-btn">↖</button>
+                                    <button data-pos="top-center" class="pos-btn">↑</button>
+                                    <button data-pos="top-right" class="pos-btn active">↗</button>
+                                    <button data-pos="middle-left" class="pos-btn">←</button>
+                                    <button data-pos="middle-center" class="pos-btn">·</button>
+                                    <button data-pos="middle-right" class="pos-btn">→</button>
+                                    <button data-pos="bottom-left" class="pos-btn">↙</button>
+                                    <button data-pos="bottom-center" class="pos-btn">↓</button>
+                                    <button data-pos="bottom-right" class="pos-btn">↘</button>
+                                </div>
+                            </div>
+
+                            <!-- Logo size slider -->
+                            <div class="form-group">
+                                <label class="form-label">Velikost loga: <span id="logoSizeValue">15</span>%</label>
+                                <input type="range" id="logoSize" min="8" max="30" value="15" />
+                            </div>
+
+                            <!-- Logo padding -->
+                            <div class="form-group">
+                                <label class="form-label">Odsazení od okraje: <span id="logoPaddingValue">5</span>%</label>
+                                <input type="range" id="logoPadding" min="2" max="15" value="5" />
+                            </div>
+
+                            <!-- Remove logo button -->
+                            <button id="removeLogo" style="display:none; margin-top:1rem;" class="btn btn-secondary">Odebrat logo</button>
+                        </div>
+
+                        <!-- Brand Colors Section -->
+                        <div class="form-section">
+                            <h3>Firemní barvy</h3>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                                <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Navy Dark</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#0C2340;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#0C2340</span></div></div>
+                                <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Teal</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#00B4D8;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#00B4D8</span></div></div>
+                                <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Bílá</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#FFFFFF;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#FFFFFF</span></div></div>
+                                <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Světle šedá</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#F0F4F8;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#F0F4F8</span></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- KALENDÁŘ MODULE -->
             <div class="module" id="module-kalendar">
                 <div class="placeholder-module">
@@ -2018,12 +2168,206 @@
         // Global store for generated posts (for download)
         let generatedPosts = [];
 
+        // ================== BRAND KIT — LOGO ==================
+        var brandLogo = { dataUrl: null, position: 'top-right', sizePercent: 15, paddingPercent: 5 };
+
+        function initBrandKit() {
+            var uploadArea = document.getElementById('logoPreview');
+            var fileInput = document.getElementById('logoUpload');
+
+            if (!uploadArea || !fileInput) return;
+
+            uploadArea.addEventListener('click', function() { fileInput.click(); });
+            uploadArea.addEventListener('dragover', function(e) { e.preventDefault(); uploadArea.style.borderColor = 'var(--accent)'; });
+            uploadArea.addEventListener('dragleave', function() { uploadArea.style.borderColor = ''; });
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.style.borderColor = '';
+                if (e.dataTransfer.files[0]) handleLogoFile(e.dataTransfer.files[0]);
+            });
+            fileInput.addEventListener('change', function() { if (this.files[0]) handleLogoFile(this.files[0]); });
+
+            // Position buttons
+            document.querySelectorAll('.pos-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.pos-btn').forEach(function(b) { b.classList.remove('active'); });
+                    this.classList.add('active');
+                    brandLogo.position = this.getAttribute('data-pos');
+                    saveBrandLogoToIDB();
+                });
+            });
+
+            // Size slider
+            var sizeSlider = document.getElementById('logoSize');
+            if (sizeSlider) {
+                sizeSlider.addEventListener('input', function() {
+                    document.getElementById('logoSizeValue').textContent = this.value;
+                    brandLogo.sizePercent = parseInt(this.value);
+                    saveBrandLogoToIDB();
+                });
+            }
+
+            // Padding slider
+            var paddingSlider = document.getElementById('logoPadding');
+            if (paddingSlider) {
+                paddingSlider.addEventListener('input', function() {
+                    document.getElementById('logoPaddingValue').textContent = this.value;
+                    brandLogo.paddingPercent = parseInt(this.value);
+                    saveBrandLogoToIDB();
+                });
+            }
+
+            // Remove button
+            var removeBtn = document.getElementById('removeLogo');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    brandLogo.dataUrl = null;
+                    document.getElementById('logoImg').style.display = 'none';
+                    document.getElementById('logoEmpty').style.display = 'block';
+                    document.getElementById('logoPreview').classList.remove('has-logo');
+                    removeBtn.style.display = 'none';
+                    saveBrandLogoToIDB();
+                    showToast('Logo odebráno', 'info');
+                });
+            }
+
+            // Load from IndexedDB
+            loadBrandLogoFromIDB();
+        }
+
+        function handleLogoFile(file) {
+            if (file.type !== 'image/png') {
+                showToast('Prosím nahrajte PNG soubor s průhledným pozadím', 'error');
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                brandLogo.dataUrl = e.target.result;
+                var img = document.getElementById('logoImg');
+                img.src = e.target.result;
+                img.style.display = 'block';
+                document.getElementById('logoEmpty').style.display = 'none';
+                document.getElementById('logoPreview').classList.add('has-logo');
+                document.getElementById('removeLogo').style.display = 'inline-block';
+                saveBrandLogoToIDB();
+                showToast('Logo nahráno', 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function saveBrandLogoToIDB() {
+            try {
+                var request = indexedDB.open('MarketingAgentDB', 2);
+                request.onupgradeneeded = function(e) {
+                    var db = e.target.result;
+                    if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles', { keyPath: 'id' });
+                    if (!db.objectStoreNames.contains('brandkit')) db.createObjectStore('brandkit', { keyPath: 'id' });
+                };
+                request.onsuccess = function(e) {
+                    var db = e.target.result;
+                    if (!db.objectStoreNames.contains('brandkit')) return;
+                    var tx = db.transaction('brandkit', 'readwrite');
+                    tx.objectStore('brandkit').put({ id: 'logo', data: brandLogo });
+                };
+            } catch(e) { console.warn('Cannot save logo to IDB:', e); }
+        }
+
+        function loadBrandLogoFromIDB() {
+            try {
+                var request = indexedDB.open('MarketingAgentDB', 2);
+                request.onupgradeneeded = function(e) {
+                    var db = e.target.result;
+                    if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles', { keyPath: 'id' });
+                    if (!db.objectStoreNames.contains('brandkit')) db.createObjectStore('brandkit', { keyPath: 'id' });
+                };
+                request.onsuccess = function(e) {
+                    var db = e.target.result;
+                    if (!db.objectStoreNames.contains('brandkit')) return;
+                    var tx = db.transaction('brandkit', 'readonly');
+                    var getReq = tx.objectStore('brandkit').get('logo');
+                    getReq.onsuccess = function() {
+                        if (getReq.result && getReq.result.data) {
+                            brandLogo = getReq.result.data;
+                            if (brandLogo.dataUrl) {
+                                var img = document.getElementById('logoImg');
+                                if (img) {
+                                    img.src = brandLogo.dataUrl;
+                                    img.style.display = 'block';
+                                    document.getElementById('logoEmpty').style.display = 'none';
+                                    document.getElementById('logoPreview').classList.add('has-logo');
+                                    document.getElementById('removeLogo').style.display = 'inline-block';
+                                }
+                            }
+                            // Restore position
+                            var posBtn = document.querySelector('.pos-btn[data-pos="' + brandLogo.position + '"]');
+                            if (posBtn) {
+                                document.querySelectorAll('.pos-btn').forEach(function(b) { b.classList.remove('active'); });
+                                posBtn.classList.add('active');
+                            }
+                            // Restore sliders
+                            var sizeSlider = document.getElementById('logoSize');
+                            if (sizeSlider && brandLogo.sizePercent) {
+                                sizeSlider.value = brandLogo.sizePercent;
+                                document.getElementById('logoSizeValue').textContent = brandLogo.sizePercent;
+                            }
+                            var paddingSlider = document.getElementById('logoPadding');
+                            if (paddingSlider && brandLogo.paddingPercent) {
+                                paddingSlider.value = brandLogo.paddingPercent;
+                                document.getElementById('logoPaddingValue').textContent = brandLogo.paddingPercent;
+                            }
+                        }
+                    };
+                };
+            } catch(e) { console.warn('Cannot load logo from IDB:', e); }
+        }
+
+        // Canvas overlay function — called after image generation
+        function applyLogoOverlay(base64Image) {
+            return new Promise(function(resolve) {
+                if (!brandLogo.dataUrl) { resolve(base64Image); return; }
+
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+
+                var bgImg = new Image();
+                bgImg.onload = function() {
+                    canvas.width = bgImg.width;
+                    canvas.height = bgImg.height;
+                    ctx.drawImage(bgImg, 0, 0);
+
+                    var logoImg = new Image();
+                    logoImg.onload = function() {
+                        var logoWidth = canvas.width * (brandLogo.sizePercent / 100);
+                        var logoHeight = (logoImg.height / logoImg.width) * logoWidth;
+                        var pad = canvas.width * (brandLogo.paddingPercent / 100);
+
+                        var x = pad, y = pad; // default: top-left
+                        var pos = brandLogo.position || 'top-right';
+
+                        if (pos.includes('right')) x = canvas.width - logoWidth - pad;
+                        if (pos.includes('center') && !pos.includes('middle')) x = (canvas.width - logoWidth) / 2;
+                        if (pos.includes('middle')) y = (canvas.height - logoHeight) / 2;
+                        if (pos.includes('bottom')) y = canvas.height - logoHeight - pad;
+                        if (pos === 'middle-center') { x = (canvas.width - logoWidth) / 2; y = (canvas.height - logoHeight) / 2; }
+
+                        ctx.drawImage(logoImg, x, y, logoWidth, logoHeight);
+
+                        var result = canvas.toDataURL('image/png').replace('data:image/png;base64,', '');
+                        resolve(result);
+                    };
+                    logoImg.src = brandLogo.dataUrl;
+                };
+                bgImg.src = 'data:image/png;base64,' + base64Image;
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             setupThemeToggle();
             setupModuleNavigation();
             updateFormatBasedOnChannel();
             initCustomDropdowns();
             initBatchSelector();
+            initBrandKit();
             tryReconnectOneDrive();
         });
 
@@ -2608,12 +2952,11 @@
             const theme = document.getElementById('theme').value;
 
             const typeMap = {
-                'typ1': 'clean minimalist banner design with headline text area, subtle geometric corner elements in turquoise, ',
-                'typ2': 'structured infographic layout with timeline, numbered cards, connecting lines, data visualization, ',
-                'typ3': 'educational single-concept card with turquoise accent stripe at top, generous white space, centered typography, ',
-                'typ4': 'myth vs reality split layout with turquoise vertical stripe on left dividing two distinct zones, ',
-                'typ5a': 'professional photograph in upper portion with clean text strip at bottom containing key information, ',
-                'typ5b': 'full-bleed professional photograph with headline and data overlay in bottom corner, semi-transparent dark gradient, '
+                'templateA': 'Clean infographic layout with numbered steps (1, 2, 3, 4) arranged vertically. Each step has a turquoise circle with number, bold sans-serif title, and short description on the right. Light gray (#F0F4F8) background. Generous white space between steps. Thin connecting lines between steps. Space for logo in top-right corner. Rounded turquoise CTA button at bottom. Modern clean corporate infographic style. ',
+                'templateB': 'Myth vs Reality split layout. Top section: red X icon with "MYTUS" label and myth statement in bold. Bottom section: green checkmark icon with "REALITA" label and fact statement. White background, clean separation between sections. Space for logo at bottom. Professional financial services aesthetic. Sans-serif bold typography. Minimal decorative elements. ',
+                'templateC': 'Two-column comparison layout with thin turquoise vertical divider in center. Left column and right column each have an icon at top and bullet-point list below. Each column has its own heading. Clean white background with subtle gray section backgrounds. Professional corporate comparison infographic. Space for logo. ',
+                'templateD': 'Bold headline banner design on clean white or navy (#0C2340) background. One large statement (max 8 words) as the main visual element, bold sans-serif typography. Small subtitle underneath. Turquoise accent elements (thin lines, geometric shapes). CTA button at bottom. Minimal and impactful. Space for logo in corner. ',
+                'templateE': 'Professional photograph background (35-50% opacity) with dark gradient overlay from bottom. White bold headline text overlaid on the gradient area. Key data points (LTV, rate, timeline) in small turquoise accent boxes. Clean modern composition. Space for logo in corner. '
             };
 
             const peopleMap = {
@@ -2651,12 +2994,12 @@
             prompt += peopleMap[people] || '';
             prompt += sceneMap[scene] || '';
             prompt += moodMap[mood] || '';
-            prompt += `Color palette: turquoise #00B4D8, navy #1A2B4A, white #FFFFFF, light gray #F0F0F0. `;
+            prompt += `STRICT color palette: teal/turquoise #00B4D8 (accents, CTA buttons, numbered circles), navy dark #0C2340 (headings, text blocks), white #FFFFFF (backgrounds), light gray #F0F4F8 (section backgrounds). Red #E53935 only for "myth" X icons. Green #43A047 only for "reality" checkmarks. No other colors allowed. `;
             prompt += `Format: ${format}. `;
-            prompt += `Sans-serif typography, clean modern design, high contrast text readable on mobile. `;
-            prompt += `No stock photo clichés, no neon colors, no excessive gradients, no decorative fonts. `;
-            prompt += `No logo unless explicitly requested. Real estate and financial services professional aesthetic. `;
-            prompt += `Topic/context: "${theme}". Minimal decorative elements, focus on clarity and impact. `;
+            prompt += `Sans-serif typography similar to DM Sans or Inter. Bold headings, clean modern design, high contrast text readable on mobile. Maximum 2 font sizes per design. `;
+            prompt += `NEVER include any logo or brand text — logo will be added as overlay. No stock photo clichés, no neon colors, no excessive gradients, no decorative fonts, no 3D icons. `;
+            prompt += `ProfiLend brand: Czech B2B financial services, real estate-secured loans. Professional, trustworthy, modern aesthetic. `;
+            prompt += `Topic/context: "${theme}". Focus on clarity, white space, and visual hierarchy. Minimal decorative elements. `;
             prompt += variations[variationIndex % variations.length];
 
             return prompt;
@@ -2741,15 +3084,16 @@
 
                 var data = await response.json();
                 if (data.success && data.image) {
+                    var finalImage = await applyLogoOverlay(data.image);
                     var container = document.getElementById('postImage' + idx);
                     if (container) {
                         container.style.display = 'block';
-                        container.querySelector('img').src = 'data:image/png;base64,' + data.image;
-                        container.dataset.base64 = data.image;
+                        container.querySelector('img').src = 'data:image/png;base64,' + finalImage;
+                        container.dataset.base64 = finalImage;
                     }
                     showToast('Obrázek vygenerován', 'success');
 
-                    await saveImageToOneDrive(data.image, idx);
+                    await saveImageToOneDrive(finalImage, idx);
                 } else {
                     showToast(data.error || 'Chyba při generování obrázku', 'error');
                 }

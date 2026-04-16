@@ -12,6 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -89,6 +90,56 @@
             display: flex;
             gap: 0.5rem;
         }
+        /* Tranches (Splátkový kalendář modal) */
+        .tranches-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-primary);
+        }
+        .tranche-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .tranche-row input {
+            padding: 0.5rem 0.625rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        .tranche-row button.remove-tranche {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tranche-row button.remove-tranche:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .tranches-sum-status {
+            margin-top: 0.5rem;
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+        .tranches-sum-status.ok { color: #10b981; }
+        .tranches-sum-status.warn { color: #f59e0b; }
+        .tranches-sum-status.err { color: #ef4444; }
         .doc-list-empty {
             text-align: center;
             padding: 3rem 1rem;
@@ -1388,6 +1439,7 @@
                                     <option value="Pololetní">Pololetní</option>
                                     <option value="Roční">Roční</option>
                                     <option value="Úroky s jistinou k splatnosti">Úroky s jistinou k splatnosti</option>
+                                    <option value="Anuita (měsíčně)">Anuita (měsíčně)</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -1607,6 +1659,39 @@
         </div><!-- /view-form -->
     </main>
     </div><!-- /appContainer -->
+
+    <!-- SPLÁTKOVÝ KALENDÁŘ MODAL -->
+    <div class="modal-overlay" id="scheduleModal">
+        <div class="modal" style="max-width: 620px;">
+            <h3>Vygenerovat splátkový kalendář</h3>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+                Zadej skutečné datum (data) čerpání. Kalendář se vygeneruje jako Excel podle šablony na Drive.
+            </p>
+
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="form-label">Konvence úročení</label>
+                <select id="scheduleDayCount" class="form-select">
+                    <option value="ACT/360">ACT/360 (standardní)</option>
+                    <option value="ACT/365">ACT/365</option>
+                </select>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <label class="form-label" style="margin: 0;">Tranše čerpání</label>
+                <button type="button" class="btn btn-outline btn-small" onclick="addTrancheRow()">+ Přidat tranši</button>
+            </div>
+            <div id="tranchesContainer" class="tranches-container"></div>
+            <div id="tranchesSumStatus" class="tranches-sum-status"></div>
+
+            <div class="modal-actions" style="margin-top: 1.25rem;">
+                <button class="btn btn-outline btn-small" onclick="closeModal('scheduleModal')">Zavřít</button>
+                <button class="btn btn-generate" onclick="generateRepaymentScheduleDoc()" id="btn-gen-schedule">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Vygenerovat Excel
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- IMPORT MODAL -->
     <div class="modal-overlay" id="importModal">
@@ -1845,6 +1930,10 @@
                     html += '<div class="doc-list-item-meta">' + meta + '</div>';
                     html += '</div>';
                     html += '<div class="doc-list-item-actions">';
+                    html += '<button class="btn btn-outline btn-small" onclick="event.stopPropagation(); openScheduleModal(' + doc.id + ')" title="Vygenerovat splátkový kalendář">';
+                    html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+                    html += '<span style="margin-left: 4px;">Splátkový kal.</span>';
+                    html += '</button>';
                     html += '<button class="btn btn-outline btn-small" onclick="event.stopPropagation(); deleteDocumentSet(' + doc.id + ')" title="Smazat">';
                     html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
                     html += '</button>';
@@ -2295,6 +2384,504 @@
             }
         }
 
+        /* ═══════════════════════════════════════════════════════════════════
+         * REPAYMENT SCHEDULE ENGINE
+         * Inputs: tranches [{date:Date, amount:number}], rate (% p.a.),
+         *         maturityDate (Date), paymentType ('annuity' | 'interestOnly' | 'bullet'),
+         *         frequencyMonths (1/3/6/12), dayCount ('ACT/360' | 'ACT/365')
+         * Output: { rows: [...], totals: {...} }
+         * ═══════════════════════════════════════════════════════════════════ */
+
+        // Poslední den měsíce daného data
+        function lastDayOfMonth(year, monthZeroBased) {
+            return new Date(year, monthZeroBased + 1, 0);
+        }
+
+        // Počet dní mezi dvěma daty (exclusive start, inclusive end = celkový rozdíl v dnech)
+        function daysBetween(from, to) {
+            var ms = 24 * 3600 * 1000;
+            return Math.round((to.getTime() - from.getTime()) / ms);
+        }
+
+        // Kopie data + N měsíců, posunuté na poslední den daného měsíce
+        function lastDayOfMonthOffset(baseDate, addMonths) {
+            var d = new Date(baseDate.getFullYear(), baseDate.getMonth() + addMonths, 1);
+            return lastDayOfMonth(d.getFullYear(), d.getMonth());
+        }
+
+        // Vážený úrok za období [periodStart..periodEnd] se zohledněním tranší čerpání.
+        // Vrací { interest, openingBalance, closingBalance (po období, bez splátek jistiny) }
+        function accruedInterest(tranches, periodStart, periodEnd, ratePct, dayCount, principalPaidSoFar) {
+            var daysInYear = (dayCount === 'ACT/365') ? 365 : 360;
+            var dailyRate = (ratePct / 100) / daysInYear;
+            var interest = 0;
+            var openingBalance = 0;
+            // Zůstatek na začátku období = suma tranší čerpaných do periodStart - už splacená jistina
+            tranches.forEach(function(t) {
+                if (t.date.getTime() <= periodStart.getTime()) openingBalance += t.amount;
+            });
+            openingBalance -= principalPaidSoFar;
+            if (openingBalance < 0) openingBalance = 0;
+
+            // Rozděl období na sub-intervaly mezi jednotlivými tranšemi spadajícími do období
+            var points = [periodStart];
+            tranches.forEach(function(t) {
+                if (t.date.getTime() > periodStart.getTime() && t.date.getTime() < periodEnd.getTime()) {
+                    points.push(new Date(t.date.getTime()));
+                }
+            });
+            points.push(periodEnd);
+            points.sort(function(a, b) { return a.getTime() - b.getTime(); });
+
+            var runningPrincipal = openingBalance; // ne-odplacená jistina (bez jistin splátek v průběhu period)
+            for (var i = 0; i < points.length - 1; i++) {
+                var segStart = points[i];
+                var segEnd = points[i + 1];
+                // Přičíst tranše čerpané právě na segStart (nebo dříve, co ještě nejsou v runningPrincipal)
+                tranches.forEach(function(t) {
+                    if (t.date.getTime() === segStart.getTime() && segStart.getTime() !== periodStart.getTime()) {
+                        runningPrincipal += t.amount;
+                    }
+                });
+                var days = daysBetween(segStart, segEnd);
+                interest += runningPrincipal * dailyRate * days;
+            }
+
+            // Zůstatek na konci období zahrnující všechny tranše do periodEnd
+            var closingBalance = 0;
+            tranches.forEach(function(t) {
+                if (t.date.getTime() <= periodEnd.getTime()) closingBalance += t.amount;
+            });
+            closingBalance -= principalPaidSoFar;
+            if (closingBalance < 0) closingBalance = 0;
+
+            return { interest: interest, openingBalance: openingBalance, closingBalance: closingBalance };
+        }
+
+        function round2(n) { return Math.round(n * 100) / 100; }
+
+        function generateRepaymentSchedule(opts) {
+            // opts: { tranches, ratePct, maturityDate, paymentType, frequencyMonths, dayCount }
+            var tranches = (opts.tranches || []).slice().sort(function(a, b) { return a.date.getTime() - b.date.getTime(); });
+            if (tranches.length === 0) throw new Error('Alespoň jedna tranše čerpání je povinná');
+
+            var totalPrincipal = tranches.reduce(function(s, t) { return s + t.amount; }, 0);
+            var firstTrancheDate = tranches[0].date;
+            var lastTrancheDate = tranches[tranches.length - 1].date;
+            var rate = opts.ratePct;
+            var paymentType = opts.paymentType;
+            var dayCount = opts.dayCount || 'ACT/360';
+            var frequencyMonths = opts.frequencyMonths || 1;
+            var maturityDate = opts.maturityDate;
+
+            var rows = [];
+            var principalPaidSoFar = 0;
+
+            if (paymentType === 'interestOnly') {
+                // První splátka = poslední den měsíce prvního čerpání (alikvotní úrok)
+                // Další splátky: každých N měsíců, vždy poslední den měsíce
+                var periodStart = firstTrancheDate;
+                var firstPeriodEnd = lastDayOfMonth(firstTrancheDate.getFullYear(), firstTrancheDate.getMonth());
+                var i = 1;
+                var periodEnd = firstPeriodEnd;
+                while (true) {
+                    if (periodEnd.getTime() > maturityDate.getTime()) periodEnd = new Date(maturityDate.getTime());
+                    var isLast = (periodEnd.getTime() >= maturityDate.getTime());
+                    var acc = accruedInterest(tranches, periodStart, periodEnd, rate, dayCount, principalPaidSoFar);
+                    var principalPayment = isLast ? acc.closingBalance : 0;
+                    rows.push({
+                        period: i,
+                        date: periodEnd,
+                        openingBalance: round2(acc.openingBalance),
+                        interest: round2(acc.interest),
+                        principal: round2(principalPayment),
+                        totalPayment: round2(acc.interest + principalPayment),
+                        closingBalance: round2(acc.closingBalance - principalPayment)
+                    });
+                    principalPaidSoFar += principalPayment;
+                    if (isLast) break;
+                    periodStart = periodEnd;
+                    i++;
+                    periodEnd = lastDayOfMonthOffset(firstPeriodEnd, (i - 1) * frequencyMonths);
+                    if (i > 600) break; // safety
+                }
+            } else if (paymentType === 'bullet') {
+                // Jediná platba na konci — úrok za celou dobu z vážené jistiny + jistina
+                var acc2 = accruedInterest(tranches, firstTrancheDate, maturityDate, rate, dayCount, 0);
+                rows.push({
+                    period: 1,
+                    date: maturityDate,
+                    openingBalance: round2(acc2.openingBalance),
+                    interest: round2(acc2.interest),
+                    principal: round2(totalPrincipal),
+                    totalPayment: round2(acc2.interest + totalPrincipal),
+                    closingBalance: 0
+                });
+            } else if (paymentType === 'annuity') {
+                // Do posledního čerpání: měsíční úrokové splátky (interestOnly měsíčně)
+                // Po posledním čerpání: fixní anuita do splatnosti
+                // První "anuitní" splátka = poslední den měsíce následujícího po posledním čerpání
+                var periodStart2 = firstTrancheDate;
+                var annuityStartMonthEnd = lastDayOfMonthOffset(lastTrancheDate, 1); // poslední den měsíce následujícího po posledním čerpání
+
+                // Část 1: úrokové splátky měsíčně do annuityStart (tj. do posledního čerpání + 1 měsíc)
+                // První splátka = konec měsíce prvního čerpání (alikvotní)
+                var firstMonthEnd = lastDayOfMonth(firstTrancheDate.getFullYear(), firstTrancheDate.getMonth());
+                var j = 1;
+                var pEnd = firstMonthEnd;
+                while (true) {
+                    // pokud pEnd je stejný jako annuityStartMonthEnd nebo překročí, zastav a přejdi na anuity
+                    if (pEnd.getTime() >= annuityStartMonthEnd.getTime()) break;
+                    var accJ = accruedInterest(tranches, periodStart2, pEnd, rate, dayCount, 0);
+                    rows.push({
+                        period: j,
+                        date: pEnd,
+                        openingBalance: round2(accJ.openingBalance),
+                        interest: round2(accJ.interest),
+                        principal: 0,
+                        totalPayment: round2(accJ.interest),
+                        closingBalance: round2(accJ.closingBalance),
+                        note: 'před dočerpáním'
+                    });
+                    periodStart2 = pEnd;
+                    j++;
+                    pEnd = lastDayOfMonthOffset(firstMonthEnd, j - 1);
+                    if (j > 600) break;
+                }
+
+                // Počet anuitních splátek = celých měsíců od annuityStartMonthEnd do maturityDate
+                var annuityMonths = 0;
+                var cursor = new Date(annuityStartMonthEnd.getTime());
+                while (cursor.getTime() <= maturityDate.getTime()) {
+                    annuityMonths++;
+                    cursor = lastDayOfMonthOffset(cursor, 1);
+                }
+                if (annuityMonths < 1) annuityMonths = 1;
+
+                // Anuita z plné jistiny na annuityMonths měsíců
+                var monthlyRate = (rate / 100) / 12;
+                var annuity;
+                if (monthlyRate === 0) {
+                    annuity = totalPrincipal / annuityMonths;
+                } else {
+                    annuity = totalPrincipal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -annuityMonths));
+                }
+
+                // Část 2: anuitní splátky
+                var balance = totalPrincipal;
+                for (var k = 0; k < annuityMonths; k++) {
+                    var payDate = (k === 0)
+                        ? annuityStartMonthEnd
+                        : lastDayOfMonthOffset(annuityStartMonthEnd, k);
+                    if (payDate.getTime() > maturityDate.getTime()) payDate = maturityDate;
+                    // Úrok za období (použijeme accruedInterest pro přesnost dle dayCount, od periodStart2 do payDate)
+                    var accK = accruedInterest(tranches, periodStart2, payDate, rate, dayCount, principalPaidSoFar);
+                    var interestK = accK.interest;
+                    var principalK = annuity - interestK;
+                    if (k === annuityMonths - 1 || principalK > balance) {
+                        // Poslední splátka — dorovnej zůstatek
+                        principalK = balance;
+                        balance = 0;
+                    } else {
+                        balance -= principalK;
+                    }
+                    rows.push({
+                        period: j,
+                        date: payDate,
+                        openingBalance: round2(accK.openingBalance),
+                        interest: round2(interestK),
+                        principal: round2(principalK),
+                        totalPayment: round2(interestK + principalK),
+                        closingBalance: round2(balance)
+                    });
+                    principalPaidSoFar += principalK;
+                    periodStart2 = payDate;
+                    j++;
+                }
+            } else {
+                throw new Error('Neznámý typ splácení: ' + paymentType);
+            }
+
+            var totalInterest = rows.reduce(function(s, r) { return s + r.interest; }, 0);
+            var totalPaid = rows.reduce(function(s, r) { return s + r.totalPayment; }, 0);
+
+            return {
+                rows: rows,
+                totals: {
+                    totalInterest: round2(totalInterest),
+                    totalPaid: round2(totalPaid),
+                    totalPrincipal: round2(totalPrincipal)
+                },
+                meta: {
+                    firstPaymentDate: rows[0] ? rows[0].date : null,
+                    lastPaymentDate: rows[rows.length - 1] ? rows[rows.length - 1].date : null,
+                    paymentType: paymentType,
+                    frequencyMonths: frequencyMonths,
+                    dayCount: dayCount
+                }
+            };
+        }
+
+        // Mapování hodnoty selectu 'Placení úroků' na paymentType + frequencyMonths
+        function mapInterestPaymentToSchedule(interestPaymentValue) {
+            switch (interestPaymentValue) {
+                case 'Měsíční':   return { paymentType: 'interestOnly', frequencyMonths: 1 };
+                case 'Kvartální': return { paymentType: 'interestOnly', frequencyMonths: 3 };
+                case 'Pololetní': return { paymentType: 'interestOnly', frequencyMonths: 6 };
+                case 'Roční':     return { paymentType: 'interestOnly', frequencyMonths: 12 };
+                case 'Úroky s jistinou k splatnosti': return { paymentType: 'bullet', frequencyMonths: 12 };
+                case 'Anuita (měsíčně)': return { paymentType: 'annuity', frequencyMonths: 1 };
+                default: return { paymentType: 'interestOnly', frequencyMonths: 1 };
+            }
+        }
+
+        /* ─── SPLÁTKOVÝ KALENDÁŘ — MODAL + GENERATOR ─── */
+        var scheduleContext = null; // { docSet, formData }
+
+        function parseCzAmount(s) {
+            if (s == null) return 0;
+            var str = String(s).replace(/\s/g, '').replace(',', '.');
+            var n = parseFloat(str);
+            return isNaN(n) ? 0 : n;
+        }
+
+        function openScheduleModal(docSetId) {
+            getAllFromDB('documents', function(documents) {
+                var docSet = (documents || []).find(function(d) { return d.id === docSetId; });
+                if (!docSet) { showToast('Sada nenalezena', 'error'); return; }
+                var fd = docSet.formData || {};
+                scheduleContext = { docSet: docSet, formData: fd };
+
+                // Předvyplnění konvence (default ACT/360)
+                var dc = document.getElementById('scheduleDayCount');
+                if (dc) dc.value = 'ACT/360';
+
+                // Inicializace tranší: defaultně jedna tranše s datem podpisu (nebo dnes) + plná částka
+                var container = document.getElementById('tranchesContainer');
+                if (container) container.innerHTML = '';
+
+                var signDate = fd.signDate || '';
+                var defaultDate = signDate || (new Date().toISOString().slice(0, 10));
+                var defaultAmount = parseCzAmount(fd.amount);
+                addTrancheRow(defaultDate, defaultAmount);
+
+                updateTranchesSumStatus();
+                document.getElementById('scheduleModal').classList.add('visible');
+            });
+        }
+
+        function addTrancheRow(date, amount) {
+            var container = document.getElementById('tranchesContainer');
+            if (!container) return;
+            var row = document.createElement('div');
+            row.className = 'tranche-row';
+            var dateVal = date || '';
+            var amountVal = (amount != null && amount !== '') ? amount : '';
+            row.innerHTML =
+                '<input type="date" class="tranche-date" value="' + escapeHtml(dateVal) + '" oninput="updateTranchesSumStatus()">' +
+                '<input type="number" class="tranche-amount" placeholder="Částka" step="0.01" min="0" value="' + escapeHtml(String(amountVal)) + '" oninput="updateTranchesSumStatus()">' +
+                '<button type="button" class="remove-tranche" title="Odebrat" onclick="removeTrancheRow(this)">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+                '</button>';
+            container.appendChild(row);
+            updateTranchesSumStatus();
+        }
+
+        function removeTrancheRow(btn) {
+            var row = btn.closest('.tranche-row');
+            if (row) row.remove();
+            updateTranchesSumStatus();
+        }
+
+        function updateTranchesSumStatus() {
+            var status = document.getElementById('tranchesSumStatus');
+            if (!status || !scheduleContext) return;
+            var rows = document.querySelectorAll('#tranchesContainer .tranche-row');
+            var sum = 0;
+            rows.forEach(function(r) {
+                sum += parseCzAmount(r.querySelector('.tranche-amount').value);
+            });
+            var target = parseCzAmount(scheduleContext.formData.amount);
+            var currency = scheduleContext.formData.currency || 'CZK';
+            var diff = sum - target;
+            var fmtSum = sum.toLocaleString('cs-CZ', { maximumFractionDigits: 2 });
+            var fmtTarget = target.toLocaleString('cs-CZ', { maximumFractionDigits: 2 });
+            status.classList.remove('ok', 'warn', 'err');
+            if (Math.abs(diff) < 0.005) {
+                status.classList.add('ok');
+                status.textContent = '✓ Součet tranší: ' + fmtSum + ' ' + currency + ' (= smlouva)';
+            } else {
+                status.classList.add('err');
+                var fmtDiff = Math.abs(diff).toLocaleString('cs-CZ', { maximumFractionDigits: 2 });
+                status.textContent = '⚠ Součet: ' + fmtSum + ' ' + currency + ' / smlouva: ' + fmtTarget + ' ' + currency + ' (rozdíl ' + fmtDiff + ')';
+            }
+        }
+
+        function collectTranches() {
+            var rows = document.querySelectorAll('#tranchesContainer .tranche-row');
+            var out = [];
+            for (var i = 0; i < rows.length; i++) {
+                var d = rows[i].querySelector('.tranche-date').value;
+                var a = parseCzAmount(rows[i].querySelector('.tranche-amount').value);
+                if (!d || !(a > 0)) return null;
+                out.push({ date: new Date(d + 'T00:00:00'), amount: a });
+            }
+            out.sort(function(x, y) { return x.date - y.date; });
+            return out;
+        }
+
+        async function generateRepaymentScheduleDoc() {
+            if (!scheduleContext) { showToast('Chybí kontext smlouvy', 'error'); return; }
+            var fd = scheduleContext.formData;
+
+            var tranches = collectTranches();
+            if (!tranches || !tranches.length) {
+                showToast('Vyplňte datum a částku každé tranše', 'error'); return;
+            }
+
+            var sum = tranches.reduce(function(s, t) { return s + t.amount; }, 0);
+            var target = parseCzAmount(fd.amount);
+            if (Math.abs(sum - target) > 0.01) {
+                if (!confirm('Součet tranší (' + sum + ') se liší od částky ve smlouvě (' + target + '). Pokračovat?')) return;
+            }
+
+            var dayCount = document.getElementById('scheduleDayCount').value || 'ACT/360';
+
+            // Maturity
+            var maturityStr = fd.maturityDate || '';
+            if (!maturityStr) { showToast('Ve smlouvě chybí datum splatnosti', 'error'); return; }
+            var maturity = new Date(maturityStr + 'T00:00:00');
+
+            // Rate (% p.a.) — field id "interest"
+            var rate = parseCzAmount(fd.interest);
+            if (!(rate > 0)) { showToast('Ve smlouvě chybí úroková sazba', 'error'); return; }
+
+            // Payment type
+            var interestPayment = fd.interestPayment || 'Měsíční';
+            var mapped = mapInterestPaymentToSchedule(interestPayment);
+
+            var opts = {
+                tranches: tranches,
+                maturityDate: maturity,
+                ratePct: rate,
+                dayCount: dayCount,
+                paymentType: mapped.paymentType,
+                frequencyMonths: mapped.frequencyMonths
+            };
+
+            var schedule;
+            try {
+                schedule = generateRepaymentSchedule(opts);
+            } catch (e) {
+                console.error(e);
+                showToast('Chyba výpočtu: ' + e.message, 'error'); return;
+            }
+
+            // Zkusit načíst šablonu Excel z Drive; pokud neexistuje, vytvořit od nuly
+            var btn = document.getElementById('btn-gen-schedule');
+            if (btn) btn.disabled = true;
+            try {
+                await buildAndSaveScheduleXlsx(schedule, fd);
+                showToast('Splátkový kalendář vygenerován', 'success');
+                closeModal('scheduleModal');
+            } catch (e) {
+                console.error(e);
+                showToast('Chyba při generování: ' + e.message, 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function buildAndSaveScheduleXlsx(schedule, fd) {
+            if (typeof XLSX === 'undefined') throw new Error('SheetJS není načtený');
+
+            // Pokusit se načíst šablonu z Drive
+            var wb = null;
+            var templatePath = 'Šablony/Úvěrová dokumentace/Splátkový kalendář.xlsx';
+            try {
+                if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
+                    var blob = await GDriveSync.loadSharedBinary(templatePath);
+                    if (blob) {
+                        var buf = await blob.arrayBuffer();
+                        wb = XLSX.read(buf, { type: 'array' });
+                    }
+                }
+            } catch (e) {
+                console.warn('Šablona Excel nenalezena, vytvářím od nuly:', e);
+            }
+
+            var ws;
+            var sheetName;
+            if (wb) {
+                sheetName = wb.SheetNames[0];
+                ws = wb.Sheets[sheetName];
+            } else {
+                wb = XLSX.utils.book_new();
+                sheetName = 'Splátkový kalendář';
+                ws = {};
+            }
+
+            // Záhlaví + meta
+            var currency = fd.currency || 'CZK';
+            var borrower = fd.uvereovany || '';
+            var aoa = [];
+            aoa.push(['Splátkový kalendář']);
+            aoa.push([]);
+            aoa.push(['Úvěrovaný:', borrower]);
+            aoa.push(['Měna:', currency]);
+            aoa.push(['Úroková sazba:', (parseCzAmount(fd.interest) || 0) + ' % p.a.']);
+            aoa.push(['Konvence:', schedule.meta.dayCount]);
+            aoa.push(['Typ splácení:', schedule.meta.paymentType]);
+            aoa.push([]);
+            aoa.push(['#', 'Datum', 'Zůstatek na začátku', 'Úrok', 'Jistina', 'Splátka celkem', 'Zůstatek na konci', 'Pozn.']);
+
+            schedule.rows.forEach(function(r) {
+                var dateStr = r.date instanceof Date
+                    ? r.date.toLocaleDateString('cs-CZ')
+                    : String(r.date);
+                aoa.push([
+                    r.period,
+                    dateStr,
+                    round2(r.openingBalance),
+                    round2(r.interest),
+                    round2(r.principal),
+                    round2(r.totalPayment),
+                    round2(r.closingBalance),
+                    r.note || ''
+                ]);
+            });
+
+            aoa.push([]);
+            aoa.push(['Celkem úrok:', '', '', round2(schedule.totals.totalInterest)]);
+            aoa.push(['Celkem zaplaceno:', '', '', '', '', round2(schedule.totals.totalPaid)]);
+
+            ws = XLSX.utils.aoa_to_sheet(aoa);
+
+            // Nastavit šířky
+            ws['!cols'] = [
+                { wch: 5 }, { wch: 12 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 20 }
+            ];
+
+            if (wb.SheetNames.indexOf(sheetName) === -1) {
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            } else {
+                wb.Sheets[sheetName] = ws;
+            }
+
+            // Uložit
+            var filename = 'Splatkovy_kalendar_' + (borrower || 'uver').replace(/[^a-zA-Z0-9_-]/g, '_') + '.xlsx';
+            var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            var outBlob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            if (typeof saveAs !== 'undefined') {
+                saveAs(outBlob, filename);
+            } else {
+                var url = URL.createObjectURL(outBlob);
+                var a = document.createElement('a');
+                a.href = url; a.download = filename; a.click();
+                setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+            }
+        }
+
         /* ─── GENERATE MODE (clean vs. tracked changes) ─── */
         function setGenerateMode(mode) {
             generateMode = (mode === 'tracked') ? 'tracked' : 'clean';
@@ -2318,7 +2905,7 @@
             }
             try {
                 var files = await GDriveSync.listShared('Šablony/Úvěrová dokumentace');
-                var docx = (files || []).filter(function(f) { return /\.docx$/i.test(f.name); });
+                var docx = (files || []).filter(function(f) { return /\.(docx|xlsx)$/i.test(f.name); });
                 el.textContent = 'Šablony: ' + docx.length + ' na Drive';
                 if (btn) btn.classList.add('folder-connected');
             } catch (e) {
