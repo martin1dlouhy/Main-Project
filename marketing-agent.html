@@ -2473,23 +2473,27 @@
 
         // ================== BRAND LOGO (Google Drive + IDB fallback) ==================
         async function saveBrandLogoToIDB() {
-            if(window.GDriveSync&&GDriveSync.isConnected()){try{var meta={position:brandLogo.position,sizePercent:brandLogo.sizePercent,paddingPercent:brandLogo.paddingPercent,hasLogo:!!brandLogo.dataUrl};await GDriveSync.saveFile('brand-assets/logo-meta.json',JSON.stringify(meta,null,2),'application/json');if(brandLogo.dataUrl)await GDriveSync.saveBinary('brand-assets/logo.png',dataURLtoBlob(brandLogo.dataUrl),'image/png');}catch(e){console.warn('[Logo] GDrive err:',e);}}
+            if(window.GDriveSync&&GDriveSync.isConnected()){try{var meta={position:brandLogo.position,sizePercent:brandLogo.sizePercent,paddingPercent:brandLogo.paddingPercent,shadow:brandLogo.shadow,background:brandLogo.background,bgOpacity:brandLogo.bgOpacity,bgColor:brandLogo.bgColor,hasLogo:!!brandLogo.dataUrl};await GDriveSync.saveFile('brand-assets/logo-meta.json',JSON.stringify(meta,null,2),'application/json');if(brandLogo.dataUrl)await GDriveSync.saveBinary('brand-assets/logo.png',dataURLtoBlob(brandLogo.dataUrl),'image/png');}catch(e){console.warn('[Logo] GDrive err:',e);}}
             try{var r=indexedDB.open('MarketingAgentDB',2);r.onupgradeneeded=function(e){var db=e.target.result;if(!db.objectStoreNames.contains('handles'))db.createObjectStore('handles',{keyPath:'id'});if(!db.objectStoreNames.contains('brandkit'))db.createObjectStore('brandkit',{keyPath:'id'});};r.onsuccess=function(e){var db=e.target.result;if(!db.objectStoreNames.contains('brandkit'))return;db.transaction('brandkit','readwrite').objectStore('brandkit').put({id:'logo',data:brandLogo});};}catch(e){}
         }
         async function loadBrandLogoFromIDB() {
             var loaded=false;
-            if(window.GDriveSync&&GDriveSync.isConnected()){try{var mt=await GDriveSync.loadFile('brand-assets/logo-meta.json');if(mt){var m=JSON.parse(mt);brandLogo.position=m.position||'top-right';brandLogo.sizePercent=m.sizePercent||15;brandLogo.paddingPercent=m.paddingPercent||5;if(m.hasLogo){var lb=await GDriveSync.loadBinary('brand-assets/logo.png');if(lb){brandLogo.dataUrl=await blobToDataURL(lb);loaded=true;}}}}catch(e){console.warn('[Logo] GDrive load err:',e);}}
+            if(window.GDriveSync&&GDriveSync.isConnected()){try{var mt=await GDriveSync.loadFile('brand-assets/logo-meta.json');if(mt){var m=JSON.parse(mt);brandLogo.position=m.position||'top-right';brandLogo.sizePercent=m.sizePercent||15;brandLogo.paddingPercent=m.paddingPercent||5;brandLogo.shadow=m.shadow!==false;brandLogo.background=!!m.background;brandLogo.bgOpacity=m.bgOpacity||60;brandLogo.bgColor=m.bgColor||'dark';if(m.hasLogo){var lb=await GDriveSync.loadBinary('brand-assets/logo.png');if(lb){brandLogo.dataUrl=await blobToDataURL(lb);loaded=true;}}}}catch(e){console.warn('[Logo] GDrive load err:',e);}}
             if(!loaded){try{await new Promise(function(res){var r=indexedDB.open('MarketingAgentDB',2);r.onupgradeneeded=function(e){var db=e.target.result;if(!db.objectStoreNames.contains('handles'))db.createObjectStore('handles',{keyPath:'id'});if(!db.objectStoreNames.contains('brandkit'))db.createObjectStore('brandkit',{keyPath:'id'});};r.onsuccess=function(e){var db=e.target.result;if(!db.objectStoreNames.contains('brandkit')){res();return;}var g=db.transaction('brandkit','readonly').objectStore('brandkit').get('logo');g.onsuccess=function(){if(g.result&&g.result.data)brandLogo=g.result.data;res();};g.onerror=function(){res();};};r.onerror=function(){res();};});}catch(e){}}
             if(brandLogo.dataUrl){var img=document.getElementById('logoImg');if(img){img.src=brandLogo.dataUrl;img.style.display='block';document.getElementById('logoEmpty').style.display='none';document.getElementById('logoPreview').classList.add('has-logo');document.getElementById('removeLogo').style.display='inline-block';}}
             var pb=document.querySelector('.pos-btn[data-pos="'+brandLogo.position+'"]');if(pb){document.querySelectorAll('.pos-btn').forEach(function(b){b.classList.remove('active');});pb.classList.add('active');}
             var ss=document.getElementById('logoSize');if(ss&&brandLogo.sizePercent){ss.value=brandLogo.sizePercent;document.getElementById('logoSizeValue').textContent=brandLogo.sizePercent;}
             var ps=document.getElementById('logoPadding');if(ps&&brandLogo.paddingPercent){ps.value=brandLogo.paddingPercent;document.getElementById('logoPaddingValue').textContent=brandLogo.paddingPercent;}
+            var shCb=document.getElementById('logoShadow');if(shCb)shCb.checked=brandLogo.shadow!==false;
+            var bgCb2=document.getElementById('logoBackground');if(bgCb2){bgCb2.checked=!!brandLogo.background;document.getElementById('logoBgOpacityGroup').style.display=brandLogo.background?'block':'none';}
+            var bgOp=document.getElementById('logoBgOpacity');if(bgOp){bgOp.value=brandLogo.bgOpacity||60;document.getElementById('logoBgOpacityValue').textContent=brandLogo.bgOpacity||60;}
+            var activeBgBtn=document.querySelector('.logo-bg-color-btn[data-color="'+(brandLogo.bgColor||'dark')+'"]');if(activeBgBtn){document.querySelectorAll('.logo-bg-color-btn').forEach(function(b){b.classList.remove('active');});activeBgBtn.classList.add('active');}
         }
 
 
 
         // ================== BRAND KIT — LOGO ==================
-        var brandLogo = { dataUrl: null, position: 'top-right', sizePercent: 15, paddingPercent: 5 };
+        var brandLogo = { dataUrl: null, position: 'top-right', sizePercent: 15, paddingPercent: 5, shadow: true, background: false, bgOpacity: 60, bgColor: 'dark' };
 
         function initBrandKit() {
             var uploadArea = document.getElementById('logoPreview');
@@ -2575,37 +2579,102 @@
             reader.readAsDataURL(file);
         }
 
+            // Logo visibility controls
+            var shadowCb = document.getElementById('logoShadow');
+            if (shadowCb) {
+                shadowCb.onchange = function() {
+                    brandLogo.shadow = this.checked;
+                    saveLogoToGDrive();
+                };
+            }
+            var bgCb = document.getElementById('logoBackground');
+            if (bgCb) {
+                bgCb.onchange = function() {
+                    brandLogo.background = this.checked;
+                    document.getElementById('logoBgOpacityGroup').style.display = this.checked ? 'block' : 'none';
+                    saveLogoToGDrive();
+                };
+            }
+            var bgOpacitySlider = document.getElementById('logoBgOpacity');
+            if (bgOpacitySlider) {
+                bgOpacitySlider.oninput = function() {
+                    brandLogo.bgOpacity = parseInt(this.value);
+                    document.getElementById('logoBgOpacityValue').textContent = this.value;
+                    saveLogoToGDrive();
+                };
+            }
+            document.querySelectorAll('.logo-bg-color-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.logo-bg-color-btn').forEach(function(b) { b.classList.remove('active'); });
+                    this.classList.add('active');
+                    brandLogo.bgColor = this.getAttribute('data-color');
+                    saveLogoToGDrive();
+                });
+            });
+
 // Canvas overlay function — called after image generation
         function applyLogoOverlay(base64Image) {
             return new Promise(function(resolve) {
                 if (!brandLogo.dataUrl) { resolve(base64Image); return; }
-
                 var canvas = document.createElement('canvas');
                 var ctx = canvas.getContext('2d');
-
                 var bgImg = new Image();
                 bgImg.onload = function() {
                     canvas.width = bgImg.width;
                     canvas.height = bgImg.height;
                     ctx.drawImage(bgImg, 0, 0);
-
                     var logoImg = new Image();
                     logoImg.onload = function() {
                         var logoWidth = canvas.width * (brandLogo.sizePercent / 100);
                         var logoHeight = (logoImg.height / logoImg.width) * logoWidth;
                         var pad = canvas.width * (brandLogo.paddingPercent / 100);
-
-                        var x = pad, y = pad; // default: top-left
+                        var x = pad, y = pad;
                         var pos = brandLogo.position || 'top-right';
-
                         if (pos.includes('right')) x = canvas.width - logoWidth - pad;
                         if (pos.includes('center') && !pos.includes('middle')) x = (canvas.width - logoWidth) / 2;
                         if (pos.includes('middle')) y = (canvas.height - logoHeight) / 2;
                         if (pos.includes('bottom')) y = canvas.height - logoHeight - pad;
                         if (pos === 'middle-center') { x = (canvas.width - logoWidth) / 2; y = (canvas.height - logoHeight) / 2; }
-
-                        ctx.drawImage(logoImg, x, y, logoWidth, logoHeight);
-
+                        // Background plate behind logo for visibility
+                        if (brandLogo.background) {
+                            var bgPadLogo = Math.min(logoWidth, logoHeight) * 0.15;
+                            var bgX = x - bgPadLogo;
+                            var bgY = y - bgPadLogo;
+                            var bgW = logoWidth + bgPadLogo * 2;
+                            var bgH = logoHeight + bgPadLogo * 2;
+                            var opacity = (brandLogo.bgOpacity || 60) / 100;
+                            var bgColorMap = {
+                                'dark': 'rgba(0,0,0,' + opacity + ')',
+                                'light': 'rgba(255,255,255,' + opacity + ')',
+                                'brand': 'rgba(12,35,64,' + opacity + ')'
+                            };
+                            ctx.fillStyle = bgColorMap[brandLogo.bgColor] || bgColorMap['dark'];
+                            ctx.beginPath();
+                            var radius = bgPadLogo;
+                            ctx.moveTo(bgX + radius, bgY);
+                            ctx.lineTo(bgX + bgW - radius, bgY);
+                            ctx.quadraticCurveTo(bgX + bgW, bgY, bgX + bgW, bgY + radius);
+                            ctx.lineTo(bgX + bgW, bgY + bgH - radius);
+                            ctx.quadraticCurveTo(bgX + bgW, bgY + bgH, bgX + bgW - radius, bgY + bgH);
+                            ctx.lineTo(bgX + radius, bgY + bgH);
+                            ctx.quadraticCurveTo(bgX, bgY + bgH, bgX, bgY + bgH - radius);
+                            ctx.lineTo(bgX, bgY + radius);
+                            ctx.quadraticCurveTo(bgX, bgY, bgX + radius, bgY);
+                            ctx.closePath();
+                            ctx.fill();
+                        }
+                        // Drop shadow behind logo
+                        if (brandLogo.shadow) {
+                            ctx.save();
+                            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                            ctx.shadowBlur = Math.max(8, logoWidth * 0.04);
+                            ctx.shadowOffsetX = 2;
+                            ctx.shadowOffsetY = 2;
+                            ctx.drawImage(logoImg, x, y, logoWidth, logoHeight);
+                            ctx.restore();
+                        } else {
+                            ctx.drawImage(logoImg, x, y, logoWidth, logoHeight);
+                        }
                         var result = canvas.toDataURL('image/png').replace('data:image/png;base64,', '');
                         resolve(result);
                     };
@@ -4047,4 +4116,31 @@
     </script>
         <script src="google-drive-sync.js"></script>
 </body>
+<!-- Logo visibility settings -->
+<div class="form-group">
+    <label class="form-label">Viditelnost loga</label>
+    <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:0.5rem;">
+        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:13px;">
+            <input type="checkbox" id="logoShadow" checked style="width:16px; height:16px; accent-color: var(--accent);" />
+            <span>Drop shadow (stín)</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:13px;">
+            <input type="checkbox" id="logoBackground" style="width:16px; height:16px; accent-color: var(--accent);" />
+            <span>Poloprůhledný podklad</span>
+        </label>
+        <div id="logoBgOpacityGroup" style="display:none;">
+            <label class="form-label" style="font-size:12px;">Průhlednost podkladu: <span id="logoBgOpacityValue">60</span>%</label>
+            <input type="range" id="logoBgOpacity" min="20" max="90" value="60" />
+        </div>
+        <div>
+            <label class="form-label" style="font-size:12px;">Barva podkladu</label>
+            <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
+                <button class="logo-bg-color-btn active" data-color="dark" style="width:28px; height:28px; border-radius:6px; background:#000; border:2px solid var(--border-color); cursor:pointer;" title="Tmavý"></button>
+                <button class="logo-bg-color-btn" data-color="light" style="width:28px; height:28px; border-radius:6px; background:#fff; border:2px solid var(--border-color); cursor:pointer;" title="Světlý"></button>
+                <button class="logo-bg-color-btn" data-color="brand" style="width:28px; height:28px; border-radius:6px; background:#0C2340; border:2px solid var(--border-color); cursor:pointer;" title="Brand navy"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </html>
