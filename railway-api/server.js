@@ -471,6 +471,8 @@ app.post('/api/marketing/generate-image', async function (req, res) {
     var size = body.size || '1024x1024';
     var quality = body.quality || 'standard';
     var referenceImages = body.referenceImages || [];
+    var brandDNA = body.brandDNA || {};
+    var visualHook = body.visualHook || '';
     var allowedImageModels = ['gpt-image-1', 'dall-e-3'];
     var imageModel = allowedImageModels.indexOf(body.imageModel) !== -1 ? body.imageModel : 'gpt-image-1';
 
@@ -485,12 +487,32 @@ app.post('/api/marketing/generate-image', async function (req, res) {
         // If reference images are provided, use GPT-4o vision to analyze them
         // and create an enhanced prompt that captures their visual style
         if (referenceImages.length > 0) {
-            console.log('[Image Gen] Processing ' + referenceImages.length + ' reference images via GPT-4o vision');
+            console.log('[Image Gen] Processing ' + referenceImages.length + ' reference images via GPT-4o vision, brandDNA: ' + (brandDNA.styleMain ? 'yes' : 'no') + ', visualHook: ' + (visualHook || 'none'));
             try {
                 var visionContent = [];
+                // Build Brand DNA context for the vision model
+                var brandDNAContext = '';
+                if (brandDNA.styleMain) {
+                    brandDNAContext += '\n\nBRAND DNA - VISUAL STYLE RULES:\n' + brandDNA.styleMain;
+                }
+                if (brandDNA.antiPatterns) {
+                    brandDNAContext += '\n\nANTI-PATTERNS (NEVER do these):\n' + brandDNA.antiPatterns;
+                }
+                if (brandDNA.colors) {
+                    var colorInfo = [];
+                    if (brandDNA.colors.navy) colorInfo.push('Navy: ' + brandDNA.colors.navy);
+                    if (brandDNA.colors.teal) colorInfo.push('Teal/Turquoise: ' + brandDNA.colors.teal);
+                    if (brandDNA.colors.white) colorInfo.push('White: ' + brandDNA.colors.white);
+                    if (brandDNA.colors.gray) colorInfo.push('Light gray: ' + brandDNA.colors.gray);
+                    if (colorInfo.length > 0) brandDNAContext += '\n\nEXACT BRAND COLORS: ' + colorInfo.join(', ');
+                }
+                if (visualHook) {
+                    brandDNAContext += '\n\nVISUAL HOOK TEXT (must appear as typography in the image): "' + visualHook + '"';
+                }
+
                 visionContent.push({
                     type: 'text',
-                    text: 'You are an expert visual analyst for Instagram brand design. Analyze these ' + referenceImages.length + ' reference Instagram posts and extract their EXACT visual style. Then combine your analysis with the image generation prompt below to create a single, detailed image generation prompt that will produce an image matching this exact visual style.\n\nFocus on:\n- Color palette (exact colors, gradients, overlays)\n- Typography style (font weight, positioning, size ratios)\n- Layout composition (element placement, spacing, margins)\n- Visual effects (shadows, glows, blur, overlays, textures)\n- Photo treatment (filters, contrast, saturation, brightness)\n- Brand elements (logo placement, recurring visual motifs)\n- Overall mood and aesthetic\n\nORIGINAL IMAGE PROMPT:\n' + prompt + '\n\nReturn ONLY the enhanced image generation prompt, nothing else. The prompt should be in English and very detailed (300-500 words). It must capture the EXACT visual DNA of these reference posts so the generated image looks like it belongs in the same Instagram feed.'
+                    text: 'You are a senior brand designer creating an Instagram post for ProfiLend, a Czech B2B financial institution. You have access to the Brand DNA document (visual rules) AND reference Instagram posts from this brand.\n\nYour task: Create a PRECISE, TECHNICAL image generation prompt for gpt-image-1 that will produce an image perfectly matching the ProfiLend brand identity.\n\nSTEP 1: Analyze the reference images for exact visual patterns (colors, layout, typography, spacing, effects).\nSTEP 2: Cross-reference with the Brand DNA rules below.\nSTEP 3: Combine with the creative brief to produce a detailed technical prompt.' + brandDNAContext + '\n\nCREATIVE BRIEF (what the image should communicate):\n' + prompt + '\n\nOUTPUT RULES:\n- Return ONLY the image generation prompt, nothing else\n- Write in English, 300-500 words\n- Be extremely specific: exact HEX colors, exact positioning (top-left, center, bottom), exact proportions\n- Specify typography: font weight, size relative to canvas, color, position\n- Specify background: exact color or gradient, any geometric elements\n- Specify whitespace: margins, padding between elements\n- If visualHook text is provided, specify EXACTLY where and how it appears as typography in the composition\n- The generated image must look like it belongs in the same Instagram feed as the reference posts\n- NEVER include: red/orange urgency colors, neon effects, 3D buttons, stock photo cliches, cluttered layouts'
                 });
 
                 // Add each reference image
@@ -527,6 +549,28 @@ app.post('/api/marketing/generate-image', async function (req, res) {
             } catch (visionErr) {
                 console.error('[Image Gen] Vision analysis failed, using original prompt:', visionErr.message);
                 // Fall back to original prompt if vision fails
+            }
+        }
+
+        // If no reference images but Brand DNA exists, enhance prompt with Brand DNA context
+        if (referenceImages.length === 0 && (brandDNA.styleMain || brandDNA.antiPatterns)) {
+            console.log('[Image Gen] No reference images, enhancing prompt with Brand DNA context');
+            try {
+                var dnaPromptParts = [prompt];
+                if (brandDNA.styleMain) dnaPromptParts.push('\nBrand visual style: ' + brandDNA.styleMain.substring(0, 500));
+                if (brandDNA.antiPatterns) dnaPromptParts.push('\nNEVER: ' + brandDNA.antiPatterns.substring(0, 300));
+                if (brandDNA.colors) {
+                    var cp = [];
+                    if (brandDNA.colors.navy) cp.push('navy ' + brandDNA.colors.navy);
+                    if (brandDNA.colors.teal) cp.push('turquoise ' + brandDNA.colors.teal);
+                    if (brandDNA.colors.gray) cp.push('background ' + brandDNA.colors.gray);
+                    if (cp.length > 0) dnaPromptParts.push('\nExact colors: ' + cp.join(', '));
+                }
+                if (visualHook) dnaPromptParts.push('\nInclude this text as bold sans-serif typography in the composition: "' + visualHook + '"');
+                finalPrompt = dnaPromptParts.join(' ');
+                console.log('[Image Gen] Brand DNA enhanced prompt (' + finalPrompt.length + ' chars)');
+            } catch (dnaErr) {
+                console.warn('[Image Gen] Brand DNA enhancement failed:', dnaErr.message);
             }
         }
 
@@ -746,7 +790,7 @@ app.post('/api/marketing/generate', async function (req, res) {
     var imageFieldSpec = generateImage
         ? ',\n' +
           '      "visualHook": "KRÁTKÁ hláška 3–8 slov určená k vložení PŘÍMO DO OBRÁZKU (bez hashtagů, bez CTA; konkrétní, čitelná, bez diakritiky pokud to zlepší čitelnost)",\n' +
-          '      "imagePrompt": "ANGLICKÝ popis obrázku pro DALL·E/gpt-image-1 (1–3 věty). MUSÍ obsahovat pokyn, že text \\"VISUAL_HOOK\\" má být vysazen jako typografie uvnitř kompozice (bold sans-serif). Styl: profesionální B2B design, minimalistický layout. Použij PŘESNÉ firemní barvy: ' + (brandColors.teal || '#00B4D8') + ' (akcenty), ' + (brandColors.navy || '#1A2B4A') + ' (nadpisy), bílá (pozadí). Bez stock photo klišé, bez neonových barev.' + (brandStyleDesc ? ' Vizuální styl: ' + brandStyleDesc.substring(0, 200) : '') + '"'
+          '      "imagePrompt": "DETAILNÍ anglický popis obrázku pro gpt-image-1 (5-8 vět). Toto je KREATIVNÍ BRIEF pro obrázek — popiš konkrétní kompozici, rozmístění prvků, barvy a náladu. MUSÍ obsahovat: (1) pokyn že text \\"VISUAL_HOOK\\" má být vysazen jako bold sans-serif typografie, (2) PŘESNÉ firemní barvy: navy ' + (brandColors.navy || '#0B1F4D') + ', turquoise ' + (brandColors.teal || '#26C9E5') + ', pozadí ' + (brandColors.gray || '#F5F6F7') + ', CTA gradient #2BB9D5 → #63D9DB, (3) styl: profesionální B2B finance, čistý layout, zaoblené karty, lineární ikony, hodně whitespace. ZAKÁZÁNO: červená, oranžová, neon, 3D, stock klišé, přeplácaný layout.' + (brandStyleDesc ? ' VIZUÁLNÍ DNA ZNAČKY: ' + brandStyleDesc.substring(0, 400) : '') + '"'
         : '';
 
     var imageInstructions = generateImage

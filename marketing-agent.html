@@ -2375,9 +2375,23 @@
         // ================== PROFILEND BRAND PRESETS (Google Drive) ==================
         var brandPresets = {
             styleMain: '', layoutDescA: '', layoutDescB: '', layoutDescC: '', layoutDescD: '', layoutDescE: '',
-            colors: { navy: '#0C2340', teal: '#00B4D8', white: '#FFFFFF', gray: '#F0F4F8' },
+            colors: { navy: '#0B1F4D', teal: '#26C9E5', white: '#FFFFFF', gray: '#F5F6F7' },
             igScreenshots: [], igScreenshotCount: 0
         };
+        
+        // ================== BRAND DNA DEFAULTS ==================
+        // Extracted from ProfiLend Brand DNA document (ChatGPT analysis of 5 IG reference posts)
+        var BRAND_DNA_DEFAULTS = {
+            styleMain: "Vizualy pro ProfiLend maji pusobit jako komunikace seriozni financni instituce zamerene na firmy, developery a investory. Celkovy dojem musi byt profesionalni, sebevedomy, vecny, lidsky a stabilni. Komunikace nesmi pripominat spotrebitelske pujcky, slevove bannery ani retailovou reklamu. Hlavni barevny zaklad tvori tmava navy (#0B1F4D, pripadne #081A4E pro tmave hero layouty) a tyrkysova az cyan jako akcent (#26C9E5, #2BB9D5, #53D6E0). Svetle layouty maji stat na off-white nebo velmi svetle sede (#F5F6F7, #F7F7F8, #FAFAFA). Text musi byt vzdy vysoce citelny: navy na svetlem pozadi, bily na tmavem pozadi a stredni seda pro sekundarni vysvetlujici text. Typografie ma byt moderni sans-serif, s jasnou hierarchii: kratke a silne headline, semibold ci bold mezititulky a usporny body text. Layout musi byt cisty a dobre skenovatelny behem nekolika vterin. Funguji zaoblene karty, tenke akcentni linky, checklisty, timeline, jednoduche linearni ikony a CTA tlacitka s velkym radiem. Pri pouziti fotografie je nutne pracovat s tmavym overlayem tam, kde pres fotografii vede text. Pozadi muze nest jemny grid, polygonalni formy nebo svetelne body, ale jen jako podpurny prvek. Nikdy se nesmi pouzivat kriklave slevove prvky, cervena urgence, 3D efekty, lacine stock klise ani preplacany layout.",
+            layoutDescA: "Pouzivej vertikalni nebo ctvercovy layout s titulkem nahore vlevo a logem idealne nahore vpravo. Hlavni obsah stav na 3-5 krocich, ktere jsou pod sebou ve forme bilych zaoblenych karet propojenych tenkou tyrkysovou linkou. Kazdy krok ma cislo, jednoduchou linearni ikonu a kratke vysvetleni. Pozadi svetle (#F5F6F7 az #FAFAFA), karty bile se subtilnim stinem. Nadpis a klicova slova v navy, akcenty v tyrkysove. CTA tlacitko dej dolu. Text v jednom kroku drz kratky: nadpis 3-10 slov, doprovodna veta max 8-14 slov. Horni pravy roh nech volny pokud je tam logo.",
+            layoutDescB: "Pracuj se dvema jasne oddelenymi bloky: mytus a realita. Mohou byt pod sebou nebo vedle sebe. Mytus muze mit neutralnejsi pozadi a symbol krizku, realita ma mit silnejsi navy nebo bilou kartu s tyrkysovymi check prvky. Nepouzivej lacinou cervenozelenou logiku. Typografie musi byt kratka a primocara, s vysokym kontrastem a dostatkem mista kolem textu. Kazda strana ma mit jeden vyrok a jedno kratke vysvetleni. CTA je volitelne. Text drz v rozsahu priblizne 12-20 slov na blok.",
+            layoutDescC: "Vytvor vyvazeny dvousloupcovy layout pro porovnani dvou moznosti, konceptu nebo pristupu. Nahore dej headline, pod nej dva stejne siroke sloupce oddelene tenkou linkou nebo dostatecnym whitespace. Kazdy sloupec muze obsahovat nadpis, ikonu a 3-6 kratkych bodu. Funguje bile nebo svetle sede pozadi s bilymi kartami. Nadpisy v navy, podpurny text ve stredni sede, ikony a zvyrazneni v tyrkysove. CTA muze byt dole na stred nebo dole vlevo. Nepreplnuj ani jednu stranu; vizualni vaha obou sloupcu musi byt vyrovnana.",
+            layoutDescD: "Pouzivej minimalisticky layout, kde hlavni roli hraje jedna silna veta nebo dvojradkovy claim. Headline umisti do horni poloviny, nejlepe vlevo, a dej mu vyraznou velikost. Pod nej patri kratka tyrkysova akcentni linka a jedna kratka vysvetlujici veta nebo dva usporne radky. Logo muze byt nahore vpravo nebo nize v ramci kompozice, ale vzdy s dostatecnou ochrannou zonou. CTA dej nize, idealne vlevo nebo na stred. Headline by mel mit maximalne 8-12 slov, podpurny text 15-25 slov. Vhodne jsou jemne polygonalni nebo linearni elementy v rohu, nikdy ne dominantni ozdoby.",
+            layoutDescE: "Pouzij realistickou fotografii profesionala, kancelarske budovy nebo relevantniho byznysoveho prostredi. Textova cast musi byt umistena v zone s tmavym overlayem, aby byla bila typografie perfektne citelna. Subjekt fotografie idealne stoji vpravo, zatimco vlevo je headline, benefity a CTA. Headline ma byt kratky a silny, pod nim 2-4 strucne benefity s linearnimi tyrkysovymi ikonami. CTA tlacitko ma mit velke zaobleni a silny kontrast. Nepouzivej fotografie s generickym usmevem bez relevance, rusne pozadi pod textem ani text pres oblicej.",
+            antiPatterns: "Zakazane jsou cervene nebo oranzove urgentni slevove barvy a veskerou estetika spotrebitelskych pujcek. Nepouzivat neonove barvy, efektni 3D tlacitka, plasticke ikonky nebo prehnane glow efekty. Nepouzivat vice nesouvisejicich fontu; drzet jednu sans-serif rodinu. Vyhnout se stock foto klise typu potreseni rukou, klice od domu v dlani, prasatko, padajici bankovky. Nepouzivat preplacany layout s prilis mnoha boxy, ikonami nebo textem. Nepokladat text prilis blizko k okrajum ani pres vizualne rusne casti fotografie. Nepouzivat slaby kontrast typu seda na sede. Nepouzivat agresivni prodejni copy ve stylu BEST DEAL, 100% GARANCE, LIMITOVANA NABIDKA.",
+            qualityChecklist: "1. Pouziva vizual jen firemni paletu navy, tyrkysova, bila, svetle seda? 2. Je headline kratky, jasny a vizualne dominantni? 3. Je typografie jednotna, bezpatkova a dobre citelna? 4. Je layout cisty a srozumitelny behem nekolika sekund? 5. Jsou karty, ikony a delici prvky presne zarovnane? 6. Je CTA dostatecne viditelne, ale ne kriklave? 7. Je kolem textu, CTA a loga dostatek volneho prostoru? 8. Je pouzita fotografie duveryhodna a ne klisovita? 9. Jsou ikony jednoduche, linearni a stylove jednotne? 10. Pusobi vysledek jako komunikace pro firmy a investory, ne jako retailova pujcka?"
+        };
+
         var _bpTimer = null;
         function debounceSaveBrandPresets() { if(_bpTimer)clearTimeout(_bpTimer); _bpTimer=setTimeout(saveBrandPresets,1500); }
 
@@ -2431,6 +2445,11 @@
         }
 
         function applyBrandPresetsToDOM() {
+            // If brandPresets fields are empty, populate from Brand DNA defaults
+            if (!brandPresets.styleMain && BRAND_DNA_DEFAULTS.styleMain) brandPresets.styleMain = BRAND_DNA_DEFAULTS.styleMain;
+            ['layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id) {
+                if (!brandPresets[id] && BRAND_DNA_DEFAULTS[id]) brandPresets[id] = BRAND_DNA_DEFAULTS[id];
+            });
             var m=document.getElementById('brandStyleMain'); if(m&&brandPresets.styleMain)m.value=brandPresets.styleMain;
             ['layoutDescA','layoutDescB','layoutDescC','layoutDescD','layoutDescE'].forEach(function(id){var e=document.getElementById(id);if(e&&brandPresets[id])e.value=brandPresets[id];});
             if(brandPresets.colors){['Navy','Teal','White','Gray'].forEach(function(n){var i=document.getElementById('brandColor'+n),h=document.getElementById('brandColor'+n+'Hex'),v=brandPresets.colors[n.toLowerCase()];if(i&&v){i.value=v;if(h)h.textContent=v;}});}
@@ -3224,7 +3243,7 @@
             const btn = document.getElementById('generateBtn');
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = 'Generuji přes AI...';
+            btn.textContent = wantImage ? 'Generuji text + obrázky přes AI...' : 'Generuji přes AI...';
             btn.style.opacity = '0.7';
 
             // Collect image settings if needed
@@ -3293,6 +3312,12 @@
                     renderBatchPreview(generatedPosts, wantImage);
                     const label = count === 1 ? 'Příspěvek vygenerován přes AI' : `${count} příspěvky vygenerovány přes AI`;
                     showToast(label, 'success');
+
+                    // AUTO-GENERATE IMAGES: When image toggle is ON, automatically generate images for all posts
+                    if (wantImage && generatedPosts.length > 0) {
+                        showToast('Generuji obrázky pro ' + generatedPosts.length + ' příspěvků...', 'info');
+                        autoGenerateAllImages(generatedPosts);
+                    }
                 } else {
                     // API returned error — fall back to local generation
                     console.warn('API error, falling back to local:', data.error);
@@ -3510,6 +3535,25 @@
             return div.innerHTML;
         }
 
+        // Auto-generate images for all posts sequentially (called after text generation)
+        async function autoGenerateAllImages(posts) {
+            if (!posts || posts.length === 0) return;
+            var generated = 0;
+            for (var i = 0; i < posts.length; i++) {
+                if (!posts[i] || !posts[i].imagePrompt) continue;
+
+                try {
+                    await generateImageForPost(i);
+                    generated++;
+                } catch (err) {
+                    console.error('[Auto-Image] Error generating image for post ' + i + ':', err);
+                }
+            }
+            if (generated > 0) {
+                showToast('Vygenerováno ' + generated + ' obrázků', 'success');
+            }
+        }
+
         async function generateImageForPost(idx) {
             var post = generatedPosts[idx];
             if (!post || !post.imagePrompt) {
@@ -3517,9 +3561,16 @@
                 return;
             }
 
-            var btn = event.target;
-            btn.disabled = true;
-            btn.textContent = '⏳ Generuji obrázek...';
+            // Find button from DOM (works for both manual click and auto-generation)
+            var btn = null;
+            var postCards = document.querySelectorAll('.post-card');
+            if (postCards && postCards[idx]) {
+                btn = postCards[idx].querySelector('.btn-connect');
+            }
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ Generuji obrázek...';
+            }
 
             try {
                 var sizeMap = { '1:1': '1024x1024', '4:5': '1024x1792', '16:9': '1792x1024' };
@@ -3544,7 +3595,15 @@
                 var requestBody = {
                     prompt: post.imagePrompt,
                     size: size,
-                    quality: 'standard'
+                    quality: 'standard',
+                    // Send Brand DNA context for enhanced image generation
+                    brandDNA: {
+                        styleMain: brandPresets.styleMain || (typeof BRAND_DNA_DEFAULTS !== 'undefined' && BRAND_DNA_DEFAULTS.styleMain) || '',
+                        antiPatterns: (typeof BRAND_DNA_DEFAULTS !== 'undefined' && BRAND_DNA_DEFAULTS.antiPatterns) || '',
+                        qualityChecklist: (typeof BRAND_DNA_DEFAULTS !== 'undefined' && BRAND_DNA_DEFAULTS.qualityChecklist) || '',
+                        colors: brandPresets.colors || {}
+                    },
+                    visualHook: post.visualHook || ''
                 };
                 if (referenceImages.length > 0) {
                     requestBody.referenceImages = referenceImages;
@@ -3574,8 +3633,10 @@
             } catch(err) {
                 showToast('Chyba: ' + err.message, 'error');
             } finally {
-                btn.disabled = false;
-                btn.textContent = '🎨 Generovat obrázek';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '🎨 Přegenerovat obrázek';
+                }
             }
         }
 
