@@ -3673,15 +3673,15 @@
         // ================== REFERENCE POSTS — LOAD FROM GOOGLE DRIVE ==================
         async function loadRecentPostsFromGDrive(maxPosts) {
             maxPosts = maxPosts || 10;
-            if (\!window.GDriveSync || \!GDriveSync.isConnected()) return [];
+            if (!window.GDriveSync || !GDriveSync.isConnected()) return [];
 
             try {
                 var fileList = await GDriveSync.listFiles();
-                if (\!fileList || \!Array.isArray(fileList)) return [];
+                if (!fileList || !Array.isArray(fileList)) return [];
 
                 // Filter only generated post files, sort by name desc (newest first)
                 var postFiles = fileList.filter(function(f) {
-                    return f.name && (f.name.indexOf('generated_') === 0 || f.name.indexOf('generated/') === 0) && f.name.indexOf('.txt') \!== -1;
+                    return f.name && (f.name.indexOf('generated_') === 0 || f.name.indexOf('generated/') === 0) && f.name.indexOf('.txt') !== -1;
                 }).sort(function(a, b) {
                     return (b.name || '').localeCompare(a.name || '');
                 }).slice(0, maxPosts);
@@ -3695,7 +3695,7 @@
                             var lines = text.split('\n');
                             var contentStart = -1;
                             for (var j = 0; j < lines.length; j++) {
-                                if (lines[j].indexOf('=====') \!== -1 && j > 0) {
+                                if (lines[j].indexOf('=====') !== -1 && j > 0) {
                                     contentStart = j + 1;
                                 }
                             }
