@@ -3445,14 +3445,34 @@
                 var format = document.getElementById('imageFormatSelect') ? document.getElementById('imageFormatSelect').value : '1:1';
                 var size = sizeMap[format] || '1024x1024';
 
+                // Collect up to 5 reference images from Brand Kit (IG screenshots)
+                var referenceImages = [];
+                if (brandPresets && brandPresets.igScreenshots && brandPresets.igScreenshots.length > 0) {
+                    var maxRefs = Math.min(brandPresets.igScreenshots.length, 5);
+                    for (var ri = 0; ri < maxRefs; ri++) {
+                        var shot = brandPresets.igScreenshots[ri];
+                        if (shot && shot.dataUrl) {
+                            referenceImages.push(shot.dataUrl);
+                        }
+                    }
+                    if (referenceImages.length > 0) {
+                        console.log('[Image Gen] Sending ' + referenceImages.length + ' reference images from Brand Kit');
+                    }
+                }
+
+                var requestBody = {
+                    prompt: post.imagePrompt,
+                    size: size,
+                    quality: 'standard'
+                };
+                if (referenceImages.length > 0) {
+                    requestBody.referenceImages = referenceImages;
+                }
+
                 var response = await fetch(API_BASE + '/api/marketing/generate-image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        prompt: post.imagePrompt,
-                        size: size,
-                        quality: 'standard'
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 var data = await response.json();

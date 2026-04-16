@@ -28,7 +28,7 @@ app.use(cors({
     allowedHeaders: ['Content-Type']
 }));
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Health check
 app.get('/', function (req, res) {
@@ -460,7 +460,7 @@ app.get('/api/marketing/models', async function (req, res) {
 app.post('/api/marketing/generate-image', async function (req, res) {
     var openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) {
-        return res.status(500).json({ error: 'OPENAI_API_KEY is not set. Add it in Railway → Variables.' });
+        return res.status(500).json({ error: 'OPENAI_API_KEY is not set. Add it in Railway Variables.' });
     }
     if (!OpenAI) {
         return res.status(500).json({ error: 'openai package not installed.' });
@@ -470,7 +470,7 @@ app.post('/api/marketing/generate-image', async function (req, res) {
     var prompt = body.prompt || '';
     var size = body.size || '1024x1024';
     var quality = body.quality || 'standard';
-    // Povolené modely — default gpt-image-1 (novější, umí text v obrázku), fallback dall-e-3
+    var referenceImages = body.referenceImages || [];
     var allowedImageModels = ['gpt-image-1', 'dall-e-3'];
     var imageModel = allowedImageModels.indexOf(body.imageModel) !== -1 ? body.imageModel : 'gpt-image-1';
 
@@ -480,7 +480,57 @@ app.post('/api/marketing/generate-image', async function (req, res) {
 
     try {
         var openai = new OpenAI({ apiKey: openaiKey });
-        // Quality mapping — gpt-image-1 používá 'low'/'medium'/'high', dall-e-3 používá 'standard'/'hd'
+        var finalPrompt = prompt;
+
+        // If reference images are provided, use GPT-4o vision to analyze them
+        // and create an enhanced prompt that captures their visual style
+        if (referenceImages.length > 0) {
+            console.log('[Image Gen] Processing ' + referenceImages.length + ' reference images via GPT-4o vision');
+            try {
+                var visionContent = [];
+                visionContent.push({
+                    type: 'text',
+                    text: 'You are an expert visual analyst for Instagram brand design. Analyze these ' + referenceImages.length + ' reference Instagram posts and extract their EXACT visual style. Then combine your analysis with the image generation prompt below to create a single, detailed image generation prompt that will produce an image matching this exact visual style.\n\nFocus on:\n- Color palette (exact colors, gradients, overlays)\n- Typography style (font weight, positioning, size ratios)\n- Layout composition (element placement, spacing, margins)\n- Visual effects (shadows, glows, blur, overlays, textures)\n- Photo treatment (filters, contrast, saturation, brightness)\n- Brand elements (logo placement, recurring visual motifs)\n- Overall mood and aesthetic\n\nORIGINAL IMAGE PROMPT:\n' + prompt + '\n\nReturn ONLY the enhanced image generation prompt, nothing else. The prompt should be in English and very detailed (300-500 words). It must capture the EXACT visual DNA of these reference posts so the generated image looks like it belongs in the same Instagram feed.'
+                });
+
+                // Add each reference image
+                for (var ri = 0; ri < referenceImages.length; ri++) {
+                    var imgData = referenceImages[ri];
+                    // Handle both data:image/... format and raw base64
+                    if (imgData.indexOf('data:') === 0) {
+                        visionContent.push({
+                            type: 'image_url',
+                            image_url: { url: imgData, detail: 'high' }
+                        });
+                    } else {
+                        visionContent.push({
+                            type: 'image_url',
+                            image_url: { url: 'data:image/png;base64,' + imgData, detail: 'high' }
+                        });
+                    }
+                }
+
+                var visionResponse = await openai.chat.completions.create({
+                    model: 'gpt-4o',
+                    messages: [{
+                        role: 'user',
+                        content: visionContent
+                    }],
+                    max_tokens: 1000,
+                    temperature: 0.3
+                });
+
+                if (visionResponse.choices && visionResponse.choices[0] && visionResponse.choices[0].message) {
+                    finalPrompt = visionResponse.choices[0].message.content;
+                    console.log('[Image Gen] Enhanced prompt generated via GPT-4o vision (' + finalPrompt.length + ' chars)');
+                }
+            } catch (visionErr) {
+                console.error('[Image Gen] Vision analysis failed, using original prompt:', visionErr.message);
+                // Fall back to original prompt if vision fails
+            }
+        }
+
+        // Quality mapping
         var effectiveQuality = quality;
         if (imageModel === 'gpt-image-1') {
             if (quality === 'standard') effectiveQuality = 'medium';
@@ -489,12 +539,11 @@ app.post('/api/marketing/generate-image', async function (req, res) {
 
         var genParams = {
             model: imageModel,
-            prompt: prompt,
+            prompt: finalPrompt,
             n: 1,
             size: size,
             quality: effectiveQuality
         };
-        // dall-e-3 podporuje response_format, gpt-image-1 vrací b64_json defaultně
         if (imageModel === 'dall-e-3') {
             genParams.response_format = 'b64_json';
         }
@@ -506,7 +555,8 @@ app.post('/api/marketing/generate-image', async function (req, res) {
             success: true,
             image: imageData.b64_json,
             revisedPrompt: imageData.revised_prompt || null,
-            model: imageModel
+            model: imageModel,
+            usedReferenceImages: referenceImages.length > 0
         });
     } catch (err) {
         console.error('OpenAI image error:', err.message);
