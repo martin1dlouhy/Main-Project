@@ -2667,6 +2667,27 @@
         return allText;
     }
 
+    async function renderPDFPagesToImages(file) {
+        var arrayBuffer = await file.arrayBuffer();
+        var pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        var images = [];
+        for (var i = 1; i <= pdf.numPages; i++) {
+            var page = await pdf.getPage(i);
+            // Render at 2x scale for readability (good balance of quality vs size)
+            var scale = 2;
+            var viewport = page.getViewport({ scale: scale });
+            var canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            var ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+            // Export as JPEG (0.85 quality — good readability, reasonable size)
+            var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            images.push(dataUrl);
+        }
+        return images;
+    }
+
     async function extractTextFromDOCX(file) {
         var arrayBuffer = await file.arrayBuffer();
         var zip = new PizZip(arrayBuffer);
@@ -2688,30 +2709,53 @@
 
             try {
                 var ext = lvFiles[i].name.split('.').pop().toLowerCase();
-                var text;
+                var text = '';
+                var pageImages = null;
+
                 if (ext === 'pdf') {
                     text = await extractTextFromPDF(lvFiles[i].file);
+                    // If text extraction failed, fall back to image mode
+                    if (!text || text.trim().length < 20) {
+                        console.log(lvFiles[i].name + ': text extraction yielded only ' + (text ? text.trim().length : 0) + ' chars, falling back to image mode');
+                        lvFiles[i].status = 'extracting';
+                        renderLVFileList();
+                        pageImages = await renderPDFPagesToImages(lvFiles[i].file);
+                    }
                 } else {
                     text = await extractTextFromDOCX(lvFiles[i].file);
                 }
 
-                if (!text || text.trim().length < 20) {
+                var hasText = text && text.trim().length >= 20;
+                var hasImages = pageImages && pageImages.length > 0;
+
+                if (!hasText && !hasImages) {
                     lvFiles[i].status = 'error';
                     showToast('Nepodařilo se extrahovat text z ' + lvFiles[i].name, 'error');
                     renderLVFileList();
                     continue;
                 }
 
-                lvFiles[i].text = text;
+                if (hasText) lvFiles[i].text = text;
 
                 // Step 2: Send to Claude API
                 lvFiles[i].status = 'parsing';
                 renderLVFileList();
 
+                var requestBody = {
+                    fileName: lvFiles[i].name,
+                    instructions: document.getElementById('lv-instructions').value.trim()
+                };
+                if (hasText) {
+                    requestBody.text = text;
+                }
+                if (hasImages) {
+                    requestBody.images = pageImages;
+                }
+
                 var response = await fetch(LV_API_BASE + '/api/parse-lv', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text, fileName: lvFiles[i].name, instructions: document.getElementById('lv-instructions').value.trim() })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (!response.ok) {

@@ -117,15 +117,23 @@ app.post('/api/parse-lv', async function (req, res) {
     }
 
     var text = req.body && req.body.text;
+    var images = req.body && req.body.images; // Array of base64 JPEG strings (fallback when pdf.js can't extract text)
     var fileName = req.body && req.body.fileName;
     var instructions = req.body && req.body.instructions;
 
-    if (!text || text.trim().length < 20) {
-        return res.status(400).json({ error: 'Z dokumentu se nepodařilo extrahovat dostatek textu. PDF může být naskenované (obrázek místo textu).' });
+    var hasText = text && text.trim().length >= 20;
+    var hasImages = images && Array.isArray(images) && images.length > 0;
+
+    if (!hasText && !hasImages) {
+        return res.status(400).json({ error: 'Z dokumentu se nepodařilo extrahovat text ani obrázky.' });
     }
 
-    if (text.length > 100000) {
+    if (hasText && text.length > 100000) {
         return res.status(400).json({ error: 'Text je příliš dlouhý (max 100 000 znaků).' });
+    }
+
+    if (hasImages && images.length > 20) {
+        return res.status(400).json({ error: 'Příliš mnoho stránek (max 20).' });
     }
 
     var client = new Anthropic({ apiKey: apiKey });
@@ -168,7 +176,9 @@ app.post('/api/parse-lv', async function (req, res) {
         'Pokud text obsahuje více LV, vrať pole JSON objektů.\n' +
         'Klíč "collateral_summary" je nejdůležitější — měl by obsahovat stručný popis vhodný do Term Sheetu.\n' +
         'Text může být špatně extrahovaný z PDF — pokus se i tak rozpoznat klíčové údaje (číslo LV, katastrální území, parcely).\n' +
-        'U velkých LV s mnoha parcelami uveď VŠECHNY parcely — nevynechávej žádnou.';
+        'U velkých LV s mnoha parcelami uveď VŠECHNY parcely — nevynechávej žádnou.\n' +
+        'Pokud dostaneš obrázky stránek PDF místo textu, přečti a analyzuj je stejným způsobem.\n' +
+        'Pokud PDF obsahuje více LV (každý na jiné stránce/stránkách), vrať pole JSON objektů — jeden objekt pro každý LV.';
 
     // Helper: try to extract JSON from Claude response text
     function tryParseJSON(responseText) {
@@ -203,20 +213,51 @@ app.post('/api/parse-lv', async function (req, res) {
         return null;
     }
 
-    var inputText = text.substring(0, 30000);
-    console.log('LV parse request:', { fileName: fileName, textLength: text.length, trimmedLength: inputText.length });
+    var mode = hasImages && !hasText ? 'images' : 'text';
+    console.log('LV parse request:', { fileName: fileName, mode: mode, textLength: hasText ? text.length : 0, imageCount: hasImages ? images.length : 0 });
 
     try {
-        var userContent = 'Analyzuj tento List vlastnictví z katastru nemovitostí (soubor: ' + (fileName || 'neznámý') + '):\n\n' +
-            (instructions ? 'POKYN OD UŽIVATELE: ' + instructions + '\n\n' : '') +
-            inputText;
+        var userContentParts;
+
+        if (mode === 'images') {
+            // Multimodal mode — send page images to Claude
+            var textIntro = 'Analyzuj tento List vlastnictví z katastru nemovitostí (soubor: ' + (fileName || 'neznámý') + ').\n' +
+                'Níže jsou obrázky jednotlivých stránek PDF.\n' +
+                (instructions ? 'POKYN OD UŽIVATELE: ' + instructions + '\n' : '') +
+                'Přečti a extrahuj VŠECHNA data ze VŠECH stránek.';
+
+            userContentParts = [{ type: 'text', text: textIntro }];
+
+            for (var imgIdx = 0; imgIdx < images.length; imgIdx++) {
+                // Strip data URI prefix if present
+                var base64Data = images[imgIdx];
+                if (base64Data.indexOf(',') !== -1) {
+                    base64Data = base64Data.split(',')[1];
+                }
+                userContentParts.push({
+                    type: 'image',
+                    source: {
+                        type: 'base64',
+                        media_type: 'image/jpeg',
+                        data: base64Data
+                    }
+                });
+            }
+        } else {
+            // Text mode — original behavior
+            var inputText = text.substring(0, 30000);
+            var textContent = 'Analyzuj tento List vlastnictví z katastru nemovitostí (soubor: ' + (fileName || 'neznámý') + '):\n\n' +
+                (instructions ? 'POKYN OD UŽIVATELE: ' + instructions + '\n\n' : '') +
+                inputText;
+            userContentParts = textContent;
+        }
 
         // Use assistant prefill to force JSON output — Claude must continue from "{"
         var message = await client.messages.create({
             model: 'claude-sonnet-4-20250514',
             max_tokens: 8192,
             messages: [
-                { role: 'user', content: userContent },
+                { role: 'user', content: userContentParts },
                 { role: 'assistant', content: '{' }
             ],
             system: systemPrompt
@@ -655,6 +696,7 @@ app.post('/api/marketing/generate', async function (req, res) {
     var brandStyleDesc = typeof body.brandStyleDesc === 'string' ? body.brandStyleDesc.trim() : '';
     var brandLayoutDescs = body.brandLayoutDescs || {};
     // Výběr OpenAI modelu pro text — default gpt-4o-mini, povolené i gpt-4o
+    var brandDNAFull = body.brandDNAFull || {};
     var allowedTextModels = ['gpt-4o-mini', 'gpt-4o'];
     var textModel = allowedTextModels.indexOf(body.textModel) !== -1 ? body.textModel : 'gpt-4o-mini';
 
@@ -786,15 +828,22 @@ app.post('/api/marketing/generate', async function (req, res) {
         '- Formát: hook (první věta chytlavá) → hlavní sdělení → CTA.\n' +
         '- DŮLEŽITÉ: Vrať POUZE platný JSON, žádný markdown.\n';
 
-    // Image-related pole jen když uživatel chce obrázek
+    // Visual type to Brand DNA template mapping
+    var templateMap = {
+        'typ1': 'D', 'typ2': 'A', 'typ3': 'A', 'typ4': 'B', 'typ5a': 'E', 'typ5b': 'E'
+    };
+    var selectedTemplate = templateMap[imageSettings.visualType] || 'D';
+    var selectedLayoutDesc = brandDNAFull['layoutDesc' + selectedTemplate] || brandLayoutDescs[selectedTemplate] || '';
+
+    // Image-related pole jen kdyz uzivatel chce obrazek
     var imageFieldSpec = generateImage
         ? ',\n' +
-          '      "visualHook": "KRÁTKÁ hláška 3–8 slov určená k vložení PŘÍMO DO OBRÁZKU (bez hashtagů, bez CTA; konkrétní, čitelná, bez diakritiky pokud to zlepší čitelnost)",\n' +
-          '      "imagePrompt": "DETAILNÍ anglický popis obrázku pro gpt-image-1 (5-8 vět). Toto je KREATIVNÍ BRIEF pro obrázek — popiš konkrétní kompozici, rozmístění prvků, barvy a náladu. MUSÍ obsahovat: (1) pokyn že text \\"VISUAL_HOOK\\" má být vysazen jako bold sans-serif typografie, (2) PŘESNÉ firemní barvy: navy ' + (brandColors.navy || '#0B1F4D') + ', turquoise ' + (brandColors.teal || '#26C9E5') + ', pozadí ' + (brandColors.gray || '#F5F6F7') + ', CTA gradient #2BB9D5 → #63D9DB, (3) styl: profesionální B2B finance, čistý layout, zaoblené karty, lineární ikony, hodně whitespace. ZAKÁZÁNO: červená, oranžová, neon, 3D, stock klišé, přeplácaný layout.' + (brandStyleDesc ? ' VIZUÁLNÍ DNA ZNAČKY: ' + brandStyleDesc.substring(0, 400) : '') + '"'
+          '      "visualHook": "KRATKA hlaska 3-8 slov urcena k vlozeni PRIMO DO OBRAZKU (bez hashtagu, bez CTA; konkretni, citelna, bez diakritiky pokud to zlepsi citelnost)",\n' +
+          '      "creativeBrief": "DETAILNI cesky popis co ma obrazek komunikovat, jaka je nalada, co je hlavni sdeleni, pro koho je urcen. 3-5 vet."'
         : '';
 
     var imageInstructions = generateImage
-        ? '\n\nOBRÁZEK: Ke každému příspěvku VRAŤ pole "visualHook" a "imagePrompt". visualHook = krátká, úderná věta/slogan, která se vloží PŘÍMO do obrázku jako viditelný text (např. "Rozhodnutí do 48 hodin", "Financování do 250 mil. Kč"). imagePrompt = anglický popis kompozice pro image generátor, který EXPLICITNĚ řekne modelu, že "VISUAL_HOOK" má být vysazen jako typografie v obrázku.'
+        ? '\n\nOBRAZEK: Ke kazdemu prispevku VRAT pole "visualHook" a "creativeBrief". visualHook = kratka uderna veta/slogan pro vlozeni do obrazku. creativeBrief = detailni popis CO ma obrazek komunikovat a JAKA nalada ma byt (NE technicke instrukce pro AI, ale kreativni zadani). Server sam sestavi technicky prompt z Brand DNA.'
         : '';
 
     var userPrompt = 'Vygeneruj ' + batchCount + ' ' + (batchCount === 1 ? 'příspěvek' : 'příspěvky') +
@@ -852,21 +901,61 @@ app.post('/api/marketing/generate', async function (req, res) {
                 var imgPrompt = null;
                 var visualHook = post.visualHook || post.hook || '';
                 if (generateImage) {
-                    if (post.imagePrompt && String(post.imagePrompt).length > 20) {
-                        // Nahradíme placeholder VISUAL_HOOK, pokud ho GPT ponechalo
-                        imgPrompt = String(post.imagePrompt).replace(/VISUAL_HOOK/g, visualHook);
-                    } else {
-                        // Fallback — sestavíme deterministický prompt ze settings + visualHook
-                        var visualType = imageSettings.visualType || 'typ1';
-                        var people = imageSettings.people || 'none';
-                        var scene = imageSettings.scene || 'abstract';
-                        var mood = imageSettings.mood || 'professional';
-                        var format = imageSettings.format || '1:1';
-                        imgPrompt = buildServerImagePrompt(visualType, people, scene, mood, format, theme, idx);
-                        if (visualHook) {
-                            imgPrompt += ' Include the text "' + visualHook + '" prominently as bold sans-serif typography within the composition.';
-                        }
+                    // SERVER-SIDE PROMPT ASSEMBLY from Brand DNA
+                    // Instead of relying on GPT to write image prompts, we build them here
+                    var fullBrandStyle = brandDNAFull.styleMain || brandStyleDesc || '';
+                    var fullAntiPatterns = brandDNAFull.antiPatterns || '';
+                    var creativeBrief = post.creativeBrief || post.imagePrompt || theme;
+                    
+                    var promptParts = [];
+                    promptParts.push('Create a professional Instagram post image for ProfiLend, a Czech B2B financial institution.');
+                    
+                    // Visual hook as typography
+                    if (visualHook) {
+                        promptParts.push('The image MUST contain this text as prominent bold sans-serif typography: "' + visualHook + '". This text should be the visual focal point.');
                     }
+                    
+                    // Creative context from GPT
+                    if (creativeBrief && creativeBrief !== theme) {
+                        promptParts.push('Creative concept: ' + creativeBrief);
+                    }
+                    promptParts.push('Topic: ' + theme);
+                    
+                    // Layout template from Brand DNA
+                    if (selectedLayoutDesc) {
+                        promptParts.push('LAYOUT TEMPLATE (follow precisely): ' + selectedLayoutDesc);
+                    }
+                    
+                    // Full Brand DNA style
+                    if (fullBrandStyle) {
+                        promptParts.push('BRAND VISUAL RULES: ' + fullBrandStyle);
+                    }
+                    
+                    // Exact colors
+                    var nc = brandColors.navy || '#0B1F4D';
+                    var tc = brandColors.teal || '#26C9E5';
+                    var gc = brandColors.gray || '#F5F6F7';
+                    promptParts.push('EXACT COLORS: Navy ' + nc + ' for headings and dark backgrounds. Turquoise ' + tc + ' for accents, CTA buttons, icons, lines. Light background ' + gc + ' to #FAFAFA. CTA gradient #2BB9D5 to #63D9DB. Secondary text #5A5A5A to #6A6A6A. White #FFFFFF for cards and text on dark backgrounds.');
+                    
+                    // Scene and people from image settings
+                    var sceneDesc = imageSettings.scene || 'abstract';
+                    var peopleDesc = imageSettings.people || 'none';
+                    if (peopleDesc === 'none') promptParts.push('No people. Pure typographic and geometric design.');
+                    else if (peopleDesc === 'silhouette') promptParts.push('Abstract silhouetted figure, no facial features.');
+                    else if (peopleDesc === 'realistic') promptParts.push('Professional businessperson, realistic photography with dark overlay where text appears.');
+                    
+                    // Anti-patterns (critical)
+                    if (fullAntiPatterns) {
+                        promptParts.push('FORBIDDEN (never include): ' + fullAntiPatterns);
+                    } else {
+                        promptParts.push('FORBIDDEN: No red/orange urgency colors. No neon. No 3D effects. No stock photo cliches (handshakes, piggy banks, falling money). No cluttered layouts. No weak contrast. No aggressive sales copy.');
+                    }
+                    
+                    // Format
+                    var format = imageSettings.format || '1:1';
+                    promptParts.push('Format: ' + format + '. Modern sans-serif typography. Clean scannable layout. Generous whitespace. Rounded cards with subtle shadows. Thin turquoise accent lines. Simple linear icons.');
+                    
+                    imgPrompt = promptParts.join('\n\n');
                 }
                 return {
                     index: idx + 1,
@@ -874,7 +963,8 @@ app.post('/api/marketing/generate', async function (req, res) {
                     hook: post.hook || '',
                     cta: post.cta || '',
                     visualHook: visualHook,
-                    imagePrompt: imgPrompt
+                    imagePrompt: imgPrompt,
+                    creativeBrief: post.creativeBrief || ''
                 };
             });
 
