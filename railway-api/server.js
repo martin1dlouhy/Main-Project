@@ -315,23 +315,32 @@ app.post('/api/parse-lv', async function (req, res) {
             userContentParts = textContent;
         }
 
-        // Use assistant prefill to force JSON output — Claude must continue from "{"
-        // Image mode needs more tokens (multiple LVs with parcels + bremena from scanned pages)
+        // Image mode: no prefill — Claude can return array directly for multiple LVs
+        // Text mode: use "{" prefill to force JSON (original behavior)
         var maxTokens = mode === 'images' ? 16384 : 8192;
+        var messages;
+        if (mode === 'images') {
+            messages = [{ role: 'user', content: userContentParts }];
+        } else {
+            messages = [
+                { role: 'user', content: userContentParts },
+                { role: 'assistant', content: '{' }
+            ];
+        }
+
         var message = await client.messages.create({
             model: 'claude-sonnet-4-20250514',
             max_tokens: maxTokens,
-            messages: [
-                { role: 'user', content: userContentParts },
-                { role: 'assistant', content: '{' }
-            ],
+            messages: messages,
             system: systemPrompt
         });
 
-        // Reconstruct full JSON — prefill "{" + Claude's continuation
-        var responseText = '{' + message.content[0].text;
+        // Reconstruct response — add prefill "{" only for text mode
+        var responseText = mode === 'images'
+            ? message.content[0].text
+            : '{' + message.content[0].text;
         var stopReason = message.stop_reason || 'unknown';
-        console.log('Claude response length:', responseText.length, 'stop_reason:', stopReason, 'first 100 chars:', responseText.substring(0, 100));
+        console.log('Claude response length:', responseText.length, 'stop_reason:', stopReason, 'mode:', mode, 'first 200 chars:', responseText.substring(0, 200));
 
         // If response was truncated (max_tokens hit), try to salvage partial JSON
         if (stopReason === 'max_tokens') {
@@ -341,7 +350,27 @@ app.post('/api/parse-lv', async function (req, res) {
         var parsed = tryParseJSON(responseText);
 
         if (parsed) {
-            var results = Array.isArray(parsed) ? parsed : [parsed];
+            var results;
+            if (Array.isArray(parsed)) {
+                results = parsed;
+            } else if (parsed.lv_cislo !== undefined) {
+                // Single LV object
+                results = [parsed];
+            } else {
+                // Wrapper object — Claude used { prefill and wrapped array in a key
+                // Look for the first array value containing LV objects
+                var foundArray = null;
+                var keys = Object.keys(parsed);
+                for (var ki = 0; ki < keys.length; ki++) {
+                    var val = parsed[keys[ki]];
+                    if (Array.isArray(val) && val.length > 0 && val[0] && typeof val[0] === 'object') {
+                        foundArray = val;
+                        console.log('Unwrapped LV array from key "' + keys[ki] + '" (' + val.length + ' items)');
+                        break;
+                    }
+                }
+                results = foundArray || [parsed];
+            }
             return res.status(200).json({ success: true, data: results });
         } else {
             console.error('Failed to parse JSON from Claude response (first 500 chars):', responseText.substring(0, 500));
