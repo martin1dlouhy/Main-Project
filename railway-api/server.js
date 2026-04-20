@@ -210,6 +210,69 @@ app.post('/api/parse-lv', async function (req, res) {
             } catch (e) { /* invalid */ }
         }
 
+        // Strategy 4: Truncated array — salvage complete objects from "[{...}, {..."
+        // When max_tokens is hit, the JSON array may be cut mid-object
+        if (startArr !== -1) {
+            var arrContent = responseText.substring(startArr + 1);
+            var salvaged = [];
+            var braceDepth = 0;
+            var objStart = -1;
+            for (var ci = 0; ci < arrContent.length; ci++) {
+                var ch = arrContent[ci];
+                if (ch === '{' && braceDepth === 0) objStart = ci;
+                if (ch === '{') braceDepth++;
+                if (ch === '}') braceDepth--;
+                if (ch === '}' && braceDepth === 0 && objStart !== -1) {
+                    try {
+                        var obj = JSON.parse(arrContent.substring(objStart, ci + 1));
+                        salvaged.push(obj);
+                    } catch (e) { /* skip malformed object */ }
+                    objStart = -1;
+                }
+            }
+            if (salvaged.length > 0) {
+                console.log('Salvaged ' + salvaged.length + ' complete JSON objects from truncated response');
+                return salvaged;
+            }
+        }
+
+        // Strategy 5: Single truncated object — try to close it
+        if (startObj !== -1) {
+            var objText = responseText.substring(startObj);
+            // Count unclosed braces and try to close them
+            var openBraces = 0;
+            var openBrackets = 0;
+            var inString = false;
+            var escaped = false;
+            for (var si = 0; si < objText.length; si++) {
+                var sc = objText[si];
+                if (escaped) { escaped = false; continue; }
+                if (sc === '\\') { escaped = true; continue; }
+                if (sc === '"') { inString = !inString; continue; }
+                if (inString) continue;
+                if (sc === '{') openBraces++;
+                if (sc === '}') openBraces--;
+                if (sc === '[') openBrackets++;
+                if (sc === ']') openBrackets--;
+            }
+            if (openBraces > 0 || openBrackets > 0) {
+                // Truncate to last complete key-value pair
+                var lastComma = objText.lastIndexOf(',');
+                var lastCloseBrace = objText.lastIndexOf('}');
+                if (lastComma > lastCloseBrace) {
+                    objText = objText.substring(0, lastComma);
+                }
+                // Close open brackets and braces
+                for (var bi = 0; bi < openBrackets; bi++) objText += ']';
+                for (var bj = 0; bj < openBraces; bj++) objText += '}';
+                try {
+                    var repaired = JSON.parse(objText);
+                    console.log('Repaired truncated JSON object (closed ' + openBraces + ' braces, ' + openBrackets + ' brackets)');
+                    return repaired;
+                } catch (e) { /* repair failed */ }
+            }
+        }
+
         return null;
     }
 
@@ -253,9 +316,11 @@ app.post('/api/parse-lv', async function (req, res) {
         }
 
         // Use assistant prefill to force JSON output — Claude must continue from "{"
+        // Image mode needs more tokens (multiple LVs with parcels + bremena from scanned pages)
+        var maxTokens = mode === 'images' ? 16384 : 8192;
         var message = await client.messages.create({
             model: 'claude-sonnet-4-20250514',
-            max_tokens: 8192,
+            max_tokens: maxTokens,
             messages: [
                 { role: 'user', content: userContentParts },
                 { role: 'assistant', content: '{' }
@@ -265,7 +330,13 @@ app.post('/api/parse-lv', async function (req, res) {
 
         // Reconstruct full JSON — prefill "{" + Claude's continuation
         var responseText = '{' + message.content[0].text;
-        console.log('Claude response length:', responseText.length, 'first 100 chars:', responseText.substring(0, 100));
+        var stopReason = message.stop_reason || 'unknown';
+        console.log('Claude response length:', responseText.length, 'stop_reason:', stopReason, 'first 100 chars:', responseText.substring(0, 100));
+
+        // If response was truncated (max_tokens hit), try to salvage partial JSON
+        if (stopReason === 'max_tokens') {
+            console.warn('Claude response was truncated at max_tokens — attempting to salvage partial JSON');
+        }
 
         var parsed = tryParseJSON(responseText);
 
