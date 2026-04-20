@@ -2644,6 +2644,7 @@
         var arrayBuffer = await file.arrayBuffer();
         var pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         var allText = '';
+        var realTextLength = 0; // Track actual PDF text (excluding our page separators)
         for (var i = 1; i <= pdf.numPages; i++) {
             var page = await pdf.getPage(i);
             var content = await page.getTextContent();
@@ -2661,8 +2662,14 @@
                 var lineItems = lines[y].sort(function(a, b) { return a.x - b.x; });
                 var lineText = lineItems.map(function(item) { return item.text; }).join(' ');
                 allText += lineText + '\n';
+                realTextLength += lineText.trim().length;
             });
             allText += '\n--- Stránka ' + i + ' ---\n\n';
+        }
+        // If pdf.js extracted no real text (only our separators), return empty
+        if (realTextLength < 20) {
+            console.log('PDF text extraction: only ' + realTextLength + ' chars of real text found');
+            return '';
         }
         return allText;
     }
