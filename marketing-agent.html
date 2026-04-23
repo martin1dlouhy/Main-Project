@@ -830,6 +830,68 @@
             border-radius: 12px;
             padding: 1rem;
             margin-bottom: 0.75rem;
+            position: relative;
+        }
+
+        /* Image generation spinner overlay (Spec 1 hotfix) */
+        .batch-post-card.is-generating-image::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 17, 32, 0.55);
+            border-radius: 12px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .batch-post-card.is-generating-image::after {
+            content: 'Generuji obrázek…';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: 0.02em;
+            z-index: 11;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 50 50'%3E%3Ccircle cx='25' cy='25' r='20' stroke='%2338BDF8' stroke-width='4' fill='none' stroke-linecap='round' stroke-dasharray='90 60'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 25 25' to='360 25 25' dur='1s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center calc(50% - 26px);
+            padding-top: 38px;
+        }
+
+        /* Sticky persistent toast (image generation in progress, doesn't auto-dismiss) */
+        .sticky-progress-toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9997;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1.5px solid var(--accent);
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 8px 28px rgba(56, 189, 248, 0.25);
+        }
+        .sticky-progress-toast .spinner-mini {
+            width: 16px;
+            height: 16px;
+            border: 2.5px solid var(--accent-light);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spinnerRotate 0.8s linear infinite;
+        }
+        @keyframes spinnerRotate {
+            to { transform: rotate(360deg); }
         }
 
         .batch-post-header {
@@ -3694,14 +3756,26 @@
             }
 
             // Find button from DOM (works for both manual click and auto-generation)
+            // NOTE: actual class is .batch-post-card, not .post-card (was a no-op selector before)
             var btn = null;
-            var postCards = document.querySelectorAll('.post-card');
-            if (postCards && postCards[idx]) {
-                btn = postCards[idx].querySelector('.btn-connect');
+            var postCards = document.querySelectorAll('.batch-post-card');
+            var thisCard = postCards && postCards[idx] ? postCards[idx] : null;
+            if (thisCard) {
+                btn = thisCard.querySelector('.btn-connect');
+                thisCard.classList.add('is-generating-image');
             }
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = '⏳ Generuji obrázek...';
+                btn.textContent = '⏳ Generuji obrázek…';
+            }
+            // Sticky toast (persistent until removed) — global feedback if user scrolls away
+            var stickyToast = document.getElementById('imgGenStickyToast');
+            if (!stickyToast) {
+                stickyToast = document.createElement('div');
+                stickyToast.id = 'imgGenStickyToast';
+                stickyToast.className = 'sticky-progress-toast';
+                stickyToast.innerHTML = '<span class="spinner-mini"></span><span>Generuji obrázek…</span>';
+                document.body.appendChild(stickyToast);
             }
 
             try {
@@ -3818,6 +3892,14 @@
                 if (btn) {
                     btn.disabled = false;
                     btn.textContent = '🎨 Přegenerovat obrázek';
+                }
+                if (thisCard) {
+                    thisCard.classList.remove('is-generating-image');
+                }
+                // Remove sticky toast only if no other image generation is in flight
+                if (!document.querySelector('.batch-post-card.is-generating-image')) {
+                    var st = document.getElementById('imgGenStickyToast');
+                    if (st) st.remove();
                 }
             }
         }
