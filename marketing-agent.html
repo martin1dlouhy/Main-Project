@@ -1659,6 +1659,9 @@
                 </div>
             </div>
             <div class="nav-right">
+                <select id="brandSwitcherTopnav" title="Aktivní brand"
+                    onchange="setActiveBrandV2(this.value)"
+                    style="margin-right:0.75rem;padding:0.4rem 0.6rem;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-weight:600;font-size:13px;cursor:pointer;"></select>
                 <div class="theme-toggle">
                     <button class="theme-btn theme-btn-snow active" onclick="setTheme('snow')" title="Light Mode">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1696,6 +1699,12 @@
                     <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-1 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z" fill="white"/><circle cx="6.5" cy="11.5" r="1.5" fill="#FCA5A5"/><circle cx="9.5" cy="7.5" r="1.5" fill="#FDE68A"/><circle cx="14.5" cy="7.5" r="1.5" fill="#6EE7B7"/><circle cx="17.5" cy="11.5" r="1.5" fill="#93C5FD"/></svg>
                 </div>
                 <span class="sidebar-label">Brand Kit</span>
+            </button>
+            <button class="sidebar-item" data-module="brandstudio" onclick="document.querySelectorAll('.sidebar-item').forEach(function(b){b.classList.remove('active');});this.classList.add('active');document.querySelectorAll('.module').forEach(function(m){m.classList.remove('active');});var el=document.getElementById('module-brandstudio');if(el)el.classList.add('active');renderBrandStudio();renderPromptLog();">
+                <div class="sidebar-icon" style="background: linear-gradient(145deg, #A5B4FC, #6366F1, #4338CA);">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.18L19.82 8 12 11.82 4.18 8 12 4.18zM4 9.5l7 3.5v7.5l-7-3.5v-7.5zm9 11v-7.5l7-3.5v7.5l-7 3.5z" fill="white"/></svg>
+                </div>
+                <span class="sidebar-label">Brand Studio</span>
             </button>
             <button class="sidebar-item" data-module="kalendar">
                 <div class="sidebar-icon" style="background: linear-gradient(145deg, #FDE68A, #FBBF24, #D97706);">
@@ -2305,6 +2314,47 @@
                 </div>
             </div>
 
+            <!-- BRAND STUDIO MODULE (Spec 1, 2026-04-22) -->
+            <div class="module" id="module-brandstudio">
+                <div style="display:flex;gap:1.25rem;height:calc(100vh - 100px);">
+                    <!-- Sidebar: brand list + history -->
+                    <div style="width:260px;display:flex;flex-direction:column;background:var(--bg-surface);border-radius:12px;padding:1rem;overflow:hidden;">
+                        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.6rem;">Brandy</div>
+                        <div id="brandStudioSidebarList" style="overflow-y:auto;flex:0 0 auto;max-height:50%;"></div>
+                        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin:1rem 0 0.6rem;">Historie promptů</div>
+                        <div id="promptLogList" style="overflow-y:auto;flex:1 1 auto;"></div>
+                    </div>
+                    <!-- Main: editor -->
+                    <div style="flex:1;display:flex;flex-direction:column;background:var(--bg-surface);border-radius:12px;overflow:hidden;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border-color);">
+                            <div>
+                                <div style="font-size:12px;color:var(--text-muted);font-weight:600;">BRAND</div>
+                                <div id="brandStudioTitle" style="font-size:20px;font-weight:700;color:var(--text-primary);">—</div>
+                            </div>
+                            <button onclick="bsSaveActive()" style="padding:0.55rem 1.1rem;border:none;border-radius:8px;background:var(--accent);color:white;font-weight:600;cursor:pointer;">Uložit</button>
+                        </div>
+                        <div id="brandStudioTabBar" style="display:flex;gap:0.25rem;padding:0 1.25rem;border-bottom:1px solid var(--border-color);"></div>
+                        <div id="brandStudioTabBody" style="flex:1;overflow-y:auto;padding:1.25rem;"></div>
+                    </div>
+                </div>
+            </div>
+            <style>
+                #module-brandstudio .bs-input { width:100%; padding:0.5rem 0.65rem; border:1px solid var(--border-color); border-radius:6px; background:var(--bg-primary); color:var(--text-primary); font-family:inherit; font-size:13px; line-height:1.4; }
+                #module-brandstudio textarea.bs-input { resize:vertical; min-height:60px; font-family:inherit; }
+                #previewPromptModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:10000; align-items:center; justify-content:center; padding:1rem; }
+                #previewPromptModal .pp-card { background:var(--bg-primary); border-radius:14px; max-width:900px; width:100%; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+                #previewPromptModal .pp-header { padding:1rem 1.25rem; border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+                #previewPromptModal .pp-meta { display:flex; gap:1rem; font-size:12px; color:var(--text-muted); flex-wrap:wrap; padding:0.6rem 1.25rem; background:var(--bg-surface); border-bottom:1px solid var(--border-color); }
+                #previewPromptModal .pp-body { padding:1.25rem; overflow-y:auto; flex:1; }
+                #previewPromptModal .pp-section-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin:1rem 0 0.4rem; display:flex; justify-content:space-between; align-items:center; }
+                #previewPromptModal pre.pp-text { background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem 0.9rem; font-size:12px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; max-height:280px; overflow-y:auto; color:var(--text-primary); font-family: 'JetBrains Mono', Menlo, Consolas, monospace; }
+                #previewPromptModal .pp-actions { padding:0.85rem 1.25rem; border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:0.6rem; background:var(--bg-surface); }
+                #previewPromptModal .pp-btn { padding:0.55rem 1.1rem; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); cursor:pointer; font-weight:600; font-size:13px; }
+                #previewPromptModal .pp-btn-primary { background:var(--accent); color:white; border-color:var(--accent); }
+                #previewPromptModal .pp-copy { background:none; border:none; color:var(--accent); cursor:pointer; font-size:11px; font-weight:600; }
+                #previewPromptModal .pp-error { background:rgba(239,68,68,0.1); color:#EF4444; padding:0.6rem 1rem; border-left:3px solid #EF4444; font-size:13px; margin:0.6rem 1.25rem; border-radius:6px; }
+            </style>
+
             <!-- KALENDÁŘ MODULE -->
             <div class="module" id="module-kalendar">
                 <div class="placeholder-module">
@@ -2461,13 +2511,18 @@
 
         async function handleIGUpload(event) {
             var files=event.target.files; if(!files||files.length===0)return;
+            var savedCount = 0;
             for(var fi=0;fi<files.length;fi++){var file=files[fi];if(!file.type.startsWith('image/'))continue;
                 var du=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
                 var idx=brandPresets.igScreenshots.length,nm='ig-ref-'+idx+'.png';
                 brandPresets.igScreenshots.push({name:nm,dataUrl:du});
-                if(window.GDriveSync&&GDriveSync.isConnected()){try{await GDriveSync.saveBinary('brand-assets/'+nm,dataURLtoBlob(du),'image/png');showToast('Screenshot uložen na Google Drive','success');}catch(e){showToast('Screenshot uložen lokálně','info');}}
+                if(window.GDriveSync&&GDriveSync.isConnected()){try{await GDriveSync.saveBinary('brand-assets/'+nm,dataURLtoBlob(du),'image/png');savedCount++;}catch(e){console.warn('[IG] GDrive binary save err:',e);}}
             }
-            renderIGGallery(); saveBrandPresets(); event.target.value='';
+            renderIGGallery();
+            await saveBrandPresets();
+            if(savedCount>0) showToast(savedCount+' screenshotů uloženo na Google Drive','success');
+            else showToast('Screenshoty uloženy lokálně','info');
+            event.target.value='';
         }
         async function removeIGScreenshot(index) {
             var item=brandPresets.igScreenshots[index]; brandPresets.igScreenshots.splice(index,1);
@@ -3274,15 +3329,28 @@
                     console.warn('[Marketing] Could not load reference posts:', refErr);
                 }
 
-                const response = await fetch(`${API_BASE}/api/marketing/generate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+                // Build request body — include v2 brandPreset for new server flow
+                // (server falls back to legacy flat fields if v2 absent)
+                var v2Preset = (typeof getActivePresetV2 === 'function') ? getActivePresetV2() : null;
+                var requestBody = {
+                        brandPreset: v2Preset || undefined,
+                        brief: { topic: theme.trim(), format: (imageSettings && imageSettings.format) || '1:1' },
                         channel, audience: targetAudience, pillar: contentPillar,
                         postType, goal, theme: theme.trim(), tone,
                         emojiLevel, hashtagLevel, batchCount: count,
                         textModel,
                         generateImage: wantImage, imageSettings,
+                        // Send full Brand DNA for server-side prompt assembly
+                        brandDNAFull: {
+                            styleMain: brandPresets.styleMain || (typeof BRAND_DNA_DEFAULTS !== 'undefined' ? BRAND_DNA_DEFAULTS.styleMain : '') || '',
+                            layoutDescA: brandPresets.layoutDescA || (typeof BRAND_DNA_DEFAULTS !== 'undefined' ? BRAND_DNA_DEFAULTS.layoutDescA : '') || '',
+                            layoutDescB: brandPresets.layoutDescB || (typeof BRAND_DNA_DEFAULTS !== 'undefined' ? BRAND_DNA_DEFAULTS.layoutDescB : '') || '',
+                            layoutDescC: brandPresets.layoutDescC || (typeof BRAND_DNA_DEFAULTS !== 'undefined' ? BRAND_DNA_DEFAULTS.layoutDescC : '') || '',
+                            layoutDescD: brandPresets.layoutDescD || (typeof BRAND_DNA_DEFAULTS !== 'undefined' ? BRAND_DNA_DEFAULTS.layoutDescD : '') || '',
+                            layoutDescE: brandPresets.layoutDescE || (typeof BRAND_DNA_DEFAULTS !== 'undefined' ? BRAND_DNA_DEFAULTS.layoutDescE : '') || '',
+                            antiPatterns: (typeof BRAND_DNA_DEFAULTS !== 'undefined' ? BRAND_DNA_DEFAULTS.antiPatterns : '') || '',
+                            qualityChecklist: (typeof BRAND_DNA_DEFAULTS !== 'undefined' ? BRAND_DNA_DEFAULTS.qualityChecklist : '') || ''
+                        },
                         customSystemPrompt: customSettings.systemPrompt,
                         customBannedWords: customSettings.bannedWords,
                         customCTAs: customSettings.ctas,
@@ -3302,10 +3370,38 @@
                             D: brandPresets.layoutDescD || '',
                             E: brandPresets.layoutDescE || ''
                         }
-                    })
-                });
+                };
 
-                const data = await response.json();
+                // Preview gate (Spec 1) — when v2 preset exists, show modal first
+                let data;
+                if (v2Preset && typeof previewAndSend === 'function') {
+                    try {
+                        data = await previewAndSend({
+                            url: API_BASE + '/api/marketing/generate',
+                            body: requestBody,
+                            kind: 'text',
+                            topic: theme.trim(),
+                            model: textModel
+                        });
+                    } catch (preErr) {
+                        // User cancelled (preErr.message === 'cancelled') or fetch failed
+                        if (preErr && preErr.message === 'cancelled') {
+                            // Silent exit — user clicked Zrušit. No toast, just re-enable button.
+                        } else if (preErr && preErr.message) {
+                            console.warn('[generate] preview send failed:', preErr);
+                            showToast('Generování selhalo: ' + preErr.message, 'error');
+                        }
+                        btn.disabled = false;
+                        return;
+                    }
+                } else {
+                    const response = await fetch(`${API_BASE}/api/marketing/generate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
+                    });
+                    data = await response.json();
+                }
 
                 if (data.success && data.posts) {
                     generatedPosts = data.posts;
@@ -3536,21 +3632,27 @@
         }
 
         // Auto-generate images for all posts sequentially (called after text generation)
+        // Bypasses Preview modal for the whole batch — user already saw the text gen preview;
+        // showing a modal per-image would be too noisy.
         async function autoGenerateAllImages(posts) {
             if (!posts || posts.length === 0) return;
-            var generated = 0;
-            for (var i = 0; i < posts.length; i++) {
-                if (!posts[i] || !posts[i].imagePrompt) continue;
-
-                try {
-                    await generateImageForPost(i);
-                    generated++;
-                } catch (err) {
-                    console.error('[Auto-Image] Error generating image for post ' + i + ':', err);
+            window._marketingBypassPreview = true;
+            try {
+                var generated = 0;
+                for (var i = 0; i < posts.length; i++) {
+                    if (!posts[i] || !posts[i].imagePrompt) continue;
+                    try {
+                        await generateImageForPost(i);
+                        generated++;
+                    } catch (err) {
+                        console.error('[Auto-Image] Error generating image for post ' + i + ':', err);
+                    }
                 }
-            }
-            if (generated > 0) {
-                showToast('Vygenerováno ' + generated + ' obrázků', 'success');
+                if (generated > 0) {
+                    showToast('Vygenerováno ' + generated + ' obrázků', 'success');
+                }
+            } finally {
+                window._marketingBypassPreview = false;
             }
         }
 
@@ -3592,30 +3694,67 @@
                     }
                 }
 
+                // v2 brandPreset path (Spec 1) — server prefers this when present
+                var v2Preset = (typeof getActivePresetV2 === 'function') ? getActivePresetV2() : null;
+                var v2Refs = referenceImages;
+                if (v2Preset && (!v2Refs || v2Refs.length === 0)) {
+                    // Fall back to brand preset's own reference images
+                    v2Refs = ((v2Preset.visual && v2Preset.visual.referenceImages) || [])
+                        .map(function(r){ return r.dataUrl; }).filter(Boolean);
+                }
                 var requestBody = {
+                    brandPreset: v2Preset || undefined,
+                    brief: { topic: post.imagePrompt || post.creativeBrief || '', visualHook: post.visualHook || '', format: '1:1' },
+                    options: { model: 'gpt-image-1', size: size, quality: 'standard' },
+                    // Legacy mirror (server still accepts these)
                     prompt: post.imagePrompt,
                     size: size,
                     quality: 'standard',
-                    // Send Brand DNA context for enhanced image generation
                     brandDNA: {
                         styleMain: brandPresets.styleMain || (typeof BRAND_DNA_DEFAULTS !== 'undefined' && BRAND_DNA_DEFAULTS.styleMain) || '',
                         antiPatterns: (typeof BRAND_DNA_DEFAULTS !== 'undefined' && BRAND_DNA_DEFAULTS.antiPatterns) || '',
                         qualityChecklist: (typeof BRAND_DNA_DEFAULTS !== 'undefined' && BRAND_DNA_DEFAULTS.qualityChecklist) || '',
                         colors: brandPresets.colors || {}
                     },
-                    visualHook: post.visualHook || ''
+                    visualHook: post.visualHook || '',
+                    referenceImages: v2Refs && v2Refs.length > 0 ? v2Refs : (referenceImages.length > 0 ? referenceImages : undefined)
                 };
-                if (referenceImages.length > 0) {
+                if (referenceImages.length > 0 && !requestBody.referenceImages) {
                     requestBody.referenceImages = referenceImages;
                 }
 
-                var response = await fetch(API_BASE + '/api/marketing/generate-image', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
-                var data = await response.json();
+                var data;
+                var skipPreview = !!window._marketingBypassPreview;
+                if (v2Preset && typeof previewAndSend === 'function' && !skipPreview) {
+                    try {
+                        data = await previewAndSend({
+                            url: API_BASE + '/api/marketing/generate-image',
+                            body: requestBody,
+                            kind: 'image',
+                            topic: post.imagePrompt || post.creativeBrief || '',
+                            model: 'gpt-image-1',
+                            size: size,
+                            quality: 'standard',
+                            referenceCount: (requestBody.referenceImages || []).length
+                        });
+                    } catch (preErr) {
+                        if (preErr && preErr.message === 'cancelled') {
+                            // Silent — user clicked Zrušit on the preview modal
+                        } else if (preErr && preErr.message) {
+                            console.warn('[image gen] preview send failed:', preErr);
+                            showToast('Generování obrázku selhalo: ' + preErr.message, 'error');
+                        }
+                        if (btn) { btn.disabled = false; btn.textContent = '🎨 Přegenerovat obrázek'; }
+                        return;
+                    }
+                } else {
+                    var response = await fetch(API_BASE + '/api/marketing/generate-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
+                    });
+                    data = await response.json();
+                }
                 if (data.success && data.image) {
                     var finalImage = await applyLogoOverlay(data.image);
                     var container = document.getElementById('postImage' + idx);
@@ -4189,8 +4328,922 @@
             }
             updateThemeButtons(t);
         })();
+
+        // ============================================================
+        // ============ BRAND STUDIO V2 (Spec 1, 2026-04-22) ===========
+        // Sjednocuje paralelní brandProfiles + brandPresets + brandLogo
+        // do jednoho per-brand presetu (brand-presets/{slug}.json).
+        // Stará data zůstávají funkční jako fallback během přechodu;
+        // legacy formáty migrujeme idempotentně.
+        // ============================================================
+
+        var BRAND_PRESET_SCHEMA_VERSION = 2;
+        var BRAND_PRESETS_LOCAL_PREFIX = 'brand-preset-';
+        var BRAND_ACTIVE_KEY = 'marketing-active-brand';
+        var BRAND_INDEX_KEY = 'marketing-brand-index';
+        var PROMPT_LOG_KEY = 'marketing-prompt-log';
+        var PROMPT_LOG_MAX = 50;
+        var DEFAULT_BANNED_WORDS = ['nejlevnější','garantujeme','bez rizika','revoluční','ihned','100% jisté','zaručené','nejlepší','úspěch zaručen'];
+        var DEFAULT_APPROVED_CTAS = ['Chci konzultaci zdarma','Nezávazná konzultace','Zjistit více','Domluvit schůzku'];
+        var DEFAULT_TONE = 'věcný, sebevědomý, lidský, přímý, expertní';
+        var DEFAULT_QUALITY_CHECKLIST = [
+            'Používá vizuál pouze brandové barvy?',
+            'Je headline krátký, jasný a vizuálně dominantní?',
+            'Je typografie jednotná, bezpatková a dobře čitelná?',
+            'Je layout čistý a srozumitelný během několika sekund?',
+            'Jsou karty, ikony a dělící prvky přesně zarovnané?',
+            'Je CTA dostatečně viditelné, ale ne křiklavé?',
+            'Je kolem textu, CTA a loga dostatek volného prostoru?',
+            'Je použitá fotografie důvěryhodná a ne klišovitá?',
+            'Jsou ikony jednoduché, lineární a stylově jednotné?',
+            'Působí výsledek jako komunikace pro firmy a investory, ne jako retailová reklama?'
+        ];
+
+        var brandPresetsV2 = {};
+        var activeBrandSlug = null;
+        var promptLog = [];
+        var brandStudioState = { activeTab: 'identity', selectedSlug: null };
+        var pendingPreview = null; // { kind, body, fetchUrl, onResult }
+
+        // ---------- Helpers ----------
+        function nowIso() { return new Date().toISOString(); }
+        function slugify(name) {
+            return (name || '').toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'brand';
+        }
+        function isValidHex(h) { return typeof h === 'string' && /^#[0-9A-Fa-f]{6}$/.test(h); }
+
+        function makeEmptyPreset(slug, displayName) {
+            return {
+                schemaVersion: BRAND_PRESET_SCHEMA_VERSION,
+                slug: slug,
+                displayName: displayName || slug,
+                identity: {
+                    shortDescription: '',
+                    audienceShort: '',
+                    logo: { dataUrl: null, position: 'top-right', sizePercent: 15, paddingPercent: 5, shadow: true, background: false, bgOpacity: 60, bgColor: 'dark' },
+                    colors: { primary: '#0C2340', accent: '#00B4D8', background: '#F0F4F8', muted: '#94A3B8' },
+                    typography: { primaryFont: 'DM Sans', fallback: 'Inter, sans-serif' }
+                },
+                voice: {
+                    tone: DEFAULT_TONE,
+                    bannedWords: DEFAULT_BANNED_WORDS.slice(),
+                    approvedCTAs: DEFAULT_APPROVED_CTAS.slice(),
+                    languagePrimary: 'cs'
+                },
+                visual: {
+                    styleMain: '',
+                    antiPatterns: '',
+                    qualityChecklist: DEFAULT_QUALITY_CHECKLIST.slice(),
+                    layoutTemplates: { processA: '', mythRealityB: '', comparisonC: '', headlineD: '', photoE: '' },
+                    referenceImages: []
+                },
+                sources: { driveApprovedFolder: null, instagramHandle: null },
+                createdAt: nowIso(),
+                updatedAt: nowIso()
+            };
+        }
+
+        function getActivePresetV2() {
+            if (!activeBrandSlug || !brandPresetsV2[activeBrandSlug]) return null;
+            return brandPresetsV2[activeBrandSlug];
+        }
+
+        function validatePreset(preset) {
+            var errs = [];
+            if (!preset || !preset.slug) errs.push('Brand musí mít slug.');
+            if (!preset.displayName) errs.push('Brand musí mít zobrazené jméno (displayName).');
+            if (!preset.voice || !Array.isArray(preset.voice.bannedWords) || preset.voice.bannedWords.length < 1)
+                errs.push('Voice → bannedWords musí mít alespoň 1 položku.');
+            if (!preset.voice || !Array.isArray(preset.voice.approvedCTAs) || preset.voice.approvedCTAs.length < 1)
+                errs.push('Voice → approvedCTAs musí mít alespoň 1 položku.');
+            var c = preset.identity && preset.identity.colors;
+            if (c) {
+                ['primary','accent','background'].forEach(function(k){ if (!isValidHex(c[k])) errs.push('Identity → colors.' + k + ' musí být platný HEX (#RRGGBB).'); });
+            }
+            if (preset.visual && Array.isArray(preset.visual.referenceImages) && preset.visual.referenceImages.length > 5)
+                errs.push('Visual → referenceImages: maximálně 5 obrázků.');
+            return errs;
+        }
+
+        // ---------- Persistence (Drive master, localStorage cache) ----------
+        async function savePresetV2(slug) {
+            var preset = brandPresetsV2[slug];
+            if (!preset) return false;
+            preset.updatedAt = nowIso();
+            // Local cache always
+            try { localStorage.setItem(BRAND_PRESETS_LOCAL_PREFIX + slug, JSON.stringify(preset)); } catch(e) { console.warn('[BPv2] localStorage save fail:', e); }
+            // Drive (best effort; if offline, mark _pendingSync)
+            if (window.GDriveSync && GDriveSync.isConnected()) {
+                try {
+                    var blob = new Blob([JSON.stringify(preset, null, 2)], { type: 'application/json' });
+                    await GDriveSync.saveBinary('brand-presets/' + slug + '.json', blob, 'application/json');
+                    delete preset._pendingSync;
+                    // Also maintain a tiny index for discovery
+                    var idx = Object.keys(brandPresetsV2).map(function(s){ return { slug: s, displayName: brandPresetsV2[s].displayName }; });
+                    var idxBlob = new Blob([JSON.stringify(idx, null, 2)], { type: 'application/json' });
+                    await GDriveSync.saveBinary('brand-presets/_index.json', idxBlob, 'application/json');
+                    try { localStorage.setItem(BRAND_INDEX_KEY, JSON.stringify(idx)); } catch(e) {}
+                    return true;
+                } catch(e) {
+                    console.warn('[BPv2] Drive save failed, marking _pendingSync:', e);
+                    preset._pendingSync = true;
+                    try { localStorage.setItem(BRAND_PRESETS_LOCAL_PREFIX + slug, JSON.stringify(preset)); } catch(e2) {}
+                    return false;
+                }
+            } else {
+                preset._pendingSync = true;
+                try { localStorage.setItem(BRAND_PRESETS_LOCAL_PREFIX + slug, JSON.stringify(preset)); } catch(e) {}
+                return false;
+            }
+        }
+
+        async function retryPendingSync() {
+            if (!(window.GDriveSync && GDriveSync.isConnected())) return;
+            var slugs = Object.keys(brandPresetsV2);
+            var synced = 0;
+            for (var i = 0; i < slugs.length; i++) {
+                if (brandPresetsV2[slugs[i]]._pendingSync) {
+                    var ok = await savePresetV2(slugs[i]);
+                    if (ok) synced++;
+                }
+            }
+            if (synced > 0 && typeof showToast === 'function') showToast('Sync s Drive obnoven (' + synced + ' brand' + (synced > 1 ? 'y' : '') + ').', 'success');
+        }
+
+        async function loadAllPresetsV2() {
+            brandPresetsV2 = {};
+            // Try Drive first (master)
+            var indexFromDrive = null;
+            if (window.GDriveSync && GDriveSync.isConnected()) {
+                try {
+                    var idxBlob = await GDriveSync.loadBinary('brand-presets/_index.json');
+                    if (idxBlob) {
+                        var idxText = await new Promise(function(res){ var r = new FileReader(); r.onload = function(){ res(r.result); }; r.readAsText(new Blob([idxBlob])); });
+                        indexFromDrive = JSON.parse(idxText);
+                    }
+                } catch(e) { console.warn('[BPv2] Drive index read failed:', e); }
+                if (Array.isArray(indexFromDrive)) {
+                    for (var i = 0; i < indexFromDrive.length; i++) {
+                        var slug = indexFromDrive[i].slug;
+                        try {
+                            var b = await GDriveSync.loadBinary('brand-presets/' + slug + '.json');
+                            if (b) {
+                                var t = await new Promise(function(res){ var r = new FileReader(); r.onload = function(){ res(r.result); }; r.readAsText(new Blob([b])); });
+                                var preset = JSON.parse(t);
+                                if (preset && preset.schemaVersion >= 2) {
+                                    brandPresetsV2[slug] = preset;
+                                    try { localStorage.setItem(BRAND_PRESETS_LOCAL_PREFIX + slug, JSON.stringify(preset)); } catch(e2) {}
+                                }
+                            }
+                        } catch(e) { console.warn('[BPv2] Failed to load preset ' + slug + ':', e); }
+                    }
+                }
+            }
+            // Fallback: load from localStorage cache (offline mode)
+            if (Object.keys(brandPresetsV2).length === 0) {
+                try {
+                    var idxLocal = localStorage.getItem(BRAND_INDEX_KEY);
+                    if (idxLocal) {
+                        var arr = JSON.parse(idxLocal);
+                        arr.forEach(function(it) {
+                            var raw = localStorage.getItem(BRAND_PRESETS_LOCAL_PREFIX + it.slug);
+                            if (raw) {
+                                try { var p = JSON.parse(raw); if (p && p.schemaVersion >= 2) brandPresetsV2[p.slug] = p; } catch(e) {}
+                            }
+                        });
+                    }
+                } catch(e) {}
+            }
+            return brandPresetsV2;
+        }
+
+        // ---------- Migrace legacy → v2 (idempotent + retry-safe) ----------
+        // Returns true on completion, false if deferred (caller should retry later).
+        async function migrateLegacyToV2() {
+            // If we already have at least one v2 preset, skip migration.
+            if (Object.keys(brandPresetsV2).length > 0) {
+                console.log('[BPv2] Migration skipped — v2 presets already exist.');
+                return true;
+            }
+
+            // Wait until legacy data is actually loaded — if Drive load is slow, the in-memory
+            // brandProfiles / brandPresets / brandLogo are still at empty defaults and migrating
+            // would permanently overwrite real user data with blanks.
+            // We retry up to 3× (2 s apart) waiting for legacy data to populate.
+            // Detection: if Drive is connected but legacy DNA fields are all blank AND default DNA
+            // exists in BRAND_DNA_DEFAULTS but legacyDNA doesn't reflect it → still loading.
+            var driveConnected = !!(window.GDriveSync && GDriveSync.isConnected());
+            var legacyDNA0 = (typeof brandPresets === 'object' && brandPresets) ? brandPresets : null;
+            var legacyDNALooksEmpty = !legacyDNA0 || (
+                !legacyDNA0.styleMain &&
+                !legacyDNA0.layoutDescA && !legacyDNA0.layoutDescB && !legacyDNA0.layoutDescC &&
+                !legacyDNA0.layoutDescD && !legacyDNA0.layoutDescE &&
+                (!legacyDNA0.igScreenshots || legacyDNA0.igScreenshots.length === 0)
+            );
+            if (driveConnected && legacyDNALooksEmpty) {
+                console.warn('[BPv2] Migration deferred — Drive connected but legacy data not yet loaded.');
+                return false;
+            }
+            console.log('[BPv2] Running legacy → v2 migration…');
+
+            // Read legacy data sources (in-memory variables loaded by older init code)
+            var legacyProfiles = (typeof brandProfiles === 'object' && brandProfiles) ? brandProfiles : { profilend: { id: 'profilend', name: 'ProfiLend' } };
+            var legacyDNA = (typeof brandPresets === 'object' && brandPresets) ? brandPresets : null;
+            var legacyDNADefaults = (typeof BRAND_DNA_DEFAULTS === 'object' && BRAND_DNA_DEFAULTS) ? BRAND_DNA_DEFAULTS : {};
+            var legacyLogo = (typeof brandLogo === 'object' && brandLogo) ? brandLogo : null;
+
+            // Backup legacy brand-presets.json once
+            if (window.GDriveSync && GDriveSync.isConnected()) {
+                try {
+                    var oldText = await GDriveSync.loadFile('brand-presets.json');
+                    if (oldText) {
+                        var backupBlob = new Blob([oldText], { type: 'application/json' });
+                        await GDriveSync.saveBinary('brand-presets.json.backup-2026-04-22', backupBlob, 'application/json');
+                    }
+                } catch(e) { console.warn('[BPv2] Legacy backup failed (continuing):', e); }
+            }
+
+            var slugList = Object.keys(legacyProfiles);
+            if (slugList.indexOf('profilend') === -1) slugList.unshift('profilend');
+            for (var si = 0; si < slugList.length; si++) {
+                var slug = slugList[si];
+                var prof = legacyProfiles[slug] || { name: slug };
+                var preset = makeEmptyPreset(slug, prof.name || slug);
+                // Identity
+                if (prof.colors) {
+                    preset.identity.colors.primary = prof.colors.primary || prof.colors.navy || preset.identity.colors.primary;
+                    preset.identity.colors.accent = prof.colors.secondary || prof.colors.teal || preset.identity.colors.accent;
+                    if (prof.colors.white) preset.identity.colors.background = prof.colors.white;
+                    if (prof.colors.lightGray) preset.identity.colors.background = prof.colors.lightGray;
+                }
+                // Voice
+                if (Array.isArray(prof.bannedWords) && prof.bannedWords.length > 0) preset.voice.bannedWords = prof.bannedWords.slice();
+                if (Array.isArray(prof.ctas) && prof.ctas.length > 0) preset.voice.approvedCTAs = prof.ctas.slice();
+                if (Array.isArray(prof.tone) && prof.tone.length > 0) preset.voice.tone = prof.tone.join(', ');
+                // Visual — only ProfiLend gets the legacy DNA (it was global)
+                if (slug === 'profilend' && legacyDNA) {
+                    preset.visual.styleMain = legacyDNA.styleMain || legacyDNADefaults.styleMain || '';
+                    preset.visual.antiPatterns = legacyDNADefaults.antiPatterns || '';
+                    if (typeof legacyDNADefaults.qualityChecklist === 'string') {
+                        // Older format was a single concatenated string — split heuristically
+                        var qcStr = legacyDNADefaults.qualityChecklist;
+                        var qcArr = qcStr.split(/\s*\d+\.\s*/).map(function(s){ return s.trim(); }).filter(Boolean);
+                        if (qcArr.length > 0) preset.visual.qualityChecklist = qcArr;
+                    }
+                    preset.visual.layoutTemplates = {
+                        processA: legacyDNA.layoutDescA || legacyDNADefaults.layoutDescA || '',
+                        mythRealityB: legacyDNA.layoutDescB || legacyDNADefaults.layoutDescB || '',
+                        comparisonC: legacyDNA.layoutDescC || legacyDNADefaults.layoutDescC || '',
+                        headlineD: legacyDNA.layoutDescD || legacyDNADefaults.layoutDescD || '',
+                        photoE: legacyDNA.layoutDescE || legacyDNADefaults.layoutDescE || ''
+                    };
+                    if (legacyDNA.colors) {
+                        if (legacyDNA.colors.navy) preset.identity.colors.primary = legacyDNA.colors.navy;
+                        if (legacyDNA.colors.teal) preset.identity.colors.accent = legacyDNA.colors.teal;
+                        if (legacyDNA.colors.gray) preset.identity.colors.background = legacyDNA.colors.gray;
+                    }
+                    // Reference images: copy legacy data URLs into the new per-brand Drive path,
+                    // so subsequent loads find the binary at brand-assets/{slug}/ig-ref-N.png.
+                    if (Array.isArray(legacyDNA.igScreenshots)) {
+                        preset.visual.referenceImages = [];
+                        for (var rsi = 0; rsi < Math.min(5, legacyDNA.igScreenshots.length); rsi++) {
+                            var rsItem = legacyDNA.igScreenshots[rsi];
+                            var rsDu = (typeof rsItem === 'string') ? rsItem : (rsItem && rsItem.dataUrl);
+                            var rsPath = 'brand-assets/profilend/ig-ref-' + rsi + '.png';
+                            preset.visual.referenceImages.push({ id: 'ig-' + (rsi+1), drivePath: rsPath, dataUrl: rsDu, tags: [] });
+                            // Physical copy to new Drive path (best-effort, non-blocking on failure)
+                            if (rsDu && window.GDriveSync && GDriveSync.isConnected()) {
+                                try {
+                                    var rsBlob = await (await fetch(rsDu)).blob();
+                                    await GDriveSync.saveBinary(rsPath, rsBlob, 'image/png');
+                                } catch(rsErr) { console.warn('[BPv2] ref image copy failed for', rsPath, rsErr); }
+                            }
+                        }
+                    }
+                    // Logo from legacy
+                    if (legacyLogo) {
+                        preset.identity.logo = JSON.parse(JSON.stringify(legacyLogo));
+                    }
+                }
+                preset.identity.shortDescription = prof.systemPrompt ? prof.systemPrompt.substring(0, 280) : '';
+                brandPresetsV2[slug] = preset;
+            }
+            // Persist all
+            for (var ps = 0; ps < slugList.length; ps++) {
+                await savePresetV2(slugList[ps]);
+            }
+            console.log('[BPv2] Migration complete. Migrated ' + slugList.length + ' brand(s):', slugList);
+            if (typeof showToast === 'function') showToast('Brand presets migrovány do v2 schema (' + slugList.length + ' brand' + (slugList.length>1?'y':'') + ').', 'success');
+            return true;
+        }
+
+        // ---------- Active brand switching ----------
+        function setActiveBrandV2(slug) {
+            if (!brandPresetsV2[slug]) return false;
+            activeBrandSlug = slug;
+            try { localStorage.setItem(BRAND_ACTIVE_KEY, slug); } catch(e) {}
+            populateBrandSwitcherTopnav();
+            // Sync legacy switchBrand if it exists, so existing UI keeps working
+            try {
+                if (typeof brandProfiles === 'object' && brandProfiles[slug] && typeof switchBrand === 'function') switchBrand(slug);
+            } catch(e) {}
+            return true;
+        }
+
+        // ---------- Topnav brand switcher ----------
+        function populateBrandSwitcherTopnav() {
+            var sel = document.getElementById('brandSwitcherTopnav');
+            if (!sel) return;
+            sel.innerHTML = '';
+            Object.keys(brandPresetsV2).forEach(function(slug) {
+                var opt = document.createElement('option');
+                opt.value = slug;
+                opt.textContent = brandPresetsV2[slug].displayName || slug;
+                if (slug === activeBrandSlug) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        // ---------- Init wiring (called from initial onReady, after Drive ready) ----------
+        async function initBrandStudioV2() {
+            promptLog = loadPromptLog();
+            await loadAllPresetsV2();
+            if (Object.keys(brandPresetsV2).length === 0) {
+                // Try migration with retry: if legacy data isn't loaded yet (Drive slow),
+                // wait and try again — up to 3 attempts, 2 s apart.
+                var migrated = await migrateLegacyToV2();
+                var attempts = 0;
+                while (!migrated && attempts < 3) {
+                    attempts++;
+                    console.log('[BPv2] Migration deferred — retry ' + attempts + '/3 in 2 s');
+                    await new Promise(function(r){ setTimeout(r, 2000); });
+                    migrated = await migrateLegacyToV2();
+                }
+                if (!migrated) {
+                    console.warn('[BPv2] Migration could not run — legacy data still empty after 3 retries. App will run with empty brandPresetsV2; user can create brands manually in Brand Studio.');
+                }
+            }
+            activeBrandSlug = localStorage.getItem(BRAND_ACTIVE_KEY) ||
+                (brandPresetsV2['profilend'] ? 'profilend' : Object.keys(brandPresetsV2)[0]);
+            if (activeBrandSlug) {
+                try { localStorage.setItem(BRAND_ACTIVE_KEY, activeBrandSlug); } catch(e) {}
+            }
+            brandStudioState.selectedSlug = activeBrandSlug;
+            populateBrandSwitcherTopnav();
+            renderBrandStudio();
+            renderPromptLog();
+            // Background: retry any pending sync
+            setTimeout(retryPendingSync, 1500);
+        }
+
+        // ============ Prompt log (history) ============
+        function loadPromptLog() {
+            try {
+                var raw = localStorage.getItem(PROMPT_LOG_KEY);
+                if (!raw) return [];
+                var arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr : [];
+            } catch(e) { return []; }
+        }
+        function saveLogToStorage() {
+            try {
+                // Trim oversized prompts (>50KB) to avoid localStorage bloat
+                var trimmed = promptLog.map(function(e) {
+                    var clone = Object.assign({}, e);
+                    ['systemPrompt','userPrompt','finalPrompt'].forEach(function(k) {
+                        if (clone[k] && clone[k].length > 50000) clone[k] = clone[k].substring(0, 50000) + '... [trimmed]';
+                    });
+                    return clone;
+                });
+                localStorage.setItem(PROMPT_LOG_KEY, JSON.stringify(trimmed));
+            } catch(e) { console.warn('[promptLog] save failed:', e); }
+        }
+        function appendToPromptLog(entry) {
+            entry.timestamp = entry.timestamp || nowIso();
+            promptLog.unshift(entry);
+            if (promptLog.length > PROMPT_LOG_MAX) promptLog = promptLog.slice(0, PROMPT_LOG_MAX);
+            saveLogToStorage();
+            renderPromptLog();
+        }
+        function renderPromptLog() {
+            var c = document.getElementById('promptLogList');
+            if (!c) return;
+            if (promptLog.length === 0) { c.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:0.75rem;">Zatím žádné záznamy.</div>'; return; }
+            c.innerHTML = '';
+            promptLog.forEach(function(e, idx) {
+                var el = document.createElement('div');
+                el.style.cssText = 'padding:0.5rem 0.75rem;border:1px solid var(--border-color);border-radius:8px;margin-bottom:0.5rem;cursor:pointer;background:var(--bg-primary);';
+                var ts = (e.timestamp || '').replace('T',' ').substring(0, 16);
+                var label = (e.endpoint || 'gen').replace('/api/marketing/','');
+                var brand = e.brandSlug || '?';
+                var badge = e.error ? '<span style="color:var(--danger,#EF4444);font-size:11px;">⚠ chyba</span>' : '<span style="color:#22C55E;font-size:11px;">✓</span>';
+                el.innerHTML = '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--text-primary);">' +
+                    '<span>' + label + ' · ' + brand + '</span>' + badge + '</div>' +
+                    '<div style="font-size:11px;color:var(--text-muted);margin-top:0.25rem;">' + ts + '</div>';
+                el.onclick = function() { showLogEntry(idx); };
+                c.appendChild(el);
+            });
+        }
+        function showLogEntry(idx) {
+            var e = promptLog[idx];
+            if (!e) return;
+            openPreviewModal({
+                kind: e.endpoint && e.endpoint.indexOf('image') !== -1 ? 'image' : 'text',
+                brandName: e.brandSlug,
+                topic: e.topic || '',
+                model: e.model || '',
+                size: e.size || '',
+                quality: e.quality || '',
+                referenceCount: e.referenceCount || 0,
+                systemPrompt: e.systemPrompt || '',
+                userPrompt: e.userPrompt || '',
+                finalPrompt: e.finalPrompt || '',
+                costEstimate: e.costEstimate || 0,
+                readonly: true,
+                error: e.error || null
+            });
+        }
+
+        // ============ Preview modal ============
+        function openPreviewModal(p) {
+            var modal = document.getElementById('previewPromptModal');
+            if (!modal) return;
+            // Header
+            document.getElementById('previewModalBrand').textContent = p.brandName || '—';
+            document.getElementById('previewModalTopic').textContent = p.topic || '—';
+            document.getElementById('previewModalKind').textContent = p.kind === 'image' ? 'Image generation' : 'Text generation';
+            document.getElementById('previewModalModel').textContent = p.model || '';
+            document.getElementById('previewModalCost').textContent = p.costEstimate ? ('$' + Number(p.costEstimate).toFixed(3) + ' (odhad)') : '';
+            document.getElementById('previewModalRefs').textContent = p.kind === 'image' ? ('Reference: ' + (p.referenceCount || 0)) : '';
+            // Body
+            document.getElementById('previewSystemPromptText').textContent = p.systemPrompt || '(žádný)';
+            document.getElementById('previewUserPromptText').textContent = p.userPrompt || '(žádný)';
+            var finalSection = document.getElementById('previewFinalSection');
+            if (p.finalPrompt && p.finalPrompt !== p.userPrompt) {
+                finalSection.style.display = 'block';
+                document.getElementById('previewFinalPromptText').textContent = p.finalPrompt;
+            } else {
+                finalSection.style.display = 'none';
+            }
+            // Mode (preview vs view-only log)
+            var actionBar = document.getElementById('previewModalActions');
+            var errorBanner = document.getElementById('previewModalError');
+            if (p.error) {
+                errorBanner.style.display = 'block';
+                errorBanner.textContent = 'Chyba: ' + p.error;
+            } else {
+                errorBanner.style.display = 'none';
+            }
+            if (p.readonly) {
+                actionBar.querySelector('[data-action="send"]').style.display = 'none';
+                actionBar.querySelector('[data-action="cancel"]').textContent = 'Zavřít';
+            } else {
+                actionBar.querySelector('[data-action="send"]').style.display = 'inline-flex';
+                actionBar.querySelector('[data-action="cancel"]').textContent = 'Zrušit';
+            }
+            modal.style.display = 'flex';
+        }
+        function closePreviewModal() {
+            var modal = document.getElementById('previewPromptModal');
+            if (modal) modal.style.display = 'none';
+            // Notify any awaiter that the preview was cancelled — otherwise the await hangs forever
+            // and the caller's button stays disabled.
+            if (pendingPreview && typeof pendingPreview.onCancel === 'function') {
+                try { pendingPreview.onCancel(); } catch(e) { console.warn('[preview] onCancel failed:', e); }
+            }
+            pendingPreview = null;
+        }
+        async function confirmAndSendPreview() {
+            if (!pendingPreview) { closePreviewModal(); return; }
+            var pp = pendingPreview;
+            closePreviewModal();
+            try {
+                if (typeof pp.onConfirm === 'function') await pp.onConfirm();
+            } catch(e) {
+                console.error('[preview] confirm send failed:', e);
+                if (typeof showToast === 'function') showToast('Generování selhalo: ' + (e.message || e), 'error');
+            }
+        }
+        function copyPreviewText(targetId) {
+            var el = document.getElementById(targetId);
+            if (!el) return;
+            try {
+                navigator.clipboard.writeText(el.textContent || '');
+                if (typeof showToast === 'function') showToast('Zkopírováno do schránky.', 'success');
+            } catch(e) {
+                console.warn('Clipboard write failed:', e);
+            }
+        }
+
+        // ============ doGenerate intercept — show preview, build v2 body ============
+        // This wraps the existing fetches by adding a preview gate for the new flow.
+        // The legacy fetch calls in doGenerate / doGenerateImage continue to work
+        // (server supports both formats), so this is purely additive.
+        function buildV2BodyForText(brief, opts) {
+            var p = getActivePresetV2();
+            if (!p) return null;
+            var body = Object.assign({}, opts || {}, {
+                brandPreset: p,
+                brief: brief,
+                // Legacy mirror for older server versions during deploy window
+                brandId: p.slug,
+                brandName: p.displayName,
+                customBannedWords: (p.voice && p.voice.bannedWords) || [],
+                customCTAs: (p.voice && p.voice.approvedCTAs) || [],
+                customTone: (p.voice && p.voice.tone) ? [p.voice.tone] : [],
+                brandColors: {
+                    navy: p.identity.colors.primary, teal: p.identity.colors.accent,
+                    white: p.identity.colors.background, gray: p.identity.colors.muted,
+                    primary: p.identity.colors.primary, secondary: p.identity.colors.muted
+                },
+                brandStyleDesc: (p.visual && p.visual.styleMain) || '',
+                brandLayoutDescs: {
+                    A: p.visual.layoutTemplates.processA, B: p.visual.layoutTemplates.mythRealityB,
+                    C: p.visual.layoutTemplates.comparisonC, D: p.visual.layoutTemplates.headlineD,
+                    E: p.visual.layoutTemplates.photoE
+                },
+                brandDNAFull: { styleMain: p.visual.styleMain, antiPatterns: p.visual.antiPatterns }
+            });
+            return body;
+        }
+        function buildV2BodyForImage(brief, opts, refs) {
+            var p = getActivePresetV2();
+            if (!p) return null;
+            return {
+                brandPreset: p,
+                brief: brief,
+                options: opts || {},
+                referenceImages: refs || [],
+                // Legacy mirror
+                prompt: brief.topic || '',
+                visualHook: brief.visualHook || '',
+                size: opts && opts.size,
+                quality: opts && opts.quality,
+                imageModel: opts && opts.model,
+                referenceImages: refs || [],
+                brandDNA: { styleMain: p.visual.styleMain, antiPatterns: p.visual.antiPatterns, colors: { navy: p.identity.colors.primary, teal: p.identity.colors.accent, white: p.identity.colors.background, gray: p.identity.colors.muted } }
+            };
+        }
+
+        // Convenience wrapper: opens preview modal, on confirm sends fetch.
+        async function previewAndSend(opts) {
+            // opts: { url, body, kind, brandName, topic, model, size, quality, referenceCount, onResult }
+            // Build a system+user prompt preview client-side (mirror server's buildImage*Prompt heuristics)
+            var p = getActivePresetV2();
+            var sys = '';
+            var usr = '';
+            if (p) {
+                if (opts.kind === 'image') {
+                    sys = 'You are a senior brand designer producing a social-media post image for ' + (p.displayName || p.slug) +
+                        (p.identity.shortDescription ? ' (' + p.identity.shortDescription + ')' : '') + '.\n' +
+                        (p.identity.audienceShort ? 'Audience: ' + p.identity.audienceShort + '.\n' : '') +
+                        'QUALITY CHECKLIST:\n' + (p.visual.qualityChecklist || []).map(function(q,i){return (i+1)+'. '+q;}).join('\n');
+                    var brief = opts.body && (opts.body.brief || {});
+                    usr = 'Topic: ' + (brief.topic || '') + '\n' +
+                        (brief.visualHook ? 'Visual hook (typography in image): "' + brief.visualHook + '"\n' : '') +
+                        'EXACT COLORS: primary ' + p.identity.colors.primary + ', accent ' + p.identity.colors.accent + ', background ' + p.identity.colors.background + ', muted ' + p.identity.colors.muted + '.\n' +
+                        'TYPOGRAPHY: ' + p.identity.typography.primaryFont + ' / ' + p.identity.typography.fallback + ', max 2 weights.\n' +
+                        (p.voice.tone ? 'Visual mood: ' + p.voice.tone + '.\n' : '') +
+                        (p.voice.bannedWords.length ? 'FORBIDDEN: ' + p.voice.bannedWords.join(', ') + '.\n' : '') +
+                        (p.visual.antiPatterns ? 'ANTI-PATTERNS: ' + p.visual.antiPatterns + '\n' : '') +
+                        (p.visual.styleMain ? 'BRAND STYLE: ' + p.visual.styleMain : '');
+                } else {
+                    sys = 'Marketing copywriter for ' + (p.displayName || p.slug) + '.\n' +
+                        'Tone: ' + p.voice.tone + '\n' +
+                        'Banned words: ' + (p.voice.bannedWords || []).join(', ') + '\n' +
+                        'Approved CTAs: ' + (p.voice.approvedCTAs || []).join(' | ');
+                    var brief2 = opts.body && (opts.body.brief || { topic: opts.topic });
+                    usr = 'Topic: ' + (brief2.topic || opts.topic || '') + '\n' +
+                        'Channel: ' + (opts.body.channel || '') + ', audience: ' + (opts.body.audience || '') + ', batchCount: ' + (opts.body.batchCount || 1);
+                }
+            }
+            // Cost estimate (mirror server)
+            var costGuess = 0;
+            if (opts.kind === 'image') {
+                var modelKey = (opts.body.options && opts.body.options.model) || (opts.body.imageModel) || 'gpt-image-1';
+                costGuess = (modelKey === 'dall-e-3' ? 0.08 : 0.04) + (opts.referenceCount || 0) * 0.01;
+            } else {
+                var modelKey2 = opts.body.textModel || 'gpt-4o-mini';
+                costGuess = (modelKey2 === 'gpt-4o' ? 0.005 : 0.001) * (opts.body.batchCount || 1);
+            }
+            return new Promise(function(resolve, reject) {
+                pendingPreview = {
+                    onCancel: function() { reject(new Error('cancelled')); },
+                    onConfirm: async function() {
+                        try {
+                            var resp = await fetch(opts.url, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(opts.body)
+                            });
+                            var data = await resp.json();
+                            // Log
+                            appendToPromptLog({
+                                endpoint: opts.url.replace(/^.*\/api\//, '/api/'),
+                                brandSlug: p ? p.slug : null,
+                                topic: opts.topic || '',
+                                model: opts.model || (opts.body.options && opts.body.options.model) || opts.body.textModel || '',
+                                size: opts.size || '',
+                                quality: opts.quality || '',
+                                referenceCount: opts.referenceCount || 0,
+                                systemPrompt: (data.debug && data.debug.systemPrompt) || sys,
+                                userPrompt: (data.debug && data.debug.userPrompt) || usr,
+                                finalPrompt: (data.debug && data.debug.finalPrompt) || '',
+                                costEstimate: (data.debug && data.debug.costEstimate) || costGuess,
+                                error: data.error || (!data.success ? (data.error || 'unknown') : null)
+                            });
+                            resolve(data);
+                        } catch(e) {
+                            appendToPromptLog({
+                                endpoint: opts.url.replace(/^.*\/api\//, '/api/'),
+                                brandSlug: p ? p.slug : null,
+                                topic: opts.topic || '',
+                                error: e.message || String(e)
+                            });
+                            reject(e);
+                        }
+                    }
+                };
+                openPreviewModal({
+                    kind: opts.kind,
+                    brandName: p ? (p.displayName || p.slug) : '—',
+                    topic: opts.topic || '',
+                    model: opts.model || (opts.body.options && opts.body.options.model) || opts.body.textModel || '',
+                    size: opts.size || '',
+                    quality: opts.quality || '',
+                    referenceCount: opts.referenceCount || 0,
+                    systemPrompt: sys,
+                    userPrompt: usr,
+                    finalPrompt: '',
+                    costEstimate: costGuess
+                });
+            });
+        }
+
+        // ============ Brand Studio render ============
+        function renderBrandStudio() {
+            renderBrandSidebarList();
+            var preset = brandPresetsV2[brandStudioState.selectedSlug];
+            renderBrandStudioMain(preset);
+        }
+        function renderBrandSidebarList() {
+            var c = document.getElementById('brandStudioSidebarList');
+            if (!c) return;
+            c.innerHTML = '';
+            Object.keys(brandPresetsV2).forEach(function(slug) {
+                var p = brandPresetsV2[slug];
+                var el = document.createElement('div');
+                el.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.75rem;border:1px solid ' + (slug===brandStudioState.selectedSlug?'var(--accent)':'var(--border-color)') + ';border-radius:8px;margin-bottom:0.4rem;background:var(--bg-primary);cursor:pointer;';
+                var pendingFlag = p._pendingSync ? ' <span style="color:#F59E0B;font-size:11px;">⟳ pending</span>' : '';
+                el.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;"><div style="width:10px;height:10px;border-radius:50%;background:' + (p.identity.colors.accent || '#38BDF8') + ';"></div>' +
+                    '<span style="font-weight:600;color:var(--text-primary);font-size:13px;">' + (p.displayName || slug) + '</span>' + pendingFlag + '</div>' +
+                    '<button onclick="event.stopPropagation();bsDeleteBrand(\'' + slug + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;" title="Smazat">×</button>';
+                el.onclick = function() { brandStudioState.selectedSlug = slug; renderBrandStudio(); };
+                c.appendChild(el);
+            });
+            // Add new brand control
+            var addBtn = document.createElement('button');
+            addBtn.style.cssText = 'width:100%;padding:0.6rem;border:1px dashed var(--border-color);border-radius:8px;background:none;color:var(--accent);cursor:pointer;font-weight:600;font-size:13px;margin-top:0.5rem;';
+            addBtn.textContent = '+ Přidat brand';
+            addBtn.onclick = function() { bsAddBrand(); };
+            c.appendChild(addBtn);
+        }
+        function renderBrandStudioMain(preset) {
+            var titleEl = document.getElementById('brandStudioTitle');
+            if (titleEl) titleEl.textContent = preset ? (preset.displayName || preset.slug) : '— vyber brand —';
+            var tabs = ['identity','voice','visual','sources'];
+            var labels = { identity: 'Identity', voice: 'Voice', visual: 'Visual', sources: 'Sources' };
+            var tabBar = document.getElementById('brandStudioTabBar');
+            if (tabBar) {
+                tabBar.innerHTML = '';
+                tabs.forEach(function(t) {
+                    var btn = document.createElement('button');
+                    btn.textContent = labels[t];
+                    var active = (t === brandStudioState.activeTab);
+                    btn.style.cssText = 'padding:0.5rem 0.9rem;border:none;background:none;color:' + (active?'var(--accent)':'var(--text-muted)') + ';font-weight:600;cursor:pointer;border-bottom:2px solid ' + (active?'var(--accent)':'transparent') + ';';
+                    btn.onclick = function() { brandStudioState.activeTab = t; renderBrandStudioMain(preset); };
+                    tabBar.appendChild(btn);
+                });
+            }
+            var body = document.getElementById('brandStudioTabBody');
+            if (!body) return;
+            if (!preset) {
+                body.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);">Vyber brand vlevo nebo přidej nový.</div>';
+                return;
+            }
+            if (brandStudioState.activeTab === 'identity') body.innerHTML = renderTabIdentity(preset);
+            else if (brandStudioState.activeTab === 'voice') body.innerHTML = renderTabVoice(preset);
+            else if (brandStudioState.activeTab === 'visual') body.innerHTML = renderTabVisual(preset);
+            else if (brandStudioState.activeTab === 'sources') body.innerHTML = renderTabSources(preset);
+            // Wire chip inputs / color inputs
+            wireTabInputs(preset);
+        }
+        function inputRow(label, html) {
+            return '<div style="margin-bottom:1rem;"><label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:0.35rem;">' + label + '</label>' + html + '</div>';
+        }
+        function renderTabIdentity(p) {
+            return inputRow('Display name', '<input class="bs-input" data-bs="displayName" value="' + escapeHtml(p.displayName||'') + '" />') +
+                inputRow('Krátký popis brandu (≤500 znaků)', '<textarea class="bs-input" data-bs="identity.shortDescription" rows="3">' + escapeHtml(p.identity.shortDescription||'') + '</textarea>') +
+                inputRow('Audience (1 věta)', '<input class="bs-input" data-bs="identity.audienceShort" value="' + escapeHtml(p.identity.audienceShort||'') + '" />') +
+                inputRow('Barvy', '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">' +
+                    ['primary','accent','background','muted'].map(function(k) {
+                        return '<div style="display:flex;align-items:center;gap:0.4rem;"><label style="font-size:11px;color:var(--text-muted);">' + k + '</label>' +
+                            '<input type="color" class="bs-input" data-bs="identity.colors.' + k + '" value="' + (p.identity.colors[k]||'#000000') + '" style="width:40px;height:32px;padding:0;border:1px solid var(--border-color);border-radius:6px;" />' +
+                            '<span style="font-family:monospace;font-size:11px;color:var(--text-muted);">' + (p.identity.colors[k]||'') + '</span></div>';
+                    }).join('') + '</div>') +
+                inputRow('Primary font', '<input class="bs-input" data-bs="identity.typography.primaryFont" value="' + escapeHtml(p.identity.typography.primaryFont||'') + '" />') +
+                inputRow('Fallback font', '<input class="bs-input" data-bs="identity.typography.fallback" value="' + escapeHtml(p.identity.typography.fallback||'') + '" />');
+        }
+        function renderTabVoice(p) {
+            return inputRow('Tone (krátký popis)', '<input class="bs-input" data-bs="voice.tone" value="' + escapeHtml(p.voice.tone||'') + '" />') +
+                inputRow('Banned words (řádek = jedno slovo)', '<textarea class="bs-input" data-bs="voice.bannedWords" rows="6">' + escapeHtml((p.voice.bannedWords||[]).join('\n')) + '</textarea>') +
+                inputRow('Schválené CTA (řádek = jedno CTA)', '<textarea class="bs-input" data-bs="voice.approvedCTAs" rows="5">' + escapeHtml((p.voice.approvedCTAs||[]).join('\n')) + '</textarea>') +
+                inputRow('Primární jazyk', '<select class="bs-input" data-bs="voice.languagePrimary"><option value="cs"' + (p.voice.languagePrimary==='cs'?' selected':'') + '>Čeština</option><option value="en"' + (p.voice.languagePrimary==='en'?' selected':'') + '>English</option></select>');
+        }
+        function renderTabVisual(p) {
+            var lt = p.visual.layoutTemplates || {};
+            return inputRow('Style main (Brand DNA, full text)', '<textarea class="bs-input" data-bs="visual.styleMain" rows="8">' + escapeHtml(p.visual.styleMain||'') + '</textarea>') +
+                inputRow('Anti-patterns (full text, bez limitu)', '<textarea class="bs-input" data-bs="visual.antiPatterns" rows="6">' + escapeHtml(p.visual.antiPatterns||'') + '</textarea>') +
+                inputRow('Quality checklist (řádek = jedna otázka)', '<textarea class="bs-input" data-bs="visual.qualityChecklist" rows="6">' + escapeHtml((p.visual.qualityChecklist||[]).join('\n')) + '</textarea>') +
+                inputRow('Layout: Process (A)', '<textarea class="bs-input" data-bs="visual.layoutTemplates.processA" rows="3">' + escapeHtml(lt.processA||'') + '</textarea>') +
+                inputRow('Layout: Myth/Reality (B)', '<textarea class="bs-input" data-bs="visual.layoutTemplates.mythRealityB" rows="3">' + escapeHtml(lt.mythRealityB||'') + '</textarea>') +
+                inputRow('Layout: Comparison (C)', '<textarea class="bs-input" data-bs="visual.layoutTemplates.comparisonC" rows="3">' + escapeHtml(lt.comparisonC||'') + '</textarea>') +
+                inputRow('Layout: Headline (D)', '<textarea class="bs-input" data-bs="visual.layoutTemplates.headlineD" rows="3">' + escapeHtml(lt.headlineD||'') + '</textarea>') +
+                inputRow('Layout: Photo (E)', '<textarea class="bs-input" data-bs="visual.layoutTemplates.photoE" rows="3">' + escapeHtml(lt.photoE||'') + '</textarea>') +
+                inputRow('Reference obrázky (max 5, použijí se ve vision pipeline)',
+                    '<div id="bsRefImagesGrid" style="display:flex;gap:0.5rem;flex-wrap:wrap;">' +
+                        (p.visual.referenceImages||[]).map(function(r,i) {
+                            var src = r.dataUrl || '';
+                            return '<div style="position:relative;width:90px;height:90px;border:1px solid var(--border-color);border-radius:6px;overflow:hidden;">' +
+                                (src ? '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;" />' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:10px;">' + escapeHtml(r.drivePath||'') + '</div>') +
+                                '<button onclick="bsRemoveRefImage(' + i + ')" style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:white;cursor:pointer;">×</button>' +
+                            '</div>';
+                        }).join('') +
+                        ((p.visual.referenceImages||[]).length < 5
+                            ? '<label style="width:90px;height:90px;border:1px dashed var(--border-color);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);"><span style="font-size:24px;">+</span><span style="font-size:10px;">Nahrát</span><input type="file" accept="image/*" multiple style="display:none;" onchange="bsUploadRefImages(event)" /></label>'
+                            : '') +
+                    '</div>');
+        }
+        function renderTabSources(p) {
+            return '<div style="padding:1rem;border:1px dashed var(--border-color);border-radius:8px;background:var(--bg-surface);">' +
+                '<div style="font-weight:600;color:var(--text-primary);margin-bottom:0.4rem;">Drive — schválené posty (Spec 2 / TBD)</div>' +
+                '<div style="font-size:12px;color:var(--text-muted);">Až bude implementováno: nastavíš složku Drive, kam budeš ukládat schválené posty. Aplikace je bude číst zpět a používat jako reference pro nové generování.</div>' +
+                '</div>' +
+                '<div style="padding:1rem;border:1px dashed var(--border-color);border-radius:8px;background:var(--bg-surface);margin-top:0.75rem;">' +
+                '<div style="font-weight:600;color:var(--text-primary);margin-bottom:0.4rem;">Instagram napojení (Spec 3 / TBD)</div>' +
+                '<div style="font-size:12px;color:var(--text-muted);">Až bude implementováno: zadáš Instagram handle a aplikace bude tahat poslední posty jako vizuální referenci.</div>' +
+                '</div>' +
+                '<div style="margin-top:1rem;font-size:11px;color:var(--text-muted);">Slug brandu (immutable): <code>' + escapeHtml(p.slug) + '</code></div>';
+        }
+        function escapeHtml(s) {
+            return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        function setNested(obj, path, value) {
+            var parts = path.split('.');
+            var cur = obj;
+            for (var i = 0; i < parts.length - 1; i++) {
+                if (!cur[parts[i]] || typeof cur[parts[i]] !== 'object') cur[parts[i]] = {};
+                cur = cur[parts[i]];
+            }
+            cur[parts[parts.length - 1]] = value;
+        }
+        function wireTabInputs(preset) {
+            document.querySelectorAll('.bs-input[data-bs]').forEach(function(el) {
+                el.addEventListener('change', function() {
+                    var path = el.getAttribute('data-bs');
+                    var val = el.value;
+                    if (path === 'voice.bannedWords' || path === 'voice.approvedCTAs' || path === 'visual.qualityChecklist') {
+                        val = val.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+                    }
+                    setNested(preset, path, val);
+                });
+            });
+        }
+        async function bsAddBrand() {
+            var name = prompt('Název nového brandu:');
+            if (!name) return;
+            var slug = slugify(name);
+            if (brandPresetsV2[slug]) { if (typeof showToast === 'function') showToast('Brand s tímto slug už existuje.', 'error'); return; }
+            brandPresetsV2[slug] = makeEmptyPreset(slug, name);
+            brandStudioState.selectedSlug = slug;
+            await savePresetV2(slug);
+            renderBrandStudio();
+            populateBrandSwitcherTopnav();
+        }
+        async function bsDeleteBrand(slug) {
+            if (slug === 'profilend') { if (typeof showToast === 'function') showToast('ProfiLend nelze smazat.', 'error'); return; }
+            if (!confirm('Opravdu smazat brand "' + (brandPresetsV2[slug].displayName||slug) + '"?')) return;
+            delete brandPresetsV2[slug];
+            try { localStorage.removeItem(BRAND_PRESETS_LOCAL_PREFIX + slug); } catch(e) {}
+            // Re-save index (other brands' files still exist in Drive but are orphaned without index entry)
+            if (window.GDriveSync && GDriveSync.isConnected()) {
+                try {
+                    var idx = Object.keys(brandPresetsV2).map(function(s){ return { slug: s, displayName: brandPresetsV2[s].displayName }; });
+                    var idxBlob = new Blob([JSON.stringify(idx, null, 2)], { type: 'application/json' });
+                    await GDriveSync.saveBinary('brand-presets/_index.json', idxBlob, 'application/json');
+                } catch(e) { console.warn('[BPv2] index update failed:', e); }
+            }
+            if (activeBrandSlug === slug) {
+                activeBrandSlug = brandPresetsV2['profilend'] ? 'profilend' : Object.keys(brandPresetsV2)[0];
+                try { localStorage.setItem(BRAND_ACTIVE_KEY, activeBrandSlug); } catch(e) {}
+            }
+            brandStudioState.selectedSlug = activeBrandSlug;
+            renderBrandStudio();
+            populateBrandSwitcherTopnav();
+        }
+        async function bsSaveActive() {
+            var preset = brandPresetsV2[brandStudioState.selectedSlug];
+            if (!preset) return;
+            var errs = validatePreset(preset);
+            if (errs.length > 0) { if (typeof showToast === 'function') showToast('Chyby validace:\n' + errs.join('\n'), 'error'); return; }
+            var ok = await savePresetV2(preset.slug);
+            if (ok) { if (typeof showToast === 'function') showToast('Brand uložen na Drive.', 'success'); }
+            else { if (typeof showToast === 'function') showToast('Drive nedostupný — uloženo lokálně, sync proběhne po připojení.', 'info'); }
+            renderBrandStudio();
+            populateBrandSwitcherTopnav();
+        }
+        async function bsUploadRefImages(ev) {
+            var preset = brandPresetsV2[brandStudioState.selectedSlug];
+            if (!preset) return;
+            var files = ev.target.files;
+            if (!files || files.length === 0) return;
+            for (var fi = 0; fi < files.length && (preset.visual.referenceImages || []).length < 5; fi++) {
+                var f = files[fi];
+                if (!f.type.startsWith('image/')) continue;
+                var dataUrl = await new Promise(function(res){ var r = new FileReader(); r.onload = function(e){res(e.target.result);}; r.readAsDataURL(f); });
+                var idx = preset.visual.referenceImages.length;
+                var drivePath = 'brand-assets/' + preset.slug + '/ig-ref-' + idx + '.png';
+                preset.visual.referenceImages.push({ id: 'ig-' + (idx+1), drivePath: drivePath, dataUrl: dataUrl, tags: [] });
+                if (window.GDriveSync && GDriveSync.isConnected()) {
+                    try {
+                        var blob = await (await fetch(dataUrl)).blob();
+                        await GDriveSync.saveBinary(drivePath, blob, 'image/png');
+                    } catch(e) { console.warn('[BPv2] ref upload failed:', e); }
+                }
+            }
+            ev.target.value = '';
+            renderBrandStudio();
+        }
+        async function bsRemoveRefImage(idx) {
+            var preset = brandPresetsV2[brandStudioState.selectedSlug];
+            if (!preset) return;
+            var ref = preset.visual.referenceImages[idx];
+            preset.visual.referenceImages.splice(idx, 1);
+            if (ref && window.GDriveSync && GDriveSync.isConnected()) {
+                try { await GDriveSync.deleteFile(ref.drivePath); } catch(e) {}
+            }
+            renderBrandStudio();
+        }
+
+        // ============ Wire init: kick off after Drive ready (or immediately) ============
+        (function bootBrandStudioV2() {
+            function go() { initBrandStudioV2().catch(function(e){ console.error('[BPv2] init failed:', e); }); }
+            // If GDriveSync already connected, init immediately. Otherwise wait until DOM ready.
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() { setTimeout(go, 600); });
+            } else {
+                setTimeout(go, 600);
+            }
+        })();
     </script>
         <script src="google-drive-sync.js"></script>
+
+    <!-- Preview Prompt Modal (Spec 1, 2026-04-22) -->
+    <div id="previewPromptModal" role="dialog" aria-modal="true">
+        <div class="pp-card">
+            <div class="pp-header">
+                <div>
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Co se odešle do GPT</div>
+                    <div style="font-size:18px;font-weight:700;color:var(--text-primary);"><span id="previewModalKind">—</span></div>
+                </div>
+                <button onclick="closePreviewModal()" style="background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1;">×</button>
+            </div>
+            <div class="pp-meta">
+                <span><strong>Brand:</strong> <span id="previewModalBrand">—</span></span>
+                <span><strong>Téma:</strong> <span id="previewModalTopic">—</span></span>
+                <span><strong>Model:</strong> <span id="previewModalModel">—</span></span>
+                <span id="previewModalRefs"></span>
+                <span style="margin-left:auto;color:var(--accent);font-weight:600;"><span id="previewModalCost"></span></span>
+            </div>
+            <div id="previewModalError" class="pp-error" style="display:none;"></div>
+            <div class="pp-body">
+                <div class="pp-section-label">System prompt <button class="pp-copy" onclick="copyPreviewText('previewSystemPromptText')">📋 copy</button></div>
+                <pre class="pp-text" id="previewSystemPromptText"></pre>
+                <div class="pp-section-label">User prompt <button class="pp-copy" onclick="copyPreviewText('previewUserPromptText')">📋 copy</button></div>
+                <pre class="pp-text" id="previewUserPromptText"></pre>
+                <div id="previewFinalSection" style="display:none;">
+                    <div class="pp-section-label">Final prompt (po vision refine) <button class="pp-copy" onclick="copyPreviewText('previewFinalPromptText')">📋 copy</button></div>
+                    <pre class="pp-text" id="previewFinalPromptText"></pre>
+                </div>
+            </div>
+            <div id="previewModalActions" class="pp-actions">
+                <button class="pp-btn" data-action="cancel" onclick="closePreviewModal()">Zrušit</button>
+                <button class="pp-btn pp-btn-primary" data-action="send" onclick="confirmAndSendPreview()">Odeslat →</button>
+            </div>
+        </div>
+    </div>
 </body>
 <!-- Logo visibility settings -->
 <div class="form-group">
