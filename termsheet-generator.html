@@ -2083,10 +2083,11 @@
                '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="32"/></w:rPr>' +
                '<w:t>Term Sheet \u2013 financov\u00e1n\u00ed</w:t></w:r></w:p>';
 
-        xml += buildFieldXml('\u00dav\u011brovan\u00fd:', data.borrower);
-        if (data.ico) xml += buildFieldXml('I\u010cO:', data.ico);
-        if (data.spisovaZnacka) xml += buildFieldXml('Spisov\u00e1 zna\u010dka:', data.spisovaZnacka);
-        if (data.sidlo) xml += buildFieldXml('S\u00eddlo:', data.sidlo);
+        var basicInfoParts = [data.borrower];
+        if (data.ico) basicInfoParts.push(data.ico);
+        if (data.spisovaZnacka) basicInfoParts.push(data.spisovaZnacka);
+        if (data.sidlo) basicInfoParts.push(data.sidlo);
+        xml += buildFieldXml('\u00dav\u011brovan\u00fd:', basicInfoParts.join(', '));
         if (data.purpose) xml += buildFieldXml('\u00da\u010del \u00fav\u011bru:', data.purpose);
         xml += buildFieldXml('\u00dav\u011brovan\u00e1 \u010d\u00e1stka:', data.amount ? data.amount + ' ' + data.currency : '');
         if (data.drawdownDate) {
@@ -2204,10 +2205,11 @@
                 }));
             }
 
-            addField('\u00dav\u011brovan\u00fd:', data.borrower);
-            if (data.ico) addField('I\u010cO:', data.ico);
-            if (data.spisovaZnacka) addField('Spisov\u00e1 zna\u010dka:', data.spisovaZnacka);
-            if (data.sidlo) addField('S\u00eddlo:', data.sidlo);
+            var basicInfoParts = [data.borrower];
+            if (data.ico) basicInfoParts.push(data.ico);
+            if (data.spisovaZnacka) basicInfoParts.push(data.spisovaZnacka);
+            if (data.sidlo) basicInfoParts.push(data.sidlo);
+            addField('\u00dav\u011brovan\u00fd:', basicInfoParts.join(', '));
             if (data.purpose) addField('\u00da\u010del \u00fav\u011bru:', data.purpose);
             addField('\u00dav\u011brovan\u00e1 \u010d\u00e1stka:', data.amount ? data.amount + ' ' + data.currency : '');
             if (data.drawdownDate) {
