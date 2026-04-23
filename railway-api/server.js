@@ -3,8 +3,31 @@ const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
 const crypto = require('crypto');
 
+// Optional: sharp for reference image compression in marketing image pipeline.
+// If sharp is unavailable on the runtime (native binary issues), the pipeline
+// still works — references just go uncompressed (larger payload).
+var sharp = null;
+try { sharp = require('sharp'); } catch (e) { console.warn('[marketing] sharp not available — reference images sent uncompressed'); }
+
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// =============================================
+// MARKETING_CONFIG — central config for marketing endpoints
+// Cost values are estimates; OpenAI prices change — not authoritative.
+// =============================================
+var MARKETING_CONFIG = {
+    visionModel: 'gpt-4o',
+    visionMaxTokens: 1500,
+    visionTemperature: 0.3,
+    imageModelDefault: 'gpt-image-1',
+    imageQualityDefault: 'hd',
+    promptMaxLength: 4000,
+    referenceCompressionPx: 512,
+    costPerVisionImage: 0.01,
+    costPerImageGen: { 'gpt-image-1': 0.04, 'dall-e-3': 0.08 },
+    costPerTextGen: { 'gpt-4o-mini': 0.001, 'gpt-4o': 0.005 }
+};
 
 // CORS — allow Vercel production + localhost
 var allowedOrigins = [
@@ -597,7 +620,181 @@ app.get('/api/marketing/models', async function (req, res) {
     }
 });
 
-// DALL-E Image Generation endpoint
+// =============================================
+// Marketing Agent — Brand Context Layer (Spec 1)
+// Builds structured prompts from a complete brand preset.
+// Replaces the previous flat-field, partly-hardcoded approach.
+// =============================================
+
+// Normalize old (flat) request body into a brandPreset shape (backwards compat).
+// Old format: { prompt, brandDNA: {styleMain, antiPatterns, colors}, visualHook, ... }
+// New format: { brandPreset: {schemaVersion, slug, displayName, identity, voice, visual, sources}, brief, options }
+function normalizeImageRequest(body) {
+    if (body.brandPreset && body.brandPreset.schemaVersion >= 2) {
+        return {
+            mode: 'v2',
+            brandPreset: body.brandPreset,
+            brief: body.brief || { topic: body.prompt || '', visualHook: body.visualHook || '' },
+            options: body.options || { model: body.imageModel, size: body.size, quality: body.quality },
+            referenceImages: body.referenceImages || []
+        };
+    }
+    // Legacy: synthesize a minimal brandPreset from flat fields.
+    var dna = body.brandDNA || {};
+    return {
+        mode: 'legacy',
+        brandPreset: {
+            schemaVersion: 1,
+            slug: 'legacy',
+            displayName: 'ProfiLend',
+            identity: {
+                shortDescription: 'Czech B2B private debt — secured real estate loans',
+                colors: dna.colors || {},
+                typography: { primaryFont: 'DM Sans', fallback: 'Inter, sans-serif' }
+            },
+            voice: { tone: '', bannedWords: [], approvedCTAs: [] },
+            visual: {
+                styleMain: dna.styleMain || '',
+                antiPatterns: dna.antiPatterns || '',
+                qualityChecklist: []
+            }
+        },
+        brief: { topic: body.prompt || '', visualHook: body.visualHook || '' },
+        options: { model: body.imageModel, size: body.size, quality: body.quality },
+        referenceImages: body.referenceImages || []
+    };
+}
+
+// Build a flat brand context object usable by prompt builders.
+function buildBrandContext(brandPreset, brief) {
+    var identity = brandPreset.identity || {};
+    var voice = brandPreset.voice || {};
+    var visual = brandPreset.visual || {};
+    var colors = identity.colors || {};
+    return {
+        brandName: brandPreset.displayName || brandPreset.slug || 'Brand',
+        shortDescription: identity.shortDescription || '',
+        audienceShort: identity.audienceShort || '',
+        languagePrimary: voice.languagePrimary || 'cs',
+        tone: voice.tone || '',
+        bannedWords: Array.isArray(voice.bannedWords) ? voice.bannedWords : [],
+        approvedCTAs: Array.isArray(voice.approvedCTAs) ? voice.approvedCTAs : [],
+        styleMain: visual.styleMain || '',
+        antiPatterns: visual.antiPatterns || '',
+        qualityChecklist: Array.isArray(visual.qualityChecklist) ? visual.qualityChecklist : (visual.qualityChecklist ? [visual.qualityChecklist] : []),
+        layoutTemplates: visual.layoutTemplates || {},
+        colors: {
+            primary: colors.primary || colors.navy || '#0C2340',
+            accent: colors.accent || colors.teal || '#00B4D8',
+            background: colors.background || colors.gray || colors.white || '#F0F4F8',
+            muted: colors.muted || '#94A3B8'
+        },
+        typography: identity.typography || { primaryFont: 'DM Sans', fallback: 'Inter, sans-serif' },
+        brief: brief || {}
+    };
+}
+
+function buildImageSystemPrompt(ctx) {
+    var lines = [];
+    lines.push('You are a senior brand designer producing a social-media post image for ' + ctx.brandName +
+        (ctx.shortDescription ? ' (' + ctx.shortDescription + ')' : '') + '.');
+    if (ctx.audienceShort) lines.push('Audience: ' + ctx.audienceShort + '.');
+    lines.push('Your output must look as if it belongs to this brand\'s existing visual identity — never generic stock.');
+    if (ctx.qualityChecklist.length > 0) {
+        lines.push('\nQUALITY CHECKLIST (the result must satisfy each):');
+        ctx.qualityChecklist.forEach(function (q, i) { lines.push((i + 1) + '. ' + q); });
+    }
+    lines.push('\nRULES:');
+    lines.push('- Never include any logo or brand text — the logo will be added later as overlay.');
+    lines.push('- Sans-serif typography only.');
+    lines.push('- Maximum 2 font weights (bold for headlines, regular for body).');
+    return lines.join('\n');
+}
+
+function buildImageUserPrompt(ctx) {
+    var brief = ctx.brief || {};
+    var parts = [];
+    parts.push('Create a professional social-media post image for ' + ctx.brandName + '.');
+    if (brief.topic) parts.push('Topic: ' + brief.topic);
+    if (brief.visualHook) {
+        parts.push('Include this short text as prominent bold sans-serif typography (focal point of the composition): "' + brief.visualHook + '".');
+    }
+    if (brief.creativeBrief) parts.push('Creative concept: ' + brief.creativeBrief);
+    var layoutKey = brief.layout || brief.layoutKey;
+    if (layoutKey && ctx.layoutTemplates[layoutKey]) {
+        parts.push('LAYOUT TEMPLATE (follow precisely): ' + ctx.layoutTemplates[layoutKey]);
+    }
+    if (ctx.styleMain) parts.push('BRAND VISUAL RULES (full): ' + ctx.styleMain);
+    parts.push('EXACT COLORS: primary ' + ctx.colors.primary + ' (headings, dark surfaces), accent ' + ctx.colors.accent +
+        ' (CTAs, lines, highlights), background ' + ctx.colors.background + ', muted text ' + ctx.colors.muted +
+        '. Do not introduce other colors.');
+    parts.push('TYPOGRAPHY: Use ' + (ctx.typography.primaryFont || 'DM Sans') + ' or ' + (ctx.typography.fallback || 'Inter, sans-serif') +
+        ' only. Maximum 2 font weights (bold for headlines, regular for body).');
+    if (ctx.tone) parts.push('VISUAL MOOD (matches brand voice): ' + ctx.tone + '.');
+    if (ctx.bannedWords.length > 0) {
+        parts.push('FORBIDDEN words and concepts (must not appear as typography or imagery): ' + ctx.bannedWords.join(', ') + '.');
+    }
+    if (ctx.antiPatterns) parts.push('ANTI-PATTERNS (never include any of these): ' + ctx.antiPatterns);
+    var format = brief.format || '1:1';
+    parts.push('Format: ' + format + '. Clean scannable layout, generous whitespace, rounded cards with subtle shadows, thin accent lines, simple linear icons. No 3D effects, no neon, no stock-photo cliches, no aggressive sales copy.');
+    return parts.join('\n\n');
+}
+
+function buildTextSystemPrompt(ctx) {
+    var lines = [];
+    lines.push('You are a marketing copywriter for ' + ctx.brandName +
+        (ctx.shortDescription ? ' (' + ctx.shortDescription + ')' : '') + '.');
+    if (ctx.audienceShort) lines.push('Audience: ' + ctx.audienceShort + '.');
+    lines.push('Primary language: ' + (ctx.languagePrimary === 'en' ? 'English' : 'Czech') + '. Always respond in this language.');
+    if (ctx.tone) lines.push('TONE: ' + ctx.tone + '.');
+    if (ctx.bannedWords.length > 0) {
+        lines.push('BANNED WORDS — must never appear: ' + ctx.bannedWords.join(', ') + '.');
+    }
+    if (ctx.approvedCTAs.length > 0) {
+        lines.push('APPROVED CTAs — use only one of these (verbatim): ' + ctx.approvedCTAs.join(' | ') + '.');
+    }
+    if (ctx.styleMain) lines.push('BRAND VOICE/STYLE NOTES: ' + ctx.styleMain.substring(0, 1500));
+    lines.push('OUTPUT: write naturally, like a human professional, never AI-flavored phrases. No "In today\'s world", no "Did you know that".');
+    return lines.join('\n');
+}
+
+function validatePromptLength(prompt) {
+    if (!prompt || typeof prompt !== 'string') return { ok: false, reason: 'Prompt is empty.' };
+    if (prompt.length < 10) return { ok: false, reason: 'Prompt is too short (min 10 chars).' };
+    if (prompt.length > MARKETING_CONFIG.promptMaxLength) {
+        return { ok: false, reason: 'Prompt exceeds ' + MARKETING_CONFIG.promptMaxLength + ' chars (got ' + prompt.length + ').' };
+    }
+    return { ok: true };
+}
+
+// Compress a base64 reference image to MARKETING_CONFIG.referenceCompressionPx square,
+// returning a new data URL. If sharp is unavailable, returns the input unchanged.
+async function compressReferenceImage(dataUrlOrBase64) {
+    if (!sharp) return dataUrlOrBase64;
+    try {
+        var raw = dataUrlOrBase64;
+        var mime = 'image/png';
+        if (raw.indexOf('data:') === 0) {
+            var commaIdx = raw.indexOf(',');
+            var header = raw.substring(0, commaIdx);
+            var mimeMatch = header.match(/data:([^;]+)/);
+            if (mimeMatch) mime = mimeMatch[1];
+            raw = raw.substring(commaIdx + 1);
+        }
+        var buf = Buffer.from(raw, 'base64');
+        var px = MARKETING_CONFIG.referenceCompressionPx;
+        var out = await sharp(buf).resize(px, px, { fit: 'inside' }).jpeg({ quality: 82 }).toBuffer();
+        return 'data:image/jpeg;base64,' + out.toString('base64');
+    } catch (e) {
+        console.warn('[marketing] reference compression failed, sending uncompressed:', e.message);
+        return dataUrlOrBase64;
+    }
+}
+
+// =============================================
+// POST /api/marketing/generate-image
+// Supports both legacy flat body and v2 { brandPreset, brief, options } body.
+// =============================================
 app.post('/api/marketing/generate-image', async function (req, res) {
     var openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) {
@@ -607,112 +804,74 @@ app.post('/api/marketing/generate-image', async function (req, res) {
         return res.status(500).json({ error: 'openai package not installed.' });
     }
 
-    var body = req.body || {};
-    var prompt = body.prompt || '';
-    var size = body.size || '1024x1024';
-    var quality = body.quality || 'standard';
-    var referenceImages = body.referenceImages || [];
-    var brandDNA = body.brandDNA || {};
-    var visualHook = body.visualHook || '';
-    var allowedImageModels = ['gpt-image-1', 'dall-e-3'];
-    var imageModel = allowedImageModels.indexOf(body.imageModel) !== -1 ? body.imageModel : 'gpt-image-1';
+    var normalized = normalizeImageRequest(req.body || {});
+    var brandPreset = normalized.brandPreset;
+    var brief = normalized.brief;
+    var options = normalized.options || {};
+    var referenceImages = normalized.referenceImages || [];
 
-    if (!prompt || prompt.length < 10) {
-        return res.status(400).json({ error: 'Image prompt is required (min 10 chars).' });
+    var allowedImageModels = ['gpt-image-1', 'dall-e-3'];
+    var imageModel = allowedImageModels.indexOf(options.model) !== -1 ? options.model : MARKETING_CONFIG.imageModelDefault;
+    var size = options.size || '1024x1024';
+    var quality = options.quality || MARKETING_CONFIG.imageQualityDefault;
+
+    var ctx = buildBrandContext(brandPreset, brief);
+    var systemPrompt = buildImageSystemPrompt(ctx);
+    var userPrompt = buildImageUserPrompt(ctx);
+
+    if (!brief.topic && !userPrompt) {
+        return res.status(400).json({ error: 'Brief topic is required.' });
     }
 
     try {
         var openai = new OpenAI({ apiKey: openaiKey });
-        var finalPrompt = prompt;
+        var finalPrompt = userPrompt;
 
-        // If reference images are provided, use GPT-4o vision to analyze them
-        // and create an enhanced prompt that captures their visual style
+        // Vision refinement when references are provided
         if (referenceImages.length > 0) {
-            console.log('[Image Gen] Processing ' + referenceImages.length + ' reference images via GPT-4o vision, brandDNA: ' + (brandDNA.styleMain ? 'yes' : 'no') + ', visualHook: ' + (visualHook || 'none'));
+            console.log('[marketing/image] vision refine: ' + referenceImages.length + ' refs, brand=' + ctx.brandName);
             try {
-                var visionContent = [];
-                // Build Brand DNA context for the vision model
-                var brandDNAContext = '';
-                if (brandDNA.styleMain) {
-                    brandDNAContext += '\n\nBRAND DNA - VISUAL STYLE RULES:\n' + brandDNA.styleMain;
+                // Compress references to keep token usage and request size down
+                var compressedRefs = [];
+                for (var ci = 0; ci < referenceImages.length; ci++) {
+                    compressedRefs.push(await compressReferenceImage(referenceImages[ci]));
                 }
-                if (brandDNA.antiPatterns) {
-                    brandDNAContext += '\n\nANTI-PATTERNS (NEVER do these):\n' + brandDNA.antiPatterns;
-                }
-                if (brandDNA.colors) {
-                    var colorInfo = [];
-                    if (brandDNA.colors.navy) colorInfo.push('Navy: ' + brandDNA.colors.navy);
-                    if (brandDNA.colors.teal) colorInfo.push('Teal/Turquoise: ' + brandDNA.colors.teal);
-                    if (brandDNA.colors.white) colorInfo.push('White: ' + brandDNA.colors.white);
-                    if (brandDNA.colors.gray) colorInfo.push('Light gray: ' + brandDNA.colors.gray);
-                    if (colorInfo.length > 0) brandDNAContext += '\n\nEXACT BRAND COLORS: ' + colorInfo.join(', ');
-                }
-                if (visualHook) {
-                    brandDNAContext += '\n\nVISUAL HOOK TEXT (must appear as typography in the image): "' + visualHook + '"';
-                }
-
-                visionContent.push({
+                var visionContent = [{
                     type: 'text',
-                    text: 'You are a senior brand designer creating an Instagram post for ProfiLend, a Czech B2B financial institution. You have access to the Brand DNA document (visual rules) AND reference Instagram posts from this brand.\n\nYour task: Create a PRECISE, TECHNICAL image generation prompt for gpt-image-1 that will produce an image perfectly matching the ProfiLend brand identity.\n\nSTEP 1: Analyze the reference images for exact visual patterns (colors, layout, typography, spacing, effects).\nSTEP 2: Cross-reference with the Brand DNA rules below.\nSTEP 3: Combine with the creative brief to produce a detailed technical prompt.' + brandDNAContext + '\n\nCREATIVE BRIEF (what the image should communicate):\n' + prompt + '\n\nOUTPUT RULES:\n- Return ONLY the image generation prompt, nothing else\n- Write in English, 300-500 words\n- Be extremely specific: exact HEX colors, exact positioning (top-left, center, bottom), exact proportions\n- Specify typography: font weight, size relative to canvas, color, position\n- Specify background: exact color or gradient, any geometric elements\n- Specify whitespace: margins, padding between elements\n- If visualHook text is provided, specify EXACTLY where and how it appears as typography in the composition\n- The generated image must look like it belongs in the same Instagram feed as the reference posts\n- NEVER include: red/orange urgency colors, neon effects, 3D buttons, stock photo cliches, cluttered layouts'
-                });
-
-                // Add each reference image
-                for (var ri = 0; ri < referenceImages.length; ri++) {
-                    var imgData = referenceImages[ri];
-                    // Handle both data:image/... format and raw base64
-                    if (imgData.indexOf('data:') === 0) {
-                        visionContent.push({
-                            type: 'image_url',
-                            image_url: { url: imgData, detail: 'high' }
-                        });
-                    } else {
-                        visionContent.push({
-                            type: 'image_url',
-                            image_url: { url: 'data:image/png;base64,' + imgData, detail: 'high' }
-                        });
-                    }
+                    text: systemPrompt + '\n\nCREATIVE BRIEF (image must communicate this):\n' + userPrompt +
+                        '\n\nINSTRUCTIONS:\n- Analyze the reference images for exact visual patterns (colors, layout, typography, spacing).\n' +
+                        '- Cross-reference with the rules above.\n' +
+                        '- Produce a single PRECISE technical prompt for an image-generation model.\n' +
+                        '- Output ONLY the prompt, in English, 300-500 words.\n' +
+                        '- Be specific: exact HEX colors, positions (top-left/center/bottom), proportions, typography.\n' +
+                        '- The result must look like it belongs in the same feed as these references.'
+                }];
+                for (var ri = 0; ri < compressedRefs.length; ri++) {
+                    var imgData = compressedRefs[ri];
+                    visionContent.push({
+                        type: 'image_url',
+                        image_url: { url: imgData.indexOf('data:') === 0 ? imgData : 'data:image/png;base64,' + imgData, detail: 'high' }
+                    });
                 }
-
                 var visionResponse = await openai.chat.completions.create({
-                    model: 'gpt-4o',
-                    messages: [{
-                        role: 'user',
-                        content: visionContent
-                    }],
-                    max_tokens: 1000,
-                    temperature: 0.3
+                    model: MARKETING_CONFIG.visionModel,
+                    messages: [{ role: 'user', content: visionContent }],
+                    max_tokens: MARKETING_CONFIG.visionMaxTokens,
+                    temperature: MARKETING_CONFIG.visionTemperature
                 });
-
                 if (visionResponse.choices && visionResponse.choices[0] && visionResponse.choices[0].message) {
                     finalPrompt = visionResponse.choices[0].message.content;
-                    console.log('[Image Gen] Enhanced prompt generated via GPT-4o vision (' + finalPrompt.length + ' chars)');
+                    console.log('[marketing/image] vision-refined prompt (' + finalPrompt.length + ' chars)');
                 }
             } catch (visionErr) {
-                console.error('[Image Gen] Vision analysis failed, using original prompt:', visionErr.message);
-                // Fall back to original prompt if vision fails
+                console.error('[marketing/image] vision refine failed, falling back to user prompt:', visionErr.message);
             }
         }
 
-        // If no reference images but Brand DNA exists, enhance prompt with Brand DNA context
-        if (referenceImages.length === 0 && (brandDNA.styleMain || brandDNA.antiPatterns)) {
-            console.log('[Image Gen] No reference images, enhancing prompt with Brand DNA context');
-            try {
-                var dnaPromptParts = [prompt];
-                if (brandDNA.styleMain) dnaPromptParts.push('\nBrand visual style: ' + brandDNA.styleMain.substring(0, 500));
-                if (brandDNA.antiPatterns) dnaPromptParts.push('\nNEVER: ' + brandDNA.antiPatterns.substring(0, 300));
-                if (brandDNA.colors) {
-                    var cp = [];
-                    if (brandDNA.colors.navy) cp.push('navy ' + brandDNA.colors.navy);
-                    if (brandDNA.colors.teal) cp.push('turquoise ' + brandDNA.colors.teal);
-                    if (brandDNA.colors.gray) cp.push('background ' + brandDNA.colors.gray);
-                    if (cp.length > 0) dnaPromptParts.push('\nExact colors: ' + cp.join(', '));
-                }
-                if (visualHook) dnaPromptParts.push('\nInclude this text as bold sans-serif typography in the composition: "' + visualHook + '"');
-                finalPrompt = dnaPromptParts.join(' ');
-                console.log('[Image Gen] Brand DNA enhanced prompt (' + finalPrompt.length + ' chars)');
-            } catch (dnaErr) {
-                console.warn('[Image Gen] Brand DNA enhancement failed:', dnaErr.message);
-            }
+        // Validate length before sending to image model
+        var validation = validatePromptLength(finalPrompt);
+        if (!validation.ok) {
+            return res.status(400).json({ error: 'Prompt validation failed: ' + validation.reason, debug: { systemPrompt: systemPrompt, userPrompt: userPrompt, finalPrompt: finalPrompt } });
         }
 
         // Quality mapping
@@ -722,26 +881,28 @@ app.post('/api/marketing/generate-image', async function (req, res) {
             else if (quality === 'hd') effectiveQuality = 'high';
         }
 
-        var genParams = {
-            model: imageModel,
-            prompt: finalPrompt,
-            n: 1,
-            size: size,
-            quality: effectiveQuality
-        };
-        if (imageModel === 'dall-e-3') {
-            genParams.response_format = 'b64_json';
-        }
+        var genParams = { model: imageModel, prompt: finalPrompt, n: 1, size: size, quality: effectiveQuality };
+        if (imageModel === 'dall-e-3') genParams.response_format = 'b64_json';
 
         var response = await openai.images.generate(genParams);
-
         var imageData = response.data[0];
+
+        var costEstimate = (MARKETING_CONFIG.costPerImageGen[imageModel] || 0) +
+            (referenceImages.length * MARKETING_CONFIG.costPerVisionImage);
+
         res.json({
             success: true,
             image: imageData.b64_json,
             revisedPrompt: imageData.revised_prompt || null,
             model: imageModel,
-            usedReferenceImages: referenceImages.length > 0
+            usedReferenceImages: referenceImages.length > 0,
+            debug: {
+                systemPrompt: systemPrompt,
+                userPrompt: userPrompt,
+                finalPrompt: finalPrompt,
+                costEstimate: Number(costEstimate.toFixed(4)),
+                requestMode: normalized.mode
+            }
         });
     } catch (err) {
         console.error('OpenAI image error:', err.message);
@@ -768,12 +929,41 @@ app.post('/api/marketing/generate', async function (req, res) {
     }
 
     var body = req.body || {};
+
+    // ===== Dual-format support (Spec 1) =====
+    // If body has brandPreset (schemaVersion>=2), pull legacy fields from it for compat
+    // with the rest of this handler (which still uses flat variables internally).
+    var v2BrandPreset = (body.brandPreset && body.brandPreset.schemaVersion >= 2) ? body.brandPreset : null;
+    var requestMode = v2BrandPreset ? 'v2' : 'legacy';
+    if (v2BrandPreset) {
+        var ident = v2BrandPreset.identity || {};
+        var voice2 = v2BrandPreset.voice || {};
+        var visual2 = v2BrandPreset.visual || {};
+        var c2 = ident.colors || {};
+        body.brandId = body.brandId || v2BrandPreset.slug;
+        body.brandName = body.brandName || v2BrandPreset.displayName;
+        body.customBannedWords = body.customBannedWords || voice2.bannedWords || [];
+        body.customCTAs = body.customCTAs || voice2.approvedCTAs || [];
+        body.customTone = body.customTone || (voice2.tone ? [voice2.tone] : []);
+        body.brandColors = body.brandColors || {
+            navy: c2.primary || c2.navy, teal: c2.accent || c2.teal,
+            white: c2.background || c2.white, gray: c2.muted || c2.gray,
+            primary: c2.primary, secondary: c2.muted
+        };
+        body.brandStyleDesc = body.brandStyleDesc || visual2.styleMain || '';
+        body.brandLayoutDescs = body.brandLayoutDescs || visual2.layoutTemplates || {};
+        body.brandDNAFull = body.brandDNAFull || {
+            styleMain: visual2.styleMain || '',
+            antiPatterns: visual2.antiPatterns || ''
+        };
+    }
+
     var channel = body.channel || 'linkedin';
     var audience = body.audience || 'owners';
     var pillar = body.pillar || 'product';
     var postType = body.postType || 'social-post';
     var goal = body.goal || 'awareness';
-    var theme = body.theme;
+    var theme = body.theme || (body.brief && body.brief.topic);
     var tone = body.tone || 'factual';
     var emojiLevel = body.emojiLevel || 'few';
     var hashtagLevel = body.hashtagLevel || 'few';
@@ -865,23 +1055,32 @@ app.post('/api/marketing/generate', async function (req, res) {
         moderate: 'Přiměřeně 2–3 emoji, pro zvýraznění klíčových bodů.'
     };
 
+    // Brand-derived hashtag (lowercase, no diacritics, no spaces)
+    var brandHashtag = '#' + (brandName || 'Brand').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]/g, '');
     var hashtagRules = {
         none: 'Žádné hashtagy.',
-        few: 'Na konec příspěvku přidej 3–5 relevantních hashtagů (vždy #ProfiLend jako první).',
-        many: 'Na konec příspěvku přidej 5–8 hashtagů (vždy #ProfiLend jako první).'
+        few: 'Na konec příspěvku přidej 3–5 relevantních hashtagů (vždy ' + brandHashtag + ' jako první).',
+        many: 'Na konec příspěvku přidej 5–8 hashtagů (vždy ' + brandHashtag + ' jako první).'
     };
 
     var goalMap = {
-        awareness: 'Cíl: zvýšit povědomí o značce ProfiLend.',
+        awareness: 'Cíl: zvýšit povědomí o značce ' + brandName + '.',
         leads: 'Cíl: získat poptávky a leady — příspěvek musí motivovat k akci.',
         trust: 'Cíl: budovat důvěru a expertizu — ukázat odbornost.',
-        educate: 'Cíl: edukovat publikum o financování nemovitostí.',
+        educate: 'Cíl: edukovat publikum o tématech relevantních značce.',
         engagement: 'Cíl: zvýšit zapojení — otázky, ankety, interakce.',
-        partners: 'Cíl: oslovit potenciální partnery (makléře, poradce, právníky).'
+        partners: 'Cíl: oslovit potenciální partnery a spolupracovníky.'
     };
 
     // Build system prompt — combine base instructions with custom settings
-    var baseSystemPrompt = customSystemPrompt || ('Jsi marketingový copywriter pro ' + brandName + '. Generuješ příspěvky na sociální sítě.');
+    // In v2 mode (brandPreset), prefer the structured brand-context-based base prompt.
+    var baseSystemPrompt;
+    if (v2BrandPreset && !customSystemPrompt) {
+        var v2Ctx = buildBrandContext(v2BrandPreset, { topic: theme });
+        baseSystemPrompt = buildTextSystemPrompt(v2Ctx);
+    } else {
+        baseSystemPrompt = customSystemPrompt || ('Jsi marketingový copywriter pro ' + brandName + '. Generuješ příspěvky na sociální sítě.');
+    }
     
     // Custom banned words override or extend defaults
     var bannedWordsText = '';
@@ -1008,7 +1207,7 @@ app.post('/api/marketing/generate', async function (req, res) {
                     var creativeBrief = post.creativeBrief || post.imagePrompt || theme;
                     
                     var promptParts = [];
-                    promptParts.push('Create a professional Instagram post image for ProfiLend, a Czech B2B financial institution.');
+                    promptParts.push('Create a professional social-media post image for ' + brandName + '.');
                     
                     // Visual hook as typography
                     if (visualHook) {
@@ -1068,15 +1267,22 @@ app.post('/api/marketing/generate', async function (req, res) {
                 };
             });
 
+            var costEstimateText = (MARKETING_CONFIG.costPerTextGen[textModel] || 0) * batchCount;
             return res.status(200).json({
                 success: true,
                 posts: posts,
                 model: textModel,
-                cached: false
+                cached: false,
+                debug: {
+                    requestMode: requestMode,
+                    systemPrompt: systemPrompt,
+                    userPrompt: userPrompt,
+                    costEstimate: Number(costEstimateText.toFixed(4))
+                }
             });
         } else {
             console.error('Invalid OpenAI response:', responseText.substring(0, 500));
-            return res.status(200).json({ success: false, error: 'AI nevrátilo platný formát. Zkuste to znovu.' });
+            return res.status(200).json({ success: false, error: 'AI nevrátilo platný formát. Zkuste to znovu.', debug: { requestMode: requestMode, systemPrompt: systemPrompt, userPrompt: userPrompt } });
         }
     } catch (err) {
         console.error('OpenAI API error:', err.message);
