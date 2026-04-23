@@ -20,12 +20,23 @@ var MARKETING_CONFIG = {
     visionModel: 'gpt-4o',
     visionMaxTokens: 1500,
     visionTemperature: 0.3,
-    imageModelDefault: 'gpt-image-1',
+    // gpt-image-1.5 = current flagship (since ~Apr 2026), ~30% cheaper than gpt-image-1 with better quality.
+    // gpt-image-2 = "ChatGPT Images 2.0" (released 2026-04-21) — API rollout to developers in early May 2026;
+    //              listed here so the dropdown is ready, but server falls back to default if model unsupported.
+    imageModelDefault: 'gpt-image-1.5',
     imageQualityDefault: 'hd',
     promptMaxLength: 4000,
     referenceCompressionPx: 512,
     costPerVisionImage: 0.01,
-    costPerImageGen: { 'gpt-image-1': 0.04, 'dall-e-3': 0.08 },
+    // Per-image cost estimates for 1024x1024 high quality. Source: OpenAI pricing 2026-04-23.
+    costPerImageGen: {
+        'gpt-image-2': 0.211,
+        'gpt-image-1.5': 0.133,
+        'gpt-image-1': 0.19,
+        'gpt-image-1-mini': 0.052,
+        'dall-e-3': 0.12,
+        'dall-e-2': 0.02
+    },
     costPerTextGen: { 'gpt-4o-mini': 0.001, 'gpt-4o': 0.005 }
 };
 
@@ -822,7 +833,7 @@ app.post('/api/marketing/generate-image', async function (req, res) {
     var options = normalized.options || {};
     var referenceImages = normalized.referenceImages || [];
 
-    var allowedImageModels = ['gpt-image-1', 'dall-e-3'];
+    var allowedImageModels = ['gpt-image-2', 'gpt-image-1.5', 'gpt-image-1', 'gpt-image-1-mini', 'dall-e-3', 'dall-e-2'];
     var imageModel = allowedImageModels.indexOf(options.model) !== -1 ? options.model : MARKETING_CONFIG.imageModelDefault;
     var size = options.size || '1024x1024';
     var quality = options.quality || MARKETING_CONFIG.imageQualityDefault;
