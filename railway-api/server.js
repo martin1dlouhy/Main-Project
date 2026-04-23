@@ -714,30 +714,42 @@ function buildImageSystemPrompt(ctx) {
 function buildImageUserPrompt(ctx) {
     var brief = ctx.brief || {};
     var parts = [];
+    // Defensive truncation: if a caller sends a pre-assembled prompt as `topic`, it would blow
+    // past promptMaxLength once we append brand context. Cap brief fields to safe lengths.
+    function trim(s, max) { s = (s || '').toString(); return s.length > max ? s.substring(0, max) + '…' : s; }
+    var topicShort = trim(brief.topic, 600);
+    var creativeShort = trim(brief.creativeBrief, 600);
     parts.push('Create a professional social-media post image for ' + ctx.brandName + '.');
-    if (brief.topic) parts.push('Topic: ' + brief.topic);
+    if (topicShort) parts.push('Topic: ' + topicShort);
     if (brief.visualHook) {
-        parts.push('Include this short text as prominent bold sans-serif typography (focal point of the composition): "' + brief.visualHook + '".');
+        parts.push('Include this short text as prominent bold sans-serif typography (focal point of the composition): "' + trim(brief.visualHook, 200) + '".');
     }
-    if (brief.creativeBrief) parts.push('Creative concept: ' + brief.creativeBrief);
+    if (creativeShort && creativeShort !== topicShort) parts.push('Creative concept: ' + creativeShort);
     var layoutKey = brief.layout || brief.layoutKey;
     if (layoutKey && ctx.layoutTemplates[layoutKey]) {
-        parts.push('LAYOUT TEMPLATE (follow precisely): ' + ctx.layoutTemplates[layoutKey]);
+        parts.push('LAYOUT TEMPLATE (follow precisely): ' + trim(ctx.layoutTemplates[layoutKey], 700));
     }
-    if (ctx.styleMain) parts.push('BRAND VISUAL RULES (full): ' + ctx.styleMain);
+    if (ctx.styleMain) parts.push('BRAND VISUAL RULES: ' + trim(ctx.styleMain, 900));
     parts.push('EXACT COLORS: primary ' + ctx.colors.primary + ' (headings, dark surfaces), accent ' + ctx.colors.accent +
         ' (CTAs, lines, highlights), background ' + ctx.colors.background + ', muted text ' + ctx.colors.muted +
         '. Do not introduce other colors.');
     parts.push('TYPOGRAPHY: Use ' + (ctx.typography.primaryFont || 'DM Sans') + ' or ' + (ctx.typography.fallback || 'Inter, sans-serif') +
         ' only. Maximum 2 font weights (bold for headlines, regular for body).');
-    if (ctx.tone) parts.push('VISUAL MOOD (matches brand voice): ' + ctx.tone + '.');
+    if (ctx.tone) parts.push('VISUAL MOOD: ' + trim(ctx.tone, 200) + '.');
     if (ctx.bannedWords.length > 0) {
-        parts.push('FORBIDDEN words and concepts (must not appear as typography or imagery): ' + ctx.bannedWords.join(', ') + '.');
+        parts.push('FORBIDDEN words and concepts: ' + ctx.bannedWords.slice(0, 20).join(', ') + '.');
     }
-    if (ctx.antiPatterns) parts.push('ANTI-PATTERNS (never include any of these): ' + ctx.antiPatterns);
+    if (ctx.antiPatterns) parts.push('ANTI-PATTERNS (never include): ' + trim(ctx.antiPatterns, 600));
     var format = brief.format || '1:1';
-    parts.push('Format: ' + format + '. Clean scannable layout, generous whitespace, rounded cards with subtle shadows, thin accent lines, simple linear icons. No 3D effects, no neon, no stock-photo cliches, no aggressive sales copy.');
-    return parts.join('\n\n');
+    parts.push('Format: ' + format + '. Clean scannable layout, generous whitespace, rounded cards, thin accent lines, simple linear icons. No 3D, no neon, no stock-photo cliches, no aggressive sales copy.');
+    var assembled = parts.join('\n\n');
+    // Hard cap as last-resort safety: if still over the limit, drop the longest section.
+    var MAX = MARKETING_CONFIG.promptMaxLength - 200; // headroom for vision refinement step
+    if (assembled.length > MAX) {
+        console.warn('[marketing/image] prompt exceeded ' + MAX + ' chars (' + assembled.length + '); truncating');
+        assembled = assembled.substring(0, MAX) + '…';
+    }
+    return assembled;
 }
 
 function buildTextSystemPrompt(ctx) {
