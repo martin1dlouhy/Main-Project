@@ -4805,20 +4805,27 @@
             }
             modal.style.display = 'flex';
         }
+        // UI-only close — does NOT cancel the awaiting promise.
+        // Used internally by confirmAndSendPreview (which has its own onConfirm path).
         function closePreviewModal() {
             var modal = document.getElementById('previewPromptModal');
             if (modal) modal.style.display = 'none';
-            // Notify any awaiter that the preview was cancelled — otherwise the await hangs forever
-            // and the caller's button stays disabled.
-            if (pendingPreview && typeof pendingPreview.onCancel === 'function') {
-                try { pendingPreview.onCancel(); } catch(e) { console.warn('[preview] onCancel failed:', e); }
+        }
+        // Cancel = close modal + reject the awaiting promise.
+        // Bound to the ✕ button and the "Zrušit" button.
+        function cancelPreviewModal() {
+            var pp = pendingPreview;
+            pendingPreview = null; // clear before firing onCancel to avoid re-entry
+            closePreviewModal();
+            if (pp && typeof pp.onCancel === 'function') {
+                try { pp.onCancel(); } catch(e) { console.warn('[preview] onCancel failed:', e); }
             }
-            pendingPreview = null;
         }
         async function confirmAndSendPreview() {
             if (!pendingPreview) { closePreviewModal(); return; }
             var pp = pendingPreview;
-            closePreviewModal();
+            pendingPreview = null;   // clear FIRST so closePreviewModal doesn't fire onCancel
+            closePreviewModal();     // UI close only
             try {
                 if (typeof pp.onConfirm === 'function') await pp.onConfirm();
             } catch(e) {
@@ -5218,7 +5225,7 @@
                     <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Co se odešle do GPT</div>
                     <div style="font-size:18px;font-weight:700;color:var(--text-primary);"><span id="previewModalKind">—</span></div>
                 </div>
-                <button onclick="closePreviewModal()" style="background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1;">×</button>
+                <button onclick="cancelPreviewModal()" style="background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1;">×</button>
             </div>
             <div class="pp-meta">
                 <span><strong>Brand:</strong> <span id="previewModalBrand">—</span></span>
@@ -5239,7 +5246,7 @@
                 </div>
             </div>
             <div id="previewModalActions" class="pp-actions">
-                <button class="pp-btn" data-action="cancel" onclick="closePreviewModal()">Zrušit</button>
+                <button class="pp-btn" data-action="cancel" onclick="cancelPreviewModal()">Zrušit</button>
                 <button class="pp-btn pp-btn-primary" data-action="send" onclick="confirmAndSendPreview()">Odeslat →</button>
             </div>
         </div>
