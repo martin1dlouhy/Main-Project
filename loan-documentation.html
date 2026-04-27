@@ -2057,29 +2057,38 @@
         var DEFAULT_CATEGORIES = [
             { name: 'Úvěrové smlouvy', order: 1 },
             { name: 'Zástavní smlouvy', order: 2 },
-            { name: 'Plná moc k přímému prodeji', order: 3 }
+            { name: 'Plná moc k přímému prodeji', order: 3 },
+            { name: 'Vinkulace pojistného plnění', order: 4 }
         ];
 
+        // Idempotent: any DEFAULT_CATEGORIES name not present in the DB gets added.
+        // Existing categories are left untouched; the user's reordering / renames stay.
         function ensureDefaultCategories(callback) {
             getAllFromDB('categories', function(cats) {
-                if (cats && cats.length > 0) {
+                cats = cats || [];
+                var existingNames = cats.map(function(c) { return (c.name || '').toLowerCase(); });
+                var missing = DEFAULT_CATEGORIES.filter(function(c) {
+                    return existingNames.indexOf(c.name.toLowerCase()) === -1;
+                });
+                if (missing.length === 0) {
                     migrateUncategorizedTemplates(cats, function() {
                         if (callback) callback(cats);
                     });
                     return;
                 }
-                // Prázdný store → vytvoříme defaultní
-                var remaining = DEFAULT_CATEGORIES.length;
-                DEFAULT_CATEGORIES.forEach(function(c) {
+                var remaining = missing.length;
+                var addedAny = false;
+                missing.forEach(function(c) {
                     saveToDb('categories', {
                         name: c.name,
                         order: c.order,
                         createdAt: new Date().toISOString()
                     }, function() {
+                        addedAny = true;
                         remaining--;
                         if (remaining === 0) {
                             getAllFromDB('categories', function(allCats) {
-                                syncCategoriesToDrive();
+                                if (addedAny) syncCategoriesToDrive();
                                 migrateUncategorizedTemplates(allCats, function() {
                                     if (callback) callback(allCats);
                                 });
@@ -2127,7 +2136,8 @@
             var rules = [
                 { re: /\b(uver|uverov)/i, match: 'uver' },
                 { re: /\bzastav/i, match: 'zastav' },
-                { re: /\b(plna moc|pln moc|prodej|moc k prodeji)/i, match: 'plna moc' }
+                { re: /\b(plna moc|pln moc|prodej|moc k prodeji)/i, match: 'plna moc' },
+                { re: /\b(vinkulac|pojistn|pojist plnen)/i, match: 'vinkulac' }
             ];
             var detected = null;
             for (var i = 0; i < rules.length; i++) {
