@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 562" preserveAspectRatio="none">
+  
+  
+  <defs>
+    <filter id="soft">
+      <feGaussianBlur stdDeviation="2.5"></feGaussianBlur>
+    </filter>
+  </defs>
+  <g filter="url(#soft)">
+    
+    <path d="&#xA;      M 165,375&#xA;      C 175,380 200,385 230,388&#xA;      C 260,392 290,395 310,400&#xA;      C 325,408 332,420 335,438&#xA;      C 338,455 335,470 325,485&#xA;      C 318,500 305,512 290,525&#xA;      C 280,540 290,560 305,562&#xA;      L 410,562&#xA;      C 405,548 395,532 388,515&#xA;      C 380,498 372,480 368,460&#xA;      C 364,440 365,418 365,398&#xA;      C 365,378 358,360 340,348&#xA;      C 320,338 295,335 270,335&#xA;      C 245,335 220,340 200,348&#xA;      C 180,355 168,365 165,375 Z&#xA;    " fill="white"></path>
+    
+    <ellipse cx="270" cy="430" rx="80" ry="45" fill="white" opacity="0.9"></ellipse>
+    <ellipse cx="320" cy="500" rx="50" ry="35" fill="white" opacity="0.85"></ellipse>
+  </g>
+</svg>

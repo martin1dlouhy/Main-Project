@@ -3,40 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marketing Agent - ProfiLend</title>
+    <title>Marketing Agent | ProfiLend</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="design-system/tokens.css">
+    <link rel="stylesheet" href="design-system/app-shell.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-
-        :root {
-            --bg-primary: #FFFFFF;
-            --bg-secondary: #F8FAFC;
-            --bg-surface: #F1F5F9;
-            --border-color: #E2E8F0;
-            --text-primary: #1E293B;
-            --text-secondary: #64748B;
-            --accent: #38BDF8;
-            --accent-hover: #0EA5E9;
-            --accent-light: rgba(56, 189, 248, 0.1);
-            --accent-glow: rgba(56, 189, 248, 0.12);
-            --success: #22C55E;
-            --warning: #F59E0B;
-            --danger: #EF4444;
-            --shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        html.carbon {
-            --bg-primary: #0B1120;
-            --bg-secondary: #111827;
-            --bg-surface: #1E293B;
-            --border-color: #1E293B;
-            --text-primary: #F1F5F9;
-            --text-secondary: #94A3B8;
-            --accent: #38BDF8;
-            --accent-hover: #7DD3FC;
-            --accent-light: rgba(56, 189, 248, 0.15);
-            --accent-glow: rgba(56, 189, 248, 0.2);
-            --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-        }
+        /* Local-only style overrides — palette is provided by tokens.css. */
 
         * {
             margin: 0;
@@ -1694,12 +1667,29 @@
                 min-width: auto;
             }
         }
-    </style>
-    <script>
-        if (localStorage.getItem("daynight-theme") === "carbon") {
-            document.documentElement.classList.add("carbon");
+
+        /* ===== Editorial overrides ===== */
+        html, body { background: var(--bg-deep); overflow: auto; height: auto; }
+        body { color: var(--text); font-family: var(--font-body); padding-top: var(--header-h); }
+        .top-nav { display: none !important; }
+        .app-container, .main-content { background: transparent !important; max-width: var(--container) !important; margin: 0 auto; padding: 32px 40px 80px; }
+        .app-header h1, .app-header .app-title, .app-header .app-subtitle { display: none !important; }
+        /* Hide legacy DayNight footer. */
+        body > footer.footer, .footer { display: none !important; }
+        .btn-primary, button.btn-primary { background: var(--amber) !important; color: #1a1207 !important; box-shadow: none !important; border: none !important; font-weight: 600; }
+        .btn-primary:hover { background: var(--amber-warm) !important; box-shadow: 0 4px 14px var(--amber-glow) !important; }
+        /* Logo overlay controls (sidebar form-section): editorial label styling */
+        .form-label, .sidebar label, .panel-section label, .control-section label {
+            color: var(--text-mute) !important;
+            font-size: 11px !important;
+            letter-spacing: 0.18em !important;
+            text-transform: uppercase !important;
+            font-weight: 500 !important;
         }
-    </script>
+        @media (max-width: 800px) {
+            .app-container, .main-content { padding-left: 20px; padding-right: 20px; }
+        }
+    </style>
 </head>
 <body>
     <!-- Top Navigation -->
@@ -1769,6 +1759,59 @@
             </div>
         </div>
     </nav>
+
+<!-- ===== EDITORIAL NAV (replaces hidden top-nav above) ===== -->
+<nav class="nav">
+  <div class="nav-left">
+    <a href="index.html" class="logo">
+      <span class="logo-mark">IT</span>
+      <span class="logo-text">Investment Tools</span>
+    </a>
+  </div>
+  <div class="nav-menu nav-center">
+    <div class="nav-item">
+      <a class="nav-link">Osobní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="debt-calculator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M16 5 v22"/><path d="M9 27 h14"/><path d="M6 11 h20"/><path d="M6 11 l-3 7 a3 3 0 0 0 6 0 z"/><path d="M26 11 l-3 7 a3 3 0 0 0 6 0 z"/></svg></span><div><div class="dd-title">Debt Calculator</div><div class="dd-meta">Dluhové financování</div></div></a>
+        <a class="dd-item" href="real-estate-prompt-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 14 L14 6 L23 14 V25 H5 Z"/><path d="M11 25 V18 H17 V25"/><path d="M25 5 v4 M23 7 h4 M25 12 v2 M24 13 h2"/></svg></span><div><div class="dd-title">R-E Prompt Generator</div><div class="dd-meta">AI valuace nemovitostí</div></div></a>
+        <a class="dd-item" href="sp500-calculator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M4 26 H28"/><path d="M4 22 L10 16 L14 19 L20 9 L26 13"/><circle cx="10" cy="16" r="1.2"/><circle cx="14" cy="19" r="1.2"/><circle cx="20" cy="9" r="1.2"/><circle cx="26" cy="13" r="1.2"/></svg></span><div><div class="dd-title">S&amp;P 500 Portfolio</div><div class="dd-meta">Rozklad indexu</div></div></a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <a class="nav-link">Pracovní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="portfolio-dashboard.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><path d="M16 6 A10 10 0 0 1 26 16"/><path d="M16 16 L26 16"/><path d="M16 16 L16 6"/><circle cx="16" cy="16" r="4"/></svg></span><div><div class="dd-title">Portfolio Dashboard</div><div class="dd-meta">Přehled portfolia</div></div></a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <a class="nav-link current">ProfiLend <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="termsheet-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span><div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy &amp; export</div></div></a>
+        <a class="dd-item" href="loan-documentation.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M6 10 V30 H22"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg></span><div><div class="dd-title">Úvěrová dokumentace</div><div class="dd-meta">AI generování</div></div></a>
+        <a class="dd-item" href="marketing-agent.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 7 H23 a2 2 0 0 1 2 2 V19 a2 2 0 0 1 -2 2 H13 L8 26 V21 H5 a2 2 0 0 1 -2 -2 V9 a2 2 0 0 1 2 -2 Z"/><path d="M27 5 v3 M25.5 6.5 h3 M27 11 v2 M26 12 h2"/></svg></span><div><div class="dd-title">Marketing Agent</div><div class="dd-meta">Sociální obsah</div></div></a>
+      </div>
+    </div>
+  </div>
+  <div class="nav-right-slot"></div>
+</nav>
+
+<div class="app-meta">
+  <div class="crumbs">
+    <a href="index.html">Domů</a>
+    <span class="sep">/</span>
+    <a href="apps.html#profilend">ProfiLend</a>
+    <span class="sep">/</span>
+    <span class="current">Marketing Agent</span>
+  </div>
+</div>
+
+<div class="app-head">
+  <div class="app-head-left">
+    <div class="eyebrow">ProfiLend · Marketing</div>
+    <h1 class="app-title">Marketing <em>Agent</em></h1>
+    <p class="app-sub">AI generování příspěvků pro sociální sítě podle ProfiLend brand guide. Brand Studio, batch tvorba, generování obrázků, GDrive sync.</p>
+  </div>
+</div>
 
     <!-- Main App Container -->
     <div class="app-container">
@@ -5376,9 +5419,10 @@
             </div>
         </div>
     </div>
-</body>
-<!-- Logo visibility settings -->
-<div class="form-group">
+
+<!-- Logo visibility settings — kept in DOM (form IDs referenced by JS) but hidden;
+     it was originally placed after </body> as a stray fragment. -->
+<div class="form-group" id="legacy-logo-overlay-controls" style="display:none;">
     <label class="form-label">Viditelnost loga</label>
     <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:0.5rem;">
         <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:13px;">
@@ -5404,4 +5448,13 @@
     </div>
 </div>
 
+<div class="page-foot" style="margin-top:80px;padding:40px;border-top:1px solid var(--line);text-align:center;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--text-mute);font-weight:500;display:flex;justify-content:center;gap:14px;align-items:center;max-width:var(--container);margin-left:auto;margin-right:auto;">
+  <span>Investment Tools · MMXXVI</span>
+  <span style="opacity:0.4">·</span>
+  <span>Martin Dlouhý</span>
+</div>
+
+<script src="design-system/nav.js" defer></script>
+
+</body>
 </html>

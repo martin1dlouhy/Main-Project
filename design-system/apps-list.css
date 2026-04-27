@@ -1,0 +1,123 @@
+/* =========================================================
+   Apps list — shared between index.html (below hero) and apps.html
+   Visual: editorial sections (01/02/03) with vertical app-row list.
+   ========================================================= */
+
+.apps-wrap{
+  background:var(--bg-deep);
+  padding:140px 40px 100px;
+  max-width:1180px;margin:0 auto;
+}
+.apps-intro{text-align:center;margin-bottom:120px}
+.kicker{
+  font-size:10.5px;letter-spacing:0.32em;text-transform:uppercase;
+  color:var(--amber);font-weight:500;margin-bottom:18px;
+  display:inline-flex;align-items:center;gap:14px;
+}
+.kicker::before,.kicker::after{content:"";width:30px;height:1px;background:var(--amber);opacity:0.5}
+.apps-title{
+  font-family:var(--font-display);font-weight:300;
+  font-size:clamp(34px,4.2vw,56px);letter-spacing:-0.025em;line-height:1.05;
+  color:var(--text);
+}
+.apps-title em{font-style:italic;font-weight:400;color:var(--amber-warm)}
+.apps-lead{
+  margin-top:18px;font-family:var(--font-display);font-style:italic;font-weight:300;
+  color:var(--text-soft);font-size:16px;
+}
+
+.apps-section{margin-bottom:96px}
+.section-head{
+  display:flex;align-items:flex-start;gap:24px;
+  padding-bottom:28px;margin-bottom:28px;
+  border-bottom:1px solid var(--line);
+}
+.section-num{
+  font-family:var(--font-display);font-style:italic;font-weight:300;
+  font-size:46px;color:var(--amber-warm);line-height:1;letter-spacing:-0.02em;
+  min-width:60px;
+}
+.section-kicker{
+  font-size:10.5px;letter-spacing:0.28em;text-transform:uppercase;
+  color:var(--text-mute);font-weight:600;margin-bottom:8px;
+}
+.section-title{
+  font-family:var(--font-display);font-weight:300;font-size:30px;
+  letter-spacing:-0.02em;color:var(--text);line-height:1.1;
+}
+.section-title em{font-style:italic;color:var(--amber-warm);font-weight:400}
+
+.apps-list{display:flex;flex-direction:column;gap:0}
+.app-row{
+  display:grid;grid-template-columns:64px 1fr auto auto;align-items:center;gap:24px;
+  padding:24px 8px;border-bottom:1px solid var(--line);
+  color:inherit;transition:background .25s ease, padding .25s ease;
+  position:relative;
+}
+.app-row:hover{background:rgba(232,223,208,0.025);padding-left:18px;padding-right:18px}
+.app-row:hover .app-arrow{color:var(--amber-warm);transform:translateX(4px)}
+.app-row:hover .app-name{color:var(--amber-warm)}
+
+/* Disabled apps (planned, not yet built) — readable but not interactive */
+.app-row.disabled{cursor:default;opacity:0.55}
+.app-row.disabled:hover{background:transparent;padding-left:8px;padding-right:8px}
+.app-row.disabled:hover .app-arrow{color:var(--text-mute);transform:none}
+.app-row.disabled:hover .app-name{color:var(--text)}
+.app-row.disabled:hover .app-mark{color:var(--text-mute);transform:none}
+.app-row.disabled .app-arrow{visibility:hidden}
+
+.app-mark{
+  width:54px;height:54px;display:flex;align-items:center;justify-content:center;
+  color:var(--amber-warm);transition:color .25s ease, transform .25s ease;
+}
+.app-mark svg{
+  width:34px;height:34px;stroke:currentColor;stroke-width:1.4;
+  fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0.92;
+}
+.app-row:hover .app-mark{color:var(--amber);transform:scale(1.04)}
+.app-row.disabled .app-mark{color:var(--text-mute)}
+
+.app-name{
+  font-family:var(--font-display);font-weight:400;font-size:19px;
+  letter-spacing:-0.01em;color:var(--text);margin-bottom:4px;
+  transition:color .25s ease;
+}
+.app-desc{
+  font-size:13.5px;color:var(--text-mute);line-height:1.5;max-width:560px;
+}
+.app-tag{
+  font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;
+  color:var(--text-mute);font-weight:600;
+  padding:6px 12px;border:1px solid var(--line);border-radius:999px;
+  white-space:nowrap;
+}
+.app-arrow{
+  color:var(--text-mute);font-size:20px;font-family:var(--font-display);
+  transition:all .25s ease;
+}
+
+.page-foot{
+  margin-top:80px;padding-top:40px;
+  border-top:1px solid var(--line);text-align:center;
+  font-size:11px;letter-spacing:0.22em;text-transform:uppercase;
+  color:var(--text-mute);font-weight:500;
+  display:flex;justify-content:center;gap:14px;align-items:center;
+}
+.page-foot .dot{opacity:0.4}
+
+/* Fade-in on scroll (driven by IntersectionObserver in nav.js) */
+[data-fade-in]{
+  opacity:0;transform:translateY(20px);
+  transition:opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+[data-fade-in].in-view{opacity:1;transform:translateY(0)}
+
+@media (max-width:760px){
+  .apps-wrap{padding:80px 22px 60px}
+  .app-row{grid-template-columns:48px 1fr;gap:16px;padding:20px 4px}
+  .app-row .app-tag,.app-row .app-arrow{display:none}
+  .app-mark{width:46px;height:46px}
+  .app-name{font-size:17px}
+  .section-num{font-size:36px;min-width:46px}
+  .section-title{font-size:24px}
+}

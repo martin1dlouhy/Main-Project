@@ -1,585 +1,287 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikace | Investment Tools</title>
-    <script>
-if(localStorage.getItem("daynight-theme")==="carbon"){document.documentElement.classList.add("carbon");}
-function setTheme(t){
-  if(t==="carbon"){document.documentElement.classList.add("carbon");document.body.classList.add("carbon");localStorage.setItem("daynight-theme","carbon");}
-  else{document.documentElement.classList.remove("carbon");document.body.classList.remove("carbon");localStorage.setItem("daynight-theme","snow");}
-  document.querySelectorAll(".theme-btn-snow").forEach(function(b){b.classList.toggle("active",t==="snow");});
-  document.querySelectorAll(".theme-btn-carbon").forEach(function(b){b.classList.toggle("active",t==="carbon");});
-}
-document.addEventListener("DOMContentLoaded",function(){var t=localStorage.getItem("daynight-theme")==="carbon"?"carbon":"snow";if(t==="carbon"){document.body.classList.add("carbon");}setTheme(t);});
-</script>
-    <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aplikace | Investment Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="design-system/tokens.css">
+<link rel="stylesheet" href="design-system/app-shell.css">
+<link rel="stylesheet" href="design-system/apps-list.css">
+<style>
+  /* Apps catalog page — fixed header, no hero, content starts immediately */
+  body{padding-top:var(--header-h)}
+  .apps-wrap{padding-top:40px}
+
+  @media (max-width:800px){
+    .nav{padding:18px 20px}
+    .nav-menu{display:none}
+  }
+</style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Navigation -->
-        <nav class="top-nav">
-            <div class="nav-container">
-                <div class="nav-left">
-                    <a href="index.html" class="logo">
-                        <div class="logo-icon">
-                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="logoBar1" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.5"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0.25"/>
-                                    </linearGradient>
-                                    <linearGradient id="logoBar2" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.75"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0.45"/>
-                                    </linearGradient>
-                                    <linearGradient id="logoBar3" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0.7"/>
-                                    </linearGradient>
-                                </defs>
-                                <rect x="4" y="20" width="6" height="8" rx="1.5" fill="url(#logoBar1)"/>
-                                <rect x="13" y="13" width="6" height="15" rx="1.5" fill="url(#logoBar2)"/>
-                                <rect x="22" y="4" width="6" height="24" rx="1.5" fill="url(#logoBar3)"/>
-                                <path d="M6 18L15 10L21 14L28 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
-                                <circle cx="28" cy="4" r="2" fill="white" opacity="0.8"/>
-                            </svg>
-                        </div>
-                        <span>Investment Tools</span>
-                    </a>
-                    
-                    <div class="nav-menu">
-                        <div class="nav-item">
-                            <a href="index.html" class="nav-link">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                                    <polyline points="9 22 9 12 15 12 15 22"/>
-                                </svg>
-                                Domů
-                            </a>
-                        </div>
-                        <div class="nav-item">
-                            <a href="apps.html#osobni" class="nav-link" data-cat="osobni">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                Osobní
-                            </a>
-                        </div>
-                        <div class="nav-item">
-                            <a href="apps.html#pracovni" class="nav-link" data-cat="pracovni">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-                                Pracovní
-                            </a>
-                        </div>
-                        <div class="nav-item">
-                            <a href="apps.html#profilend" class="nav-link" data-cat="profilend">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                ProfiLend
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="nav-right">
-                    <div class="theme-toggle">
-                        <button class="theme-btn theme-btn-snow active" onclick="setTheme('snow')" title="Light Mode">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="5"/>
-                                <line x1="12" y1="1" x2="12" y2="3"/>
-                                <line x1="12" y1="21" x2="12" y2="23"/>
-                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                                <line x1="1" y1="12" x2="3" y2="12"/>
-                                <line x1="21" y1="12" x2="23" y2="12"/>
-                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                            </svg>
-                        </button>
-                        <button class="theme-btn theme-btn-carbon" onclick="setTheme('carbon')" title="Dark Mode">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </nav>
 
-        <!-- Category Styles -->
-        <style>
-            .category-section{display:none}
-            .category-section.active{display:block}
-        </style>
+<!-- ============== HEADER ============== -->
+<nav class="nav">
+  <div class="nav-left">
+    <a href="index.html" class="logo">
+      <span class="logo-mark">IT</span>
+      <span class="logo-text">Investment Tools</span>
+    </a>
+  </div>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="page-header">
-                <h1 class="page-title"><span class="hero-title-accent">Všechny</span> aplikace</h1>
-                <p class="page-subtitle">Profesionální nástroje pro investice a finance</p>
-            </div>
-
-            <!-- No intermediate picker — sections controlled by hash and nav -->
-
-            <!-- Section: Osobní -->
-            <div id="section-osobni" class="category-section">
-            <div style="margin-bottom: 0.75rem; margin-top: 1rem;">
-                <h2 style="font-size: 1.375rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.75rem;">
-                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--accent-light);color:var(--accent);">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    </span>
-                    Osobní
-                </h2>
-                <p style="font-size: 0.9375rem; color: var(--text-secondary); margin: 0.375rem 0 0 2.75rem;">Investiční nástroje a kalkulačky</p>
-            </div>
-            <div class="apps-grid">
-                <a href="debt-calculator.html" class="app-card">
-                    <div class="app-card-header">
-                        <div class="app-icon lightblue">
-                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="calcBody" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white"/>
-                                        <stop offset="100%" stop-color="#e0eaff"/>
-                                    </linearGradient>
-                                    <linearGradient id="calcScreen" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="#0c2d4a"/>
-                                        <stop offset="100%" stop-color="#163a5c"/>
-                                    </linearGradient>
-                                </defs>
-                                <rect x="5" y="2" width="22" height="28" rx="3.5" fill="url(#calcBody)" stroke="#1e3a5f" stroke-width="1"/>
-                                <rect x="6" y="3" width="20" height="26" rx="2.8" fill="none" stroke="white" stroke-width="0.5" stroke-opacity="0.3"/>
-                                <rect x="8" y="5.5" width="16" height="7" rx="2" fill="url(#calcScreen)" stroke="#1e3a5f" stroke-width="0.6"/>
-                                <text x="21.5" y="10.8" font-size="5.5" font-family="monospace" text-anchor="end" fill="#7dd3fc" font-weight="600">12.5%</text>
-                                <rect x="8" y="15" width="4" height="3" rx="0.8" fill="white" stroke="#1e3a5f" stroke-width="0.5" opacity="0.95"/>
-                                <rect x="14" y="15" width="4" height="3" rx="0.8" fill="white" stroke="#1e3a5f" stroke-width="0.5" opacity="0.95"/>
-                                <rect x="20" y="15" width="4" height="3" rx="0.8" fill="#7dd3fc" stroke="#1e3a5f" stroke-width="0.5" opacity="0.9"/>
-                                <rect x="8" y="19.5" width="4" height="3" rx="0.8" fill="white" stroke="#1e3a5f" stroke-width="0.5" opacity="0.9"/>
-                                <rect x="14" y="19.5" width="4" height="3" rx="0.8" fill="white" stroke="#1e3a5f" stroke-width="0.5" opacity="0.9"/>
-                                <rect x="20" y="19.5" width="4" height="3" rx="0.8" fill="#7dd3fc" stroke="#1e3a5f" stroke-width="0.5" opacity="0.85"/>
-                                <rect x="8" y="24" width="4" height="3" rx="0.8" fill="white" stroke="#1e3a5f" stroke-width="0.5" opacity="0.85"/>
-                                <rect x="14" y="24" width="10" height="3" rx="0.8" fill="#38bdf8" stroke="#1e3a5f" stroke-width="0.5"/>
-                                <rect x="5" y="2" width="22" height="13" rx="3.5" fill="white" opacity="0.08"/>
-                            </svg>
-                        </div>
-                        <span class="app-badge live">● Live</span>
-                    </div>
-                    <h3 class="app-card-title">Debt Financing Calculator</h3>
-                    <p class="app-card-desc">Kompletní kalkulačka pro dluhové financování s nemovitostní zástavou. Obsahuje IRR výpočty, splátkový kalendář, export do PDF a Excel.</p>
-                    <div class="app-features">
-                        <div class="feature-item">✓ IRR kalkulace</div>
-                        <div class="feature-item">✓ Splátkový kalendář</div>
-                        <div class="feature-item">✓ PDF & Excel export</div>
-                        <div class="feature-item">✓ Více měn (CZK/EUR/USD)</div>
-                    </div>
-                    <div class="app-card-tags">
-                        <span class="tag">Finance</span>
-                        <span class="tag">Real Estate</span>
-                        <span class="tag">Calculator</span>
-                    </div>
-                </a>
-
-                <a href="real-estate-prompt-generator.html" class="app-card">
-                    <div class="app-card-header">
-                        <div class="app-icon blue">
-                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="rDoc" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.9"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0.4"/>
-                                    </linearGradient>
-                                    <linearGradient id="rFold" x1="0" y1="0" x2="1" y2="1">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.6"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0.2"/>
-                                    </linearGradient>
-                                </defs>
-                                <rect x="5" y="3" width="16" height="22" rx="2.5" fill="url(#rDoc)"/>
-                                <path d="M21 3v5.5a1 1 0 001 1h4" fill="none" stroke="white" stroke-opacity="0.5" stroke-width="1"/>
-                                <path d="M21 3l5 5.5v16.5a2 2 0 01-2 2H5" fill="url(#rFold)" opacity="0.3"/>
-                                <line x1="9" y1="11" x2="17" y2="11" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.35"/>
-                                <line x1="9" y1="14.5" x2="15" y2="14.5" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.35"/>
-                                <line x1="9" y1="18" x2="16" y2="18" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.35"/>
-                                <circle cx="24" cy="8" r="6" fill="white" fill-opacity="0.15"/>
-                                <path d="M24 4l1 2.5 2.5 0.5-2 1.8 0.5 2.5L24 9.8 21.8 11.3l0.5-2.5-2-1.8 2.5-0.5z" fill="white" opacity="0.95"/>
-                                <path d="M17 24l0.5 1.2 1.2 0.3-1 0.9 0.3 1.3-1-0.6-1.1 0.6 0.2-1.3-0.9-0.9 1.2-0.3z" fill="white" opacity="0.5"/>
-                            </svg>
-                        </div>
-                        <span class="app-badge live">● Live</span>
-                    </div>
-                    <h3 class="app-card-title">R-E Prompt Generator</h3>
-                    <p class="app-card-desc">Generování profesionálních AI promptů pro valuaci nemovitostí podle bankovních standardů a legislativy ČR.</p>
-                    <div class="app-features">
-                        <div class="feature-item">✓ 4 typy nemovitostí</div>
-                        <div class="feature-item">✓ Bankovní metodika</div>
-                        <div class="feature-item">✓ Red flags identifikace</div>
-                        <div class="feature-item">✓ Export do AI nástrojů</div>
-                    </div>
-                    <div class="app-card-tags">
-                        <span class="tag">AI</span>
-                        <span class="tag">Valuace</span>
-                        <span class="tag">Real Estate</span>
-                    </div>
-                </a>
-                <a href="sp500-calculator.html" class="app-card">
-                    <div class="app-card-header">
-                        <div class="app-icon teal">
-                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="spArea" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.3"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0"/>
-                                    </linearGradient>
-                                </defs>
-                                <path d="M2 20L7 18L11 22L16 8L20 16L24 12L30 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M2 20L7 18L11 22L16 8L20 16L24 12L30 14V28H2z" fill="url(#spArea)"/>
-                                <circle cx="16" cy="8" r="3" fill="white" fill-opacity="0.3" stroke="white" stroke-width="1.2"/>
-                                <circle cx="16" cy="8" r="1.2" fill="white" opacity="0.9"/>
-                                <line x1="2" y1="28" x2="30" y2="28" stroke="white" stroke-width="0.8" opacity="0.2"/>
-                            </svg>
-                        </div>
-                        <span class="app-badge live">● Live</span>
-                    </div>
-                    <h3 class="app-card-title">S&amp;P 500 Portfolio Breakdown</h3>
-                    <p class="app-card-desc">Rozklad investice do S&amp;P 500 na jednotlivé tituly. Automatická denní aktualizace dat, více měn, sektorová analýza.</p>
-                    <div class="app-features">
-                        <div class="feature-item">✓ 503 titulů S&amp;P 500</div>
-                        <div class="feature-item">✓ Denní aktualizace dat</div>
-                        <div class="feature-item">✓ Sektorová analýza</div>
-                        <div class="feature-item">✓ Více měn (CZK/EUR/USD)</div>
-                    </div>
-                    <div class="app-card-tags">
-                        <span class="tag">Finance</span>
-                        <span class="tag">Portfolio</span>
-                        <span class="tag">S&amp;P 500</span>
-                    </div>
-                </a>
-
-
-
-                <div class="app-card disabled">
-                    <div class="app-card-header">
-                        <div class="app-icon purple">
-                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="iLine" x1="0" y1="0" x2="1" y2="0">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.3"/>
-                                        <stop offset="100%" stop-color="white"/>
-                                    </linearGradient>
-                                    <linearGradient id="iArea" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.25"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0"/>
-                                    </linearGradient>
-                                </defs>
-                                <path d="M4 26L10 18L16 21L22 11L28 6" stroke="url(#iLine)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M4 26L10 18L16 21L22 11L28 6V26H4z" fill="url(#iArea)"/>
-                                <circle cx="10" cy="18" r="2.5" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.2"/>
-                                <circle cx="16" cy="21" r="2.5" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.2"/>
-                                <circle cx="22" cy="11" r="2.5" fill="white" fill-opacity="0.25" stroke="white" stroke-width="1.2"/>
-                                <circle cx="28" cy="6" r="3" fill="white" fill-opacity="0.9" stroke="white" stroke-width="1"/>
-                                <text x="28" y="8.5" font-size="5" text-anchor="middle" fill="currentColor" opacity="0.6" font-weight="700">%</text>
-                                <line x1="4" y1="28" x2="28" y2="28" stroke="white" stroke-width="0.8" opacity="0.2"/>
-                                <line x1="4" y1="4" x2="4" y2="28" stroke="white" stroke-width="0.8" opacity="0.2"/>
-                            </svg>
-                        </div>
-                        <span class="app-badge">Q2 2026</span>
-                    </div>
-                    <h3 class="app-card-title">IRR Calculator</h3>
-                    <p class="app-card-desc">Pokročilý nástroj pro výpočet vnitřního výnosového procenta (IRR) a NPV pro investiční projekty.</p>
-                    <div class="app-features">
-                        <div class="feature-item">○ IRR & XIRR</div>
-                        <div class="feature-item">○ NPV kalkulace</div>
-                        <div class="feature-item">○ Cash flow analýza</div>
-                        <div class="feature-item">○ Sensitivity analysis</div>
-                    </div>
-                    <div class="app-card-tags">
-                        <span class="tag">Finance</span>
-                        <span class="tag">Analysis</span>
-                    </div>
-                </div>
-
-                <div class="app-card disabled">
-                    <div class="app-card-header">
-                        <div class="app-icon orange">
-                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="eBld1" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0.65"/>
-                                    </linearGradient>
-                                    <linearGradient id="eBld2" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.7"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0.35"/>
-                                    </linearGradient>
-                                </defs>
-                                <rect x="3" y="12" width="11" height="17" rx="1.5" fill="url(#eBld2)"/>
-                                <rect x="5.5" y="15" width="2.5" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
-                                <rect x="5.5" y="19.5" width="2.5" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
-                                <rect x="5.5" y="24" width="2.5" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
-                                <rect x="9.5" y="15" width="2.5" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
-                                <rect x="9.5" y="19.5" width="2.5" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
-                                <rect x="14" y="5" width="13" height="24" rx="1.5" fill="url(#eBld1)"/>
-                                <rect x="16.5" y="8" width="3" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
-                                <rect x="16.5" y="12.5" width="3" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
-                                <rect x="16.5" y="17" width="3" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
-                                <rect x="16.5" y="21.5" width="3" height="2.5" rx="0.5" fill="white" opacity="0.2"/>
-                                <rect x="21.5" y="8" width="3" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
-                                <rect x="21.5" y="12.5" width="3" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
-                                <rect x="21.5" y="17" width="3" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
-                                <rect x="21.5" y="21.5" width="3" height="2.5" rx="0.5" fill="white" opacity="0.15"/>
-                                <rect x="19" y="25" width="4" height="4" rx="0.8" fill="white" opacity="0.3"/>
-                                <rect x="14" y="3" width="13" height="2.5" rx="1" fill="white" opacity="0.15"/>
-                            </svg>
-                        </div>
-                        <span class="app-badge">Q3 2026</span>
-                    </div>
-                    <h3 class="app-card-title">Real Estate Analyzer</h3>
-                    <p class="app-card-desc">Kompletní analýza výnosnosti nemovitostních investic včetně cash flow projekce a ROI výpočtů.</p>
-                    <div class="app-features">
-                        <div class="feature-item">○ ROI kalkulace</div>
-                        <div class="feature-item">○ Cash flow projekce</div>
-                        <div class="feature-item">○ Cap rate výpočet</div>
-                        <div class="feature-item">○ Scenario modeling</div>
-                    </div>
-                    <div class="app-card-tags">
-                        <span class="tag">Real Estate</span>
-                        <span class="tag">ROI</span>
-                        <span class="tag">Analysis</span>
-                    </div>
-                </div>
-            </div>
-            </div><!-- /section-osobni -->
-
-            <!-- Section: Pracovní -->
-            <div id="section-pracovni" class="category-section">
-            <div style="margin-bottom: 0.75rem; margin-top: 1rem;">
-                <h2 style="font-size: 1.375rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.75rem;">
-                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(236,72,153,0.1);color:#EC4899;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-                    </span>
-                    Pracovní
-                </h2>
-                <p style="font-size: 0.9375rem; color: var(--text-secondary); margin: 0.375rem 0 0 2.75rem;">Nástroje pro správu portfolia a business</p>
-            </div>
-            <div class="apps-grid">
-                <a href="portfolio-dashboard.html" class="app-card">
-                    <div class="app-card-header">
-                        <div class="app-icon green">
-                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="dshG1" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.9"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0.5"/>
-                                    </linearGradient>
-                                </defs>
-                                <rect x="3" y="3" width="26" height="26" rx="3" fill="url(#dshG1)" opacity="0.2"/>
-                                <rect x="5" y="5" width="10" height="10" rx="2" fill="white" opacity="0.7"/>
-                                <rect x="17" y="5" width="10" height="10" rx="2" fill="white" opacity="0.5"/>
-                                <rect x="5" y="17" width="10" height="10" rx="2" fill="white" opacity="0.5"/>
-                                <rect x="17" y="17" width="10" height="10" rx="2" fill="white" opacity="0.3"/>
-                                <path d="M8 12L10 9L12 10.5L14 7" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <circle cx="22" cy="10" r="3.5" fill="none" stroke="white" stroke-width="1.5"/>
-                                <path d="M22 7.5V10L23.5 11" stroke="white" stroke-width="1" stroke-linecap="round"/>
-                                <rect x="7" y="20" width="6" height="1.5" rx="0.5" fill="white" opacity="0.6"/>
-                                <rect x="7" y="23" width="4" height="1.5" rx="0.5" fill="white" opacity="0.4"/>
-                                <text x="22" y="23.5" font-size="5" text-anchor="middle" fill="white" font-weight="700" opacity="0.8">%</text>
-                            </svg>
-                        </div>
-                        <span class="app-badge live">● Live</span>
-                    </div>
-                    <h3 class="app-card-title">Portfolio Dashboard</h3>
-                    <p class="app-card-desc">Přehledový dashboard celého investičního portfolia. Alokace aktiv, výnosy, likvidita, rizika, firmy a lending portfolio.</p>
-                    <div class="app-features">
-                        <div class="feature-item">✓ Alokace aktiv &amp; výnosy</div>
-                        <div class="feature-item">✓ Geografie &amp; koncentrace</div>
-                        <div class="feature-item">✓ Likvidita &amp; riziko</div>
-                        <div class="feature-item">✓ Firmy &amp; lending dealy</div>
-                    </div>
-                    <div class="app-card-tags">
-                        <span class="tag">Portfolio</span>
-                        <span class="tag">Dashboard</span>
-                        <span class="tag">Risk</span>
-                    </div>
-                </a>
-            </div>
-            </div><!-- /section-pracovni -->
-
-            <!-- Section: ProfiLend -->
-            <div id="section-profilend" class="category-section">
-            <div style="margin-bottom: 0.75rem; margin-top: 1rem;">
-                <h2 style="font-size: 1.375rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.75rem;">
-                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(16,185,129,0.1);color:#10b981;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    </span>
-                    ProfiLend
-                </h2>
-                <p style="font-size: 0.9375rem; color: var(--text-secondary); margin: 0.375rem 0 0 2.75rem;">Interní nástroje pro ProfiLend</p>
-            </div>
-            <div class="apps-grid">
-                <a href="termsheet-generator.html" class="app-card">
-                    <div class="app-card-header">
-                        <div class="app-icon green">
-                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="tsDoc" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.9"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0.5"/>
-                                    </linearGradient>
-                                </defs>
-                                <rect x="6" y="3" width="16" height="22" rx="2.5" fill="url(#tsDoc)"/>
-                                <line x1="10" y1="10" x2="18" y2="10" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-                                <line x1="10" y1="13.5" x2="16" y2="13.5" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-                                <line x1="10" y1="17" x2="17" y2="17" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-                                <circle cx="23" cy="22" r="6" fill="white" fill-opacity="0.2"/>
-                                <path d="M21 22l1.5 1.5 3-3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
-                                <rect x="8" y="5.5" width="10" height="2.5" rx="1" fill="white" opacity="0.3"/>
-                            </svg>
-                        </div>
-                        <span class="app-badge live">● Live</span>
-                    </div>
-                    <h3 class="app-card-title">Term Sheet Generátor</h3>
-                    <p class="app-card-desc">Vytváření, správa a generování Term Sheetů pro klienty. Export do Word a PDF, automatické ukládání, správa verzí.</p>
-                    <div class="app-features">
-                        <div class="feature-item">✓ Formulář s předvyplněnými poli</div>
-                        <div class="feature-item">✓ Export Word &amp; PDF</div>
-                        <div class="feature-item">✓ Správa existujících TS</div>
-                        <div class="feature-item">✓ Auto LTV kalkulace</div>
-                    </div>
-                    <div class="app-card-tags">
-                        <span class="tag">ProfiLend</span>
-                        <span class="tag">Term Sheet</span>
-                        <span class="tag">Export</span>
-                    </div>
-                </a>
-
-                <a href="loan-documentation.html" class="app-card">
-                    <div class="app-card-header">
-                        <div class="app-icon green">
-                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="loanDoc" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="white" stop-opacity="0.9"/>
-                                        <stop offset="100%" stop-color="white" stop-opacity="0.5"/>
-                                    </linearGradient>
-                                </defs>
-                                <rect x="4" y="2" width="14" height="20" rx="2" fill="url(#loanDoc)"/>
-                                <rect x="14" y="10" width="14" height="20" rx="2" fill="white" fill-opacity="0.35"/>
-                                <line x1="8" y1="8" x2="14" y2="8" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-                                <line x1="8" y1="11" x2="13" y2="11" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-                                <line x1="8" y1="14" x2="12" y2="14" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
-                                <circle cx="24" cy="8" r="5" fill="white" fill-opacity="0.2"/>
-                                <path d="M22 8h4M24 6v4" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>
-                            </svg>
-                        </div>
-                        <span class="app-badge dev">Dev</span>
-                    </div>
-                    <h3 class="app-card-title">Úvěrová dokumentace</h3>
-                    <p class="app-card-desc">Generování úvěrové dokumentace z Word šablon pomocí AI. Import dat z Term Sheetu, sledování změn, hromadný export.</p>
-                    <div class="app-features">
-                        <div class="feature-item">✓ Import z Term Sheetu</div>
-                        <div class="feature-item">✓ AI vyplnění šablon</div>
-                        <div class="feature-item">✓ Sledování změn</div>
-                        <div class="feature-item">✓ Export ZIP</div>
-                    </div>
-                    <div class="app-card-tags">
-                        <span class="tag">ProfiLend</span>
-                        <span class="tag">Dokumentace</span>
-                        <span class="tag">AI</span>
-                    </div>
-                </a>
-                <a href="marketing-agent.html" class="app-card">
-                    <div class="app-card-header">
-                        <div class="app-icon" style="background: linear-gradient(135deg, #22D3EE, #0891B2);">
-                            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M16 6l7 7-3 3 3 3-7 7-3-3-3 3-7-7 3-3-3-3 7-7 3 3 3-3z" fill="white" fill-opacity="0.25"/>
-                                <path d="M10 14l2-2 4 4 4-4 2 2-4 4 4 4-2 2-4-4-4 4-2-2 4-4-4-4z" fill="white" fill-opacity="0.6"/>
-                                <circle cx="16" cy="16" r="3" fill="white" fill-opacity="0.9"/>
-                            </svg>
-                        </div>
-                        <span class="app-badge dev">Dev</span>
-                    </div>
-                    <h3 class="app-card-title">Marketing Agent</h3>
-                    <p class="app-card-desc">Centrální marketingový nástroj pro ProfiLend. AI generování příspěvků, image promptů, batch tvorba obsahu a správa kampaní.</p>
-                    <div class="app-features">
-                        <div class="feature-item">✓ AI návrhy témat</div>
-                        <div class="feature-item">✓ Batch generování 1–5 příspěvků</div>
-                        <div class="feature-item">✓ Image prompty (DALL-E / Imagen)</div>
-                        <div class="feature-item">✓ Emoji &amp; hashtag nastavení</div>
-                    </div>
-                    <div class="app-card-tags">
-                        <span class="tag">ProfiLend</span>
-                        <span class="tag">Marketing</span>
-                        <span class="tag">AI</span>
-                    </div>
-                </a>
-            </div>
-            </div><!-- /section-profilend -->
-        </main>
-
-        <!-- Category Switch Script -->
-        <script>
-        function showCategory(cat) {
-            // Toggle sections
-            document.querySelectorAll('.category-section').forEach(function(s) { s.classList.remove('active'); });
-            var section = document.getElementById('section-' + cat);
-            if (section) section.classList.add('active');
-            // Highlight active nav link
-            document.querySelectorAll('.nav-link[data-cat]').forEach(function(link) {
-                link.classList.toggle('active', link.dataset.cat === cat);
-            });
-            // Update URL hash
-            history.replaceState(null, '', '#' + cat);
-        }
-        // Nav link click handler (prevent page reload when already on apps.html)
-        document.querySelectorAll('.nav-link[data-cat]').forEach(function(link) {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                showCategory(this.dataset.cat);
-            });
-        });
-        // On load: check hash, default to osobni
-        (function() {
-            var hash = window.location.hash.replace('#', '');
-            if (hash === 'osobni' || hash === 'pracovni' || hash === 'profilend') {
-                showCategory(hash);
-            } else {
-                showCategory('osobni');
-            }
-        })();
-        // Handle hash changes (e.g. back/forward)
-        window.addEventListener('hashchange', function() {
-            var hash = window.location.hash.replace('#', '');
-            if (hash === 'osobni' || hash === 'pracovni' || hash === 'profilend') {
-                showCategory(hash);
-            }
-        });
-        </script>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>Investment Tools</h4>
-                    <p>Profesionální nástroje pro správu investic a financí.</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Navigace</h4>
-                    <ul>
-                        <li><a href="index.html">Domů</a></li>
-                        <li><a href="apps.html#osobni">Osobní</a></li>
-                        <li><a href="apps.html#pracovni">Pracovní</a></li>
-                        <li><a href="apps.html#profilend">ProfiLend</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Kontakt</h4>
-                    <p>Email: <a href="mailto:martin@dlouhy.com">martin@dlouhy.com</a></p>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 Martin Dlouhý. Všechna práva vyhrazena.</p>
-            </div>
-        </footer>
+  <div class="nav-menu nav-center">
+    <div class="nav-item">
+      <a class="nav-link">Osobní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="debt-calculator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M16 5 v22"/><path d="M9 27 h14"/><path d="M6 11 h20"/><path d="M6 11 l-3 7 a3 3 0 0 0 6 0 z"/><path d="M26 11 l-3 7 a3 3 0 0 0 6 0 z"/></svg></span>
+          <div><div class="dd-title">Debt Calculator</div><div class="dd-meta">Dluhové financování</div></div>
+        </a>
+        <a class="dd-item" href="real-estate-prompt-generator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 14 L14 6 L23 14 V25 H5 Z"/><path d="M11 25 V18 H17 V25"/><path d="M25 5 v4 M23 7 h4 M25 12 v2 M24 13 h2"/></svg></span>
+          <div><div class="dd-title">R-E Prompt Generator</div><div class="dd-meta">AI valuace nemovitostí</div></div>
+        </a>
+        <a class="dd-item" href="sp500-calculator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M4 26 H28"/><path d="M4 22 L10 16 L14 19 L20 9 L26 13"/><circle cx="10" cy="16" r="1.2"/><circle cx="14" cy="19" r="1.2"/><circle cx="20" cy="9" r="1.2"/><circle cx="26" cy="13" r="1.2"/></svg></span>
+          <div><div class="dd-title">S&amp;P 500 Portfolio</div><div class="dd-meta">Rozklad indexu</div></div>
+        </a>
+      </div>
     </div>
+    <div class="nav-item">
+      <a class="nav-link">Pracovní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="portfolio-dashboard.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><path d="M16 6 A10 10 0 0 1 26 16"/><path d="M16 16 L26 16"/><path d="M16 16 L16 6"/><circle cx="16" cy="16" r="4"/></svg></span>
+          <div><div class="dd-title">Portfolio Dashboard</div><div class="dd-meta">Přehled portfolia</div></div>
+        </a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <a class="nav-link">ProfiLend <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="termsheet-generator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span>
+          <div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy &amp; export</div></div>
+        </a>
+        <a class="dd-item" href="loan-documentation.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M6 10 V30 H22"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg></span>
+          <div><div class="dd-title">Úvěrová dokumentace</div><div class="dd-meta">AI generování</div></div>
+        </a>
+        <a class="dd-item" href="marketing-agent.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 7 H23 a2 2 0 0 1 2 2 V19 a2 2 0 0 1 -2 2 H13 L8 26 V21 H5 a2 2 0 0 1 -2 -2 V9 a2 2 0 0 1 2 -2 Z"/><path d="M27 5 v3 M25.5 6.5 h3 M27 11 v2 M26 12 h2"/></svg></span>
+          <div><div class="dd-title">Marketing Agent</div><div class="dd-meta">Sociální obsah</div></div>
+        </a>
+      </div>
+    </div>
+  </div>
 
-    <script src="script.js"></script>
+  <div class="nav-right-slot"></div>
+</nav>
+
+<!-- ============== APP META + HEAD ============== -->
+<div class="app-meta">
+  <div class="crumbs">
+    <a href="index.html">Domů</a>
+    <span class="sep">/</span>
+    <span class="current">Aplikace</span>
+  </div>
+</div>
+
+<div class="app-head">
+  <div class="app-head-left">
+    <div class="eyebrow">Index · Katalog</div>
+    <h1 class="app-title">Všechny <em>aplikace</em></h1>
+    <p class="app-sub">Tři okruhy práce, devět nástrojů. Sedm připravených, dva ve frontě.</p>
+  </div>
+</div>
+
+<!-- ============== APPS SECTIONS ============== -->
+<section class="apps-wrap">
+
+  <!-- Section: Osobní -->
+  <div class="apps-section" id="osobni" data-fade-in>
+    <div class="section-head">
+      <div class="section-num">01</div>
+      <div>
+        <div class="section-kicker">Osobní</div>
+        <h3 class="section-title">Vlastní finance &amp; <em>analýza</em></h3>
+      </div>
+    </div>
+    <div class="apps-list">
+      <a href="debt-calculator.html" class="app-row">
+        <div class="app-mark">
+          <svg viewBox="0 0 32 32">
+            <path d="M16 5 v22"/><path d="M9 27 h14"/><path d="M6 11 h20"/>
+            <path d="M6 11 l-3 7 a3 3 0 0 0 6 0 z"/><path d="M26 11 l-3 7 a3 3 0 0 0 6 0 z"/>
+          </svg>
+        </div>
+        <div class="app-body">
+          <div class="app-name">Debt Financing Calculator</div>
+          <div class="app-desc">Kompletní kalkulačka pro dluhové financování s nemovitostní zástavou. IRR výpočet, splátkový kalendář, export do PDF a Excel, podpora CZK/EUR/USD.</div>
+        </div>
+        <div class="app-tag">Finance</div>
+        <div class="app-arrow">→</div>
+      </a>
+      <a href="real-estate-prompt-generator.html" class="app-row">
+        <div class="app-mark">
+          <svg viewBox="0 0 32 32">
+            <path d="M5 14 L14 6 L23 14 V25 H5 Z"/><path d="M11 25 V18 H17 V25"/>
+            <path d="M25 5 v4 M23 7 h4 M25 12 v2 M24 13 h2"/>
+          </svg>
+        </div>
+        <div class="app-body">
+          <div class="app-name">R-E Prompt Generator</div>
+          <div class="app-desc">Generátor profesionálních AI promptů pro valuaci nemovitostí podle bankovních standardů a české legislativy. 6-krokový wizard, 6 typů nemovitostí, red flags screening.</div>
+        </div>
+        <div class="app-tag">AI · Valuace</div>
+        <div class="app-arrow">→</div>
+      </a>
+      <a href="sp500-calculator.html" class="app-row">
+        <div class="app-mark">
+          <svg viewBox="0 0 32 32">
+            <path d="M4 26 H28"/><path d="M4 22 L10 16 L14 19 L20 9 L26 13"/>
+            <circle cx="10" cy="16" r="1.2"/><circle cx="14" cy="19" r="1.2"/>
+            <circle cx="20" cy="9" r="1.2"/><circle cx="26" cy="13" r="1.2"/>
+          </svg>
+        </div>
+        <div class="app-body">
+          <div class="app-name">S&amp;P 500 Portfolio Breakdown</div>
+          <div class="app-desc">Rozklad investice do indexu S&amp;P 500 na 503 jednotlivých titulů s denní aktualizací dat, sektorovou analýzou a podporou tří měn.</div>
+        </div>
+        <div class="app-tag">Portfolio</div>
+        <div class="app-arrow">→</div>
+      </a>
+      <div class="app-row disabled">
+        <div class="app-mark">
+          <svg viewBox="0 0 32 32">
+            <path d="M4 26L10 18L16 21L22 11L28 6"/>
+            <circle cx="10" cy="18" r="1.5"/>
+            <circle cx="16" cy="21" r="1.5"/>
+            <circle cx="22" cy="11" r="1.5"/>
+            <circle cx="28" cy="6" r="2"/>
+          </svg>
+        </div>
+        <div class="app-body">
+          <div class="app-name">IRR Calculator</div>
+          <div class="app-desc">Pokročilý výpočet vnitřního výnosového procenta a NPV pro investiční projekty, cash flow analýza, sensitivity analysis.</div>
+        </div>
+        <div class="app-tag">Plánováno · Q2 2026</div>
+        <div class="app-arrow">→</div>
+      </div>
+      <div class="app-row disabled">
+        <div class="app-mark">
+          <svg viewBox="0 0 32 32">
+            <rect x="3" y="12" width="11" height="17" rx="1.5"/>
+            <rect x="14" y="5" width="13" height="24" rx="1.5"/>
+            <path d="M5.5 16 h2.5 M9.5 16 h2.5 M5.5 20 h2.5 M9.5 20 h2.5 M5.5 24 h2.5"/>
+            <path d="M16.5 9 h3 M21.5 9 h3 M16.5 14 h3 M21.5 14 h3 M16.5 19 h3 M21.5 19 h3"/>
+          </svg>
+        </div>
+        <div class="app-body">
+          <div class="app-name">Real Estate Analyzer</div>
+          <div class="app-desc">Kompletní analýza výnosnosti nemovitostních investic. ROI, cash flow projekce, cap rate, scenario modeling.</div>
+        </div>
+        <div class="app-tag">Plánováno · Q3 2026</div>
+        <div class="app-arrow">→</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Pracovní -->
+  <div class="apps-section" id="pracovni" data-fade-in>
+    <div class="section-head">
+      <div class="section-num">02</div>
+      <div>
+        <div class="section-kicker">Pracovní</div>
+        <h3 class="section-title">Přehled <em>portfolia</em></h3>
+      </div>
+    </div>
+    <div class="apps-list">
+      <a href="portfolio-dashboard.html" class="app-row">
+        <div class="app-mark">
+          <svg viewBox="0 0 32 32">
+            <circle cx="16" cy="16" r="10"/>
+            <path d="M16 6 A10 10 0 0 1 26 16"/>
+            <path d="M16 16 L26 16"/><path d="M16 16 L16 6"/>
+            <circle cx="16" cy="16" r="4"/>
+          </svg>
+        </div>
+        <div class="app-body">
+          <div class="app-name">Portfolio Dashboard</div>
+          <div class="app-desc">Přehledový dashboard celého investičního portfolia. Alokace aktiv, výnosy, geografie, koncentrace, likvidita, rizika, lending dealy.</div>
+        </div>
+        <div class="app-tag">Dashboard</div>
+        <div class="app-arrow">→</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Section: ProfiLend -->
+  <div class="apps-section" id="profilend" data-fade-in>
+    <div class="section-head">
+      <div class="section-num">03</div>
+      <div>
+        <div class="section-kicker">ProfiLend</div>
+        <h3 class="section-title">Klientská <em>dokumentace</em></h3>
+      </div>
+    </div>
+    <div class="apps-list">
+      <a href="termsheet-generator.html" class="app-row">
+        <div class="app-mark">
+          <svg viewBox="0 0 32 32">
+            <path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/>
+            <path d="M11 13 H21"/><path d="M11 17 H21"/>
+            <path d="M11 23 q3 -2 5 0 t5 0"/>
+          </svg>
+        </div>
+        <div class="app-body">
+          <div class="app-name">Term Sheet Generátor</div>
+          <div class="app-desc">Tvorba a správa Term Sheetů pro klienty ProfiLend. PIN ochrana, automatický LTV, tranše, export do Word a PDF.</div>
+        </div>
+        <div class="app-tag">Dokumenty</div>
+        <div class="app-arrow">→</div>
+      </a>
+      <a href="loan-documentation.html" class="app-row">
+        <div class="app-mark">
+          <svg viewBox="0 0 32 32">
+            <path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/>
+            <path d="M6 10 V30 H22"/>
+            <path d="M14 14 H22 M14 18 H22 M14 22 H19"/>
+          </svg>
+        </div>
+        <div class="app-body">
+          <div class="app-name">Úvěrová dokumentace</div>
+          <div class="app-desc">Generování úvěrových a zástavních smluv ze šablon na Google Drive pomocí Claude AI. Mapování dat z LV, validace tranší, export DOCX.</div>
+        </div>
+        <div class="app-tag">AI · Smlouvy</div>
+        <div class="app-arrow">→</div>
+      </a>
+      <a href="marketing-agent.html" class="app-row">
+        <div class="app-mark">
+          <svg viewBox="0 0 32 32">
+            <path d="M5 7 H23 a2 2 0 0 1 2 2 V19 a2 2 0 0 1 -2 2 H13 L8 26 V21 H5 a2 2 0 0 1 -2 -2 V9 a2 2 0 0 1 2 -2 Z"/>
+            <path d="M27 5 v3 M25.5 6.5 h3 M27 11 v2 M26 12 h2"/>
+          </svg>
+        </div>
+        <div class="app-body">
+          <div class="app-name">Marketing Agent</div>
+          <div class="app-desc">AI generování příspěvků pro sociální sítě podle ProfiLend brand guide. Brand Studio, batch tvorba, generování obrázků, GDrive sync.</div>
+        </div>
+        <div class="app-tag">Marketing · AI</div>
+        <div class="app-arrow">→</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span>Investment Tools · MMXXVI</span>
+    <span class="dot">·</span>
+    <span>Martin Dlouhý</span>
+  </div>
+</section>
+
+<script src="design-system/nav.js" defer></script>
 </body>
 </html>
