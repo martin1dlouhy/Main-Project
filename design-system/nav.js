@@ -185,6 +185,11 @@
     }
   }
 
+  // Public: re-run dropdown init for any newly-rendered .dropdown-field elements.
+  // Idempotent — fields with cdInit='1' are skipped, so calling repeatedly is safe.
+  // Call after dynamically inserting .dropdown-field markup (e.g. rendered template lists).
+  window.initCustomDropdowns = initCustomDropdowns;
+
   // Public helper: sync custom-dropdown UI from the underlying <select>'s value.
   // Call after programmatically changing the select (e.g. loading saved state).
   window.syncCustomDropdown = function (selectId) {
