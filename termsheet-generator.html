@@ -3102,6 +3102,14 @@
     }
 
     // ===== INIT =====
+    // Custom dropdowns must paint regardless of DB init — initialize them as soon as the
+    // script runs, so a failing openDB() can never leave the form selects empty.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCustomDropdowns);
+    } else {
+        initCustomDropdowns();
+    }
+
     async function init() {
         await openDB();
         termSheets = await getAllFromDB();
@@ -3112,7 +3120,7 @@
             document.getElementById('f-drawdown-date').value = today;
         }
 
-        // Initialize custom dropdowns
+        // Re-init dropdowns — idempotent, picks up any selects added after first paint
         initCustomDropdowns();
 
         // Initialize ARES autocomplete
