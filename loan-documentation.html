@@ -644,22 +644,41 @@
             opacity: 0.7;
         }
 
-        .template-category-select {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 6px;
-            max-width: 180px;
-            cursor: pointer;
-            transition: var(--transition);
+        /* Custom dropdown for per-template category — replaces the native <select> open menu
+           which rendered as an OS-level Excel-style list. The hidden <select> with the same id
+           stays in DOM as the data store (change events fire normally). */
+        .template-category-dropdown {
+            width: 200px;
+            flex-shrink: 0;
         }
-
-        .template-category-select:hover,
-        .template-category-select:focus {
-            border-color: var(--accent);
-            outline: none;
+        .template-category-dropdown .dropdown-trigger {
+            padding: 6px 10px;
+            font-size: 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            color: var(--text-soft);
+        }
+        .template-category-dropdown .dropdown-trigger:hover {
+            background: var(--bg-input-hover);
+            border-color: var(--line-strong);
+        }
+        .template-category-dropdown .dropdown-trigger[aria-expanded="true"] {
+            background: var(--bg-input-hover);
+            border-color: var(--amber);
+            box-shadow: 0 0 0 3px var(--amber-glow);
+        }
+        .template-category-dropdown .dropdown-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .template-category-dropdown .dropdown-menu {
+            font-size: 12px;
+        }
+        .template-category-dropdown .dropdown-option {
+            padding: 8px 10px;
+            font-size: 12px;
         }
 
         .checkbox-group-section {
@@ -3026,7 +3045,7 @@
                         grouped[key].push(t);
                     });
 
-                    // Options pro dropdown přeřazení
+                    // Options pro skrytý <select> (data store) — zachová stávající change event flow
                     function categoryOptions(currentName) {
                         var opts = '<option value="">— Nezařazeno —</option>';
                         sortedCats.forEach(function(c) {
@@ -3034,6 +3053,28 @@
                             opts += '<option value="' + escapeHtml(c.name) + '"' + sel + '>' + escapeHtml(c.name) + '</option>';
                         });
                         return opts;
+                    }
+
+                    // Markup pro custom dropdown widget — vizuálně editoriální, hidden <select>
+                    // se stejným id zůstává v DOM jako data store (zachová JS hooks).
+                    function categoryDropdownMarkup(templateId, currentName) {
+                        var selectId = 'template-cat-select-' + templateId;
+                        var currentLabel = currentName ? escapeHtml(currentName) : '— Nezařazeno —';
+                        var optsList = '<li class="dropdown-option' + (!currentName ? ' selected' : '') + '" data-value="" role="option">— Nezařazeno —</li>';
+                        sortedCats.forEach(function(c) {
+                            var sel = (currentName === c.name) ? ' selected' : '';
+                            optsList += '<li class="dropdown-option' + sel + '" data-value="' + escapeHtml(c.name) + '" role="option">' + escapeHtml(c.name) + '</li>';
+                        });
+                        return '<div class="dropdown-field template-category-dropdown" data-target-select="' + selectId + '">' +
+                                 '<button class="dropdown-trigger" type="button" aria-expanded="false" aria-haspopup="listbox">' +
+                                   '<span class="dropdown-label">' + currentLabel + '</span>' +
+                                   '<svg class="dropdown-chevron" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>' +
+                                 '</button>' +
+                                 '<ul class="dropdown-menu" role="listbox">' + optsList + '</ul>' +
+                               '</div>' +
+                               '<select id="' + selectId + '" class="template-category-select" hidden onchange="changeTemplateCategory(' + templateId + ', this.value)">' +
+                                 categoryOptions(currentName) +
+                               '</select>';
                     }
 
                     // HTML: seznam šablon (seskupený)
@@ -3065,7 +3106,7 @@
                                 s += '<div class="template-item">';
                                 s += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
                                 s += '<span class="template-name">' + escapeHtml(template.name) + '</span>';
-                                s += '<select class="template-category-select" onchange="changeTemplateCategory(' + template.id + ', this.value)">' + categoryOptions(template.category) + '</select>';
+                                s += categoryDropdownMarkup(template.id, template.category);
                                 s += '<button type="button" class="template-delete" onclick="deleteTemplate(' + template.id + ')" title="Smazat šablonu">✕</button>';
                                 s += '</div>';
                             });
@@ -3121,6 +3162,10 @@
 
                     document.getElementById('templateList').innerHTML = html;
                     document.getElementById('documentCheckboxes').innerHTML = checkboxHtml;
+                    // Re-init custom dropdowns for the freshly rendered .dropdown-field nodes.
+                    if (typeof window.initCustomDropdowns === 'function') {
+                        window.initCustomDropdowns();
+                    }
                 });
             });
         }
