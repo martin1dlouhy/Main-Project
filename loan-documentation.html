@@ -3830,6 +3830,21 @@
             }
         });
 
+        // ===== Convert native <select class="form-select"> to editorial custom dropdowns =====
+        // Runs independently of openDB() — paint is guaranteed even if DB init fails.
+        (function () {
+            function run() {
+                if (typeof window.convertSelectsToDropdowns === 'function') {
+                    window.convertSelectsToDropdowns('select.form-select');
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', run);
+            } else {
+                run();
+            }
+        })();
+
         // ===== Google Drive Sync =====
         window.addEventListener('DOMContentLoaded', function() {
             if (!window.GDriveSync) return;

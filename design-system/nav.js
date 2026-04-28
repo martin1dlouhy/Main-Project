@@ -185,6 +185,69 @@
     }
   }
 
+  // Public: convert native <select> elements into editorial .dropdown-field widgets.
+  //
+  // Use case: legacy apps with many native <select class="form-select"> that we don't want to
+  // rewrite by hand. This walks the matching selects, generates a sibling .dropdown-field markup
+  // (button trigger + <ul> with options), and hides the original <select> as a data store.
+  // Idempotent — selects already converted are skipped.
+  //
+  // Each <select> MUST have an `id` (otherwise it's skipped — without id we can't bind the
+  // dropdown-field's `data-target-select`).
+  //
+  // After conversion, initCustomDropdowns() runs once to wire up the new widgets.
+  window.convertSelectsToDropdowns = function (selector) {
+    var nodes = document.querySelectorAll(selector || 'select.form-select');
+    nodes.forEach(function (sel) {
+      if (!sel.id) return;
+      if (sel.hidden) return; // already converted
+      // Skip if a sibling .dropdown-field already targets this select
+      if (document.querySelector('.dropdown-field[data-target-select="' + sel.id + '"]')) {
+        sel.hidden = true; return;
+      }
+
+      var current = sel.options[sel.selectedIndex];
+      var currentValue = sel.value;
+      var currentLabel = current ? current.textContent.trim() : '';
+
+      var field = document.createElement('div');
+      field.className = 'dropdown-field';
+      field.setAttribute('data-target-select', sel.id);
+
+      var trigger = document.createElement('button');
+      trigger.className = 'dropdown-trigger';
+      trigger.type = 'button';
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.setAttribute('aria-haspopup', 'listbox');
+      trigger.innerHTML =
+        '<span class="dropdown-label"></span>' +
+        '<svg class="dropdown-chevron" viewBox="0 0 11 7" fill="none">' +
+          '<path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+        '</svg>';
+      trigger.querySelector('.dropdown-label').textContent = currentLabel;
+
+      var menu = document.createElement('ul');
+      menu.className = 'dropdown-menu';
+      menu.setAttribute('role', 'listbox');
+
+      Array.from(sel.options).forEach(function (opt) {
+        var li = document.createElement('li');
+        li.className = 'dropdown-option';
+        if (opt.value === currentValue) li.classList.add('selected');
+        li.setAttribute('data-value', opt.value);
+        li.setAttribute('role', 'option');
+        li.textContent = opt.textContent;
+        menu.appendChild(li);
+      });
+
+      field.appendChild(trigger);
+      field.appendChild(menu);
+      sel.parentNode.insertBefore(field, sel);
+      sel.hidden = true;
+    });
+    initCustomDropdowns();
+  };
+
   // Public: re-run dropdown init for any newly-rendered .dropdown-field elements.
   // Idempotent — fields with cdInit='1' are skipped, so calling repeatedly is safe.
   // Call after dynamically inserting .dropdown-field markup (e.g. rendered template lists).
