@@ -195,8 +195,9 @@
             border: 1px solid var(--line-faint);
             border-radius: var(--r-lg);
             padding: 20px;
-            /* No max-height / overflow — sidebar roste podle obsahu,
-               absolutně-pozicované multi-segment menu může přesahovat hranice */
+            /* Sidebar je vždy aspoň výška viewportu minus header — multi-segment menu
+               (max 560 px / 70vh) se vejde dovnitř, pozadí nevyčuhuje. */
+            min-height: calc(100vh - var(--header-h) - 60px);
         }
         .db-main {
             min-width: 0;
@@ -610,6 +611,17 @@
         select.form-input option {
             background: var(--bg-elevated);
             color: var(--text);
+        }
+
+        /* Skrýt native number input spinners (Webkit + Firefox) — neladí s editorial designem */
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+            appearance: textfield;
         }
 
         /* ===== Multi-select segment filter ===== */
