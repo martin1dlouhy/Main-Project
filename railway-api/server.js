@@ -74,9 +74,40 @@ app.get('/health', function (req, res) {
 });
 
 // =============================================
+// Session tokens (in-memory, 4h TTL)
+// Issued by /api/verify-pin on success, required for /api/database/* endpoints.
+// =============================================
+var sessionTokens = {}; // { token: { ip, createdAt } }
+
+function generateSessionToken() {
+    return crypto.randomBytes(32).toString('hex');
+}
+
+function cleanupSessionTokens() {
+    var now = Date.now();
+    var keys = Object.keys(sessionTokens);
+    for (var i = 0; i < keys.length; i++) {
+        if (now - sessionTokens[keys[i]].createdAt > 4 * 60 * 60 * 1000) {
+            delete sessionTokens[keys[i]];
+        }
+    }
+}
+setInterval(cleanupSessionTokens, 30 * 60 * 1000);
+
+function verifyDatabaseToken(req) {
+    var t = req.headers['x-database-token'];
+    if (!t || !sessionTokens[t]) return false;
+    // Refresh activity (sliding window)
+    sessionTokens[t].createdAt = Date.now();
+    return true;
+}
+
+// =============================================
 // POST /api/verify-pin — Server-side PIN verification
 // PIN hash stored in env variable PIN_HASH (SHA-256)
 // Rate limited: max 5 attempts per IP per 5 minutes
+// On success, returns sessionToken for /api/database/* endpoints.
+// (Legacy callers — termsheet, loan-doc — ignore sessionToken field; backwards compat.)
 // =============================================
 var pinAttempts = {}; // { ip: { count, firstAttempt } }
 
@@ -134,7 +165,10 @@ app.post('/api/verify-pin', async function (req, res) {
     if (inputHash === pinHash) {
         // Reset attempts on success
         delete pinAttempts[ip];
-        return res.status(200).json({ success: true });
+        // Issue session token (legacy callers can ignore this field)
+        var sessionToken = generateSessionToken();
+        sessionTokens[sessionToken] = { ip: ip, createdAt: Date.now() };
+        return res.status(200).json({ success: true, sessionToken: sessionToken });
     } else {
         return res.status(200).json({ success: false, error: 'Nesprávný PIN.' });
     }
@@ -1371,6 +1405,239 @@ function buildServerImagePrompt(visualType, people, scene, mood, format, theme, 
         'No stock photo clichés, no neon colors. ' +
         'Topic: "' + theme + '". ' +
         variations[variationIdx % variations.length];
+}
+
+// =============================================
+// POST /api/database/find-contacts — AI contact discovery for Database app
+// Volá Claude (Anthropic) + GPT-4o (OpenAI) paralelně se stejným promptem,
+// deduplikuje výsledky napříč modely + proti existujícím kontaktům,
+// vrátí návrhy s badge spolehlivosti.
+// Vyžaduje session token z /api/verify-pin v X-Database-Token header.
+// =============================================
+app.post('/api/database/find-contacts', async function (req, res) {
+    if (!verifyDatabaseToken(req)) {
+        return res.status(401).json({ error: 'Unauthorized — chybí nebo neplatný session token. Přihlas se znovu.' });
+    }
+
+    var anthropicKey = process.env.ANTHROPIC_API_KEY;
+    var openaiKey = process.env.OPENAI_API_KEY;
+    if (!anthropicKey && !openaiKey) {
+        return res.status(500).json({ error: 'Žádný AI API klíč není nakonfigurovaný na serveru.' });
+    }
+
+    var body = req.body || {};
+    var segmentNazev = (body.segmentNazev || '').toString().trim();
+    var segmentUseCase = (body.segmentUseCase || '').toString().trim();
+    var sources = Array.isArray(body.sources) ? body.sources : [];
+    var existingKeys = body.existingContactsKeys || {};
+    var region = (body.region || 'celá ČR').toString().trim();
+    var maxResults = Math.min(50, Math.max(5, parseInt(body.maxResults) || 20));
+
+    if (!segmentNazev) {
+        return res.status(400).json({ error: 'segmentNazev je povinný.' });
+    }
+    if (sources.length === 0) {
+        return res.status(400).json({ error: 'Žádné zdroje pro tento segment. Doplň je v Google Sheets.' });
+    }
+
+    var prompt = buildFindContactsPrompt(segmentNazev, segmentUseCase, sources, region, maxResults);
+    console.log('[find-contacts] segment="' + segmentNazev + '" region="' + region + '" sources=' + sources.length + ' max=' + maxResults);
+
+    // Paralelní call obou modelů (Promise.allSettled — pokud jeden padne, druhý dorazí)
+    var promises = [];
+    if (anthropicKey) promises.push(callClaudeForContacts(anthropicKey, prompt));
+    else promises.push(Promise.resolve({ contacts: [], skipped: 'no key' }));
+    if (openaiKey) promises.push(callOpenAIForContacts(openaiKey, prompt));
+    else promises.push(Promise.resolve({ contacts: [], skipped: 'no key' }));
+
+    var results = await Promise.allSettled(promises);
+
+    var claudeResult = results[0].status === 'fulfilled'
+        ? results[0].value
+        : { contacts: [], error: results[0].reason && results[0].reason.message || 'Claude call failed' };
+    var openaiResult = results[1].status === 'fulfilled'
+        ? results[1].value
+        : { contacts: [], error: results[1].reason && results[1].reason.message || 'OpenAI call failed' };
+
+    console.log('[find-contacts] claude=' + claudeResult.contacts.length + (claudeResult.error ? ' (ERR: ' + claudeResult.error + ')' : '') +
+        ' openai=' + openaiResult.contacts.length + (openaiResult.error ? ' (ERR: ' + openaiResult.error + ')' : ''));
+
+    var merged = mergeAndDedupeContacts(claudeResult.contacts, openaiResult.contacts, existingKeys);
+
+    return res.json({
+        suggestions: merged,
+        stats: {
+            claudeCount: claudeResult.contacts.length,
+            openaiCount: openaiResult.contacts.length,
+            mergedCount: merged.length,
+            duplicates: claudeResult.contacts.length + openaiResult.contacts.length - merged.length,
+            claudeError: claudeResult.error || null,
+            openaiError: openaiResult.error || null
+        }
+    });
+});
+
+function buildFindContactsPrompt(segmentNazev, segmentUseCase, sources, region, maxResults) {
+    var sourcesText = sources.map(function (s, i) {
+        var line = (i + 1) + '. ' + (s.nazev || 'Zdroj') ;
+        if (s.url) line += ' — ' + s.url;
+        if (s.poznamka) line += ' (' + s.poznamka + ')';
+        return line;
+    }).join('\n');
+
+    return [
+        'Jsi expert na vyhledávání B2B kontaktů v České republice pro investiční firmu ProfiLend (HNWI debt financing, úvěry 10-250M CZK proti nemovitostem).',
+        '',
+        'CÍL: Najdi konkrétní reálné kontakty pro segment "' + segmentNazev + '" v regionu ' + region + '.',
+        '',
+        'USE-CASE TOHOTO SEGMENTU (proč jsou pro nás cenní): ' + (segmentUseCase || 'Zprostředkovatelé obchodů.'),
+        '',
+        'ZDROJE — INSPIRACE PRO HLEDÁNÍ (znáš tyto registry a weby z train data, využij je):',
+        sourcesText,
+        '',
+        'INSTRUKCE:',
+        '- Vrať maximálně ' + maxResults + ' nejvíce relevantních kontaktů — kvalita > kvantita',
+        '- KAŽDÝ kontakt MUSÍ být reálná osoba nebo firma, kterou znáš z train data. NEVYMÝŠLEJ.',
+        '- Cílíme na decision-makery: Partner, Managing Partner, Director, CEO, Owner, Head of, Senior',
+        '- Vyhni se juniorům, asistentům, generickým info@/contact@ adresám',
+        '- Pokud neznáš konkrétní email/telefon/LinkedIn, vrať null — NIKDY si je nevymýšlej',
+        '- Pokud znáš jen firmu (ne konkrétní osobu), vrať firmu s kontaktniOsoba=null',
+        '',
+        'FORMÁT ODPOVĚDI: vrať POUZE platný JSON, žádný markdown, žádný komentář.',
+        '{',
+        '  "contacts": [',
+        '    {',
+        '      "firma": "název společnosti (povinné)",',
+        '      "ico": "8místné IČO pokud znáš | null",',
+        '      "kontaktniOsoba": "Jméno Příjmení | null",',
+        '      "role": "Managing Partner | null",',
+        '      "email": "jmeno@firma.cz | null",',
+        '      "telefon": "+420 ... | null",',
+        '      "web": "https://firma.cz | null",',
+        '      "linkedinUrl": "https://linkedin.com/in/... | null",',
+        '      "sidlo": "Adresa sídla | null",',
+        '      "zdrojUrl": "URL zdroje kde tento kontakt obvykle figuruje | null"',
+        '    }',
+        '  ]',
+        '}'
+    ].join('\n');
+}
+
+async function callClaudeForContacts(apiKey, prompt) {
+    var client = new Anthropic({ apiKey: apiKey });
+    var msg = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        temperature: 0.4,
+        messages: [
+            { role: 'user', content: prompt },
+            { role: 'assistant', content: '{' }
+        ]
+    });
+    var text = '{' + (msg.content[0] && msg.content[0].text || '');
+    var parsed = tryParseContactsJSON(text);
+    return { contacts: (parsed && Array.isArray(parsed.contacts)) ? parsed.contacts : [] };
+}
+
+async function callOpenAIForContacts(apiKey, prompt) {
+    if (!OpenAI) throw new Error('OpenAI SDK not loaded on server');
+    var openai = new OpenAI({ apiKey: apiKey });
+    var completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        temperature: 0.4,
+        max_tokens: 4096,
+        response_format: { type: 'json_object' },
+        messages: [
+            { role: 'system', content: 'Jsi vyhledávač B2B kontaktů. Vrať POUZE platný JSON podle schématu v promptu.' },
+            { role: 'user', content: prompt }
+        ]
+    });
+    var content = completion.choices[0].message.content;
+    var parsed = tryParseContactsJSON(content);
+    return { contacts: (parsed && Array.isArray(parsed.contacts)) ? parsed.contacts : [] };
+}
+
+function tryParseContactsJSON(text) {
+    if (!text) return null;
+    try { return JSON.parse(text.trim()); } catch (e) { }
+    var codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+    if (codeBlockMatch) {
+        try { return JSON.parse(codeBlockMatch[1].trim()); } catch (e) { }
+    }
+    var startObj = text.indexOf('{');
+    if (startObj !== -1) {
+        var lastBrace = text.lastIndexOf('}');
+        if (lastBrace > startObj) {
+            try { return JSON.parse(text.substring(startObj, lastBrace + 1)); } catch (e) { }
+        }
+    }
+    return null;
+}
+
+function normalizeKey(s) {
+    return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/\/+$/, '');
+}
+
+function mergeAndDedupeContacts(claudeContacts, openaiContacts, existingKeys) {
+    var existingIcos = new Set((existingKeys.icos || []).map(normalizeKey).filter(Boolean));
+    var existingEmails = new Set((existingKeys.emails || []).map(normalizeKey).filter(Boolean));
+    var existingLinkedins = new Set((existingKeys.linkedins || []).map(normalizeKey).filter(Boolean));
+    var existingNameFirma = new Set((existingKeys.namesFirmas || []).map(normalizeKey).filter(Boolean));
+
+    var seenIcos = {};
+    var seenEmails = {};
+    var seenLinkedins = {};
+    var seenNameFirma = {};
+    var output = [];
+
+    function processOne(c, sourceModel) {
+        if (!c || !c.firma) return; // bez firmy návrh nemá smysl
+        var ico = normalizeKey(c.ico);
+        var email = normalizeKey(c.email);
+        var lin = normalizeKey(c.linkedinUrl);
+        var nf = c.kontaktniOsoba && c.firma ? normalizeKey(c.kontaktniOsoba + '|' + c.firma) : '';
+
+        // Skip if already in user's DB
+        if (ico && existingIcos.has(ico)) return;
+        if (email && existingEmails.has(email)) return;
+        if (lin && existingLinkedins.has(lin)) return;
+        if (nf && existingNameFirma.has(nf)) return;
+
+        // Find duplicate within current results
+        var idx = -1;
+        if (ico && seenIcos[ico] !== undefined) idx = seenIcos[ico];
+        else if (email && seenEmails[email] !== undefined) idx = seenEmails[email];
+        else if (lin && seenLinkedins[lin] !== undefined) idx = seenLinkedins[lin];
+        else if (nf && seenNameFirma[nf] !== undefined) idx = seenNameFirma[nf];
+
+        if (idx >= 0) {
+            // Merge: add source, fill in nulls
+            if (output[idx]._sources.indexOf(sourceModel) === -1) {
+                output[idx]._sources.push(sourceModel);
+            }
+            ['ico', 'email', 'telefon', 'linkedinUrl', 'web', 'sidlo', 'role', 'zdrojUrl', 'kontaktniOsoba'].forEach(function (f) {
+                if (!output[idx][f] && c[f]) output[idx][f] = c[f];
+            });
+        } else {
+            var newC = Object.assign({}, c, { _sources: [sourceModel] });
+            var newIdx = output.push(newC) - 1;
+            if (ico) seenIcos[ico] = newIdx;
+            if (email) seenEmails[email] = newIdx;
+            if (lin) seenLinkedins[lin] = newIdx;
+            if (nf) seenNameFirma[nf] = newIdx;
+        }
+    }
+
+    (claudeContacts || []).forEach(function (c) { processOne(c, 'claude'); });
+    (openaiContacts || []).forEach(function (c) { processOne(c, 'openai'); });
+
+    // Sort: both-sources first, then alphabetically by firma
+    output.sort(function (a, b) {
+        if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
+        return String(a.firma || '').localeCompare(String(b.firma || ''), 'cs');
+    });
+
+    return output;
 }
 
 app.listen(PORT, function () {

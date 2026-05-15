@@ -195,8 +195,8 @@
             border: 1px solid var(--line-faint);
             border-radius: var(--r-lg);
             padding: 20px;
-            max-height: calc(100vh - var(--header-h) - 48px);
-            overflow-y: auto;
+            /* No max-height / overflow — sidebar roste podle obsahu,
+               absolutně-pozicované multi-segment menu může přesahovat hranice */
         }
         .db-main {
             min-width: 0;
@@ -667,7 +667,7 @@
             pointer-events: none;
             transform: translateY(-4px);
             transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
-            max-height: 380px;
+            max-height: min(560px, 70vh);
             display: flex;
             flex-direction: column;
         }
@@ -781,6 +781,166 @@
             text-align: center;
             color: var(--text-mute);
             font-size: 12px;
+        }
+
+        /* ===== AI Vyhledávač (F2) ===== */
+        .vyhl-controls {
+            display: grid;
+            grid-template-columns: 1fr 200px 130px auto;
+            gap: 14px;
+            align-items: end;
+            margin-top: 18px;
+        }
+        @media (max-width: 900px) {
+            .vyhl-controls {
+                grid-template-columns: 1fr 1fr;
+            }
+            .vyhl-controls > .btn { grid-column: 1 / -1; }
+        }
+        .vyhl-status {
+            margin-top: 18px;
+            padding: 14px 18px;
+            border-radius: var(--r-sm);
+            font-size: 13.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .vyhl-status-loading {
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            color: var(--text-soft);
+        }
+        .vyhl-status-loading::before {
+            content: '';
+            width: 14px; height: 14px;
+            border: 2px solid var(--amber-glow);
+            border-top-color: var(--amber);
+            border-radius: 50%;
+            animation: vyhl-spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes vyhl-spin { to { transform: rotate(360deg); } }
+        .vyhl-status-success {
+            background: var(--amber-tint);
+            border: 1px solid var(--line-amber);
+            color: var(--amber-warm);
+        }
+        .vyhl-status-error {
+            background: var(--danger-tint);
+            border: 1px solid rgba(232,124,110,0.3);
+            color: var(--danger);
+        }
+        .vyhl-card {
+            background: var(--bg-raised);
+            border: 1px solid var(--line-faint);
+            border-radius: var(--r-md);
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 14px;
+            align-items: start;
+        }
+        .vyhl-card:hover { border-color: var(--line-strong); }
+        .vyhl-card.selected {
+            border-color: var(--line-amber);
+            background: var(--amber-tint);
+        }
+        .vyhl-check {
+            width: 18px; height: 18px;
+            border: 1.5px solid var(--line);
+            border-radius: var(--r-xs);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            cursor: pointer;
+            margin-top: 2px;
+            transition: all var(--dur-fast) var(--ease);
+        }
+        .vyhl-card.selected .vyhl-check {
+            background: var(--amber);
+            border-color: var(--amber);
+        }
+        .vyhl-check svg {
+            width: 12px; height: 12px;
+            color: #1a1207;
+            opacity: 0;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: opacity var(--dur-fast) var(--ease);
+        }
+        .vyhl-card.selected .vyhl-check svg { opacity: 1; }
+        .vyhl-body { min-width: 0; }
+        .vyhl-firma {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 15px;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        .vyhl-osoba {
+            font-size: 13px;
+            color: var(--text-soft);
+            margin-bottom: 2px;
+        }
+        .vyhl-osoba strong { color: var(--text); font-weight: 500; }
+        .vyhl-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 6px;
+            font-size: 11.5px;
+            color: var(--text-mute);
+        }
+        .vyhl-meta a {
+            color: var(--amber-warm);
+            text-decoration: none;
+        }
+        .vyhl-meta a:hover { text-decoration: underline; }
+        .vyhl-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .vyhl-badges {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+        .vyhl-badge {
+            padding: 2px 8px;
+            font-size: 10.5px;
+            font-weight: 500;
+            border-radius: 99px;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .vyhl-badge::before {
+            content: '';
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        .vyhl-badge-both {
+            color: var(--success);
+            background: var(--success-tint);
+        }
+        .vyhl-badge-claude {
+            color: var(--amber-warm);
+            background: var(--amber-tint);
+        }
+        .vyhl-badge-openai {
+            color: var(--info);
+            background: var(--info-tint);
         }
 
         .activity-log {
@@ -1260,24 +1420,45 @@
             </div>
         </section>
 
-        <!-- ===== SECTION: Vyhledávač (F2 placeholder) ===== -->
+        <!-- ===== SECTION: Vyhledávač (F2.1) ===== -->
         <section class="db-section" data-section="vyhledavac">
             <div class="settings-panel">
                 <h4>AI Vyhledávač kontaktů</h4>
-                <p class="panel-desc">V další fázi (F2): vyber segment a aplikace přes Anthropic + OpenAI API najde kontakty ze zdrojů. Výsledky z obou modelů se merge-ují, duplicity se odstraní, ke každému kontaktu badge spolehlivosti (Claude+ChatGPT / jen jeden).</p>
-                <div class="info-note">
-                    <strong>Zatím vypnuto.</strong> Nejdřív stavíme F1 — manuální správa kontaktů, import, filtry, GDrive sync. Vyhledávač přidám hned po schválení F1.
+                <p class="panel-desc">Vyber segment, klikni Hledat. Aplikace paralelně zavolá Claude i ChatGPT, deduplikuje výsledky napříč modely + proti tvé DB, a ukáže návrhy s badge spolehlivosti. Co odškrtneš, zapíše se do Sheetu.</p>
+
+                <div class="vyhl-controls">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Segment</label>
+                        <select id="vyhl-segment" class="form-input"></select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Region (volitelné)</label>
+                        <input type="text" class="form-input" id="vyhl-region" placeholder="celá ČR / Praha / Brno…">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Max návrhů</label>
+                        <input type="number" class="form-input" id="vyhl-max" value="20" min="5" max="50">
+                    </div>
+                    <button class="btn btn-primary btn-lg" onclick="findContacts()" id="vyhl-btn">
+                        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        Hledat
+                    </button>
                 </div>
-                <div style="margin-top:18px;font-size:13px;color:var(--text-soft);line-height:1.6;">
-                    <strong>Co bude umět:</strong>
-                    <ul style="margin-top:10px;padding-left:20px;color:var(--text-mute);">
-                        <li>Vybrat segment + případně zúžit (region, velikost firmy)</li>
-                        <li>Paralelně zavolat Claude a ChatGPT s identickým promptem</li>
-                        <li>Fuzzy deduplikace (IČO / email / jméno+firma / LinkedIn URL)</li>
-                        <li>Cross-check proti existující DB — „už existuje, aktualizovat?"</li>
-                        <li>Manuální schválení před uložením</li>
-                        <li>Audit log — kdy a odkud kontakt přišel</li>
-                    </ul>
+
+                <div id="vyhl-status" class="vyhl-status" style="display:none;"></div>
+            </div>
+
+            <div id="vyhl-results-wrap" style="display:none;">
+                <div class="settings-panel">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                        <h4 id="vyhl-results-title">Návrhy</h4>
+                        <div style="display:flex;gap:10px;align-items:center;">
+                            <span id="vyhl-selected-count" style="font-size:12px;color:var(--text-mute);">0 vybráno</span>
+                            <button class="btn btn-secondary" onclick="toggleVyhlSelectAll()" id="vyhl-toggle-all">Vybrat vše</button>
+                            <button class="btn btn-primary" onclick="addSelectedToDB()" id="vyhl-add">Přidat do DB</button>
+                        </div>
+                    </div>
+                    <div id="vyhl-results"></div>
                 </div>
             </div>
         </section>
@@ -1555,8 +1736,9 @@ const TOKEN_KEY = 'db-gtoken';
 const TOKEN_EXPIRY_KEY = 'db-gtoken-expiry';
 const SHEET_ID_KEY = 'db-sheet-id';
 
-// PIN session
+// PIN session + Railway session token (pro AI endpointy)
 const PIN_SESSION_KEY = 'db-auth';
+const DB_TOKEN_KEY = 'db-session-token';
 
 // ============================================================
 // SEGMENTY (embedované z Markdownu Segmenty_a_zdroje_kontaktu.md)
@@ -1891,6 +2073,7 @@ function checkPIN() {
     .then(data => {
         if (data.success) {
             sessionStorage.setItem(PIN_SESSION_KEY, 'true');
+            if (data.sessionToken) sessionStorage.setItem(DB_TOKEN_KEY, data.sessionToken);
             document.getElementById('pin-overlay').classList.add('hidden');
             document.getElementById('pin-error').style.display = 'none';
             digits.forEach(d => { d.value = ''; d.disabled = false; });
@@ -2651,6 +2834,7 @@ function renderAll() {
     renderSettings();
     renderSegmentMenu();
     updateSegmentTriggerLabel();
+    populateVyhlSegmentSelect();
 }
 
 function renderContacts() {
@@ -3096,6 +3280,260 @@ function checkDatabase() {
         html += '</div></div>';
     }
     container.innerHTML = html;
+}
+
+// ============================================================
+// AI VYHLEDÁVAČ (F2.1)
+// Volá Railway /api/database/find-contacts (paralelně Claude + GPT-4o),
+// zobrazí návrhy s badge spolehlivosti, schválené zapíše do Sheetu.
+// ============================================================
+state.lastVyhlSuggestions = [];
+state.vyhlSelected = new Set();
+
+function populateVyhlSegmentSelect() {
+    const sel = document.getElementById('vyhl-segment');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— vyber segment —</option>' +
+        state.segments.map(s =>
+            '<option value="' + escapeAttr(s.nazev) + '">' + escapeHtml(s.nazev) + ' (P' + s.priorita + ')</option>'
+        ).join('');
+    if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+    rebuildDropdown('vyhl-segment');
+}
+
+async function findContacts() {
+    const segmentNazev = document.getElementById('vyhl-segment').value;
+    const region = document.getElementById('vyhl-region').value.trim() || 'celá ČR';
+    const maxResults = parseInt(document.getElementById('vyhl-max').value) || 20;
+    const btn = document.getElementById('vyhl-btn');
+
+    if (!segmentNazev) {
+        toast('warning', 'Vyber segment.');
+        return;
+    }
+
+    const segment = state.segments.find(s => s.nazev === segmentNazev);
+    if (!segment) {
+        toast('error', 'Segment nenalezen v DB.');
+        return;
+    }
+
+    const sources = state.sources.filter(s => s.segment === segmentNazev);
+    if (sources.length === 0) {
+        toast('warning', 'Tento segment nemá zdroje. Doplň je v Google Sheets v listu Sources.');
+        return;
+    }
+
+    const token = sessionStorage.getItem(DB_TOKEN_KEY);
+    if (!token) {
+        toast('error', 'Chybí session token. Přihlas se znovu PIN-em.');
+        return;
+    }
+
+    const existingKeys = {
+        icos: state.contacts.map(c => c.ico).filter(Boolean),
+        emails: state.contacts.map(c => c.email).filter(Boolean),
+        linkedins: state.contacts.map(c => c.linkedinUrl).filter(Boolean),
+        namesFirmas: state.contacts.filter(c => c.kontaktniOsoba && c.firma).map(c => c.kontaktniOsoba + '|' + c.firma)
+    };
+
+    showVyhlStatus('loading', 'Hledám paralelně u Claude a ChatGPT z ' + sources.length + ' zdrojů… (může trvat 30–60 s)');
+    document.getElementById('vyhl-results-wrap').style.display = 'none';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+
+    try {
+        const resp = await fetch(RAILWAY_API + '/api/database/find-contacts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Database-Token': token
+            },
+            body: JSON.stringify({
+                segmentNazev: segmentNazev,
+                segmentUseCase: segment.useCase || '',
+                sources: sources.map(s => ({ nazev: s.nazev, url: s.url, poznamka: s.poznamka })),
+                existingContactsKeys: existingKeys,
+                region: region,
+                maxResults: maxResults
+            })
+        });
+
+        if (resp.status === 401) {
+            sessionStorage.removeItem(DB_TOKEN_KEY);
+            sessionStorage.removeItem(PIN_SESSION_KEY);
+            showVyhlStatus('error', 'Session vypršela. Obnov stránku a zadej PIN.');
+            return;
+        }
+
+        const data = await resp.json();
+        if (!resp.ok) {
+            showVyhlStatus('error', data.error || ('HTTP ' + resp.status));
+            return;
+        }
+
+        state.lastVyhlSuggestions = data.suggestions || [];
+        state.vyhlSelected = new Set();
+        renderVyhlResults(segmentNazev);
+
+        const stats = data.stats || {};
+        let msg = 'Hotovo. Claude: ' + (stats.claudeCount || 0) +
+                  ' · ChatGPT: ' + (stats.openaiCount || 0) +
+                  ' · po deduplikaci: ' + (stats.mergedCount || 0) +
+                  ' (' + (stats.duplicates || 0) + ' duplicit odstraněno)';
+        if (stats.claudeError) msg += ' · Claude: ' + stats.claudeError;
+        if (stats.openaiError) msg += ' · ChatGPT: ' + stats.openaiError;
+        showVyhlStatus('success', msg);
+    } catch (err) {
+        console.error('Find contacts error:', err);
+        showVyhlStatus('error', 'Vyhledávání selhalo: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.style.opacity = '';
+    }
+}
+
+function showVyhlStatus(type, msg) {
+    const el = document.getElementById('vyhl-status');
+    el.style.display = 'flex';
+    el.className = 'vyhl-status vyhl-status-' + type;
+    el.textContent = msg;
+}
+
+function renderVyhlResults(segmentNazev) {
+    const wrap = document.getElementById('vyhl-results-wrap');
+    const div = document.getElementById('vyhl-results');
+    const title = document.getElementById('vyhl-results-title');
+    const sugs = state.lastVyhlSuggestions;
+
+    if (sugs.length === 0) {
+        wrap.style.display = 'block';
+        title.textContent = 'Žádné nové návrhy';
+        div.innerHTML = '<div class="info-note">Buď AI nenašlo nic relevantního, nebo vše už máš v DB.</div>';
+        return;
+    }
+
+    wrap.style.display = 'block';
+    title.textContent = 'Návrhy pro „' + segmentNazev + '" (' + sugs.length + ')';
+
+    div.innerHTML = sugs.map((c, i) => {
+        const sources = c._sources || [];
+        let badge;
+        if (sources.length === 2) {
+            badge = '<span class="vyhl-badge vyhl-badge-both">Claude + ChatGPT</span>';
+        } else if (sources[0] === 'claude') {
+            badge = '<span class="vyhl-badge vyhl-badge-claude">jen Claude</span>';
+        } else {
+            badge = '<span class="vyhl-badge vyhl-badge-openai">jen ChatGPT</span>';
+        }
+
+        const meta = [];
+        if (c.email) meta.push('<span class="vyhl-meta-item">✉ ' + escapeHtml(c.email) + '</span>');
+        if (c.telefon) meta.push('<span class="vyhl-meta-item">☎ ' + escapeHtml(c.telefon) + '</span>');
+        if (c.linkedinUrl) meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(c.linkedinUrl) + '" target="_blank" rel="noopener">LinkedIn ↗</a></span>');
+        if (c.web) meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(c.web) + '" target="_blank" rel="noopener">Web ↗</a></span>');
+        if (c.sidlo) meta.push('<span class="vyhl-meta-item">📍 ' + escapeHtml(c.sidlo) + '</span>');
+        if (c.ico) meta.push('<span class="vyhl-meta-item">IČO: ' + escapeHtml(c.ico) + '</span>');
+
+        const isSelected = state.vyhlSelected.has(i);
+        return '<div class="vyhl-card' + (isSelected ? ' selected' : '') + '" data-idx="' + i + '" onclick="toggleVyhlCard(' + i + ')">' +
+            '<div class="vyhl-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+            '<div class="vyhl-body">' +
+                '<div class="vyhl-firma">' + escapeHtml(c.firma || '—') + '</div>' +
+                (c.kontaktniOsoba ? '<div class="vyhl-osoba"><strong>' + escapeHtml(c.kontaktniOsoba) + '</strong>' + (c.role ? ' — ' + escapeHtml(c.role) : '') + '</div>' : '') +
+                (meta.length > 0 ? '<div class="vyhl-meta">' + meta.join('') + '</div>' : '') +
+            '</div>' +
+            '<div class="vyhl-badges">' + badge + '</div>' +
+        '</div>';
+    }).join('');
+
+    updateVyhlSelectedCount();
+}
+
+function toggleVyhlCard(idx) {
+    if (state.vyhlSelected.has(idx)) state.vyhlSelected.delete(idx);
+    else state.vyhlSelected.add(idx);
+    const card = document.querySelector('.vyhl-card[data-idx="' + idx + '"]');
+    if (card) card.classList.toggle('selected', state.vyhlSelected.has(idx));
+    updateVyhlSelectedCount();
+}
+
+function toggleVyhlSelectAll() {
+    const all = state.lastVyhlSuggestions.length;
+    const allSelected = state.vyhlSelected.size === all && all > 0;
+    if (allSelected) {
+        state.vyhlSelected.clear();
+    } else {
+        state.lastVyhlSuggestions.forEach((_, i) => state.vyhlSelected.add(i));
+    }
+    document.querySelectorAll('.vyhl-card').forEach(c => {
+        const idx = parseInt(c.getAttribute('data-idx'));
+        c.classList.toggle('selected', state.vyhlSelected.has(idx));
+    });
+    updateVyhlSelectedCount();
+    document.getElementById('vyhl-toggle-all').textContent = !allSelected ? 'Zrušit vše' : 'Vybrat vše';
+}
+
+function updateVyhlSelectedCount() {
+    const n = state.vyhlSelected.size;
+    document.getElementById('vyhl-selected-count').textContent = n + ' vybráno';
+    document.getElementById('vyhl-add').disabled = n === 0;
+    document.getElementById('vyhl-add').style.opacity = n === 0 ? '0.5' : '';
+}
+
+async function addSelectedToDB() {
+    const segmentNazev = document.getElementById('vyhl-segment').value;
+    if (state.vyhlSelected.size === 0) {
+        toast('warning', 'Nic neoznačeno.');
+        return;
+    }
+    const toAdd = Array.from(state.vyhlSelected).map(i => state.lastVyhlSuggestions[i]);
+    const segment = state.segments.find(s => s.nazev === segmentNazev);
+    const segmentTyp = segment ? segment.typ : 'Zprostředkovatel';
+    const segmentPrio = segment ? String(segment.priorita) : '2';
+
+    const now = new Date().toISOString();
+    const newContacts = toAdd.map(s => ({
+        id: generateId(),
+        createdAt: now,
+        updatedAt: now,
+        typ: segmentTyp,
+        segment: segmentNazev,
+        priorita: segmentPrio,
+        stav: 'Nový',
+        firma: s.firma || '',
+        ico: s.ico || '',
+        sidlo: s.sidlo || '',
+        web: s.web || '',
+        email: s.email || '',
+        telefon: s.telefon || '',
+        kontaktniOsoba: s.kontaktniOsoba || '',
+        role: s.role || '',
+        linkedinUrl: s.linkedinUrl || '',
+        facebookUrl: '',
+        zdrojUrl: s.zdrojUrl || '',
+        tagy: 'AI-' + (s._sources || []).join('+'),
+        poznamka: 'AI návrh z ' + new Date().toLocaleDateString('cs-CZ') + ' (' + (s._sources || []).join(' + ') + ')',
+        osloven_kdy: '',
+        osloven_kanal: '',
+        spolehlivost: (s._sources || []).join('+')
+    }));
+
+    try {
+        toast('info', 'Přidávám ' + newContacts.length + ' kontaktů…');
+        await sheetsAppend(SHEET_TABS.contacts, newContacts.map(contactToRow));
+        await logActivity('', 'ai-import', 'AI vyhledávač přidal ' + newContacts.length + ' kontaktů (' + segmentNazev + ')');
+        toast('success', 'Přidáno ' + newContacts.length + ' kontaktů.');
+        state.vyhlSelected.clear();
+        state.lastVyhlSuggestions = [];
+        document.getElementById('vyhl-results-wrap').style.display = 'none';
+        document.getElementById('vyhl-status').style.display = 'none';
+        await syncFromSheet();
+    } catch (err) {
+        console.error('AI add error:', err);
+        toast('error', 'Přidání selhalo: ' + err.message);
+    }
 }
 
 // ============================================================
