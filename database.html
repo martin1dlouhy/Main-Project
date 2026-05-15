@@ -598,7 +598,7 @@
             min-height: 72px;
             line-height: 1.5;
         }
-        select.form-input, .filter-search[id="filter-segment"] {
+        select.form-input {
             appearance: none;
             -webkit-appearance: none;
             background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23a08770' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>");
@@ -607,9 +607,180 @@
             padding-right: 32px;
             cursor: pointer;
         }
-        select.form-input option, .filter-search[id="filter-segment"] option {
+        select.form-input option {
             background: var(--bg-elevated);
             color: var(--text);
+        }
+
+        /* ===== Multi-select segment filter ===== */
+        .multi-segment { position: relative; }
+        .multi-segment-trigger {
+            width: 100%;
+            padding: 9px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            transition: all var(--dur) var(--ease);
+        }
+        .multi-segment-trigger:hover { background: var(--bg-input-hover); border-color: var(--line-strong); }
+        .multi-segment.open .multi-segment-trigger {
+            background: var(--bg-input-hover);
+            border-color: var(--amber);
+            box-shadow: 0 0 0 3px var(--amber-glow);
+        }
+        .multi-segment-trigger-label {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .multi-segment-trigger-label.has-selection { color: var(--amber-warm); }
+        .multi-segment-chevron {
+            width: 10px; height: 6px;
+            transition: transform var(--dur) var(--ease);
+            color: var(--text-mute);
+            flex-shrink: 0;
+        }
+        .multi-segment.open .multi-segment-chevron {
+            transform: rotate(180deg);
+            color: var(--amber-warm);
+        }
+        .multi-segment-menu {
+            position: absolute;
+            top: calc(100% + 6px); left: 0; right: 0;
+            background: var(--bg-elevated);
+            border: 1px solid var(--line-strong);
+            border-radius: var(--r-sm);
+            padding: 8px;
+            box-shadow: var(--shadow-lg);
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-4px);
+            transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+            max-height: 380px;
+            display: flex;
+            flex-direction: column;
+        }
+        .multi-segment.open .multi-segment-menu {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+        .multi-segment-search {
+            width: 100%;
+            padding: 8px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-xs);
+            color: var(--text);
+            font-size: 12.5px;
+            font-family: inherit;
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+        .multi-segment-search:focus {
+            outline: none;
+            border-color: var(--amber);
+            box-shadow: 0 0 0 2px var(--amber-glow);
+        }
+        .multi-segment-actions {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+        .multi-segment-actions button {
+            flex: 1;
+            padding: 5px;
+            font-size: 11px;
+            color: var(--text-soft);
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: var(--r-xs);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all var(--dur-fast) var(--ease);
+        }
+        .multi-segment-actions button:hover {
+            color: var(--amber-warm);
+            border-color: var(--line-amber);
+        }
+        .multi-segment-list {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+            margin: 0;
+            padding: 0;
+        }
+        .multi-segment-option {
+            padding: 7px 8px;
+            font-size: 12.5px;
+            color: var(--text-soft);
+            border-radius: var(--r-xs);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background var(--dur-fast) var(--ease);
+            user-select: none;
+        }
+        .multi-segment-option:hover {
+            background: var(--bg-input);
+            color: var(--text);
+        }
+        .multi-segment-option.selected { color: var(--amber-warm); }
+        .multi-segment-checkbox {
+            width: 14px; height: 14px;
+            border: 1.5px solid var(--line);
+            border-radius: 3px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--dur-fast) var(--ease);
+        }
+        .multi-segment-option.selected .multi-segment-checkbox {
+            background: var(--amber);
+            border-color: var(--amber);
+        }
+        .multi-segment-checkbox svg {
+            width: 10px; height: 10px;
+            color: #1a1207;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all var(--dur-fast) var(--ease);
+        }
+        .multi-segment-option.selected .multi-segment-checkbox svg {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .multi-segment-option .prio-dot { flex-shrink: 0; }
+        .multi-segment-option-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .multi-segment-empty {
+            padding: 16px;
+            text-align: center;
+            color: var(--text-mute);
+            font-size: 12px;
         }
 
         .activity-log {
@@ -949,7 +1120,6 @@
                 <span class="filter-pill active" data-typ="all">Vše</span>
                 <span class="filter-pill" data-typ="Klient">Klient</span>
                 <span class="filter-pill" data-typ="Zprostředkovatel">Zprostředkovatel</span>
-                <span class="filter-pill" data-typ="Oboje">Oboje</span>
             </div>
         </div>
 
@@ -977,10 +1147,21 @@
         </div>
 
         <div class="filter-block">
-            <label class="filter-label">Segment</label>
-            <select id="filter-segment" class="filter-search" style="appearance:none;-webkit-appearance:none;cursor:pointer;">
-                <option value="all">Všechny segmenty</option>
-            </select>
+            <label class="filter-label">Segmenty</label>
+            <div class="multi-segment" id="seg-multi">
+                <button class="multi-segment-trigger" type="button" onclick="toggleSegmentMenu(event)">
+                    <span class="multi-segment-trigger-label" id="seg-trigger-label">Všechny segmenty</span>
+                    <svg class="multi-segment-chevron" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                </button>
+                <div class="multi-segment-menu">
+                    <input type="text" class="multi-segment-search" id="seg-search" placeholder="Hledat segment…" oninput="renderSegmentMenu()" onclick="event.stopPropagation()">
+                    <div class="multi-segment-actions">
+                        <button type="button" onclick="selectAllSegments(event)">Vybrat vše</button>
+                        <button type="button" onclick="clearAllSegments(event)">Zrušit</button>
+                    </div>
+                    <ul class="multi-segment-list" id="seg-list"></ul>
+                </div>
+            </div>
         </div>
 
         <button class="filter-clear" onclick="clearFilters()">Vymazat filtry</button>
@@ -1145,17 +1326,6 @@
                 <div id="check-results" style="margin-top:14px;display:none;"></div>
             </div>
 
-            <div class="settings-panel">
-                <h4>Nebezpečná zóna</h4>
-                <p class="panel-desc">Smazat všechny kontakty v Sheetu. Segmenty a zdroje zůstanou. Operace je nevratná.</p>
-                <div class="settings-row">
-                    <div>
-                        <div class="settings-row-label">Vyprázdnit databázi</div>
-                        <div class="settings-row-meta">Smaže <span id="danger-count">0</span> kontaktů. Audit log zůstane.</div>
-                    </div>
-                    <button class="btn btn-secondary" onclick="wipeContacts()" style="color:var(--danger);border-color:var(--danger);">Vyprázdnit</button>
-                </div>
-            </div>
         </section>
     </main>
 </div>
@@ -1177,7 +1347,6 @@
                     <select class="form-input" id="f-typ" required>
                         <option value="Klient">Klient</option>
                         <option value="Zprostředkovatel" selected>Zprostředkovatel</option>
-                        <option value="Oboje">Oboje</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1534,7 +1703,7 @@ const SEGMENTS_SEED = [
     },
     {
         nazev: 'Family office / wealth managers',
-        typ: 'Oboje',
+        typ: 'Zprostředkovatel',
         priorita: 2,
         useCase: 'HNWI majitelé firem, jejich rodinné kanceláře drží RE portfolio.',
         zdroje: [
@@ -1666,7 +1835,7 @@ const state = {
         typ: 'all',
         prio: 'all',
         stav: 'all',
-        segment: 'all',
+        segments: [],  // multi-select — prázdné = všechny segmenty
         search: ''
     },
     sort: { col: 'updatedAt', dir: 'desc' },
@@ -2343,7 +2512,45 @@ async function aresLookup() {
         const subj = data.data[0];
         if (subj.nazev) document.getElementById('f-firma').value = subj.nazev;
         if (subj.sidlo) document.getElementById('f-sidlo').value = subj.sidlo;
-        toast('success', 'Údaje doplněny z ARES.');
+
+        // Jednatele — pokud aspoň jeden, doplň prvního do kontaktniOsoba + role (pokud prázdné)
+        const jednatele = Array.isArray(subj.jednatele) ? subj.jednatele : [];
+        const filledFields = ['firma', 'sídlo'];
+        if (jednatele.length > 0) {
+            const j0 = jednatele[0];
+            const ko = document.getElementById('f-kontaktniOsoba');
+            const role = document.getElementById('f-role');
+            if (!ko.value.trim() && j0.jmeno) { ko.value = j0.jmeno; filledFields.push('jednatel'); }
+            if (!role.value.trim() && j0.funkce) role.value = j0.funkce;
+        }
+
+        // Strukturovaná poznámka — DIČ, datum vzniku, právní forma, kapitál, předmět činnosti, další jednatelé
+        const noteLines = [];
+        if (subj.dic) noteLines.push('DIČ: ' + subj.dic);
+        if (subj.pravniForma) noteLines.push('Právní forma: ' + subj.pravniForma);
+        if (subj.spisovaZnacka) noteLines.push('Spisová značka: ' + subj.spisovaZnacka);
+        if (subj.datumVzniku) noteLines.push('Vznik: ' + subj.datumVzniku);
+        if (subj.zakladniKapital) noteLines.push('Základní kapitál: ' + subj.zakladniKapital);
+        if (subj.predmetCinnosti) noteLines.push('Předmět činnosti: ' + subj.predmetCinnosti);
+        if (jednatele.length > 1) {
+            const dalsi = jednatele.slice(1).map(j => j.jmeno + (j.funkce ? ' (' + j.funkce + ')' : '')).join(', ');
+            noteLines.push('Další jednatelé: ' + dalsi);
+        }
+        if (noteLines.length > 0) {
+            const noteEl = document.getElementById('f-poznamka');
+            const aresBlock = '— ARES (' + new Date().toLocaleDateString('cs-CZ') + ') —\n' + noteLines.join('\n');
+            // Pokud už existuje ARES blok, nahradit; jinak append
+            const existing = noteEl.value || '';
+            const aresRegex = /— ARES \([^)]+\) —\n[\s\S]*?(?=\n\n|$)/;
+            if (aresRegex.test(existing)) {
+                noteEl.value = existing.replace(aresRegex, aresBlock);
+            } else {
+                noteEl.value = (existing ? existing + '\n\n' : '') + aresBlock;
+            }
+        }
+
+        toast('success', 'Doplněno z ARES: ' + filledFields.join(', ') +
+            (jednatele.length > 1 ? ' (+' + (jednatele.length - 1) + ' dalších jednatelů v poznámce)' : ''));
     } catch (err) {
         console.error('ARES error:', err);
         toast('error', 'ARES selhal: ' + err.message);
@@ -2359,7 +2566,7 @@ function applyFilters() {
         if (f.typ !== 'all' && c.typ !== f.typ) return false;
         if (f.prio !== 'all' && String(c.priorita) !== f.prio) return false;
         if (f.stav !== 'all' && c.stav !== f.stav) return false;
-        if (f.segment !== 'all' && c.segment !== f.segment) return false;
+        if (f.segments.length > 0 && f.segments.indexOf(c.segment) === -1) return false;
         if (f.search) {
             const s = f.search.toLowerCase();
             const hay = [c.firma, c.kontaktniOsoba, c.email, c.ico, c.web, c.role, c.tagy, c.poznamka]
@@ -2383,11 +2590,13 @@ function applyFilters() {
 }
 
 function clearFilters() {
-    state.filters = { typ: 'all', prio: 'all', stav: 'all', segment: 'all', search: '' };
+    state.filters = { typ: 'all', prio: 'all', stav: 'all', segments: [], search: '' };
     document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.filter-pill[data-typ="all"], .filter-pill[data-prio="all"], .filter-pill[data-stav="all"]').forEach(p => p.classList.add('active'));
-    document.getElementById('filter-segment').value = 'all';
     document.getElementById('search-input').value = '';
+    document.getElementById('seg-search').value = '';
+    updateSegmentTriggerLabel();
+    renderSegmentMenu();
     renderAll();
 }
 
@@ -2411,9 +2620,12 @@ function setupFilterPills() {
     bind('prio', 'prio');
     bind('stav', 'stav');
 
-    document.getElementById('filter-segment').addEventListener('change', e => {
-        state.filters.segment = e.target.value;
-        renderContacts();
+    // Multi-segment filter — click-outside closes the menu
+    document.addEventListener('click', (e) => {
+        const ms = document.getElementById('seg-multi');
+        if (ms && ms.classList.contains('open') && !ms.contains(e.target)) {
+            ms.classList.remove('open');
+        }
     });
 
     document.querySelectorAll('.contacts-table thead th[data-sort]').forEach(th => {
@@ -2437,7 +2649,8 @@ function renderAll() {
     renderContacts();
     renderDashboard();
     renderSettings();
-    populateSegmentFilter();
+    renderSegmentMenu();
+    updateSegmentTriggerLabel();
 }
 
 function renderContacts() {
@@ -2486,8 +2699,8 @@ function renderContacts() {
 
 function renderDashboard() {
     const total = state.contacts.length;
-    const klienti = state.contacts.filter(c => c.typ === 'Klient' || c.typ === 'Oboje').length;
-    const zprostredkovatele = state.contacts.filter(c => c.typ === 'Zprostředkovatel' || c.typ === 'Oboje').length;
+    const klienti = state.contacts.filter(c => c.typ === 'Klient').length;
+    const zprostredkovatele = state.contacts.filter(c => c.typ === 'Zprostředkovatel').length;
     const prio1 = state.contacts.filter(c => String(c.priorita) === '1').length;
 
     document.getElementById('dash-total').innerHTML = total === 0 ? '<em>0</em>' : String(total);
@@ -2495,7 +2708,6 @@ function renderDashboard() {
     document.getElementById('dash-klienti').textContent = klienti;
     document.getElementById('dash-zprostredkovatele').textContent = zprostredkovatele;
     document.getElementById('dash-prio1').innerHTML = prio1 === 0 ? '<em>0</em>' : String(prio1);
-    document.getElementById('danger-count').textContent = total;
 
     // Breakdown
     const breakdown = {};
@@ -2529,12 +2741,96 @@ function renderSettings() {
     }
 }
 
-function populateSegmentFilter() {
-    const sel = document.getElementById('filter-segment');
-    const current = sel.value;
-    sel.innerHTML = '<option value="all">Všechny segmenty</option>' +
-        state.segments.map(s => '<option value="' + escapeAttr(s.nazev) + '">' + escapeHtml(s.nazev) + '</option>').join('');
-    if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+// ============================================================
+// MULTI-SEGMENT FILTER
+// ============================================================
+function toggleSegmentMenu(e) {
+    if (e) e.stopPropagation();
+    const ms = document.getElementById('seg-multi');
+    const willOpen = !ms.classList.contains('open');
+    ms.classList.toggle('open', willOpen);
+    if (willOpen) {
+        renderSegmentMenu();
+        setTimeout(() => document.getElementById('seg-search').focus(), 50);
+    }
+}
+
+function renderSegmentMenu() {
+    const list = document.getElementById('seg-list');
+    if (!list) return;
+    const searchEl = document.getElementById('seg-search');
+    const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
+    const selected = state.filters.segments;
+    const filtered = state.segments.filter(s =>
+        !search || s.nazev.toLowerCase().indexOf(search) !== -1
+    );
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="multi-segment-empty">Žádný segment neodpovídá.</div>';
+        return;
+    }
+    list.innerHTML = filtered.map(s => {
+        const isSel = selected.indexOf(s.nazev) !== -1;
+        return '<li class="multi-segment-option' + (isSel ? ' selected' : '') + '" data-segment="' + escapeAttr(s.nazev) + '" onclick="toggleSegmentSelect(event, this)">' +
+            '<span class="multi-segment-checkbox"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+            '<span class="prio-dot prio-' + s.priorita + '"></span>' +
+            '<span class="multi-segment-option-name">' + escapeHtml(s.nazev) + '</span>' +
+            '</li>';
+    }).join('');
+}
+
+function toggleSegmentSelect(e, el) {
+    if (e) e.stopPropagation();
+    const seg = el.getAttribute('data-segment');
+    const idx = state.filters.segments.indexOf(seg);
+    if (idx === -1) {
+        state.filters.segments.push(seg);
+        el.classList.add('selected');
+    } else {
+        state.filters.segments.splice(idx, 1);
+        el.classList.remove('selected');
+    }
+    updateSegmentTriggerLabel();
+    renderContacts();
+}
+
+function selectAllSegments(e) {
+    if (e) e.stopPropagation();
+    const searchEl = document.getElementById('seg-search');
+    const search = (searchEl ? searchEl.value : '').toLowerCase().trim();
+    const filtered = state.segments.filter(s =>
+        !search || s.nazev.toLowerCase().indexOf(search) !== -1
+    );
+    const set = new Set(state.filters.segments);
+    filtered.forEach(s => set.add(s.nazev));
+    state.filters.segments = Array.from(set);
+    renderSegmentMenu();
+    updateSegmentTriggerLabel();
+    renderContacts();
+}
+
+function clearAllSegments(e) {
+    if (e) e.stopPropagation();
+    state.filters.segments = [];
+    renderSegmentMenu();
+    updateSegmentTriggerLabel();
+    renderContacts();
+}
+
+function updateSegmentTriggerLabel() {
+    const label = document.getElementById('seg-trigger-label');
+    if (!label) return;
+    const n = state.filters.segments.length;
+    if (n === 0) {
+        label.textContent = 'Všechny segmenty';
+        label.classList.remove('has-selection');
+    } else if (n === 1) {
+        label.textContent = state.filters.segments[0];
+        label.classList.add('has-selection');
+    } else {
+        const ending = (n >= 2 && n <= 4) ? ' segmenty' : ' segmentů';
+        label.textContent = n + ending + ' vybráno';
+        label.classList.add('has-selection');
+    }
 }
 
 function populateSegmentSelect(id) {
@@ -2803,28 +3099,6 @@ function checkDatabase() {
 }
 
 // ============================================================
-// WIPE
-// ============================================================
-async function wipeContacts() {
-    if (state.contacts.length === 0) {
-        toast('info', 'Databáze je už prázdná.');
-        return;
-    }
-    const c = state.contacts.length;
-    if (!confirm('Smazat všechny ' + c + ' kontaktů? Audit log zůstane. Operace je nevratná.')) return;
-    if (!confirm('Opravdu? Tohle smaže všechno.')) return;
-    try {
-        await sheetsClearAll(SHEET_TABS.contacts);
-        await logActivity('', 'wipe', 'Vyprázdněna databáze (' + c + ' kontaktů)');
-        toast('success', 'Vyprázdněno.');
-        await syncFromSheet();
-    } catch (err) {
-        console.error('Wipe error:', err);
-        toast('error', 'Vyprázdnění selhalo: ' + err.message);
-    }
-}
-
-// ============================================================
 // OPEN SHEET IN DRIVE
 // ============================================================
 function openSheetInDrive() {
@@ -2906,12 +3180,8 @@ function initStaticDropdowns() {
     });
 }
 
-// Override populateSegmentFilter to rebuild custom dropdown after options change
-const _origPopulateSegmentFilter = populateSegmentFilter;
-populateSegmentFilter = function() {
-    _origPopulateSegmentFilter();
-    rebuildDropdown('filter-segment');
-};
+// Multi-segment filter sidebar is rendered directly (not a custom dropdown widget).
+// Only form-segment select uses the custom dropdown auto-converter.
 
 // Override populateSegmentSelect to rebuild custom dropdown after options change
 const _origPopulateSegmentSelect = populateSegmentSelect;

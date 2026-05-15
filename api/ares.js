@@ -39,16 +39,26 @@ module.exports = async function handler(req, res) {
         var results = [];
 
         if (ico) {
-            // Direct lookup by IČO
+            // Direct lookup by IČO — fetch základní subjekt + VR (veřejný rejstřík) paralelně.
+            // VR endpoint vrací statutární orgán, jednatele, základní kapitál.
             var cleanIco = ico.replace(/\s/g, '');
             if (!/^\d{1,8}$/.test(cleanIco)) {
                 return res.status(400).json({ error: 'IČO musí být číslo (max 8 číslic).' });
             }
 
-            var response = await fetch(ARES_BASE + '/ekonomicke-subjekty/' + cleanIco, {
-                headers: { 'Accept': 'application/json' },
-                signal: createTimeout(10000)
-            });
+            var fetches = await Promise.all([
+                fetch(ARES_BASE + '/ekonomicke-subjekty/' + cleanIco, {
+                    headers: { 'Accept': 'application/json' },
+                    signal: createTimeout(10000)
+                }),
+                fetch(ARES_BASE + '/ekonomicke-subjekty-vr/' + cleanIco, {
+                    headers: { 'Accept': 'application/json' },
+                    signal: createTimeout(10000)
+                }).catch(function() { return null; })
+            ]);
+
+            var response = fetches[0];
+            var vrResponse = fetches[1];
 
             if (response.status === 404) {
                 return res.status(200).json({ success: true, data: [], message: 'Subjekt s IČO ' + cleanIco + ' nebyl nalezen.' });
@@ -60,7 +70,19 @@ module.exports = async function handler(req, res) {
 
             var data = await response.json();
             var parsed = parseSubject(data);
-            if (parsed) results.push(parsed);
+            if (parsed) {
+                // Merge in VR data (jednatele, statutární orgán) if available
+                if (vrResponse && vrResponse.ok) {
+                    try {
+                        var vrData = await vrResponse.json();
+                        var vrInfo = parseVR(vrData);
+                        Object.assign(parsed, vrInfo);
+                    } catch (vrErr) {
+                        console.warn('VR parse failed for ' + cleanIco + ':', vrErr.message);
+                    }
+                }
+                results.push(parsed);
+            }
 
         } else if (name) {
             // Search by company name
@@ -159,9 +181,11 @@ function parseSubject(subj) {
     return {
         nazev: nazev,
         ico: ico,
+        dic: subj.dic || null,
         sidlo: sidlo || null,
         spisovaZnacka: spisovaZnacka,
-        pravniForma: typeof pravniForma === 'string' ? pravniForma : null
+        pravniForma: typeof pravniForma === 'string' ? pravniForma : null,
+        datumVzniku: subj.datumVzniku || null
     };
 }
 
@@ -207,6 +231,73 @@ function extractSpisovaZnacka(subj) {
     }
 
     return null;
+}
+
+// Parse VR (veřejný rejstřík) response — extract active jednatele, statutární orgán
+function parseVR(vrData) {
+    var result = {
+        jednatele: [],
+        statutarniOrganNazev: null,
+        datumZapisuVR: null,
+        zakladniKapital: null,
+        predmetCinnosti: null
+    };
+    var zaznam = vrData && vrData.zaznamy && vrData.zaznamy[0];
+    if (!zaznam) return result;
+
+    result.datumZapisuVR = zaznam.datumZapisu || null;
+
+    // Základní kapitál (může být v různé struktuře)
+    if (zaznam.zakladniKapital) {
+        var zk = zaznam.zakladniKapital;
+        if (zk.hodnota) {
+            var castka = zk.hodnota.castka || zk.hodnota;
+            var mena = zk.hodnota.mena || zk.mena || 'CZK';
+            result.zakladniKapital = (typeof castka === 'number' ? castka.toLocaleString('cs-CZ') : castka) + ' ' + mena;
+        } else if (typeof zk === 'string') {
+            result.zakladniKapital = zk;
+        }
+    }
+
+    // Předmět činnosti (první 3 položky)
+    if (zaznam.cinnosti && Array.isArray(zaznam.cinnosti)) {
+        var cinnosti = zaznam.cinnosti
+            .map(function(c) { return c.nazev || c.predmet || c; })
+            .filter(function(c) { return typeof c === 'string'; })
+            .slice(0, 3);
+        if (cinnosti.length > 0) result.predmetCinnosti = cinnosti.join('; ');
+    }
+
+    // Statutární orgán + jednatele (jen aktivní — datumVymazu == null)
+    var statutarniOrgan = zaznam.statutarniOrgany && zaznam.statutarniOrgany[0];
+    if (statutarniOrgan) {
+        result.statutarniOrganNazev = statutarniOrgan.nazevOrganu || null;
+        var members = (statutarniOrgan.clenoveOrganu || [])
+            .filter(function(c) {
+                // Aktivní = bez data výmazu a (pokud má clenstvi) bez data zániku
+                if (c.datumVymazu) return false;
+                if (c.clenstvi && c.clenstvi.clenstvi && c.clenstvi.clenstvi.zanikClenstvi) return false;
+                return true;
+            });
+        result.jednatele = members.map(function(c) {
+            var fo = c.fyzickaOsoba || {};
+            var po = c.pravnickaOsoba || {};
+            var funkce = (c.clenstvi && c.clenstvi.funkce && c.clenstvi.funkce.nazev) || c.nazevAngazma || null;
+            var jmeno = null;
+            if (fo.jmeno || fo.prijmeni) {
+                jmeno = ((fo.jmeno || '') + ' ' + (fo.prijmeni || '')).trim();
+            } else if (po.obchodniJmeno) {
+                jmeno = po.obchodniJmeno;
+            }
+            return {
+                jmeno: jmeno,
+                funkce: funkce,
+                adresa: (fo.adresa && fo.adresa.textovaAdresa) || null
+            };
+        }).filter(function(j) { return j.jmeno; });
+    }
+
+    return result;
 }
 
 function formatSpisovaZnacka(sz) {
