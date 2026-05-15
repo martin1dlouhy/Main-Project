@@ -783,7 +783,58 @@
             font-size: 12px;
         }
 
-        /* ===== AI Vyhledávač (F2) ===== */
+        /* ===== AI Vyhledávač (F2.1-3) ===== */
+        .vyhl-modes {
+            display: flex;
+            gap: 4px;
+            margin: 18px 0 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            padding: 4px;
+            width: fit-content;
+            flex-wrap: wrap;
+        }
+        .vyhl-mode-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-mute);
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all var(--dur) var(--ease);
+        }
+        .vyhl-mode-btn:hover { color: var(--text-soft); }
+        .vyhl-mode-btn.active {
+            background: var(--bg-elevated);
+            color: var(--amber-warm);
+        }
+        .vyhl-mode-desc {
+            font-size: 12.5px;
+            color: var(--text-mute);
+            margin-bottom: 14px;
+            line-height: 1.5;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border-radius: var(--r-sm);
+            border-left: 2px solid var(--line-amber);
+        }
+        .vyhl-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            align-items: end;
+        }
+        .vyhl-form .form-group { margin-bottom: 0; }
+        .vyhl-actions {
+            margin-top: 16px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
         .vyhl-controls {
             display: grid;
             grid-template-columns: 1fr 200px 130px auto;
@@ -797,6 +848,49 @@
             }
             .vyhl-controls > .btn { grid-column: 1 / -1; }
         }
+        .vyhl-deep-finding {
+            padding: 12px 14px;
+            background: var(--bg-raised);
+            border: 1px solid var(--line-faint);
+            border-radius: var(--r-md);
+            margin-bottom: 8px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 12px;
+            align-items: start;
+        }
+        .vyhl-deep-cat {
+            font-size: 10.5px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 3px 8px;
+            border-radius: 99px;
+            white-space: nowrap;
+        }
+        .vyhl-deep-cat.cat-news { color: var(--info); background: var(--info-tint); }
+        .vyhl-deep-cat.cat-role { color: var(--amber-warm); background: var(--amber-tint); }
+        .vyhl-deep-cat.cat-board { color: var(--amber); background: var(--amber-tint); }
+        .vyhl-deep-cat.cat-kontakt { color: var(--success); background: var(--success-tint); }
+        .vyhl-deep-cat.cat-warning { color: var(--danger); background: var(--danger-tint); }
+        .vyhl-deep-content { min-width: 0; }
+        .vyhl-deep-klic {
+            font-size: 13px;
+            color: var(--text);
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        .vyhl-deep-hodnota {
+            font-size: 12.5px;
+            color: var(--text-soft);
+            word-wrap: break-word;
+        }
+        .vyhl-deep-meta {
+            font-size: 11px;
+            color: var(--text-mute);
+            margin-top: 4px;
+        }
+        .vyhl-deep-meta a { color: var(--amber-warm); }
         .vyhl-status {
             margin-top: 18px;
             padding: 14px 18px;
@@ -1420,26 +1514,70 @@
             </div>
         </section>
 
-        <!-- ===== SECTION: Vyhledávač (F2.1) ===== -->
+        <!-- ===== SECTION: Vyhledávač (F2.1-3) ===== -->
         <section class="db-section" data-section="vyhledavac">
             <div class="settings-panel">
-                <h4>AI Vyhledávač kontaktů</h4>
-                <p class="panel-desc">Vyber segment, klikni Hledat. Aplikace paralelně zavolá Claude i ChatGPT, deduplikuje výsledky napříč modely + proti tvé DB, a ukáže návrhy s badge spolehlivosti. Co odškrtneš, zapíše se do Sheetu.</p>
+                <h4>AI Vyhledávač</h4>
+                <p class="panel-desc">Tři módy: hledat kontakty, objevovat nové zdroje, prohloubit info o existujícím kontaktu. Aplikace paralelně zavolá Claude i ChatGPT s web search, deduplikuje napříč modely + proti tvé DB, ukáže návrhy s badge spolehlivosti.</p>
 
-                <div class="vyhl-controls">
-                    <div class="form-group" style="margin-bottom:0;">
+                <div class="vyhl-modes">
+                    <button class="vyhl-mode-btn active" data-mode="contacts" onclick="setVyhlMode('contacts')">Najít kontakty</button>
+                    <button class="vyhl-mode-btn" data-mode="sources" onclick="setVyhlMode('sources')">Objevit zdroje</button>
+                    <button class="vyhl-mode-btn" data-mode="deep" onclick="setVyhlMode('deep')">Hloubkový průzkum</button>
+                </div>
+
+                <div class="vyhl-mode-desc" id="vyhl-mode-desc">
+                    Najde reálné kontakty pro vybraný segment přes web search a Tvé zdroje. Cílí na decision-makery: Partner, Director, CEO.
+                </div>
+
+                <!-- Form: contacts -->
+                <div class="vyhl-form" id="vyhl-form-contacts">
+                    <div class="form-group">
                         <label class="form-label">Segment</label>
                         <select id="vyhl-segment" class="form-input"></select>
                     </div>
-                    <div class="form-group" style="margin-bottom:0;">
+                    <div class="form-group">
                         <label class="form-label">Region (volitelné)</label>
                         <input type="text" class="form-input" id="vyhl-region" placeholder="celá ČR / Praha / Brno…">
                     </div>
-                    <div class="form-group" style="margin-bottom:0;">
+                    <div class="form-group">
                         <label class="form-label">Max návrhů</label>
                         <input type="number" class="form-input" id="vyhl-max" value="20" min="5" max="50">
                     </div>
-                    <button class="btn btn-primary btn-lg" onclick="findContacts()" id="vyhl-btn">
+                </div>
+
+                <!-- Form: sources -->
+                <div class="vyhl-form" id="vyhl-form-sources" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label">Segment</label>
+                        <select id="vyhl-segment-sources" class="form-input"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Max nových zdrojů</label>
+                        <input type="number" class="form-input" id="vyhl-max-sources" value="10" min="3" max="30">
+                    </div>
+                </div>
+
+                <!-- Form: deep -->
+                <div class="vyhl-form" id="vyhl-form-deep" style="display:none;">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Kontakt z DB (vyber existující)</label>
+                        <select id="vyhl-target-contact" class="form-input">
+                            <option value="">— vyber kontakt —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nebo zadej firmu manuálně</label>
+                        <input type="text" class="form-input" id="vyhl-manual-firma" placeholder="Název firmy">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Volitelně jméno osoby</label>
+                        <input type="text" class="form-input" id="vyhl-manual-osoba" placeholder="Jméno Příjmení">
+                    </div>
+                </div>
+
+                <div class="vyhl-actions">
+                    <button class="btn btn-primary btn-lg" onclick="runAIDiscovery()" id="vyhl-btn">
                         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                         Hledat
                     </button>
@@ -1450,12 +1588,12 @@
 
             <div id="vyhl-results-wrap" style="display:none;">
                 <div class="settings-panel">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
                         <h4 id="vyhl-results-title">Návrhy</h4>
-                        <div style="display:flex;gap:10px;align-items:center;">
+                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                             <span id="vyhl-selected-count" style="font-size:12px;color:var(--text-mute);">0 vybráno</span>
                             <button class="btn btn-secondary" onclick="toggleVyhlSelectAll()" id="vyhl-toggle-all">Vybrat vše</button>
-                            <button class="btn btn-primary" onclick="addSelectedToDB()" id="vyhl-add">Přidat do DB</button>
+                            <button class="btn btn-primary" onclick="applySelected()" id="vyhl-add">Přidat do DB</button>
                         </div>
                     </div>
                     <div id="vyhl-results"></div>
@@ -3283,62 +3421,147 @@ function checkDatabase() {
 }
 
 // ============================================================
-// AI VYHLEDÁVAČ (F2.1)
-// Volá Railway /api/database/find-contacts (paralelně Claude + GPT-4o),
-// zobrazí návrhy s badge spolehlivosti, schválené zapíše do Sheetu.
+// AI VYHLEDÁVAČ (F2.1-3)
+// Tři módy: contacts (kontakty), sources (zdroje), deep (hloubkový průzkum).
+// Volá Railway /api/database/find-contacts paralelně Claude+GPT-4o s web search,
+// deduplikuje napříč modely + proti existující DB, ukáže návrhy s badge.
 // ============================================================
 state.lastVyhlSuggestions = [];
 state.vyhlSelected = new Set();
+state.vyhlMode = 'contacts';
+state.vyhlLastMode = 'contacts';
+state.vyhlLastContext = {};
 
+// ----- Mode tabs -----
+function setVyhlMode(mode) {
+    state.vyhlMode = mode;
+    document.querySelectorAll('.vyhl-mode-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.mode === mode));
+    document.querySelectorAll('.vyhl-form').forEach(f => f.style.display = 'none');
+    const formEl = document.getElementById('vyhl-form-' + mode);
+    if (formEl) formEl.style.display = 'grid';
+
+    const descMap = {
+        'contacts': 'Najde reálné kontakty pro vybraný segment přes web search a Tvé zdroje. Cílí na decision-makery: Partner, Director, CEO.',
+        'sources': 'Najde DALŠÍ zdroje (weby, registry, asociace, žebříčky) pro vybraný segment mimo Tvůj plán rozvoje sítě. Zapíše do listu Sources.',
+        'deep': 'Z jednoho existujícího kontaktu vytáhne víc info: LinkedIn URL, email, board memberships, recent news, kontroverze.'
+    };
+    document.getElementById('vyhl-mode-desc').textContent = descMap[mode] || '';
+
+    // Skryj předchozí výsledky a status (jiný mode = jiná data)
+    document.getElementById('vyhl-results-wrap').style.display = 'none';
+    document.getElementById('vyhl-status').style.display = 'none';
+}
+
+// ----- Populate dropdowny -----
 function populateVyhlSegmentSelect() {
-    const sel = document.getElementById('vyhl-segment');
-    if (!sel) return;
-    const current = sel.value;
-    sel.innerHTML = '<option value="">— vyber segment —</option>' +
+    const opts = '<option value="">— vyber segment —</option>' +
         state.segments.map(s =>
             '<option value="' + escapeAttr(s.nazev) + '">' + escapeHtml(s.nazev) + ' (P' + s.priorita + ')</option>'
         ).join('');
-    if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
-    rebuildDropdown('vyhl-segment');
+    ['vyhl-segment', 'vyhl-segment-sources'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = opts;
+        if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+        rebuildDropdown(id);
+    });
+
+    // Target contact dropdown for deep mode
+    const target = document.getElementById('vyhl-target-contact');
+    if (target) {
+        const current = target.value;
+        target.innerHTML = '<option value="">— vyber kontakt z DB —</option>' +
+            state.contacts.map(c => {
+                const label = (c.kontaktniOsoba || c.firma || '?') +
+                    (c.firma && c.kontaktniOsoba ? ' — ' + c.firma : '') +
+                    (c.role ? ' (' + c.role + ')' : '');
+                return '<option value="' + escapeAttr(c.id) + '">' + escapeHtml(label) + '</option>';
+            }).join('');
+        if (current && [...target.options].some(o => o.value === current)) target.value = current;
+        rebuildDropdown('vyhl-target-contact');
+    }
 }
 
-async function findContacts() {
-    const segmentNazev = document.getElementById('vyhl-segment').value;
-    const region = document.getElementById('vyhl-region').value.trim() || 'celá ČR';
-    const maxResults = parseInt(document.getElementById('vyhl-max').value) || 20;
-    const btn = document.getElementById('vyhl-btn');
-
-    if (!segmentNazev) {
-        toast('warning', 'Vyber segment.');
-        return;
-    }
-
-    const segment = state.segments.find(s => s.nazev === segmentNazev);
-    if (!segment) {
-        toast('error', 'Segment nenalezen v DB.');
-        return;
-    }
-
-    const sources = state.sources.filter(s => s.segment === segmentNazev);
-    if (sources.length === 0) {
-        toast('warning', 'Tento segment nemá zdroje. Doplň je v Google Sheets v listu Sources.');
-        return;
-    }
-
-    const token = sessionStorage.getItem(DB_TOKEN_KEY);
-    if (!token) {
-        toast('error', 'Chybí session token. Přihlas se znovu PIN-em.');
-        return;
-    }
-
-    const existingKeys = {
+// ----- Helper: existing keys for dedupe -----
+function getExistingContactKeys() {
+    return {
         icos: state.contacts.map(c => c.ico).filter(Boolean),
         emails: state.contacts.map(c => c.email).filter(Boolean),
         linkedins: state.contacts.map(c => c.linkedinUrl).filter(Boolean),
         namesFirmas: state.contacts.filter(c => c.kontaktniOsoba && c.firma).map(c => c.kontaktniOsoba + '|' + c.firma)
     };
+}
 
-    showVyhlStatus('loading', 'Hledám paralelně u Claude a ChatGPT z ' + sources.length + ' zdrojů… (může trvat 30–60 s)');
+// ----- Main: spustit AI discovery -----
+async function runAIDiscovery() {
+    const mode = state.vyhlMode;
+    const btn = document.getElementById('vyhl-btn');
+
+    let payload;
+    let waitingFor;
+
+    if (mode === 'contacts') {
+        const segmentNazev = document.getElementById('vyhl-segment').value;
+        if (!segmentNazev) { toast('warning', 'Vyber segment.'); return; }
+        const segment = state.segments.find(s => s.nazev === segmentNazev);
+        if (!segment) { toast('error', 'Segment nenalezen.'); return; }
+        const sources = state.sources.filter(s => s.segment === segmentNazev);
+        if (sources.length === 0) {
+            toast('warning', 'Segment nemá zdroje. Nejdřív spusť „Objevit zdroje" nebo doplň ručně v Sheetu.');
+            return;
+        }
+        payload = {
+            mode: 'contacts',
+            segmentNazev: segmentNazev,
+            segmentUseCase: segment.useCase || '',
+            sources: sources.map(s => ({ nazev: s.nazev, url: s.url, poznamka: s.poznamka })),
+            existingContactsKeys: getExistingContactKeys(),
+            region: document.getElementById('vyhl-region').value.trim() || 'celá ČR',
+            maxResults: parseInt(document.getElementById('vyhl-max').value) || 20
+        };
+        waitingFor = 'kontakty pro „' + segmentNazev + '"';
+    } else if (mode === 'sources') {
+        const segmentNazev = document.getElementById('vyhl-segment-sources').value;
+        if (!segmentNazev) { toast('warning', 'Vyber segment.'); return; }
+        const segment = state.segments.find(s => s.nazev === segmentNazev);
+        if (!segment) { toast('error', 'Segment nenalezen.'); return; }
+        payload = {
+            mode: 'sources',
+            segmentNazev: segmentNazev,
+            segmentUseCase: segment.useCase || '',
+            existingSourceUrls: state.sources.filter(s => s.segment === segmentNazev).map(s => s.url).filter(Boolean),
+            maxResults: parseInt(document.getElementById('vyhl-max-sources').value) || 10
+        };
+        waitingFor = 'nové zdroje pro „' + segmentNazev + '"';
+    } else if (mode === 'deep') {
+        const targetId = document.getElementById('vyhl-target-contact').value;
+        let target;
+        if (targetId) {
+            const c = state.contacts.find(c => c.id === targetId);
+            if (!c) { toast('error', 'Kontakt nenalezen.'); return; }
+            target = {
+                firma: c.firma, ico: c.ico, kontaktniOsoba: c.kontaktniOsoba,
+                role: c.role, web: c.web, linkedinUrl: c.linkedinUrl
+            };
+        } else {
+            const firma = document.getElementById('vyhl-manual-firma').value.trim();
+            const osoba = document.getElementById('vyhl-manual-osoba').value.trim();
+            if (!firma) { toast('warning', 'Vyber kontakt z DB nebo zadej firmu.'); return; }
+            target = { firma: firma, kontaktniOsoba: osoba || null };
+        }
+        payload = { mode: 'deep', targetContact: target };
+        waitingFor = 'info o „' + (target.kontaktniOsoba || target.firma) + '"';
+    }
+
+    const token = sessionStorage.getItem(DB_TOKEN_KEY);
+    if (!token) {
+        toast('error', 'Chybí session token. Obnov stránku a zadej PIN.');
+        return;
+    }
+
+    showVyhlStatus('loading', 'Hledám paralelně u Claude a ChatGPT (web search aktivní) — ' + waitingFor + '… (30–90 s)');
     document.getElementById('vyhl-results-wrap').style.display = 'none';
     btn.disabled = true;
     btn.style.opacity = '0.6';
@@ -3346,18 +3569,8 @@ async function findContacts() {
     try {
         const resp = await fetch(RAILWAY_API + '/api/database/find-contacts', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Database-Token': token
-            },
-            body: JSON.stringify({
-                segmentNazev: segmentNazev,
-                segmentUseCase: segment.useCase || '',
-                sources: sources.map(s => ({ nazev: s.nazev, url: s.url, poznamka: s.poznamka })),
-                existingContactsKeys: existingKeys,
-                region: region,
-                maxResults: maxResults
-            })
+            headers: { 'Content-Type': 'application/json', 'X-Database-Token': token },
+            body: JSON.stringify(payload)
         });
 
         if (resp.status === 401) {
@@ -3375,18 +3588,20 @@ async function findContacts() {
 
         state.lastVyhlSuggestions = data.suggestions || [];
         state.vyhlSelected = new Set();
-        renderVyhlResults(segmentNazev);
+        state.vyhlLastMode = mode;
+        state.vyhlLastContext = payload;
+        renderVyhlResults();
 
         const stats = data.stats || {};
         let msg = 'Hotovo. Claude: ' + (stats.claudeCount || 0) +
                   ' · ChatGPT: ' + (stats.openaiCount || 0) +
-                  ' · po deduplikaci: ' + (stats.mergedCount || 0) +
-                  ' (' + (stats.duplicates || 0) + ' duplicit odstraněno)';
-        if (stats.claudeError) msg += ' · Claude: ' + stats.claudeError;
-        if (stats.openaiError) msg += ' · ChatGPT: ' + stats.openaiError;
+                  ' · po dedupe: ' + (stats.mergedCount || 0) +
+                  ' (' + (stats.duplicates || 0) + ' duplicit/shody odstraněno)';
+        if (stats.claudeError) msg += ' · Claude err: ' + stats.claudeError;
+        if (stats.openaiError) msg += ' · ChatGPT err: ' + stats.openaiError;
         showVyhlStatus('success', msg);
     } catch (err) {
-        console.error('Find contacts error:', err);
+        console.error('AI discovery error:', err);
         showVyhlStatus('error', 'Vyhledávání selhalo: ' + err.message);
     } finally {
         btn.disabled = false;
@@ -3401,33 +3616,38 @@ function showVyhlStatus(type, msg) {
     el.textContent = msg;
 }
 
-function renderVyhlResults(segmentNazev) {
+// ----- Render: switch dle mode -----
+function renderVyhlResults() {
+    const mode = state.vyhlLastMode;
+    if (mode === 'contacts') renderContactSuggestions();
+    else if (mode === 'sources') renderSourceSuggestions();
+    else if (mode === 'deep') renderDeepFindings();
+}
+
+function makeBadge(sources) {
+    if (sources.length === 2) return '<span class="vyhl-badge vyhl-badge-both">Claude + ChatGPT</span>';
+    if (sources[0] === 'claude') return '<span class="vyhl-badge vyhl-badge-claude">jen Claude</span>';
+    return '<span class="vyhl-badge vyhl-badge-openai">jen ChatGPT</span>';
+}
+
+function renderContactSuggestions() {
     const wrap = document.getElementById('vyhl-results-wrap');
     const div = document.getElementById('vyhl-results');
     const title = document.getElementById('vyhl-results-title');
+    const addBtn = document.getElementById('vyhl-add');
+    addBtn.textContent = 'Přidat do DB';
     const sugs = state.lastVyhlSuggestions;
+    wrap.style.display = 'block';
 
     if (sugs.length === 0) {
-        wrap.style.display = 'block';
         title.textContent = 'Žádné nové návrhy';
         div.innerHTML = '<div class="info-note">Buď AI nenašlo nic relevantního, nebo vše už máš v DB.</div>';
         return;
     }
 
-    wrap.style.display = 'block';
-    title.textContent = 'Návrhy pro „' + segmentNazev + '" (' + sugs.length + ')';
-
+    title.textContent = 'Návrhy kontaktů (' + sugs.length + ')';
     div.innerHTML = sugs.map((c, i) => {
-        const sources = c._sources || [];
-        let badge;
-        if (sources.length === 2) {
-            badge = '<span class="vyhl-badge vyhl-badge-both">Claude + ChatGPT</span>';
-        } else if (sources[0] === 'claude') {
-            badge = '<span class="vyhl-badge vyhl-badge-claude">jen Claude</span>';
-        } else {
-            badge = '<span class="vyhl-badge vyhl-badge-openai">jen ChatGPT</span>';
-        }
-
+        const badge = makeBadge(c._sources || []);
         const meta = [];
         if (c.email) meta.push('<span class="vyhl-meta-item">✉ ' + escapeHtml(c.email) + '</span>');
         if (c.telefon) meta.push('<span class="vyhl-meta-item">☎ ' + escapeHtml(c.telefon) + '</span>');
@@ -3435,7 +3655,6 @@ function renderVyhlResults(segmentNazev) {
         if (c.web) meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(c.web) + '" target="_blank" rel="noopener">Web ↗</a></span>');
         if (c.sidlo) meta.push('<span class="vyhl-meta-item">📍 ' + escapeHtml(c.sidlo) + '</span>');
         if (c.ico) meta.push('<span class="vyhl-meta-item">IČO: ' + escapeHtml(c.ico) + '</span>');
-
         const isSelected = state.vyhlSelected.has(i);
         return '<div class="vyhl-card' + (isSelected ? ' selected' : '') + '" data-idx="' + i + '" onclick="toggleVyhlCard(' + i + ')">' +
             '<div class="vyhl-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>' +
@@ -3447,7 +3666,86 @@ function renderVyhlResults(segmentNazev) {
             '<div class="vyhl-badges">' + badge + '</div>' +
         '</div>';
     }).join('');
+    updateVyhlSelectedCount();
+}
 
+function renderSourceSuggestions() {
+    const wrap = document.getElementById('vyhl-results-wrap');
+    const div = document.getElementById('vyhl-results');
+    const title = document.getElementById('vyhl-results-title');
+    const addBtn = document.getElementById('vyhl-add');
+    addBtn.textContent = 'Přidat zdroje';
+    const sugs = state.lastVyhlSuggestions;
+    wrap.style.display = 'block';
+
+    if (sugs.length === 0) {
+        title.textContent = 'Žádné nové zdroje';
+        div.innerHTML = '<div class="info-note">AI nenašlo žádné nové zdroje, nebo všechny už máš v listu Sources.</div>';
+        return;
+    }
+
+    title.textContent = 'Návrhy zdrojů (' + sugs.length + ')';
+    div.innerHTML = sugs.map((s, i) => {
+        const badge = makeBadge(s._sources || []);
+        const qualMap = { 'high': '★★★ vysoká', 'mid': '★★ střední', 'low': '★ nízká' };
+        const qualLabel = s.kvalita ? (qualMap[String(s.kvalita).toLowerCase()] || s.kvalita) : '';
+        const qualBadge = qualLabel ? '<span style="font-size:11px;color:var(--amber-warm);">' + escapeHtml(qualLabel) + '</span>' : '';
+        const typBadge = s.typZdroje ? '<span style="font-size:11px;color:var(--text-mute);text-transform:capitalize;">' + escapeHtml(s.typZdroje) + '</span>' : '';
+        const isSelected = state.vyhlSelected.has(i);
+        return '<div class="vyhl-card' + (isSelected ? ' selected' : '') + '" data-idx="' + i + '" onclick="toggleVyhlCard(' + i + ')">' +
+            '<div class="vyhl-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+            '<div class="vyhl-body">' +
+                '<div class="vyhl-firma">' + escapeHtml(s.nazev || '—') + '</div>' +
+                '<div class="vyhl-osoba"><a href="' + escapeAttr(s.url) + '" target="_blank" rel="noopener" style="color:var(--amber-warm);" onclick="event.stopPropagation()">' + escapeHtml(s.url) + ' ↗</a></div>' +
+                (s.poznamka ? '<div class="vyhl-meta" style="margin-top:6px;font-size:12.5px;color:var(--text-soft);">' + escapeHtml(s.poznamka) + '</div>' : '') +
+                (qualBadge || typBadge ? '<div class="vyhl-meta" style="margin-top:4px;display:flex;gap:10px;">' + qualBadge + (qualBadge && typBadge ? ' · ' : '') + typBadge + '</div>' : '') +
+            '</div>' +
+            '<div class="vyhl-badges">' + badge + '</div>' +
+        '</div>';
+    }).join('');
+    updateVyhlSelectedCount();
+}
+
+function renderDeepFindings() {
+    const wrap = document.getElementById('vyhl-results-wrap');
+    const div = document.getElementById('vyhl-results');
+    const title = document.getElementById('vyhl-results-title');
+    const addBtn = document.getElementById('vyhl-add');
+    addBtn.textContent = 'Uložit do poznámky kontaktu';
+    const sugs = state.lastVyhlSuggestions;
+    wrap.style.display = 'block';
+
+    const target = state.vyhlLastContext.targetContact || {};
+    const targetLabel = target.kontaktniOsoba || target.firma || 'kontakt';
+
+    if (sugs.length === 0) {
+        title.textContent = 'Žádné nálezy pro „' + targetLabel + '"';
+        div.innerHTML = '<div class="info-note">AI nenašlo žádné dodatečné info. Zkus jinou kombinaci jméno+firma.</div>';
+        return;
+    }
+
+    title.textContent = 'Nálezy pro „' + targetLabel + '" (' + sugs.length + ')';
+    div.innerHTML = sugs.map((f, i) => {
+        const badge = makeBadge(f._sources || []);
+        const kat = (f.kategorie || 'kontakt').toLowerCase();
+        const isSelected = state.vyhlSelected.has(i);
+        const hodnotaIsUrl = /^https?:\/\//i.test(f.hodnota || '');
+        return '<div class="vyhl-card' + (isSelected ? ' selected' : '') + '" data-idx="' + i + '" onclick="toggleVyhlCard(' + i + ')">' +
+            '<div class="vyhl-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+            '<div class="vyhl-body">' +
+                '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;">' +
+                    '<span class="vyhl-deep-cat cat-' + escapeAttr(kat) + '">' + escapeHtml(f.kategorie || 'kontakt') + '</span>' +
+                    (f.datum ? '<span style="font-size:11px;color:var(--text-mute);">' + escapeHtml(f.datum) + '</span>' : '') +
+                '</div>' +
+                '<div class="vyhl-deep-klic">' + escapeHtml(f.klic || '') + '</div>' +
+                '<div class="vyhl-deep-hodnota">' +
+                    (hodnotaIsUrl ? '<a href="' + escapeAttr(f.hodnota) + '" target="_blank" rel="noopener" style="color:var(--amber-warm);" onclick="event.stopPropagation()">' + escapeHtml(f.hodnota) + ' ↗</a>' : escapeHtml(f.hodnota || '')) +
+                '</div>' +
+                (f.zdrojUrl ? '<div class="vyhl-deep-meta">Zdroj: <a href="' + escapeAttr(f.zdrojUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + escapeHtml(f.zdrojUrl) + ' ↗</a></div>' : '') +
+            '</div>' +
+            '<div class="vyhl-badges">' + badge + '</div>' +
+        '</div>';
+    }).join('');
     updateVyhlSelectedCount();
 }
 
@@ -3462,11 +3760,8 @@ function toggleVyhlCard(idx) {
 function toggleVyhlSelectAll() {
     const all = state.lastVyhlSuggestions.length;
     const allSelected = state.vyhlSelected.size === all && all > 0;
-    if (allSelected) {
-        state.vyhlSelected.clear();
-    } else {
-        state.lastVyhlSuggestions.forEach((_, i) => state.vyhlSelected.add(i));
-    }
+    if (allSelected) state.vyhlSelected.clear();
+    else state.lastVyhlSuggestions.forEach((_, i) => state.vyhlSelected.add(i));
     document.querySelectorAll('.vyhl-card').forEach(c => {
         const idx = parseInt(c.getAttribute('data-idx'));
         c.classList.toggle('selected', state.vyhlSelected.has(idx));
@@ -3482,41 +3777,37 @@ function updateVyhlSelectedCount() {
     document.getElementById('vyhl-add').style.opacity = n === 0 ? '0.5' : '';
 }
 
-async function addSelectedToDB() {
-    const segmentNazev = document.getElementById('vyhl-segment').value;
-    if (state.vyhlSelected.size === 0) {
-        toast('warning', 'Nic neoznačeno.');
-        return;
-    }
-    const toAdd = Array.from(state.vyhlSelected).map(i => state.lastVyhlSuggestions[i]);
+// ----- Apply: dispatch dle mode -----
+async function applySelected() {
+    if (state.vyhlSelected.size === 0) { toast('warning', 'Nic neoznačeno.'); return; }
+    const mode = state.vyhlLastMode;
+    if (mode === 'contacts') await applyContacts();
+    else if (mode === 'sources') await applySources();
+    else if (mode === 'deep') await applyDeepFindings();
+}
+
+async function applyContacts() {
+    const ctx = state.vyhlLastContext;
+    const segmentNazev = ctx.segmentNazev;
     const segment = state.segments.find(s => s.nazev === segmentNazev);
     const segmentTyp = segment ? segment.typ : 'Zprostředkovatel';
     const segmentPrio = segment ? String(segment.priorita) : '2';
 
+    const toAdd = Array.from(state.vyhlSelected).map(i => state.lastVyhlSuggestions[i]);
     const now = new Date().toISOString();
     const newContacts = toAdd.map(s => ({
         id: generateId(),
-        createdAt: now,
-        updatedAt: now,
-        typ: segmentTyp,
-        segment: segmentNazev,
-        priorita: segmentPrio,
-        stav: 'Nový',
-        firma: s.firma || '',
-        ico: s.ico || '',
-        sidlo: s.sidlo || '',
-        web: s.web || '',
-        email: s.email || '',
-        telefon: s.telefon || '',
-        kontaktniOsoba: s.kontaktniOsoba || '',
-        role: s.role || '',
-        linkedinUrl: s.linkedinUrl || '',
-        facebookUrl: '',
+        createdAt: now, updatedAt: now,
+        typ: segmentTyp, segment: segmentNazev,
+        priorita: segmentPrio, stav: 'Nový',
+        firma: s.firma || '', ico: s.ico || '', sidlo: s.sidlo || '',
+        web: s.web || '', email: s.email || '', telefon: s.telefon || '',
+        kontaktniOsoba: s.kontaktniOsoba || '', role: s.role || '',
+        linkedinUrl: s.linkedinUrl || '', facebookUrl: '',
         zdrojUrl: s.zdrojUrl || '',
         tagy: 'AI-' + (s._sources || []).join('+'),
         poznamka: 'AI návrh z ' + new Date().toLocaleDateString('cs-CZ') + ' (' + (s._sources || []).join(' + ') + ')',
-        osloven_kdy: '',
-        osloven_kanal: '',
+        osloven_kdy: '', osloven_kanal: '',
         spolehlivost: (s._sources || []).join('+')
     }));
 
@@ -3525,15 +3816,127 @@ async function addSelectedToDB() {
         await sheetsAppend(SHEET_TABS.contacts, newContacts.map(contactToRow));
         await logActivity('', 'ai-import', 'AI vyhledávač přidal ' + newContacts.length + ' kontaktů (' + segmentNazev + ')');
         toast('success', 'Přidáno ' + newContacts.length + ' kontaktů.');
-        state.vyhlSelected.clear();
-        state.lastVyhlSuggestions = [];
-        document.getElementById('vyhl-results-wrap').style.display = 'none';
-        document.getElementById('vyhl-status').style.display = 'none';
+        resetVyhlResults();
         await syncFromSheet();
     } catch (err) {
-        console.error('AI add error:', err);
+        console.error('Apply contacts error:', err);
         toast('error', 'Přidání selhalo: ' + err.message);
     }
+}
+
+async function applySources() {
+    const ctx = state.vyhlLastContext;
+    const segmentNazev = ctx.segmentNazev;
+    const toAdd = Array.from(state.vyhlSelected).map(i => state.lastVyhlSuggestions[i]);
+
+    // Najít max idx pro tento segment (Sources má sloupec idx)
+    const existingForSeg = state.sources.filter(s => s.segment === segmentNazev);
+    let nextIdx = existingForSeg.reduce((max, s) => {
+        const n = parseInt(s.idx) || 0;
+        return n > max ? n : max;
+    }, 0);
+
+    const newRows = toAdd.map(s => {
+        nextIdx++;
+        const poznamka = (s.poznamka || '') +
+            (s.typZdroje ? ' [typ: ' + s.typZdroje + ']' : '') +
+            (s.kvalita ? ' [kvalita: ' + s.kvalita + ']' : '') +
+            ' [AI ' + (s._sources || []).join('+') + ']';
+        return [segmentNazev, nextIdx, s.nazev || '', s.url || '', poznamka.trim()];
+    });
+
+    try {
+        toast('info', 'Přidávám ' + newRows.length + ' zdrojů…');
+        await sheetsAppend(SHEET_TABS.sources, newRows);
+        await logActivity('', 'ai-sources', 'AI přidal ' + newRows.length + ' zdrojů (' + segmentNazev + ')');
+        toast('success', 'Přidáno ' + newRows.length + ' zdrojů do listu Sources.');
+        resetVyhlResults();
+        await syncFromSheet();
+    } catch (err) {
+        console.error('Apply sources error:', err);
+        toast('error', 'Přidání zdrojů selhalo: ' + err.message);
+    }
+}
+
+async function applyDeepFindings() {
+    const ctx = state.vyhlLastContext;
+    const target = ctx.targetContact || {};
+    const toApply = Array.from(state.vyhlSelected).map(i => state.lastVyhlSuggestions[i]);
+
+    // Najít existující kontakt v DB (pokud byl vybrán)
+    const targetId = document.getElementById('vyhl-target-contact').value;
+    if (!targetId) {
+        // Manuální target — nelze update, jen zobraz
+        const lines = toApply.map(f => '[' + (f.kategorie || '?') + '] ' + (f.klic || '') + ': ' + (f.hodnota || '') + (f.zdrojUrl ? ' (' + f.zdrojUrl + ')' : ''));
+        const allText = '— Hloubkový průzkum z ' + new Date().toLocaleDateString('cs-CZ') + ' —\n' + lines.join('\n');
+        navigator.clipboard.writeText(allText).then(() => {
+            toast('success', 'Nálezy zkopírovány do schránky (kontakt v DB neexistuje).');
+        }).catch(() => {
+            toast('info', 'Nálezy: vlož do nového kontaktu ručně.');
+        });
+        return;
+    }
+
+    const contact = state.contacts.find(c => c.id === targetId);
+    if (!contact) { toast('error', 'Kontakt v DB nenalezen.'); return; }
+
+    // Build aktualizace poznámky + případně doplnit chybějící strukturovaná pole
+    const lines = toApply.map(f =>
+        '[' + (f.kategorie || '?') + '] ' + (f.klic || '') + ': ' + (f.hodnota || '') +
+        (f.zdrojUrl ? ' (' + f.zdrojUrl + ')' : '') +
+        (f.datum ? ' — ' + f.datum : '')
+    );
+    const block = '— AI Hloubkový průzkum (' + new Date().toLocaleDateString('cs-CZ') + ', ' +
+        Array.from(new Set(toApply.flatMap(f => f._sources || []))).join('+') + ') —\n' +
+        lines.join('\n');
+
+    // Replace/append block (idempotent re-runs nahradí poslední block)
+    const existingNote = contact.poznamka || '';
+    const blockRegex = /— AI Hloubkový průzkum \([^)]+\) —\n[\s\S]*?(?=\n\n|$)/;
+    if (blockRegex.test(existingNote)) {
+        contact.poznamka = existingNote.replace(blockRegex, block);
+    } else {
+        contact.poznamka = (existingNote ? existingNote + '\n\n' : '') + block;
+    }
+
+    // Auto-fill missing structured fields if AI provided exact match
+    toApply.forEach(f => {
+        const klic = (f.klic || '').toLowerCase();
+        const val = f.hodnota || '';
+        if (!val) return;
+        if (!contact.linkedinUrl && /linkedin/i.test(klic + ' ' + val)) {
+            const m = val.match(/https?:\/\/[^\s]*linkedin\.com\/[^\s]+/i);
+            if (m) contact.linkedinUrl = m[0];
+        }
+        if (!contact.email && /email|e-mail/i.test(klic) && /@/.test(val)) {
+            const m = val.match(/[^\s<>]+@[^\s<>]+/);
+            if (m) contact.email = m[0];
+        }
+        if (!contact.telefon && /telefon|phone/i.test(klic)) {
+            contact.telefon = val;
+        }
+    });
+
+    contact.updatedAt = new Date().toISOString();
+
+    try {
+        toast('info', 'Aktualizuji kontakt…');
+        await sheetsUpdateRow(SHEET_TABS.contacts, contact._rowIndex, contactToRow(contact));
+        await logActivity(contact.id, 'ai-deep', 'AI hloubkový průzkum: ' + toApply.length + ' nálezů');
+        toast('success', 'Kontakt aktualizován: ' + toApply.length + ' nálezů přidáno do poznámky.');
+        resetVyhlResults();
+        await syncFromSheet();
+    } catch (err) {
+        console.error('Apply deep error:', err);
+        toast('error', 'Aktualizace selhala: ' + err.message);
+    }
+}
+
+function resetVyhlResults() {
+    state.vyhlSelected.clear();
+    state.lastVyhlSuggestions = [];
+    document.getElementById('vyhl-results-wrap').style.display = 'none';
+    document.getElementById('vyhl-status').style.display = 'none';
 }
 
 // ============================================================

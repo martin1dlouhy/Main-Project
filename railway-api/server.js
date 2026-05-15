@@ -1408,10 +1408,13 @@ function buildServerImagePrompt(visualType, people, scene, mood, format, theme, 
 }
 
 // =============================================
-// POST /api/database/find-contacts — AI contact discovery for Database app
-// Volá Claude (Anthropic) + GPT-4o (OpenAI) paralelně se stejným promptem,
-// deduplikuje výsledky napříč modely + proti existujícím kontaktům,
-// vrátí návrhy s badge spolehlivosti.
+// POST /api/database/find-contacts — AI discovery pro Database (F2.1-3)
+// Tři módy:
+//   mode='contacts' — vyhledá nové kontakty pro segment ze známých zdrojů
+//   mode='sources'  — najde DALŠÍ zdroje (weby, registry, asociace) pro segment
+//   mode='deep'     — z 1 existujícího kontaktu vytáhne víc info (LinkedIn, email, board, atd.)
+// Volá paralelně Claude Sonnet 4 + GPT-4o, oba s web search tool.
+// Deduplikuje výsledky napříč modely + proti existujícím záznamům.
 // Vyžaduje session token z /api/verify-pin v X-Database-Token header.
 // =============================================
 app.post('/api/database/find-contacts', async function (req, res) {
@@ -1426,184 +1429,381 @@ app.post('/api/database/find-contacts', async function (req, res) {
     }
 
     var body = req.body || {};
+    var mode = (body.mode || 'contacts').toString();
+    if (['contacts', 'sources', 'deep'].indexOf(mode) === -1) {
+        return res.status(400).json({ error: 'mode musí být contacts | sources | deep.' });
+    }
+
     var segmentNazev = (body.segmentNazev || '').toString().trim();
     var segmentUseCase = (body.segmentUseCase || '').toString().trim();
     var sources = Array.isArray(body.sources) ? body.sources : [];
     var existingKeys = body.existingContactsKeys || {};
+    var existingSourceUrls = body.existingSourceUrls || [];
     var region = (body.region || 'celá ČR').toString().trim();
     var maxResults = Math.min(50, Math.max(5, parseInt(body.maxResults) || 20));
+    var targetContact = body.targetContact || null; // pro mode=deep
 
-    if (!segmentNazev) {
-        return res.status(400).json({ error: 'segmentNazev je povinný.' });
+    // Validace mode-specific inputů
+    if (mode === 'contacts') {
+        if (!segmentNazev) return res.status(400).json({ error: 'segmentNazev je povinný pro mode=contacts.' });
+        if (sources.length === 0) return res.status(400).json({ error: 'Žádné zdroje pro tento segment. Doplň je v Google Sheets.' });
+    } else if (mode === 'sources') {
+        if (!segmentNazev) return res.status(400).json({ error: 'segmentNazev je povinný pro mode=sources.' });
+    } else if (mode === 'deep') {
+        if (!targetContact || !targetContact.firma) {
+            return res.status(400).json({ error: 'targetContact (s firma minimum) je povinný pro mode=deep.' });
+        }
     }
-    if (sources.length === 0) {
-        return res.status(400).json({ error: 'Žádné zdroje pro tento segment. Doplň je v Google Sheets.' });
-    }
 
-    var prompt = buildFindContactsPrompt(segmentNazev, segmentUseCase, sources, region, maxResults);
-    console.log('[find-contacts] segment="' + segmentNazev + '" region="' + region + '" sources=' + sources.length + ' max=' + maxResults);
+    var prompt = buildAIDiscoveryPrompt(mode, {
+        segmentNazev: segmentNazev,
+        segmentUseCase: segmentUseCase,
+        sources: sources,
+        region: region,
+        maxResults: maxResults,
+        targetContact: targetContact
+    });
 
-    // Paralelní call obou modelů (Promise.allSettled — pokud jeden padne, druhý dorazí)
+    console.log('[find-contacts] mode=' + mode + ' segment="' + segmentNazev + '" max=' + maxResults);
+
     var promises = [];
-    if (anthropicKey) promises.push(callClaudeForContacts(anthropicKey, prompt));
-    else promises.push(Promise.resolve({ contacts: [], skipped: 'no key' }));
-    if (openaiKey) promises.push(callOpenAIForContacts(openaiKey, prompt));
-    else promises.push(Promise.resolve({ contacts: [], skipped: 'no key' }));
+    if (anthropicKey) promises.push(callClaudeWithWebSearch(anthropicKey, prompt, mode));
+    else promises.push(Promise.resolve({ items: [], skipped: 'no key' }));
+    if (openaiKey) promises.push(callOpenAIWithWebSearch(openaiKey, prompt, mode));
+    else promises.push(Promise.resolve({ items: [], skipped: 'no key' }));
 
     var results = await Promise.allSettled(promises);
 
     var claudeResult = results[0].status === 'fulfilled'
         ? results[0].value
-        : { contacts: [], error: results[0].reason && results[0].reason.message || 'Claude call failed' };
+        : { items: [], error: results[0].reason && results[0].reason.message || 'Claude call failed' };
     var openaiResult = results[1].status === 'fulfilled'
         ? results[1].value
-        : { contacts: [], error: results[1].reason && results[1].reason.message || 'OpenAI call failed' };
+        : { items: [], error: results[1].reason && results[1].reason.message || 'OpenAI call failed' };
 
-    console.log('[find-contacts] claude=' + claudeResult.contacts.length + (claudeResult.error ? ' (ERR: ' + claudeResult.error + ')' : '') +
-        ' openai=' + openaiResult.contacts.length + (openaiResult.error ? ' (ERR: ' + openaiResult.error + ')' : ''));
+    console.log('[find-contacts] mode=' + mode + ' claude=' + claudeResult.items.length +
+        (claudeResult.error ? ' (ERR: ' + claudeResult.error + ')' : '') +
+        ' openai=' + openaiResult.items.length +
+        (openaiResult.error ? ' (ERR: ' + openaiResult.error + ')' : ''));
 
-    var merged = mergeAndDedupeContacts(claudeResult.contacts, openaiResult.contacts, existingKeys);
+    var merged;
+    if (mode === 'contacts') {
+        merged = mergeAndDedupeContacts(claudeResult.items, openaiResult.items, existingKeys);
+    } else if (mode === 'sources') {
+        merged = mergeAndDedupeSources(claudeResult.items, openaiResult.items, existingSourceUrls);
+    } else { // deep
+        merged = mergeDeepEnrichment(claudeResult.items, openaiResult.items);
+    }
 
     return res.json({
+        mode: mode,
         suggestions: merged,
         stats: {
-            claudeCount: claudeResult.contacts.length,
-            openaiCount: openaiResult.contacts.length,
+            claudeCount: claudeResult.items.length,
+            openaiCount: openaiResult.items.length,
             mergedCount: merged.length,
-            duplicates: claudeResult.contacts.length + openaiResult.contacts.length - merged.length,
+            duplicates: claudeResult.items.length + openaiResult.items.length - merged.length,
             claudeError: claudeResult.error || null,
             openaiError: openaiResult.error || null
         }
     });
 });
 
-function buildFindContactsPrompt(segmentNazev, segmentUseCase, sources, region, maxResults) {
-    var sourcesText = sources.map(function (s, i) {
-        var line = (i + 1) + '. ' + (s.nazev || 'Zdroj') ;
-        if (s.url) line += ' — ' + s.url;
-        if (s.poznamka) line += ' (' + s.poznamka + ')';
-        return line;
-    }).join('\n');
+// =============================================
+// Prompt builders pro 3 módy
+// =============================================
+function buildAIDiscoveryPrompt(mode, ctx) {
+    var header = 'Jsi expert na vyhledávání B2B kontaktů a zdrojů v České republice pro investiční firmu ProfiLend ' +
+        '(HNWI debt financing, úvěry 10–250M CZK proti komerčním nemovitostem v ČR).';
 
-    return [
-        'Jsi expert na vyhledávání B2B kontaktů v České republice pro investiční firmu ProfiLend (HNWI debt financing, úvěry 10-250M CZK proti nemovitostem).',
-        '',
-        'CÍL: Najdi konkrétní reálné kontakty pro segment "' + segmentNazev + '" v regionu ' + region + '.',
-        '',
-        'USE-CASE TOHOTO SEGMENTU (proč jsou pro nás cenní): ' + (segmentUseCase || 'Zprostředkovatelé obchodů.'),
-        '',
-        'ZDROJE — INSPIRACE PRO HLEDÁNÍ (znáš tyto registry a weby z train data, využij je):',
-        sourcesText,
-        '',
-        'INSTRUKCE:',
-        '- Vrať maximálně ' + maxResults + ' nejvíce relevantních kontaktů — kvalita > kvantita',
-        '- KAŽDÝ kontakt MUSÍ být reálná osoba nebo firma, kterou znáš z train data. NEVYMÝŠLEJ.',
-        '- Cílíme na decision-makery: Partner, Managing Partner, Director, CEO, Owner, Head of, Senior',
-        '- Vyhni se juniorům, asistentům, generickým info@/contact@ adresám',
-        '- Pokud neznáš konkrétní email/telefon/LinkedIn, vrať null — NIKDY si je nevymýšlej',
-        '- Pokud znáš jen firmu (ne konkrétní osobu), vrať firmu s kontaktniOsoba=null',
-        '',
-        'FORMÁT ODPOVĚDI: vrať POUZE platný JSON, žádný markdown, žádný komentář.',
-        '{',
-        '  "contacts": [',
-        '    {',
-        '      "firma": "název společnosti (povinné)",',
-        '      "ico": "8místné IČO pokud znáš | null",',
-        '      "kontaktniOsoba": "Jméno Příjmení | null",',
-        '      "role": "Managing Partner | null",',
-        '      "email": "jmeno@firma.cz | null",',
-        '      "telefon": "+420 ... | null",',
-        '      "web": "https://firma.cz | null",',
-        '      "linkedinUrl": "https://linkedin.com/in/... | null",',
-        '      "sidlo": "Adresa sídla | null",',
-        '      "zdrojUrl": "URL zdroje kde tento kontakt obvykle figuruje | null"',
-        '    }',
-        '  ]',
-        '}'
-    ].join('\n');
+    if (mode === 'contacts') {
+        var sourcesText = ctx.sources.map(function (s, i) {
+            var line = (i + 1) + '. ' + (s.nazev || 'Zdroj');
+            if (s.url) line += ' — ' + s.url;
+            if (s.poznamka) line += ' (' + s.poznamka + ')';
+            return line;
+        }).join('\n');
+
+        return [
+            header, '',
+            'CÍL: Najdi konkrétní reálné kontakty pro segment "' + ctx.segmentNazev + '" v regionu ' + ctx.region + '.',
+            '',
+            'USE-CASE SEGMENTU: ' + (ctx.segmentUseCase || 'Zprostředkovatelé obchodů pro debt financing.'),
+            '',
+            'ZDROJE K PROZKOUMÁNÍ (použij web search pokud máš tool dostupný):',
+            sourcesText,
+            '',
+            'INSTRUKCE:',
+            '- Použij web search pro každý zdroj a vytahej konkrétní jména + role + kontakty',
+            '- Vrať MAX ' + ctx.maxResults + ' nejlepších kontaktů (kvalita > kvantita)',
+            '- KAŽDÝ kontakt MUSÍ být ověřitelný v reálu — žádné halucinace',
+            '- Cílíme na decision-makery: Partner, Managing Partner, Director, CEO, Owner, Head of, Senior',
+            '- Vyhni se juniorům, asistentům, info@/contact@ adresám',
+            '- Email/telefon/LinkedIn = jen pokud je v reálu veřejně dostupné. Jinak null.',
+            '',
+            'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
+            '{',
+            '  "contacts": [',
+            '    {',
+            '      "firma": "název s.r.o./a.s. (povinné)",',
+            '      "ico": "8místné IČO | null",',
+            '      "kontaktniOsoba": "Jméno Příjmení | null",',
+            '      "role": "Managing Partner | null",',
+            '      "email": "veřejný email | null",',
+            '      "telefon": "veřejný tel | null",',
+            '      "web": "https://… | null",',
+            '      "linkedinUrl": "https://linkedin.com/in/… | null",',
+            '      "sidlo": "adresa | null",',
+            '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
+            '    }',
+            '  ]',
+            '}'
+        ].join('\n');
+    }
+
+    if (mode === 'sources') {
+        return [
+            header, '',
+            'CÍL: Najdi DALŠÍ relevantní zdroje (weby, registry, asociace, žebříčky, eventy, oborové publikace) ',
+            'pro segment "' + ctx.segmentNazev + '" v ČR. Žádné kontakty osob — jen zdroje.',
+            '',
+            'USE-CASE SEGMENTU: ' + (ctx.segmentUseCase || 'Zprostředkovatelé obchodů.'),
+            '',
+            'INSTRUKCE:',
+            '- Použij web search a najdi nové weby/registry, které se dají využít jako zdroj kontaktů',
+            '- Vrať MAX ' + ctx.maxResults + ' zdrojů',
+            '- Pro každý zdroj uveď jeho URL, krátký název, popis (co konkrétně se tam dá vytěžit)',
+            '- Typy: profesní registr, oborová asociace, žebříček/ranking, konferenční speakers, oborový časopis, deal feed',
+            '- Vyhni se Wikipedii, obecným adresářům typu Firmy.cz (ledaže by měly specifickou kategorii)',
+            '- Pro každý zdroj odhadni jeho "kvalitu" (high / mid / low) — kolik kvalitních kontaktů z něj půjde získat',
+            '',
+            'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
+            '{',
+            '  "sources": [',
+            '    {',
+            '      "nazev": "Krátký název zdroje (povinné)",',
+            '      "url": "https://… (povinné)",',
+            '      "poznamka": "Co se tam dá vytěžit, koho hledat",',
+            '      "typZdroje": "registr | asociace | ranking | konference | publikace | dealfeed",',
+            '      "kvalita": "high | mid | low"',
+            '    }',
+            '  ]',
+            '}'
+        ].join('\n');
+    }
+
+    if (mode === 'deep') {
+        var t = ctx.targetContact;
+        return [
+            header, '',
+            'CÍL: Hloubkový průzkum konkrétního kontaktu. Najdi co nejvíc informací o této osobě / firmě.',
+            '',
+            'CÍLOVÝ KONTAKT:',
+            '- Firma: ' + (t.firma || '?'),
+            '- IČO: ' + (t.ico || '?'),
+            '- Osoba: ' + (t.kontaktniOsoba || '?'),
+            '- Role: ' + (t.role || '?'),
+            '- Web: ' + (t.web || '?'),
+            '- LinkedIn: ' + (t.linkedinUrl || '?'),
+            '',
+            'INSTRUKCE:',
+            '- Použij web search pro hledání: LinkedIn profil, email, telefon, board memberships, historie pozic, news mentions, kontroverze',
+            '- Najdi i jiné firmy, kde tato osoba sedí v boardu nebo má vlastnický podíl',
+            '- Najdi recent news o této osobě nebo firmě (poslední 12 měsíců)',
+            '- Pokud kontakt neexistuje v reálu, vrať prázdné pole',
+            '',
+            'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
+            '{',
+            '  "enrichments": [',
+            '    {',
+            '      "kategorie": "kontakt | role | board | news | warning",',
+            '      "klic": "stručný popis (např. \'LinkedIn URL\', \'Board člen XY\', \'Akvizice 2024\')",',
+            '      "hodnota": "konkrétní info / URL / popis",',
+            '      "zdrojUrl": "URL zdroje pokud znáš | null",',
+            '      "datum": "YYYY-MM nebo YYYY pokud relevantní | null"',
+            '    }',
+            '  ]',
+            '}'
+        ].join('\n');
+    }
+
+    return header;
 }
 
-async function callClaudeForContacts(apiKey, prompt) {
+// =============================================
+// Claude — multi-block content extraction with web search
+// =============================================
+async function callClaudeWithWebSearch(apiKey, prompt, mode) {
     var client = new Anthropic({ apiKey: apiKey });
-    var msg = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 8000,
-        temperature: 0.4,
-        messages: [
-            { role: 'user', content: prompt },
-            { role: 'assistant', content: '{' }
-        ]
-    });
-    var text = '{' + (msg.content[0] && msg.content[0].text || '');
-    var parsed = tryParseContactsJSON(text);
-    return { contacts: (parsed && Array.isArray(parsed.contacts)) ? parsed.contacts : [] };
+
+    // web_search tool je beta — pokud Anthropic účet nemá přístup, fallback bez toolu
+    var tools = [{
+        type: 'web_search_20250305',
+        name: 'web_search',
+        max_uses: 8
+    }];
+
+    var msg;
+    try {
+        msg = await client.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 8000,
+            temperature: 0.4,
+            tools: tools,
+            messages: [{ role: 'user', content: prompt }]
+        });
+    } catch (toolErr) {
+        // Fallback: bez web search (např. tool není povolený na účtu)
+        console.warn('[claude] web_search tool nedostupný, fallback bez něj:', toolErr.message);
+        msg = await client.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 8000,
+            temperature: 0.4,
+            messages: [{ role: 'user', content: prompt }]
+        });
+    }
+
+    // Claude content je array bloků: text, server_tool_use, web_search_tool_result, …
+    // Concatenate všechny text bloky a hledej JSON
+    var allText = '';
+    if (Array.isArray(msg.content)) {
+        msg.content.forEach(function (block) {
+            if (block.type === 'text' && block.text) allText += block.text + '\n';
+        });
+    }
+    var parsed = tryParseAIResponse(allText, mode);
+    return { items: parsed };
 }
 
-async function callOpenAIForContacts(apiKey, prompt) {
+// =============================================
+// OpenAI — Responses API s web_search_preview, fallback na chat.completions bez search
+// =============================================
+async function callOpenAIWithWebSearch(apiKey, prompt, mode) {
     if (!OpenAI) throw new Error('OpenAI SDK not loaded on server');
     var openai = new OpenAI({ apiKey: apiKey });
+
+    // Pokus 1: Responses API s web_search_preview
+    if (typeof openai.responses !== 'undefined' && typeof openai.responses.create === 'function') {
+        try {
+            var r = await openai.responses.create({
+                model: 'gpt-4o',
+                tools: [{ type: 'web_search_preview' }],
+                input: prompt + '\n\nDŮLEŽITÉ: Odpověz POUZE platným JSON. Žádný markdown.'
+            });
+            // Najdi text v output array
+            var text = '';
+            if (typeof r.output_text === 'string') {
+                text = r.output_text;
+            } else if (Array.isArray(r.output)) {
+                r.output.forEach(function (item) {
+                    if (item.type === 'message' && Array.isArray(item.content)) {
+                        item.content.forEach(function (c) {
+                            if (c.type === 'output_text' && c.text) text += c.text + '\n';
+                        });
+                    }
+                });
+            }
+            var parsed = tryParseAIResponse(text, mode);
+            return { items: parsed };
+        } catch (respErr) {
+            console.warn('[openai] Responses API selhalo, fallback na chat.completions:', respErr.message);
+        }
+    }
+
+    // Pokus 2: chat.completions bez web search (fallback)
     var completion = await openai.chat.completions.create({
         model: 'gpt-4o',
         temperature: 0.4,
         max_tokens: 4096,
         response_format: { type: 'json_object' },
         messages: [
-            { role: 'system', content: 'Jsi vyhledávač B2B kontaktů. Vrať POUZE platný JSON podle schématu v promptu.' },
+            { role: 'system', content: 'Jsi vyhledávač B2B kontaktů a zdrojů. Vrať POUZE platný JSON podle schématu v promptu.' },
             { role: 'user', content: prompt }
         ]
     });
     var content = completion.choices[0].message.content;
-    var parsed = tryParseContactsJSON(content);
-    return { contacts: (parsed && Array.isArray(parsed.contacts)) ? parsed.contacts : [] };
+    var parsed2 = tryParseAIResponse(content, mode);
+    return { items: parsed2 };
 }
 
-function tryParseContactsJSON(text) {
-    if (!text) return null;
-    try { return JSON.parse(text.trim()); } catch (e) { }
+// =============================================
+// JSON extraction — robust proti markdown obalům, partial responses, multiple objects
+// =============================================
+function tryParseAIResponse(text, mode) {
+    if (!text) return [];
+    var key = mode === 'contacts' ? 'contacts' : mode === 'sources' ? 'sources' : 'enrichments';
+
+    function pull(obj) {
+        if (!obj || typeof obj !== 'object') return null;
+        if (Array.isArray(obj[key])) return obj[key];
+        // Sometimes AI nests it
+        var keys = Object.keys(obj);
+        for (var i = 0; i < keys.length; i++) {
+            var v = obj[keys[i]];
+            if (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object') return v;
+        }
+        return null;
+    }
+
+    // Strategy 1: Direct parse
+    try {
+        var p = JSON.parse(text.trim());
+        var r = pull(p);
+        if (r) return r;
+    } catch (e) { }
+
+    // Strategy 2: Markdown code block
     var codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
     if (codeBlockMatch) {
-        try { return JSON.parse(codeBlockMatch[1].trim()); } catch (e) { }
+        try {
+            var p2 = JSON.parse(codeBlockMatch[1].trim());
+            var r2 = pull(p2);
+            if (r2) return r2;
+        } catch (e) { }
     }
+
+    // Strategy 3: First { to last }
     var startObj = text.indexOf('{');
-    if (startObj !== -1) {
-        var lastBrace = text.lastIndexOf('}');
-        if (lastBrace > startObj) {
-            try { return JSON.parse(text.substring(startObj, lastBrace + 1)); } catch (e) { }
-        }
+    var lastBrace = text.lastIndexOf('}');
+    if (startObj !== -1 && lastBrace > startObj) {
+        try {
+            var p3 = JSON.parse(text.substring(startObj, lastBrace + 1));
+            var r3 = pull(p3);
+            if (r3) return r3;
+        } catch (e) { }
     }
-    return null;
+
+    return [];
 }
 
 function normalizeKey(s) {
     return String(s || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/\/+$/, '');
 }
 
+// =============================================
+// Dedupe — contacts
+// =============================================
 function mergeAndDedupeContacts(claudeContacts, openaiContacts, existingKeys) {
     var existingIcos = new Set((existingKeys.icos || []).map(normalizeKey).filter(Boolean));
     var existingEmails = new Set((existingKeys.emails || []).map(normalizeKey).filter(Boolean));
     var existingLinkedins = new Set((existingKeys.linkedins || []).map(normalizeKey).filter(Boolean));
     var existingNameFirma = new Set((existingKeys.namesFirmas || []).map(normalizeKey).filter(Boolean));
 
-    var seenIcos = {};
-    var seenEmails = {};
-    var seenLinkedins = {};
-    var seenNameFirma = {};
+    var seenIcos = {}, seenEmails = {}, seenLinkedins = {}, seenNameFirma = {};
     var output = [];
 
     function processOne(c, sourceModel) {
-        if (!c || !c.firma) return; // bez firmy návrh nemá smysl
+        if (!c || !c.firma) return;
         var ico = normalizeKey(c.ico);
         var email = normalizeKey(c.email);
         var lin = normalizeKey(c.linkedinUrl);
         var nf = c.kontaktniOsoba && c.firma ? normalizeKey(c.kontaktniOsoba + '|' + c.firma) : '';
 
-        // Skip if already in user's DB
         if (ico && existingIcos.has(ico)) return;
         if (email && existingEmails.has(email)) return;
         if (lin && existingLinkedins.has(lin)) return;
         if (nf && existingNameFirma.has(nf)) return;
 
-        // Find duplicate within current results
         var idx = -1;
         if (ico && seenIcos[ico] !== undefined) idx = seenIcos[ico];
         else if (email && seenEmails[email] !== undefined) idx = seenEmails[email];
@@ -1611,10 +1811,7 @@ function mergeAndDedupeContacts(claudeContacts, openaiContacts, existingKeys) {
         else if (nf && seenNameFirma[nf] !== undefined) idx = seenNameFirma[nf];
 
         if (idx >= 0) {
-            // Merge: add source, fill in nulls
-            if (output[idx]._sources.indexOf(sourceModel) === -1) {
-                output[idx]._sources.push(sourceModel);
-            }
+            if (output[idx]._sources.indexOf(sourceModel) === -1) output[idx]._sources.push(sourceModel);
             ['ico', 'email', 'telefon', 'linkedinUrl', 'web', 'sidlo', 'role', 'zdrojUrl', 'kontaktniOsoba'].forEach(function (f) {
                 if (!output[idx][f] && c[f]) output[idx][f] = c[f];
             });
@@ -1631,12 +1828,97 @@ function mergeAndDedupeContacts(claudeContacts, openaiContacts, existingKeys) {
     (claudeContacts || []).forEach(function (c) { processOne(c, 'claude'); });
     (openaiContacts || []).forEach(function (c) { processOne(c, 'openai'); });
 
-    // Sort: both-sources first, then alphabetically by firma
     output.sort(function (a, b) {
         if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
         return String(a.firma || '').localeCompare(String(b.firma || ''), 'cs');
     });
+    return output;
+}
 
+// =============================================
+// Dedupe — sources (deduplikuje podle hostname URL)
+// =============================================
+function urlHostname(u) {
+    if (!u) return '';
+    try {
+        var withProto = /^https?:\/\//i.test(u) ? u : 'https://' + u;
+        var url = new URL(withProto);
+        return url.hostname.replace(/^www\./, '').toLowerCase();
+    } catch (e) {
+        return String(u).toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+    }
+}
+
+function mergeAndDedupeSources(claudeSources, openaiSources, existingSourceUrls) {
+    var existingHosts = new Set((existingSourceUrls || []).map(urlHostname).filter(Boolean));
+    var seenHosts = {};
+    var output = [];
+
+    function processOne(s, sourceModel) {
+        if (!s || !s.url || !s.nazev) return;
+        var host = urlHostname(s.url);
+        if (!host) return;
+        if (existingHosts.has(host)) return;
+        if (seenHosts[host] !== undefined) {
+            var existing = output[seenHosts[host]];
+            if (existing._sources.indexOf(sourceModel) === -1) existing._sources.push(sourceModel);
+            // Merge in missing fields
+            ['poznamka', 'typZdroje', 'kvalita'].forEach(function (f) {
+                if (!existing[f] && s[f]) existing[f] = s[f];
+            });
+            return;
+        }
+        var newS = Object.assign({}, s, { _sources: [sourceModel] });
+        seenHosts[host] = output.push(newS) - 1;
+    }
+
+    (claudeSources || []).forEach(function (s) { processOne(s, 'claude'); });
+    (openaiSources || []).forEach(function (s) { processOne(s, 'openai'); });
+
+    // Sort: both-sources first, then high quality first
+    var qualOrder = { 'high': 0, 'mid': 1, 'low': 2 };
+    output.sort(function (a, b) {
+        if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
+        var qa = qualOrder[(a.kvalita || '').toLowerCase()] != null ? qualOrder[(a.kvalita || '').toLowerCase()] : 3;
+        var qb = qualOrder[(b.kvalita || '').toLowerCase()] != null ? qualOrder[(b.kvalita || '').toLowerCase()] : 3;
+        if (qa !== qb) return qa - qb;
+        return String(a.nazev || '').localeCompare(String(b.nazev || ''), 'cs');
+    });
+    return output;
+}
+
+// =============================================
+// Merge — deep enrichment (1 contact → many findings)
+// =============================================
+function mergeDeepEnrichment(claudeFindings, openaiFindings) {
+    var seen = {};
+    var output = [];
+
+    function processOne(f, sourceModel) {
+        if (!f || !f.hodnota) return;
+        var key = normalizeKey((f.kategorie || '') + '|' + (f.klic || '') + '|' + (f.hodnota || ''));
+        if (seen[key] !== undefined) {
+            var existing = output[seen[key]];
+            if (existing._sources.indexOf(sourceModel) === -1) existing._sources.push(sourceModel);
+            if (!existing.zdrojUrl && f.zdrojUrl) existing.zdrojUrl = f.zdrojUrl;
+            if (!existing.datum && f.datum) existing.datum = f.datum;
+            return;
+        }
+        var newF = Object.assign({}, f, { _sources: [sourceModel] });
+        seen[key] = output.push(newF) - 1;
+    }
+
+    (claudeFindings || []).forEach(function (f) { processOne(f, 'claude'); });
+    (openaiFindings || []).forEach(function (f) { processOne(f, 'openai'); });
+
+    // Sort: both-sources first, then by category (warning na konec, news nahoře)
+    var catOrder = { 'news': 0, 'role': 1, 'board': 2, 'kontakt': 3, 'warning': 4 };
+    output.sort(function (a, b) {
+        if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
+        var ca = catOrder[(a.kategorie || '').toLowerCase()] != null ? catOrder[(a.kategorie || '').toLowerCase()] : 5;
+        var cb = catOrder[(b.kategorie || '').toLowerCase()] != null ? catOrder[(b.kategorie || '').toLowerCase()] : 5;
+        return ca - cb;
+    });
     return output;
 }
 
