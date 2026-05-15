@@ -1,0 +1,2954 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database | ProfiLend Investment Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="design-system/tokens.css">
+    <link rel="stylesheet" href="design-system/app-shell.css">
+    <style>
+        /* ============================================================
+           Database — interní databáze kontaktů ProfiLend
+           Editorial dark, amber accent, sjednoceno s ostatními ProfiLend apps
+           ============================================================ */
+
+        /* ===== Body padding pro fixed nav ===== */
+        body { padding-top: var(--header-h); }
+
+        /* ===== PIN screen ===== */
+        .pin-overlay {
+            position: fixed; inset: 0;
+            background: var(--bg-deep);
+            z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.4s ease;
+        }
+        .pin-overlay.hidden { opacity: 0; pointer-events: none; }
+        .pin-box {
+            background: var(--bg-raised);
+            border: 1px solid var(--line-faint);
+            border-radius: var(--r-lg);
+            padding: 2.5rem;
+            text-align: center;
+            max-width: 360px; width: 90%;
+            box-shadow: var(--shadow-xl);
+        }
+        .pin-logo {
+            width: 48px; height: 48px;
+            background: linear-gradient(145deg, var(--amber-warm), var(--amber));
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1rem;
+            box-shadow: 0 0 32px var(--amber-glow), 0 4px 16px rgba(0,0,0,0.4);
+        }
+        .pin-logo svg { width: 28px; height: 28px; stroke: #1a1207; fill: none; stroke-width: 2; }
+        .pin-box h2 {
+            color: var(--text);
+            font-family: var(--font-display);
+            font-weight: 300;
+            letter-spacing: -0.01em;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .pin-box p {
+            color: var(--text-mute);
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+        }
+        .pin-input-group {
+            display: flex; gap: 0.75rem;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .pin-digit {
+            width: 52px; height: 60px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-md);
+            color: var(--text);
+            font-family: inherit;
+            transition: all var(--dur) var(--ease);
+        }
+        .pin-digit:focus {
+            outline: none;
+            border-color: var(--amber);
+            box-shadow: 0 0 0 3px var(--amber-glow);
+        }
+        .pin-error {
+            color: var(--danger);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            margin-top: -0.5rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .pin-button {
+            display: block; width: 100%;
+            margin-top: 18px;
+            padding: 12px 24px;
+            background: var(--amber);
+            color: #1a1207;
+            border: none;
+            border-radius: var(--r-sm);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 14px var(--amber-glow);
+            transition: all var(--dur) var(--ease);
+        }
+        .pin-button:hover {
+            background: var(--amber-warm);
+            box-shadow: 0 6px 20px var(--amber-glow);
+        }
+
+        /* ===== Connect Google overlay ===== */
+        .connect-overlay {
+            position: fixed; inset: 0;
+            background: var(--bg-deep);
+            z-index: 9000;
+            display: none;
+            align-items: center; justify-content: center;
+        }
+        .connect-overlay.visible { display: flex; }
+        .connect-box {
+            background: var(--bg-raised);
+            border: 1px solid var(--line-faint);
+            border-radius: var(--r-lg);
+            padding: 3rem 2.5rem;
+            text-align: center;
+            max-width: 460px; width: 92%;
+            box-shadow: var(--shadow-xl);
+        }
+        .connect-eyebrow {
+            font-size: var(--fs-eyebrow);
+            letter-spacing: var(--tracking-eyebrow);
+            text-transform: uppercase;
+            color: var(--amber);
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+        .connect-box h2 {
+            font-family: var(--font-display);
+            font-weight: 300;
+            font-size: 1.875rem;
+            letter-spacing: -0.01em;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+        .connect-box h2 em {
+            font-style: italic;
+            font-weight: 400;
+            color: var(--amber-warm);
+        }
+        .connect-box p {
+            color: var(--text-mute);
+            font-size: 14px;
+            line-height: var(--lh-relaxed);
+            margin-bottom: 2rem;
+        }
+        .connect-btn {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 14px 28px;
+            background: var(--amber);
+            color: #1a1207;
+            border: none;
+            border-radius: var(--r-sm);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 14px var(--amber-glow);
+            transition: all var(--dur) var(--ease);
+        }
+        .connect-btn:hover {
+            background: var(--amber-warm);
+            box-shadow: 0 6px 22px var(--amber-glow);
+        }
+        .connect-btn svg { width: 18px; height: 18px; }
+        .connect-status {
+            margin-top: 16px;
+            font-size: 12px;
+            color: var(--text-faint);
+            min-height: 18px;
+        }
+        .connect-status.error { color: var(--danger); }
+
+        /* ===== App layout ===== */
+        .db-layout {
+            max-width: var(--container);
+            margin: 0 auto;
+            padding: 0 40px 80px;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 28px;
+        }
+        .db-sidebar {
+            position: sticky;
+            top: calc(var(--header-h) + 24px);
+            align-self: start;
+            background: var(--bg-raised);
+            border: 1px solid var(--line-faint);
+            border-radius: var(--r-lg);
+            padding: 20px;
+            max-height: calc(100vh - var(--header-h) - 48px);
+            overflow-y: auto;
+        }
+        .db-main {
+            min-width: 0;
+        }
+
+        /* ===== Section nav (tabs) ===== */
+        .section-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            padding: 4px;
+            width: fit-content;
+        }
+        .section-tab {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-mute);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all var(--dur) var(--ease);
+            background: transparent;
+            border: none;
+        }
+        .section-tab:hover { color: var(--text-soft); }
+        .section-tab.active {
+            background: var(--bg-elevated);
+            color: var(--amber-warm);
+        }
+
+        .db-section {
+            display: none;
+        }
+        .db-section.active {
+            display: block;
+        }
+
+        /* ===== Sidebar filters ===== */
+        .sidebar-title {
+            font-size: var(--fs-eyebrow);
+            letter-spacing: var(--tracking-eyebrow);
+            text-transform: uppercase;
+            color: var(--text-mute);
+            font-weight: 500;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--line-faint);
+        }
+        .filter-block { margin-bottom: 22px; }
+        .filter-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-soft);
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .filter-search {
+            width: 100%;
+            padding: 9px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+        }
+        .filter-search:focus {
+            outline: none;
+            border-color: var(--amber);
+            box-shadow: 0 0 0 3px var(--amber-glow);
+        }
+        .filter-pills {
+            display: flex; flex-wrap: wrap; gap: 6px;
+        }
+        .filter-pill {
+            padding: 5px 10px;
+            font-size: 11.5px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: 99px;
+            color: var(--text-mute);
+            cursor: pointer;
+            transition: all var(--dur-fast) var(--ease);
+            user-select: none;
+        }
+        .filter-pill:hover {
+            border-color: var(--line-strong);
+            color: var(--text-soft);
+        }
+        .filter-pill.active {
+            background: var(--amber-tint);
+            border-color: var(--line-amber);
+            color: var(--amber-warm);
+        }
+        .filter-clear {
+            display: block;
+            width: 100%;
+            padding: 9px;
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            color: var(--text-soft);
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: all var(--dur) var(--ease);
+        }
+        .filter-clear:hover {
+            border-color: var(--line-strong);
+            color: var(--text);
+        }
+
+        /* ===== Toolbar ===== */
+        .db-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .db-toolbar-left {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex: 1;
+            min-width: 280px;
+        }
+        .db-search {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+        .db-search input {
+            width: 100%;
+            padding: 10px 12px 10px 38px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            color: var(--text);
+            font-size: 13.5px;
+            font-family: inherit;
+        }
+        .db-search input:focus {
+            outline: none;
+            border-color: var(--amber);
+            box-shadow: 0 0 0 3px var(--amber-glow);
+        }
+        .db-search svg {
+            position: absolute;
+            left: 12px; top: 50%;
+            transform: translateY(-50%);
+            width: 16px; height: 16px;
+            color: var(--text-faint);
+            stroke: currentColor; fill: none;
+            stroke-width: 1.6;
+        }
+        .db-toolbar-right {
+            display: flex; gap: 10px; align-items: center;
+        }
+        .results-count {
+            font-size: 12px;
+            color: var(--text-mute);
+            white-space: nowrap;
+        }
+
+        /* ===== Table ===== */
+        .table-wrap {
+            border: 1px solid var(--line-faint);
+            border-radius: var(--r-lg);
+            overflow: hidden;
+            background: var(--bg-raised);
+        }
+        .contacts-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .contacts-table thead th {
+            text-align: left;
+            padding: 12px 14px;
+            font-weight: 500;
+            color: var(--text-mute);
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--line-faint);
+            background: var(--bg);
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+        .contacts-table thead th:hover { color: var(--text-soft); }
+        .contacts-table thead th.sorted-asc::after,
+        .contacts-table thead th.sorted-desc::after {
+            content: '';
+            display: inline-block;
+            margin-left: 6px;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            vertical-align: middle;
+        }
+        .contacts-table thead th.sorted-asc::after { border-bottom: 5px solid var(--amber); }
+        .contacts-table thead th.sorted-desc::after { border-top: 5px solid var(--amber); }
+        .contacts-table tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--line-faint);
+            color: var(--text-soft);
+            vertical-align: middle;
+        }
+        .contacts-table tbody tr {
+            cursor: pointer;
+            transition: background var(--dur-fast) var(--ease);
+        }
+        .contacts-table tbody tr:hover { background: var(--bg-input); }
+        .contacts-table tbody tr.selected { background: var(--amber-tint); }
+        .contacts-table tbody tr:last-child td { border-bottom: none; }
+        .contacts-table .col-name { color: var(--text); font-weight: 500; }
+        .contacts-table .col-firma { color: var(--text); }
+
+        .typ-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 2px 9px;
+            font-size: 10.5px;
+            font-weight: 500;
+            border-radius: 99px;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+        .typ-badge::before {
+            content: '';
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        .typ-klient { color: var(--amber); background: var(--amber-tint); }
+        .typ-zprostredkovatel { color: var(--info); background: var(--info-tint); }
+        .typ-oboje { color: var(--success); background: var(--success-tint); }
+
+        .stav-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 11px;
+            border-radius: 99px;
+            background: var(--bg-input);
+            color: var(--text-mute);
+            white-space: nowrap;
+        }
+        .stav-badge.stav-novy { color: var(--text-soft); }
+        .stav-badge.stav-overeny { color: var(--info); background: var(--info-tint); }
+        .stav-badge.stav-osloven { color: var(--warning); background: var(--warning-tint); }
+        .stav-badge.stav-reaguje { color: var(--amber-warm); background: var(--amber-tint); }
+        .stav-badge.stav-klient { color: var(--success); background: var(--success-tint); }
+        .stav-badge.stav-odmitnut { color: var(--danger); background: var(--danger-tint); }
+
+        .prio-dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        .prio-1 { background: var(--danger); }
+        .prio-2 { background: var(--warning); }
+        .prio-3 { background: var(--text-faint); }
+
+        .empty-state {
+            padding: 80px 24px;
+            text-align: center;
+            color: var(--text-mute);
+        }
+        .empty-state-icon {
+            width: 56px; height: 56px;
+            margin: 0 auto 18px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--bg-input);
+            border-radius: 50%;
+            color: var(--text-faint);
+        }
+        .empty-state-icon svg { width: 28px; height: 28px; stroke: currentColor; fill: none; stroke-width: 1.4; }
+        .empty-state h3 {
+            font-family: var(--font-display);
+            font-weight: 300;
+            font-size: 22px;
+            color: var(--text-soft);
+            margin-bottom: 8px;
+        }
+        .empty-state p {
+            font-size: 13.5px;
+            max-width: 360px;
+            margin: 0 auto 18px;
+            line-height: var(--lh-relaxed);
+        }
+
+        /* ===== Detail panel (slide-over) ===== */
+        .detail-overlay {
+            position: fixed; inset: 0;
+            background: rgba(7,9,16,0.6);
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--dur) var(--ease);
+        }
+        .detail-overlay.visible { opacity: 1; pointer-events: auto; }
+        .detail-panel {
+            position: fixed;
+            top: 0; right: 0; bottom: 0;
+            width: 580px; max-width: 92vw;
+            background: var(--bg);
+            border-left: 1px solid var(--line-faint);
+            z-index: 210;
+            transform: translateX(100%);
+            transition: transform var(--dur-slow) var(--ease-out);
+            display: flex; flex-direction: column;
+            box-shadow: -20px 0 60px rgba(0,0,0,0.5);
+        }
+        .detail-panel.visible { transform: translateX(0); }
+        .detail-head {
+            padding: 24px 28px 18px;
+            border-bottom: 1px solid var(--line-faint);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+        .detail-head h3 {
+            font-family: var(--font-display);
+            font-weight: 300;
+            font-size: 22px;
+            color: var(--text);
+            margin: 0;
+        }
+        .detail-close {
+            width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            color: var(--text-soft);
+            cursor: pointer;
+            transition: all var(--dur) var(--ease);
+        }
+        .detail-close:hover {
+            border-color: var(--line-strong);
+            color: var(--text);
+        }
+        .detail-close svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+        .detail-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 22px 28px;
+        }
+        .detail-foot {
+            padding: 16px 28px;
+            border-top: 1px solid var(--line-faint);
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .detail-foot-left { display: flex; gap: 8px; }
+        .detail-foot-right { display: flex; gap: 8px; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .form-label {
+            display: block;
+            font-size: var(--fs-eyebrow);
+            letter-spacing: var(--tracking-eyebrow);
+            text-transform: uppercase;
+            color: var(--text-mute);
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            color: var(--text);
+            font-size: 13.5px;
+            font-family: inherit;
+            transition: all var(--dur) var(--ease);
+        }
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            background: var(--bg-input-hover);
+            border-color: var(--amber);
+            box-shadow: 0 0 0 3px var(--amber-glow);
+        }
+        .form-textarea {
+            resize: vertical;
+            min-height: 72px;
+            line-height: 1.5;
+        }
+        select.form-input, .filter-search[id="filter-segment"] {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23a08770' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+            cursor: pointer;
+        }
+        select.form-input option, .filter-search[id="filter-segment"] option {
+            background: var(--bg-elevated);
+            color: var(--text);
+        }
+
+        .activity-log {
+            background: var(--bg-raised);
+            border: 1px solid var(--line-faint);
+            border-radius: var(--r-md);
+            padding: 12px 14px;
+            font-size: 12px;
+            color: var(--text-mute);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .activity-log .log-row {
+            padding: 6px 0;
+            border-bottom: 1px solid var(--line-faint);
+        }
+        .activity-log .log-row:last-child { border-bottom: none; }
+        .activity-log .log-when { color: var(--text-faint); font-family: var(--font-mono); font-size: 10.5px; }
+        .activity-log .log-what { color: var(--text-soft); margin-left: 8px; }
+
+        /* ===== Dashboard cards ===== */
+        .dash-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .dash-card {
+            background: var(--bg-raised);
+            border: 1px solid var(--line-faint);
+            border-radius: var(--r-lg);
+            padding: 22px;
+        }
+        .dash-label {
+            font-size: var(--fs-eyebrow);
+            letter-spacing: var(--tracking-eyebrow);
+            text-transform: uppercase;
+            color: var(--text-mute);
+            margin-bottom: 12px;
+        }
+        .dash-value {
+            font-family: var(--font-display);
+            font-weight: 300;
+            font-size: 36px;
+            color: var(--text);
+            line-height: 1;
+            letter-spacing: var(--tracking-display);
+            font-variant-numeric: tabular-nums;
+        }
+        .dash-value em {
+            font-style: italic;
+            font-weight: 400;
+            color: var(--amber-warm);
+        }
+        .dash-meta {
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--text-mute);
+        }
+
+        .seg-list {
+            display: flex; flex-direction: column;
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .seg-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-input);
+            border-radius: var(--r-sm);
+            font-size: 12.5px;
+        }
+        .seg-row-name { color: var(--text-soft); }
+        .seg-row-count { color: var(--amber-warm); font-family: var(--font-mono); }
+
+        /* ===== Settings ===== */
+        .settings-panel {
+            background: var(--bg-raised);
+            border: 1px solid var(--line-faint);
+            border-radius: var(--r-lg);
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+        .settings-panel h4 {
+            font-family: var(--font-display);
+            font-weight: 400;
+            font-size: 18px;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+        .settings-panel .panel-desc {
+            font-size: 13px;
+            color: var(--text-mute);
+            line-height: var(--lh-relaxed);
+            margin-bottom: 18px;
+        }
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--line-faint);
+        }
+        .settings-row:last-child { border-bottom: none; }
+        .settings-row-label { font-size: 13.5px; color: var(--text); }
+        .settings-row-meta { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(7,9,16,0.7);
+            z-index: 300;
+            display: none;
+            align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.visible { display: flex; }
+        .modal {
+            background: var(--bg-raised);
+            border: 1px solid var(--line-faint);
+            border-radius: var(--r-lg);
+            max-width: 560px; width: 100%;
+            max-height: 90vh;
+            display: flex; flex-direction: column;
+            box-shadow: var(--shadow-xl);
+        }
+        .modal-head {
+            padding: 20px 24px 14px;
+            border-bottom: 1px solid var(--line-faint);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-head h3 {
+            font-family: var(--font-display);
+            font-weight: 300;
+            font-size: 20px;
+            color: var(--text);
+        }
+        .modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .modal-foot {
+            padding: 14px 24px;
+            border-top: 1px solid var(--line-faint);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* ===== Toast ===== */
+        .toast-host {
+            position: fixed;
+            bottom: 24px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 500;
+            display: flex; flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .toast {
+            background: var(--bg-elevated);
+            border: 1px solid var(--line-strong);
+            border-left: 3px solid var(--amber);
+            border-radius: var(--r-md);
+            padding: 12px 18px;
+            font-size: 13px;
+            color: var(--text);
+            box-shadow: var(--shadow-lg);
+            min-width: 240px;
+            max-width: 480px;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all var(--dur) var(--ease-out);
+            pointer-events: auto;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+        .toast.warning { border-left-color: var(--warning); }
+
+        /* ===== Footer ===== */
+        .page-foot {
+            max-width: var(--container);
+            margin: 60px auto 0;
+            padding: 24px 40px;
+            border-top: 1px solid var(--line-faint);
+            display: flex; gap: 14px;
+            font-size: 12px;
+            color: var(--text-mute);
+        }
+        .page-foot .dot { color: var(--text-faint); }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 1100px) {
+            .db-layout {
+                grid-template-columns: 1fr;
+                padding: 0 20px 60px;
+            }
+            .db-sidebar {
+                position: static;
+                max-height: none;
+            }
+        }
+        @media (max-width: 720px) {
+            .contacts-table { font-size: 12px; }
+            .contacts-table thead th, .contacts-table tbody td { padding: 10px 8px; }
+            .col-firma, .col-email { display: none; }
+            .detail-panel { width: 100vw; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== PIN SCREEN ===== -->
+<div id="pin-overlay" class="pin-overlay">
+    <div class="pin-box">
+        <div class="pin-logo">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h2>ProfiLend</h2>
+        <p>Zadejte PIN pro přístup k Database</p>
+        <div class="pin-input-group">
+            <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" data-index="0" autofocus>
+            <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" data-index="1">
+            <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" data-index="2">
+            <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" data-index="3">
+        </div>
+        <p id="pin-error" class="pin-error">Nesprávný PIN</p>
+        <button class="pin-button" onclick="checkPIN()">Pokračovat</button>
+    </div>
+</div>
+
+<!-- ===== CONNECT GOOGLE OVERLAY ===== -->
+<div id="connect-overlay" class="connect-overlay">
+    <div class="connect-box">
+        <div class="connect-eyebrow">ProfiLend · Database</div>
+        <h2>Databáze v <em>Google Sheets</em></h2>
+        <p>Připoj svůj Google účet. Aplikace vytvoří soubor <strong>ProfiLend Investment Tools / Database / Contacts.sheets</strong> a všechny kontakty bude ukládat tam. K souboru má přístup pouze tvůj účet.</p>
+        <button class="connect-btn" onclick="connectGoogle()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Připojit Google Sheets
+        </button>
+        <div id="connect-status" class="connect-status"></div>
+    </div>
+</div>
+
+<!-- ===== TOP NAVIGATION ===== -->
+<nav class="nav">
+    <div class="nav-left">
+        <a href="index.html" class="logo">
+            <span class="logo-mark">IT</span>
+            <span class="logo-text">Investment Tools</span>
+        </a>
+    </div>
+    <div class="nav-menu nav-center">
+        <div class="nav-item">
+            <a class="nav-link">Osobní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+            <div class="dropdown">
+                <a class="dd-item" href="debt-calculator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M16 5 v22"/><path d="M9 27 h14"/><path d="M6 11 h20"/><path d="M6 11 l-3 7 a3 3 0 0 0 6 0 z"/><path d="M26 11 l-3 7 a3 3 0 0 0 6 0 z"/></svg></span><div><div class="dd-title">Debt Calculator</div><div class="dd-meta">Dluhové financování</div></div></a>
+                <a class="dd-item" href="real-estate-prompt-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 14 L14 6 L23 14 V25 H5 Z"/><path d="M11 25 V18 H17 V25"/><path d="M25 5 v4 M23 7 h4 M25 12 v2 M24 13 h2"/></svg></span><div><div class="dd-title">R-E Prompt Generator</div><div class="dd-meta">AI valuace nemovitostí</div></div></a>
+                <a class="dd-item" href="sp500-calculator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M4 26 H28"/><path d="M4 22 L10 16 L14 19 L20 9 L26 13"/><circle cx="10" cy="16" r="1.2"/><circle cx="14" cy="19" r="1.2"/><circle cx="20" cy="9" r="1.2"/><circle cx="26" cy="13" r="1.2"/></svg></span><div><div class="dd-title">S&amp;P 500 Portfolio</div><div class="dd-meta">Rozklad indexu</div></div></a>
+            </div>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link">Pracovní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+            <div class="dropdown">
+                <a class="dd-item" href="portfolio-dashboard.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><path d="M16 6 A10 10 0 0 1 26 16"/><path d="M16 16 L26 16"/><path d="M16 16 L16 6"/><circle cx="16" cy="16" r="4"/></svg></span><div><div class="dd-title">Portfolio Dashboard</div><div class="dd-meta">Přehled portfolia</div></div></a>
+            </div>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link current">ProfiLend <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+            <div class="dropdown">
+                <a class="dd-item" href="termsheet-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span><div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy &amp; export</div></div></a>
+                <a class="dd-item" href="loan-documentation.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M6 10 V30 H22"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg></span><div><div class="dd-title">Úvěrová dokumentace</div><div class="dd-meta">AI generování</div></div></a>
+                <a class="dd-item" href="marketing-agent.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 7 H23 a2 2 0 0 1 2 2 V19 a2 2 0 0 1 -2 2 H13 L8 26 V21 H5 a2 2 0 0 1 -2 -2 V9 a2 2 0 0 1 2 -2 Z"/><path d="M27 5 v3 M25.5 6.5 h3 M27 11 v2 M26 12 h2"/></svg></span><div><div class="dd-title">Marketing Agent</div><div class="dd-meta">Sociální obsah</div></div></a>
+                <a class="dd-item" href="database.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><ellipse cx="16" cy="8" rx="10" ry="3.5"/><path d="M6 8 V16 a10 3.5 0 0 0 20 0 V8"/><path d="M6 16 V24 a10 3.5 0 0 0 20 0 V16"/></svg></span><div><div class="dd-title">Database</div><div class="dd-meta">Kontakty &amp; segmenty</div></div></a>
+            </div>
+        </div>
+    </div>
+    <div class="nav-right-slot"></div>
+</nav>
+
+<div class="app-meta">
+    <div class="crumbs">
+        <a href="index.html">Domů</a>
+        <span class="sep">/</span>
+        <a href="apps.html#profilend">ProfiLend</a>
+        <span class="sep">/</span>
+        <span class="current">Database</span>
+    </div>
+    <div class="app-tools">
+        <div id="gdrive-indicator" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-mute);">
+            <span id="gdrive-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-faint);"></span>
+            <span id="gdrive-text">Odpojeno</span>
+        </div>
+    </div>
+</div>
+
+<div class="app-head">
+    <div class="app-head-left">
+        <div class="eyebrow">ProfiLend · Interní databáze</div>
+        <h1 class="app-title">Database <em>Kontakty</em></h1>
+        <p class="app-sub">Centrální databáze klientů a zprostředkovatelů ProfiLend. PIN ochrana, ukládání do Google Sheets, segmenty a zdroje z plánu rozvoje sítě.</p>
+    </div>
+    <div class="app-actions">
+        <button class="btn btn-secondary" onclick="openImportModal()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import CSV
+        </button>
+        <button class="btn btn-secondary" onclick="exportCSV()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+        </button>
+        <button class="btn btn-primary" onclick="openNewContact()">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nový kontakt
+        </button>
+    </div>
+</div>
+
+<div class="db-layout">
+    <!-- ===== SIDEBAR (filters) ===== -->
+    <aside class="db-sidebar">
+        <div class="sidebar-title">Filtry</div>
+
+        <div class="filter-block">
+            <label class="filter-label">Typ</label>
+            <div class="filter-pills" id="filter-typ">
+                <span class="filter-pill active" data-typ="all">Vše</span>
+                <span class="filter-pill" data-typ="Klient">Klient</span>
+                <span class="filter-pill" data-typ="Zprostředkovatel">Zprostředkovatel</span>
+                <span class="filter-pill" data-typ="Oboje">Oboje</span>
+            </div>
+        </div>
+
+        <div class="filter-block">
+            <label class="filter-label">Priorita</label>
+            <div class="filter-pills" id="filter-prio">
+                <span class="filter-pill active" data-prio="all">Vše</span>
+                <span class="filter-pill" data-prio="1">1</span>
+                <span class="filter-pill" data-prio="2">2</span>
+                <span class="filter-pill" data-prio="3">3</span>
+            </div>
+        </div>
+
+        <div class="filter-block">
+            <label class="filter-label">Stav</label>
+            <div class="filter-pills" id="filter-stav">
+                <span class="filter-pill active" data-stav="all">Vše</span>
+                <span class="filter-pill" data-stav="Nový">Nový</span>
+                <span class="filter-pill" data-stav="Ověřený">Ověřený</span>
+                <span class="filter-pill" data-stav="Osloven">Osloven</span>
+                <span class="filter-pill" data-stav="Reaguje">Reaguje</span>
+                <span class="filter-pill" data-stav="Klient">Klient</span>
+                <span class="filter-pill" data-stav="Odmítnut">Odmítnut</span>
+            </div>
+        </div>
+
+        <div class="filter-block">
+            <label class="filter-label">Segment</label>
+            <select id="filter-segment" class="filter-search" style="appearance:none;-webkit-appearance:none;cursor:pointer;">
+                <option value="all">Všechny segmenty</option>
+            </select>
+        </div>
+
+        <button class="filter-clear" onclick="clearFilters()">Vymazat filtry</button>
+    </aside>
+
+    <!-- ===== MAIN ===== -->
+    <main class="db-main">
+        <!-- Tab nav -->
+        <div class="section-tabs">
+            <button class="section-tab active" data-section="kontakty">Kontakty</button>
+            <button class="section-tab" data-section="dashboard">Dashboard</button>
+            <button class="section-tab" data-section="vyhledavac">Vyhledávač</button>
+            <button class="section-tab" data-section="nastaveni">Nastavení</button>
+        </div>
+
+        <!-- ===== SECTION: Kontakty ===== -->
+        <section class="db-section active" data-section="kontakty">
+            <div class="db-toolbar">
+                <div class="db-toolbar-left">
+                    <div class="db-search">
+                        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="search-input" placeholder="Hledat (jméno, firma, email, IČO, web…)" oninput="onSearch()">
+                    </div>
+                </div>
+                <div class="db-toolbar-right">
+                    <span class="results-count" id="results-count">0 kontaktů</span>
+                </div>
+            </div>
+
+            <div class="table-wrap" id="contacts-wrap">
+                <table class="contacts-table" id="contacts-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="kontaktniOsoba">Jméno</th>
+                            <th data-sort="firma" class="col-firma">Firma</th>
+                            <th data-sort="typ">Typ</th>
+                            <th data-sort="segment">Segment</th>
+                            <th data-sort="priorita">Priorita</th>
+                            <th data-sort="stav">Stav</th>
+                            <th data-sort="email" class="col-email">Email</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contacts-tbody"></tbody>
+                </table>
+                <div class="empty-state" id="empty-state" style="display:none;">
+                    <div class="empty-state-icon">
+                        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5 V12 a9 3 0 0 0 18 0 V5"/><path d="M3 12 V19 a9 3 0 0 0 18 0 V12"/></svg>
+                    </div>
+                    <h3>Žádné kontakty</h3>
+                    <p>Začni přidáním kontaktu nebo importem CSV. Segmenty z plánu rozvoje sítě jsou už načtené v sidebaru.</p>
+                    <button class="btn btn-primary" onclick="openNewContact()">
+                        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Přidat první kontakt
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECTION: Dashboard ===== -->
+        <section class="db-section" data-section="dashboard">
+            <div class="dash-grid">
+                <div class="dash-card">
+                    <div class="dash-label">Celkem kontaktů</div>
+                    <div class="dash-value" id="dash-total"><em>0</em></div>
+                    <div class="dash-meta" id="dash-total-meta">žádné</div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-label">Klienti</div>
+                    <div class="dash-value" id="dash-klienti">0</div>
+                    <div class="dash-meta">přímé poptávky</div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-label">Zprostředkovatelé</div>
+                    <div class="dash-value" id="dash-zprostredkovatele">0</div>
+                    <div class="dash-meta">síť partnerů</div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-label">Priorita 1</div>
+                    <div class="dash-value" id="dash-prio1"><em>0</em></div>
+                    <div class="dash-meta">top priorita</div>
+                </div>
+            </div>
+
+            <div class="settings-panel">
+                <h4>Rozložení podle segmentů</h4>
+                <p class="panel-desc">Kolik kontaktů máš v každém segmentu z plánu rozvoje sítě.</p>
+                <div class="seg-list" id="seg-breakdown"></div>
+            </div>
+
+            <div class="settings-panel">
+                <h4>Poslední aktivita</h4>
+                <p class="panel-desc">Posledních 20 záznamů z audit logu (vznik kontaktu, úprava, oslovení).</p>
+                <div class="activity-log" id="recent-activity">
+                    <div class="log-row"><span class="log-when">—</span><span class="log-what">Žádná aktivita</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECTION: Vyhledávač (F2 placeholder) ===== -->
+        <section class="db-section" data-section="vyhledavac">
+            <div class="settings-panel">
+                <h4>AI Vyhledávač kontaktů</h4>
+                <p class="panel-desc">V další fázi (F2): vyber segment a aplikace přes Anthropic + OpenAI API najde kontakty ze zdrojů. Výsledky z obou modelů se merge-ují, duplicity se odstraní, ke každému kontaktu badge spolehlivosti (Claude+ChatGPT / jen jeden).</p>
+                <div class="info-note">
+                    <strong>Zatím vypnuto.</strong> Nejdřív stavíme F1 — manuální správa kontaktů, import, filtry, GDrive sync. Vyhledávač přidám hned po schválení F1.
+                </div>
+                <div style="margin-top:18px;font-size:13px;color:var(--text-soft);line-height:1.6;">
+                    <strong>Co bude umět:</strong>
+                    <ul style="margin-top:10px;padding-left:20px;color:var(--text-mute);">
+                        <li>Vybrat segment + případně zúžit (region, velikost firmy)</li>
+                        <li>Paralelně zavolat Claude a ChatGPT s identickým promptem</li>
+                        <li>Fuzzy deduplikace (IČO / email / jméno+firma / LinkedIn URL)</li>
+                        <li>Cross-check proti existující DB — „už existuje, aktualizovat?"</li>
+                        <li>Manuální schválení před uložením</li>
+                        <li>Audit log — kdy a odkud kontakt přišel</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECTION: Nastavení ===== -->
+        <section class="db-section" data-section="nastaveni">
+            <div class="settings-panel">
+                <h4>Google Sheets připojení</h4>
+                <p class="panel-desc">Databáze je uložená v Google Sheets, soubor <strong>ProfiLend Investment Tools / Database / Contacts.sheets</strong>. K souboru má přístup pouze tvůj přihlášený Google účet.</p>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Stav připojení</div>
+                        <div class="settings-row-meta" id="settings-conn-meta">Odpojeno</div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-secondary" id="btn-open-sheet" onclick="openSheetInDrive()" style="display:none;">Otevřít v Drive</button>
+                        <button class="btn btn-secondary" id="btn-disconnect" onclick="disconnectGoogle()" style="display:none;">Odpojit</button>
+                        <button class="btn btn-primary" id="btn-connect" onclick="connectGoogle()">Připojit</button>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Synchronizace</div>
+                        <div class="settings-row-meta" id="settings-sync-meta">—</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="syncFromSheet()" id="btn-sync">Načíst znovu</button>
+                </div>
+            </div>
+
+            <div class="settings-panel">
+                <h4>Segmenty a zdroje</h4>
+                <p class="panel-desc">Z plánu rozvoje sítě (Markdown). Při prvním připojení se nahrály do listu <em>Segments</em> a <em>Sources</em> v Sheetu. Tady je vidíš v aplikaci; editovat můžeš přímo v Google Sheets (změny se načtou po kliknutí na „Načíst znovu" nahoře).</p>
+                <div class="seg-list" id="settings-seg-list"></div>
+            </div>
+
+            <div class="settings-panel">
+                <h4>Kontrola databáze</h4>
+                <p class="panel-desc">Najde duplicity (stejné IČO, email, nebo jméno+firma) a chybějící povinná pole. Sloučení duplicit zatím manuálně — aplikace na ně upozorní.</p>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Poslední kontrola</div>
+                        <div class="settings-row-meta" id="check-meta">Nespouštěno</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="checkDatabase()">Zkontrolovat</button>
+                </div>
+                <div id="check-results" style="margin-top:14px;display:none;"></div>
+            </div>
+
+            <div class="settings-panel">
+                <h4>Nebezpečná zóna</h4>
+                <p class="panel-desc">Smazat všechny kontakty v Sheetu. Segmenty a zdroje zůstanou. Operace je nevratná.</p>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Vyprázdnit databázi</div>
+                        <div class="settings-row-meta">Smaže <span id="danger-count">0</span> kontaktů. Audit log zůstane.</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="wipeContacts()" style="color:var(--danger);border-color:var(--danger);">Vyprázdnit</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- ===== DETAIL PANEL (slide-over) ===== -->
+<div id="detail-overlay" class="detail-overlay" onclick="closeDetail()"></div>
+<aside id="detail-panel" class="detail-panel">
+    <div class="detail-head">
+        <h3 id="detail-title">Nový kontakt</h3>
+        <button class="detail-close" onclick="closeDetail()" aria-label="Zavřít">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+    <div class="detail-body">
+        <form id="contact-form" onsubmit="event.preventDefault();saveContact();">
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label class="form-label">Typ</label>
+                    <select class="form-input" id="f-typ" required>
+                        <option value="Klient">Klient</option>
+                        <option value="Zprostředkovatel" selected>Zprostředkovatel</option>
+                        <option value="Oboje">Oboje</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Priorita</label>
+                    <select class="form-input" id="f-priorita" required>
+                        <option value="1">1 (nejvyšší)</option>
+                        <option value="2" selected>2</option>
+                        <option value="3">3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Stav</label>
+                    <select class="form-input" id="f-stav" required>
+                        <option value="Nový" selected>Nový</option>
+                        <option value="Ověřený">Ověřený</option>
+                        <option value="Osloven">Osloven</option>
+                        <option value="Reaguje">Reaguje</option>
+                        <option value="Klient">Klient</option>
+                        <option value="Odmítnut">Odmítnut</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Segment</label>
+                <select class="form-input" id="f-segment"></select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Firma</label>
+                    <input type="text" class="form-input" id="f-firma" placeholder="Název společnosti">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">IČO</label>
+                    <div style="display:flex;gap:6px;">
+                        <input type="text" class="form-input" id="f-ico" placeholder="12345678" maxlength="8">
+                        <button type="button" class="btn btn-secondary" onclick="aresLookup()" title="Doplnit z ARES" style="padding:8px 12px;">ARES</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Sídlo</label>
+                <input type="text" class="form-input" id="f-sidlo" placeholder="Ulice 123, PSČ Město">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Kontaktní osoba</label>
+                    <input type="text" class="form-input" id="f-kontaktniOsoba" placeholder="Jméno a příjmení">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role / pozice</label>
+                    <input type="text" class="form-input" id="f-role" placeholder="např. Managing Partner">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="f-email" placeholder="email@firma.cz">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefon</label>
+                    <input type="text" class="form-input" id="f-telefon" placeholder="+420 ...">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Web</label>
+                    <input type="url" class="form-input" id="f-web" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">LinkedIn URL</label>
+                    <input type="url" class="form-input" id="f-linkedinUrl" placeholder="https://linkedin.com/in/...">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Facebook URL</label>
+                    <input type="url" class="form-input" id="f-facebookUrl" placeholder="https://facebook.com/...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tagy (oddělené čárkou)</label>
+                    <input type="text" class="form-input" id="f-tagy" placeholder="Praha, M&A, top-100">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Zdroj — URL nebo poznámka odkud kontakt máš</label>
+                <input type="text" class="form-input" id="f-zdrojUrl" placeholder="https://... nebo 'doporučení od X'">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Poznámka</label>
+                <textarea class="form-textarea" id="f-poznamka" placeholder="Cokoli relevantního — historie kontaktu, kontext, follow-up..."></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Datum oslovení</label>
+                    <input type="date" class="form-input" id="f-osloven_kdy">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kanál oslovení</label>
+                    <select class="form-input" id="f-osloven_kanal">
+                        <option value="">—</option>
+                        <option value="Email">Email</option>
+                        <option value="LinkedIn">LinkedIn</option>
+                        <option value="Telefon">Telefon</option>
+                        <option value="Dopis">Dopis</option>
+                        <option value="Osobně">Osobně</option>
+                        <option value="Doporučení">Doporučení</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="form-meta" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line-faint);font-size:12px;color:var(--text-mute);display:none;">
+                <div>Vytvořeno: <span id="meta-created">—</span></div>
+                <div>Aktualizováno: <span id="meta-updated">—</span></div>
+                <div>ID: <span id="meta-id" style="font-family:var(--font-mono);font-size:11px;">—</span></div>
+            </div>
+        </form>
+    </div>
+    <div class="detail-foot">
+        <div class="detail-foot-left">
+            <button class="btn btn-secondary" id="btn-delete" onclick="deleteContact()" style="color:var(--danger);border-color:var(--danger);display:none;">Smazat</button>
+        </div>
+        <div class="detail-foot-right">
+            <button class="btn btn-secondary" onclick="closeDetail()">Zavřít</button>
+            <button class="btn btn-primary" onclick="saveContact()">Uložit</button>
+        </div>
+    </div>
+</aside>
+
+<!-- ===== IMPORT CSV MODAL ===== -->
+<div id="import-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-head">
+            <h3>Import z CSV</h3>
+            <button class="detail-close" onclick="closeImportModal()" aria-label="Zavřít">
+                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:13px;color:var(--text-mute);line-height:1.6;margin-bottom:18px;">
+                Nahraj CSV se sloupci (první řádek = hlavička). Aplikace zkusí napárovat sloupce automaticky podle názvu. Podporované názvy: <code style="font-family:var(--font-mono);font-size:11.5px;color:var(--amber-warm);">firma, ico, sidlo, kontaktniOsoba, jmeno, role, email, telefon, web, linkedinUrl, facebookUrl, segment, typ, priorita, stav, tagy, zdrojUrl, poznamka</code>
+            </p>
+            <input type="file" id="csv-file-input" accept=".csv" class="form-input" onchange="onCsvFileChosen(event)">
+            <div id="csv-preview" style="margin-top:18px;font-size:12px;color:var(--text-soft);"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-secondary" onclick="closeImportModal()">Zrušit</button>
+            <button class="btn btn-primary" id="btn-do-import" onclick="doImport()" disabled>Importovat</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== TOAST HOST ===== -->
+<div class="toast-host" id="toast-host"></div>
+
+<!-- ===== FOOTER ===== -->
+<div class="page-foot">
+    <span>Investment Tools · MMXXVI</span>
+    <span class="dot">·</span>
+    <span>ProfiLend Database</span>
+    <span class="dot">·</span>
+    <span id="foot-version">v1.0 (F1)</span>
+</div>
+
+<!-- ===== Google Identity Services ===== -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script src="design-system/nav.js" defer></script>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const RAILWAY_API = 'https://main-project-production-b048.up.railway.app';
+
+// OAuth — reuse stejný Client ID jako google-drive-sync.js,
+// rozšířený scope o Sheets API
+const GOOGLE_CLIENT_ID = '765274611389-25tev1d2a60v2di4t0jfho7fbpqf8q9c.apps.googleusercontent.com';
+const GOOGLE_SCOPES = [
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/spreadsheets'
+].join(' ');
+
+const ROOT_FOLDER_NAME = 'ProfiLend Investment Tools';
+const APP_FOLDER_NAME = 'Database';
+const SHEET_TITLE = 'Contacts Database';
+
+const SHEET_TABS = {
+    contacts: 'Contacts',
+    sources: 'Sources',
+    segments: 'Segments',
+    activity: 'Activity'
+};
+
+// Token storage — sessionStorage (mizí po zavření tabu = bezpečnější pro citlivá data)
+const TOKEN_KEY = 'db-gtoken';
+const TOKEN_EXPIRY_KEY = 'db-gtoken-expiry';
+const SHEET_ID_KEY = 'db-sheet-id';
+
+// PIN session
+const PIN_SESSION_KEY = 'db-auth';
+
+// ============================================================
+// SEGMENTY (embedované z Markdownu Segmenty_a_zdroje_kontaktu.md)
+// Pri prvním připojení se zapíší do Sheets do listu "Segments" a "Sources".
+// Pak je už zdroj pravdy Sheet — editovat můžeš tam.
+// ============================================================
+const SEGMENTS_SEED = [
+    {
+        nazev: 'Ex-bankéři corporate / RE / private banking',
+        typ: 'Zprostředkovatel',
+        priorita: 1,
+        useCase: 'Warm intro k HNWI a corporate klientům, znalost bankovního procesu.',
+        zdroje: [
+            { nazev: 'Bio profily M&A boutique webů', url: '', poznamka: 'Viz segment "M&A boutique poradci"' },
+            { nazev: 'Bio profily PE/RE fondů', url: 'rsj.com, kkcg.com, penta.com, j-t.com, hartenberg.cz', poznamka: 'Investment directors s bank backgroundem' },
+            { nazev: 'Property Forum speakers', url: 'property-forum.eu', poznamka: 'Speakers s bank backgroundem v RE' },
+            { nazev: 'CEE Real Estate Forum speakers', url: 'ceerealestate.eu', poznamka: '' },
+            { nazev: 'Forbes 30 pod 30 / profilové články', url: 'forbes.cz', poznamka: 'Identifikace ex-bankéřů v new ventures' },
+            { nazev: 'HN finance archive', url: 'hn.cz/finance', poznamka: 'Tiskové zprávy o personálních změnách' },
+            { nazev: 'E15 byznys', url: 'e15.cz', poznamka: '' }
+        ]
+    },
+    {
+        nazev: 'Insolvenční / restrukturalizační správci',
+        typ: 'Zprostředkovatel',
+        priorita: 1,
+        useCase: 'Distressed property, časový tlak, vyplacení společníka.',
+        zdroje: [
+            { nazev: 'ISIR — insolvenční správci', url: 'isir.justice.cz/InsSpravci', poznamka: 'Správce, sídlo, kontakt; preferovat reorganizace a podnikové případy' },
+            { nazev: 'REPR — restrukturalizační správci', url: 'repr.gov.cz/ResSpravci', poznamka: 'Všechny osoby + web + telefon' },
+            { nazev: 'MSP profesní seznamy', url: 'msp.gov.cz/web/msp/profesni-seznamy', poznamka: 'Rozcestník' },
+            { nazev: 'ASIS — Asociace insolvenčních správců', url: 'asis.cz', poznamka: 'Členové, kontakty' },
+            { nazev: 'ČAR — Česká asociace restrukturalizace', url: 'car-cz.cz', poznamka: 'Členové, eventy' },
+            { nazev: 'Insolvenční zákon — autoři článků', url: 'insolvencni-zakon.cz', poznamka: 'Top experti se články' },
+            { nazev: 'EPRAVO — autoři článků k insolvenci', url: 'epravo.cz', poznamka: '' }
+        ]
+    },
+    {
+        nazev: 'M&A boutique poradci',
+        typ: 'Zprostředkovatel',
+        priorita: 1,
+        useCase: 'Akviziční financování, bridge před prodejem, vypořádání transakce.',
+        zdroje: [
+            { nazev: 'CVCA — Czech PE & VC Association', url: 'cvca.cz', poznamka: 'Full + associate members' },
+            { nazev: 'Patria Finance team', url: 'patria.cz/o-nas/tym', poznamka: 'Partneři, M&A directors' },
+            { nazev: 'WOOD & Company team', url: 'wood.cz', poznamka: '' },
+            { nazev: 'BHM Group', url: 'bhmgroup.com', poznamka: 'Partneři' },
+            { nazev: 'ECM Investment Banking', url: 'ecminvestments.cz', poznamka: '' },
+            { nazev: 'Tarpan Partners', url: 'tarpan.cz', poznamka: '' },
+            { nazev: 'Mergermarket CZ deal feed', url: 'mergermarket.com', poznamka: 'Recent transactions + advisor names' },
+            { nazev: 'Deal announcements HN/E15/Forbes', url: 'hn.cz, e15.cz, forbes.cz', poznamka: '"Poradcem byla" / "advisor"' },
+            { nazev: 'CzechCrunch dealflow', url: 'czechcrunch.cz', poznamka: '' }
+        ]
+    },
+    {
+        nazev: 'Advokáti corporate / RE / restrukturalizace',
+        typ: 'Zprostředkovatel',
+        priorita: 1,
+        useCase: 'Akvizice, development, refinancování, vyplacení společníka, RE transakce.',
+        zdroje: [
+            { nazev: 'ČAK — vyhledávač advokátů', url: 'vyhledavac.cak.cz', poznamka: 'Filtr Praha + obchodní právo / nemovitosti / insolvence / finance' },
+            { nazev: 'Legal 500 CZ rankingy', url: 'legal500.com/c/czech-republic', poznamka: 'Banking/finance, Corporate/M&A, Real Estate, Restructuring' },
+            { nazev: 'Chambers CZ rankingy', url: 'chambers.com/legal-rankings', poznamka: '' },
+            { nazev: 'IFLR1000 CZ', url: 'iflr1000.com/jurisdiction/czech-republic', poznamka: 'Financial / corporate rankingy' },
+            { nazev: 'Forbes Právnické 1000', url: 'forbes.cz/pravnicke-rankingy', poznamka: 'Roční ranking ČR' },
+            { nazev: 'Weby top kanceláří', url: 'havelpartners.cz, ksb.cz, prkpartners.com, glatzova.com, akkrupar.cz, allenovery.com, schoenherr.eu, kinstellar.com, whitecase.com, squirepattonboggs.com', poznamka: 'Partner / counsel / senior associate profily' },
+            { nazev: 'EPRAVO autoři', url: 'epravo.cz', poznamka: 'Autoři článků k M&A / RE / Insolvence' },
+            { nazev: 'ČAK adresář advokátních kanceláří', url: 'cak.cz', poznamka: 'Doplňkový' }
+        ]
+    },
+    {
+        nazev: 'Komerční RE / capital markets',
+        typ: 'Zprostředkovatel',
+        priorita: 1,
+        useCase: 'Vlastníci komerčních nemovitostí, development land, investiční nemovitosti.',
+        zdroje: [
+            { nazev: 'Prague Research Forum', url: 'pragueresearchforum.cz/prf-members', poznamka: 'Členové (CBRE, Colliers, C&W, iO Partners, Knight Frank, Savills)' },
+            { nazev: 'CBRE Capital Markets CZ', url: 'cbre.cz/capital-markets', poznamka: 'Jména, role, telefon, e-mail' },
+            { nazev: 'CBRE People CZ', url: 'cbre.cz/people', poznamka: 'Filtr business area + capability' },
+            { nazev: 'JLL CZ', url: 'jll.cz', poznamka: 'Capital markets, investment, valuation' },
+            { nazev: 'Colliers CZ', url: 'colliers.com/en-cz/czech-republic/cities/prague', poznamka: 'People pages' },
+            { nazev: 'Cushman & Wakefield CZ', url: 'cushmanwakefield.com/en/czech-republic', poznamka: '' },
+            { nazev: 'Knight Frank CZ', url: 'knightfrank.cz', poznamka: '' },
+            { nazev: 'Savills CZ', url: 'savills.cz', poznamka: '' },
+            { nazev: '108 REAL ESTATE', url: '108realestate.cz/contact', poznamka: 'Investice, pozemky, industrial/offices' },
+            { nazev: 'iO Partners', url: 'io-partners.eu', poznamka: 'Capital markets CEE' },
+            { nazev: 'Property Forum', url: 'property-forum.eu', poznamka: 'Speakers, sponsors' },
+            { nazev: 'ARK ČR — Asociace realitních kanceláří', url: 'arkcr.cz', poznamka: 'Členové (komerční sekce)' },
+            { nazev: 'Sreality komerční nemovitosti', url: 'sreality.cz/firmy', poznamka: 'Adresář kanceláří' }
+        ]
+    },
+    {
+        nazev: 'Boutique daňoví poradci pro HNWI',
+        typ: 'Zprostředkovatel',
+        priorita: 2,
+        useCase: 'Majitelé firem, holdingové struktury, majetkové transakce.',
+        zdroje: [
+            { nazev: 'KDP ČR — seznam daňových poradců', url: 'kdpcr.cz/seznam-danovych-poradcu', poznamka: 'Filtr Praha + PO + nemovitosti + mezinárodní zdanění + oceňování majetku' },
+            { nazev: 'Weby boutique firem (NE Big 4)', url: 'rsm.cz, mazars.cz, bdo.cz, crowe.cz, moore.cz, ekol.cz, sterling.cz, kreston.cz', poznamka: 'Partneři / owneři' },
+            { nazev: 'Firmy.cz', url: 'firmy.cz', poznamka: '"daňový poradce holding Praha"' },
+            { nazev: 'KDP eventy / kongresy speakers', url: 'kdpcr.cz', poznamka: 'Speaker list' },
+            { nazev: 'EPRAVO autoři daň', url: 'epravo.cz', poznamka: 'Autoři článků k daňovým transakcím' }
+        ]
+    },
+    {
+        nazev: 'Dražebníci',
+        typ: 'Zprostředkovatel',
+        priorita: 1,
+        useCase: 'Prohrávající uchazeči v dražbě potřebují rychlé financování pro jinou nemovitost; vlastníci prodávající do dražby pro vyplacení společníka.',
+        zdroje: [
+            { nazev: 'Centrální adresa', url: 'centralniadresa.cz', poznamka: 'Vyhlášené dražby + dražebníci' },
+            { nazev: 'Naxos', url: 'naxos.cz', poznamka: 'Kontakty, dražebníci' },
+            { nazev: 'Eurodražby.cz', url: 'eurodrazby.cz', poznamka: '' },
+            { nazev: 'Centrum dražeb', url: 'centrumdrazeb.cz', poznamka: '' },
+            { nazev: 'Drazby.com', url: 'drazby.com', poznamka: '' },
+            { nazev: 'AAA dražby', url: 'aaa-drazby.cz', poznamka: '' },
+            { nazev: 'Drazby.net', url: 'drazby.net', poznamka: '' },
+            { nazev: 'Komora dražebníků ČR', url: 'komoradrazebniku.cz', poznamka: 'Členský seznam' },
+            { nazev: 'Asociace dražebníků', url: 'asociace-drazebniku.cz', poznamka: 'Členský seznam' }
+        ]
+    },
+    {
+        nazev: 'Soudní exekutoři',
+        typ: 'Zprostředkovatel',
+        priorita: 2,
+        useCase: 'Distressed property leads, exekuované nemovitosti, vlastníci tlačení do prodeje.',
+        zdroje: [
+            { nazev: 'Exekutorská komora ČR — seznam exekutorů', url: 'ekcr.cz/seznam-exekutoru', poznamka: 'Všichni exekutoři ČR + sídlo + kontakt' },
+            { nazev: 'Portál justice — exekuce', url: 'portal.justice.cz', poznamka: 'Vyhledávání aktivních exekucí' },
+            { nazev: 'Centrální evidence exekucí', url: 'ceecr.cz', poznamka: 'Detaily exekucí' },
+            { nazev: 'EPRAVO autoři k exekucím', url: 'epravo.cz', poznamka: 'Top exekutoři se články' }
+        ]
+    },
+    {
+        nazev: 'Notáři pro RE transakce',
+        typ: 'Zprostředkovatel',
+        priorita: 2,
+        useCase: 'Vidí RE transakce v okamžiku katastrálního zápisu, refinancování, vyplacení společníka.',
+        zdroje: [
+            { nazev: 'Notářská komora ČR — vyhledávání', url: 'nkcr.cz/seznam-notaru', poznamka: 'Všichni notáři ČR + sídlo + telefon + e-mail' },
+            { nazev: 'Ad Notam — odborný časopis NK ČR', url: 'nkcr.cz/casopis-ad-notam', poznamka: 'Autoři článků k RE / corporate notářským zápisům' },
+            { nazev: 'Weby velkých notářských kanceláří v Praze', url: '', poznamka: 'Partneři, koncipienti — individuální vyhledání' }
+        ]
+    },
+    {
+        nazev: 'Family office / wealth managers',
+        typ: 'Oboje',
+        priorita: 2,
+        useCase: 'HNWI majitelé firem, jejich rodinné kanceláře drží RE portfolio.',
+        zdroje: [
+            { nazev: 'Forbes 100 nejbohatších Čechů', url: 'forbes.cz/zebricky', poznamka: 'Rodiny + jejich rodinné kanceláře' },
+            { nazev: 'Public domain family offices', url: 'rsj.com, kkcg.com, j-t.com, hartenberg.cz, r2g.cz, pentainvestments.com, vitkovice.cz, agrofert.cz', poznamka: 'Investment teams' },
+            { nazev: 'J&T Banka Private Banking', url: 'jtbank.cz/private-banking', poznamka: 'Privátní bankéři' },
+            { nazev: 'ČSOB Private Banking', url: 'csob.cz/portal/lide/produkty/private-banking', poznamka: '' },
+            { nazev: 'Česká spořitelna Erste Premier', url: 'erstepremier.cz', poznamka: '' },
+            { nazev: 'KB Privée', url: 'kb.cz/cs/o-bance/kb-privee', poznamka: '' },
+            { nazev: 'Raiffeisenbank Friedrich Wilhelm Raiffeisen', url: 'rb.cz/private-banking', poznamka: '' },
+            { nazev: 'UniCredit Private Banking', url: 'unicreditbank.cz/cs/obcane/private-banking', poznamka: '' },
+            { nazev: 'Czech Wealth Forum', url: 'czechwealthforum.cz', poznamka: 'Speakers, sponsoři' }
+        ]
+    },
+    {
+        nazev: 'Crowdfunding investiční platformy',
+        typ: 'Zprostředkovatel',
+        priorita: 3,
+        useCase: 'Emiteti hledající dluhové financování, investoři s RE focusem, retail investoři kteří vidí ProfiLend jako alternativu.',
+        zdroje: [
+            { nazev: 'Upvest', url: 'upvest.cz', poznamka: 'Tým, partneři, emiteti' },
+            { nazev: 'Investown', url: 'investown.cz', poznamka: '' },
+            { nazev: 'Roklen / Roklen24', url: 'roklen.cz, roklen24.cz', poznamka: '' },
+            { nazev: 'Fingood', url: 'fingood.cz', poznamka: '' },
+            { nazev: 'Bondster', url: 'bondster.com', poznamka: '' },
+            { nazev: 'ČNB — seznam licencovaných crowdfunding poskytovatelů', url: 'cnb.cz/cs/dohled-financni-trh/seznamy-regulovanych-a-registrovanych-subjektu', poznamka: 'Oficiální seznam' }
+        ]
+    },
+    {
+        nazev: 'Property management firmy pro komerční nemovitosti',
+        typ: 'Zprostředkovatel',
+        priorita: 2,
+        useCase: 'Vidí cash flow problémy vlastníků, refinancování, exit z aktiva.',
+        zdroje: [
+            { nazev: 'CBRE GWS / Property Management CZ', url: 'cbre.cz/property-management', poznamka: 'Senior PM' },
+            { nazev: 'JLL Property & Asset Management CZ', url: 'jll.cz/services/property-management', poznamka: '' },
+            { nazev: 'Colliers Real Estate Management Services', url: 'colliers.com/en-cz/services/real-estate-management', poznamka: '' },
+            { nazev: 'Cushman & Wakefield Asset Services', url: 'cushmanwakefield.com', poznamka: '' },
+            { nazev: 'Atalian CZ', url: 'atalian.cz', poznamka: 'Senior PM' },
+            { nazev: 'Anabix Real Estate', url: 'anabix.cz', poznamka: '' },
+            { nazev: 'Apleona CZ', url: 'apleona.com/cs', poznamka: '' },
+            { nazev: 'ISS Facility Services', url: 'issworld.com/cs-cz', poznamka: '' }
+        ]
+    },
+    {
+        nazev: 'Pojišťovací makléři pro komerční nemovitosti',
+        typ: 'Zprostředkovatel',
+        priorita: 2,
+        useCase: 'Vidí RE transakce při refinancování pojistek, kontakty na vlastníky.',
+        zdroje: [
+            { nazev: 'RENOMIA', url: 'renomia.cz', poznamka: 'Tým, RE specialisté' },
+            { nazev: 'GrECo CZ', url: 'greco.services/cz', poznamka: '' },
+            { nazev: 'Marsh CZ', url: 'marsh.com/cz', poznamka: '' },
+            { nazev: 'Aon CZ', url: 'aon.cz', poznamka: '' },
+            { nazev: 'WIM Wagner Insurance Management', url: 'wim.cz', poznamka: '' },
+            { nazev: 'AČPM — Asociace českých pojišťovacích makléřů', url: 'acpm.cz', poznamka: 'Členský seznam' },
+            { nazev: 'OK Holding', url: 'okholding.cz', poznamka: '' },
+            { nazev: 'C-Quadrat', url: 'c-quadrat.cz', poznamka: '' }
+        ]
+    },
+    {
+        nazev: 'Architekti / projekční ateliéry pro development',
+        typ: 'Zprostředkovatel',
+        priorita: 3,
+        useCase: 'Kontakt na developery v early stage, kdy potřebují seed nebo bridge financování.',
+        zdroje: [
+            { nazev: 'Česká komora architektů (ČKA) — seznam', url: 'cka.cz/cs/seznam-autorizovanych-architektu', poznamka: 'Filtr pozemní / RE / development' },
+            { nazev: 'Czech Architecture Award', url: 'architectsfortheearth.com, ceska-cena-architektury.cz', poznamka: 'Rankings' },
+            { nazev: 'Weby top ateliérů', url: 'jcarchitekti.com, aulik-fiser.cz, ksarchitects.cz, casua.cz, studio-acht.cz, msarchitekti.com, sgl-projekt.cz, atelier8000.cz', poznamka: 'Architekti + jejich developer klienti' },
+            { nazev: 'ArchiSpace', url: 'archispace.cz', poznamka: 'Adresář ateliérů' },
+            { nazev: 'Časopis Architekt', url: 'architekt.cz', poznamka: 'Autoři článků, profilované ateliéry' }
+        ]
+    },
+    {
+        nazev: 'Stavební firmy pro development',
+        typ: 'Zprostředkovatel',
+        priorita: 3,
+        useCase: 'Vidí developery v cash flow tlaku, doporučují bridge financování.',
+        zdroje: [
+            { nazev: 'SPS — Svaz podnikatelů ve stavebnictví ČR', url: 'sps.cz', poznamka: 'Členský seznam' },
+            { nazev: 'Top stavební firmy ČR — weby', url: 'metrostav.cz, skanska.cz, strabag.cz, eurovia.cz, hochtief.cz, ohl-zs.cz, geosan-group.cz, subterra.cz, imos.cz, gemo.cz, trigema.cz', poznamka: 'Business development, project directors' },
+            { nazev: 'HN top 100 stavebnictví', url: 'hn.cz/stavebnictvi', poznamka: 'Roční žebříček' },
+            { nazev: 'Stavební fórum', url: 'stavebni-forum.cz', poznamka: 'Konference, speakers' },
+            { nazev: 'Czech Builder Council', url: 'czbuilder.cz', poznamka: 'Členové' }
+        ]
+    },
+    {
+        nazev: 'Hospodářská komora ČR + Svaz průmyslu a dopravy',
+        typ: 'Zprostředkovatel',
+        priorita: 3,
+        useCase: 'Členské seznamy mid-market firem s potřebou financování, networking eventy.',
+        zdroje: [
+            { nazev: 'Hospodářská komora ČR — adresář členů', url: 'komora.cz', poznamka: 'Členské firmy, kontakty' },
+            { nazev: 'Krajské hospodářské komory', url: 'komora.cz/krajske-hospodarske-komory', poznamka: 'Regionální členové' },
+            { nazev: 'Svaz průmyslu a dopravy ČR', url: 'spcr.cz', poznamka: 'Členové (3,3 tis. firem)' },
+            { nazev: 'HK ČR eventy', url: 'komora.cz/akce', poznamka: 'Speakers, sponsoři, účastníci' },
+            { nazev: 'SP ČR sněmy / fóra', url: 'spcr.cz/akce', poznamka: '' },
+            { nazev: 'Asociace malých a středních podniků a živnostníků', url: 'amsp.cz', poznamka: 'Členové' }
+        ]
+    },
+    {
+        nazev: 'Podnikatelé s daňovou optimalizací mimo bankovní financování',
+        typ: 'Klient',
+        priorita: 1,
+        useCase: 'Majitelé hodnotných nemovitostí a firem, kterým banka nepůjčuje (daňová optimalizace, struktura příjmů). Často potřebují alternativní financování proti zástavě.',
+        zdroje: [
+            { nazev: 'Obchodní rejstřík', url: 'or.justice.cz', poznamka: 'Vyhledávání podle sídla (např. SAPA — Libušská, Praha 4) a jednatelů' },
+            { nazev: 'Justice.cz výpisy', url: 'justice.cz', poznamka: 'Sbírka listin — finanční výkazy, kapitálová struktura' },
+            { nazev: 'Katastr nemovitostí', url: 'nahlizenidokn.cuzk.cz', poznamka: 'Vlastnické vztahy — drahé nemovitosti, hodnota zástavy' },
+            { nazev: 'Firmy.cz', url: 'firmy.cz', poznamka: 'Obchodní rejstřík rozšířený o kontakty' }
+        ]
+    }
+];
+
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+    accessToken: null,
+    tokenExpiry: 0,
+    spreadsheetId: null,
+    sheetTabIds: {},        // { Contacts: 0, Sources: 1234, ... }
+    contacts: [],
+    segments: [],           // loaded from Sheet (or seeded on first run)
+    sources: [],
+    activity: [],
+    filteredContacts: [],
+    filters: {
+        typ: 'all',
+        prio: 'all',
+        stav: 'all',
+        segment: 'all',
+        search: ''
+    },
+    sort: { col: 'updatedAt', dir: 'desc' },
+    selectedId: null,
+    csvRows: [],
+    lastSync: null
+};
+
+// ============================================================
+// PIN AUTHENTICATION (server-side)
+// ============================================================
+(function initPIN() {
+    if (sessionStorage.getItem(PIN_SESSION_KEY) === 'true') {
+        document.getElementById('pin-overlay').classList.add('hidden');
+        onPinSuccess();
+        return;
+    }
+    const digits = document.querySelectorAll('.pin-digit');
+    digits.forEach(function(d, i) {
+        d.addEventListener('input', function() {
+            if (d.value.length === 1 && i < 3) digits[i + 1].focus();
+            if (i === 3 && d.value.length === 1) checkPIN();
+        });
+        d.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && d.value === '' && i > 0) digits[i - 1].focus();
+        });
+        d.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+            for (let j = 0; j < Math.min(pasted.length, digits.length); j++) {
+                digits[j].value = pasted[j];
+            }
+            if (pasted.length >= digits.length) checkPIN();
+            else if (pasted.length > 0) digits[Math.min(pasted.length, digits.length - 1)].focus();
+        });
+    });
+})();
+
+function checkPIN() {
+    const digits = document.querySelectorAll('.pin-digit');
+    let pin = '';
+    digits.forEach(d => { pin += d.value; });
+    if (pin.length !== 4) return;
+
+    digits.forEach(d => { d.disabled = true; });
+
+    fetch(RAILWAY_API + '/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pin })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            sessionStorage.setItem(PIN_SESSION_KEY, 'true');
+            document.getElementById('pin-overlay').classList.add('hidden');
+            document.getElementById('pin-error').style.display = 'none';
+            digits.forEach(d => { d.value = ''; d.disabled = false; });
+            onPinSuccess();
+        } else {
+            document.getElementById('pin-error').textContent = data.error || 'Nesprávný PIN.';
+            document.getElementById('pin-error').style.display = 'block';
+            digits.forEach(d => { d.value = ''; d.disabled = false; });
+            digits[0].focus();
+        }
+    })
+    .catch(err => {
+        console.error('PIN verification error:', err);
+        document.getElementById('pin-error').textContent = 'Chyba připojení k serveru.';
+        document.getElementById('pin-error').style.display = 'block';
+        digits.forEach(d => { d.value = ''; d.disabled = false; });
+        digits[0].focus();
+    });
+}
+
+function onPinSuccess() {
+    // After PIN: try to restore Google token. If absent → show connect overlay.
+    restoreToken();
+    if (state.accessToken) {
+        bootstrapApp();
+    } else {
+        document.getElementById('connect-overlay').classList.add('visible');
+    }
+}
+
+// ============================================================
+// GOOGLE OAUTH
+// ============================================================
+let tokenClient = null;
+
+function initTokenClient() {
+    if (!window.google || !window.google.accounts) {
+        setTimeout(initTokenClient, 300);
+        return;
+    }
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: GOOGLE_SCOPES,
+        callback: handleTokenResponse
+    });
+}
+
+function handleTokenResponse(response) {
+    if (response.error) {
+        console.error('OAuth error:', response);
+        document.getElementById('connect-status').textContent = 'Přihlášení selhalo: ' + (response.error_description || response.error);
+        document.getElementById('connect-status').classList.add('error');
+        return;
+    }
+    state.accessToken = response.access_token;
+    state.tokenExpiry = Date.now() + ((response.expires_in || 3600) * 1000) - 60000;
+    sessionStorage.setItem(TOKEN_KEY, state.accessToken);
+    sessionStorage.setItem(TOKEN_EXPIRY_KEY, String(state.tokenExpiry));
+    document.getElementById('connect-overlay').classList.remove('visible');
+    updateGDriveIndicator(true);
+    bootstrapApp();
+}
+
+function restoreToken() {
+    const t = sessionStorage.getItem(TOKEN_KEY);
+    const exp = parseInt(sessionStorage.getItem(TOKEN_EXPIRY_KEY) || '0', 10);
+    if (t && exp > Date.now()) {
+        state.accessToken = t;
+        state.tokenExpiry = exp;
+        updateGDriveIndicator(true);
+        return true;
+    }
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
+    return false;
+}
+
+function connectGoogle() {
+    if (!tokenClient) {
+        initTokenClient();
+        setTimeout(connectGoogle, 500);
+        return;
+    }
+    document.getElementById('connect-status').textContent = 'Otvírám Google přihlášení…';
+    document.getElementById('connect-status').classList.remove('error');
+    tokenClient.requestAccessToken({ prompt: state.accessToken ? '' : 'consent' });
+}
+
+function disconnectGoogle() {
+    if (state.accessToken && window.google && google.accounts && google.accounts.oauth2) {
+        google.accounts.oauth2.revoke(state.accessToken, () => {});
+    }
+    state.accessToken = null;
+    state.tokenExpiry = 0;
+    state.spreadsheetId = null;
+    state.contacts = [];
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
+    sessionStorage.removeItem(SHEET_ID_KEY);
+    updateGDriveIndicator(false);
+    document.getElementById('connect-overlay').classList.add('visible');
+    renderAll();
+}
+
+function updateGDriveIndicator(connected) {
+    const dot = document.getElementById('gdrive-dot');
+    const text = document.getElementById('gdrive-text');
+    const btnConnect = document.getElementById('btn-connect');
+    const btnDisconnect = document.getElementById('btn-disconnect');
+    const btnOpen = document.getElementById('btn-open-sheet');
+    const connMeta = document.getElementById('settings-conn-meta');
+    if (connected) {
+        dot.style.background = 'var(--success)';
+        dot.style.boxShadow = '0 0 8px var(--success)';
+        text.textContent = 'Sheets připojeno';
+        if (btnConnect) btnConnect.style.display = 'none';
+        if (btnDisconnect) btnDisconnect.style.display = 'inline-flex';
+        if (btnOpen) btnOpen.style.display = state.spreadsheetId ? 'inline-flex' : 'none';
+        if (connMeta) connMeta.textContent = state.spreadsheetId ? ('Soubor: ' + (state.spreadsheetId.slice(0, 12) + '…')) : 'Připojeno';
+    } else {
+        dot.style.background = 'var(--text-faint)';
+        dot.style.boxShadow = 'none';
+        text.textContent = 'Odpojeno';
+        if (btnConnect) btnConnect.style.display = 'inline-flex';
+        if (btnDisconnect) btnDisconnect.style.display = 'none';
+        if (btnOpen) btnOpen.style.display = 'none';
+        if (connMeta) connMeta.textContent = 'Odpojeno';
+    }
+}
+
+// ============================================================
+// GOOGLE DRIVE / SHEETS API
+// ============================================================
+async function gfetch(url, options = {}) {
+    if (!state.accessToken) throw new Error('Not authenticated');
+    const headers = Object.assign({
+        'Authorization': 'Bearer ' + state.accessToken
+    }, options.headers || {});
+    const res = await fetch(url, Object.assign({}, options, { headers }));
+    if (res.status === 401) {
+        state.accessToken = null;
+        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
+        updateGDriveIndicator(false);
+        document.getElementById('connect-overlay').classList.add('visible');
+        throw new Error('Token vypršel — prosím přihlas se znovu');
+    }
+    if (res.status === 403) {
+        const body = await res.text();
+        if (body.indexOf('SERVICE_DISABLED') !== -1 || body.indexOf('Google Sheets API has not been used') !== -1) {
+            toast('error', 'Sheets API není povolené v Google Cloud Console. Otevři: https://console.cloud.google.com/apis/library/sheets.googleapis.com a klikni Enable.', 12000);
+            throw new Error('Sheets API disabled');
+        }
+    }
+    return res;
+}
+
+async function driveFindFolder(name, parentId) {
+    const q = encodeURIComponent(
+        "name='" + name.replace(/'/g, "\\'") + "' and mimeType='application/vnd.google-apps.folder' and trashed=false" +
+        (parentId ? " and '" + parentId + "' in parents" : '')
+    );
+    const res = await gfetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)&spaces=drive');
+    const data = await res.json();
+    return data.files && data.files.length > 0 ? data.files[0].id : null;
+}
+
+async function driveCreateFolder(name, parentId) {
+    const meta = { name: name, mimeType: 'application/vnd.google-apps.folder' };
+    if (parentId) meta.parents = [parentId];
+    const res = await gfetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(meta)
+    });
+    const data = await res.json();
+    return data.id;
+}
+
+async function driveFindFile(name, parentId) {
+    const q = encodeURIComponent(
+        "name='" + name.replace(/'/g, "\\'") + "' and '" + parentId + "' in parents and trashed=false"
+    );
+    const res = await gfetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,mimeType)&spaces=drive');
+    const data = await res.json();
+    return data.files && data.files.length > 0 ? data.files[0] : null;
+}
+
+async function ensureFolders() {
+    let rootId = await driveFindFolder(ROOT_FOLDER_NAME, null);
+    if (!rootId) rootId = await driveCreateFolder(ROOT_FOLDER_NAME, null);
+    let appId = await driveFindFolder(APP_FOLDER_NAME, rootId);
+    if (!appId) appId = await driveCreateFolder(APP_FOLDER_NAME, rootId);
+    return appId;
+}
+
+async function ensureSpreadsheet() {
+    // Try restored ID first
+    const cachedId = sessionStorage.getItem(SHEET_ID_KEY);
+    if (cachedId) {
+        try {
+            const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + cachedId + '?fields=sheets.properties');
+            if (res.ok) {
+                const data = await res.json();
+                state.spreadsheetId = cachedId;
+                state.sheetTabIds = {};
+                (data.sheets || []).forEach(s => {
+                    state.sheetTabIds[s.properties.title] = s.properties.sheetId;
+                });
+                return cachedId;
+            }
+        } catch (e) {
+            // Cached ID no longer accessible — fall through to lookup/create
+            sessionStorage.removeItem(SHEET_ID_KEY);
+        }
+    }
+
+    const appFolderId = await ensureFolders();
+
+    // Look up existing Sheet by name in app folder
+    const existing = await driveFindFile(SHEET_TITLE, appFolderId);
+    if (existing) {
+        state.spreadsheetId = existing.id;
+        sessionStorage.setItem(SHEET_ID_KEY, existing.id);
+        // Load sheet tabs
+        const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + existing.id + '?fields=sheets.properties');
+        const data = await res.json();
+        state.sheetTabIds = {};
+        (data.sheets || []).forEach(s => {
+            state.sheetTabIds[s.properties.title] = s.properties.sheetId;
+        });
+        return existing.id;
+    }
+
+    // Create new spreadsheet via Sheets API
+    const createRes = await gfetch('https://sheets.googleapis.com/v4/spreadsheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            properties: { title: SHEET_TITLE },
+            sheets: [
+                { properties: { title: SHEET_TABS.contacts } },
+                { properties: { title: SHEET_TABS.sources } },
+                { properties: { title: SHEET_TABS.segments } },
+                { properties: { title: SHEET_TABS.activity } }
+            ]
+        })
+    });
+    const createData = await createRes.json();
+    state.spreadsheetId = createData.spreadsheetId;
+    state.sheetTabIds = {};
+    (createData.sheets || []).forEach(s => {
+        state.sheetTabIds[s.properties.title] = s.properties.sheetId;
+    });
+    sessionStorage.setItem(SHEET_ID_KEY, state.spreadsheetId);
+
+    // Move spreadsheet to app folder
+    await gfetch(
+        'https://www.googleapis.com/drive/v3/files/' + state.spreadsheetId +
+        '?addParents=' + appFolderId + '&removeParents=root&fields=id,parents',
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }
+    );
+
+    // Seed headers + segments
+    await seedNewSpreadsheet();
+    return state.spreadsheetId;
+}
+
+const CONTACTS_HEADER = [
+    'id', 'createdAt', 'updatedAt', 'typ', 'segment', 'priorita', 'stav',
+    'firma', 'ico', 'sidlo', 'web', 'email', 'telefon',
+    'kontaktniOsoba', 'role', 'linkedinUrl', 'facebookUrl',
+    'zdrojUrl', 'tagy', 'poznamka', 'osloven_kdy', 'osloven_kanal', 'spolehlivost'
+];
+const SOURCES_HEADER = ['segment', 'idx', 'nazev', 'url', 'poznamka'];
+const SEGMENTS_HEADER = ['nazev', 'typ', 'priorita', 'useCase', 'pocetZdroju'];
+const ACTIVITY_HEADER = ['when', 'kontaktId', 'what', 'detail'];
+
+async function seedNewSpreadsheet() {
+    // Write headers
+    await sheetsAppend(SHEET_TABS.contacts, [CONTACTS_HEADER]);
+    await sheetsAppend(SHEET_TABS.sources, [SOURCES_HEADER]);
+    await sheetsAppend(SHEET_TABS.segments, [SEGMENTS_HEADER]);
+    await sheetsAppend(SHEET_TABS.activity, [ACTIVITY_HEADER]);
+
+    // Seed segments + sources from embedded markdown
+    const segRows = SEGMENTS_SEED.map(s => [s.nazev, s.typ, s.priorita, s.useCase, s.zdroje.length]);
+    await sheetsAppend(SHEET_TABS.segments, segRows);
+
+    const srcRows = [];
+    SEGMENTS_SEED.forEach(s => {
+        s.zdroje.forEach((z, idx) => {
+            srcRows.push([s.nazev, idx + 1, z.nazev, z.url, z.poznamka]);
+        });
+    });
+    if (srcRows.length > 0) await sheetsAppend(SHEET_TABS.sources, srcRows);
+
+    await logActivity('', 'init', 'Vytvořen nový spreadsheet a načteny segmenty (' + SEGMENTS_SEED.length + ')');
+}
+
+async function sheetsAppend(tabName, rows) {
+    if (!rows || rows.length === 0) return;
+    const range = encodeURIComponent(tabName + '!A1');
+    const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
+        '/values/' + range + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
+    await gfetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: rows })
+    });
+}
+
+async function sheetsRead(tabName) {
+    const range = encodeURIComponent(tabName);
+    const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
+        '/values/' + range;
+    const res = await gfetch(url);
+    const data = await res.json();
+    return data.values || [];
+}
+
+async function sheetsUpdateRow(tabName, rowIndex /* 1-based incl. header */, rowValues) {
+    const range = encodeURIComponent(tabName + '!A' + rowIndex);
+    const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
+        '/values/' + range + '?valueInputOption=RAW';
+    await gfetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [rowValues] })
+    });
+}
+
+async function sheetsClearRow(tabName, rowIndex) {
+    // Use batchUpdate with deleteDimension to actually delete the row
+    const tabId = state.sheetTabIds[tabName];
+    if (tabId === undefined) return;
+    const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + ':batchUpdate';
+    await gfetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            requests: [{
+                deleteDimension: {
+                    range: { sheetId: tabId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex }
+                }
+            }]
+        })
+    });
+}
+
+async function sheetsClearAll(tabName) {
+    // Clear all rows except header
+    const range = encodeURIComponent(tabName + '!A2:Z');
+    const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
+        '/values/' + range + ':clear';
+    await gfetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+}
+
+// ============================================================
+// BOOTSTRAP / SYNC
+// ============================================================
+async function bootstrapApp() {
+    try {
+        toast('info', 'Připojuji se ke Google Sheets…');
+        await ensureSpreadsheet();
+        await syncFromSheet();
+        updateGDriveIndicator(true);
+        toast('success', 'Připojeno. Databáze načtena.');
+    } catch (err) {
+        console.error('Bootstrap error:', err);
+        toast('error', 'Chyba: ' + err.message);
+    }
+}
+
+async function syncFromSheet() {
+    if (!state.spreadsheetId) {
+        toast('error', 'Sheet neexistuje, nejprve se připoj.');
+        return;
+    }
+    try {
+        const [contactRows, segmentRows, sourceRows, activityRows] = await Promise.all([
+            sheetsRead(SHEET_TABS.contacts),
+            sheetsRead(SHEET_TABS.segments),
+            sheetsRead(SHEET_TABS.sources),
+            sheetsRead(SHEET_TABS.activity)
+        ]);
+
+        state.contacts = rowsToObjects(contactRows, CONTACTS_HEADER);
+        // Re-index rowIndex (2-based, +1 for header)
+        state.contacts.forEach((c, i) => { c._rowIndex = i + 2; });
+
+        state.segments = rowsToObjects(segmentRows, SEGMENTS_HEADER);
+        state.sources = rowsToObjects(sourceRows, SOURCES_HEADER);
+        state.activity = rowsToObjects(activityRows, ACTIVITY_HEADER);
+
+        state.lastSync = new Date();
+        document.getElementById('settings-sync-meta').textContent =
+            'Načteno před chvílí · ' + state.contacts.length + ' kontaktů · ' + state.segments.length + ' segmentů';
+
+        renderAll();
+    } catch (err) {
+        console.error('Sync error:', err);
+        toast('error', 'Sync selhal: ' + err.message);
+    }
+}
+
+function rowsToObjects(rows, header) {
+    if (!rows || rows.length < 1) return [];
+    const headerRow = rows[0];
+    return rows.slice(1).map(row => {
+        const obj = {};
+        header.forEach((key, i) => {
+            obj[key] = row[i] !== undefined ? row[i] : '';
+        });
+        return obj;
+    });
+}
+
+function contactToRow(c) {
+    return CONTACTS_HEADER.map(k => c[k] !== undefined && c[k] !== null ? String(c[k]) : '');
+}
+
+// ============================================================
+// ACTIVITY LOG
+// ============================================================
+async function logActivity(kontaktId, what, detail) {
+    try {
+        await sheetsAppend(SHEET_TABS.activity, [[
+            new Date().toISOString(),
+            kontaktId || '',
+            what,
+            detail || ''
+        ]]);
+        state.activity.unshift({ when: new Date().toISOString(), kontaktId, what, detail });
+    } catch (err) {
+        console.warn('Activity log failed:', err);
+    }
+}
+
+// ============================================================
+// CONTACT CRUD
+// ============================================================
+function openNewContact() {
+    state.selectedId = null;
+    document.getElementById('detail-title').textContent = 'Nový kontakt';
+    document.getElementById('btn-delete').style.display = 'none';
+    document.getElementById('form-meta').style.display = 'none';
+    resetForm();
+    populateSegmentSelect('f-segment');
+    openDetail();
+}
+
+function openEditContact(id) {
+    const c = state.contacts.find(x => x.id === id);
+    if (!c) return;
+    state.selectedId = id;
+    document.getElementById('detail-title').textContent = c.kontaktniOsoba || c.firma || 'Kontakt';
+    document.getElementById('btn-delete').style.display = 'inline-flex';
+    document.getElementById('form-meta').style.display = 'block';
+    populateSegmentSelect('f-segment');
+    populateForm(c);
+    openDetail();
+}
+
+function resetForm() {
+    document.getElementById('f-typ').value = 'Zprostředkovatel';
+    document.getElementById('f-priorita').value = '2';
+    document.getElementById('f-stav').value = 'Nový';
+    document.getElementById('f-segment').value = '';
+    ['f-firma','f-ico','f-sidlo','f-kontaktniOsoba','f-role','f-email','f-telefon',
+     'f-web','f-linkedinUrl','f-facebookUrl','f-tagy','f-zdrojUrl','f-poznamka',
+     'f-osloven_kdy','f-osloven_kanal'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+}
+
+function populateForm(c) {
+    document.getElementById('f-typ').value = c.typ || 'Zprostředkovatel';
+    document.getElementById('f-priorita').value = c.priorita || '2';
+    document.getElementById('f-stav').value = c.stav || 'Nový';
+    document.getElementById('f-segment').value = c.segment || '';
+    document.getElementById('f-firma').value = c.firma || '';
+    document.getElementById('f-ico').value = c.ico || '';
+    document.getElementById('f-sidlo').value = c.sidlo || '';
+    document.getElementById('f-kontaktniOsoba').value = c.kontaktniOsoba || '';
+    document.getElementById('f-role').value = c.role || '';
+    document.getElementById('f-email').value = c.email || '';
+    document.getElementById('f-telefon').value = c.telefon || '';
+    document.getElementById('f-web').value = c.web || '';
+    document.getElementById('f-linkedinUrl').value = c.linkedinUrl || '';
+    document.getElementById('f-facebookUrl').value = c.facebookUrl || '';
+    document.getElementById('f-tagy').value = c.tagy || '';
+    document.getElementById('f-zdrojUrl').value = c.zdrojUrl || '';
+    document.getElementById('f-poznamka').value = c.poznamka || '';
+    document.getElementById('f-osloven_kdy').value = c.osloven_kdy || '';
+    document.getElementById('f-osloven_kanal').value = c.osloven_kanal || '';
+    document.getElementById('meta-created').textContent = c.createdAt ? formatDateTime(c.createdAt) : '—';
+    document.getElementById('meta-updated').textContent = c.updatedAt ? formatDateTime(c.updatedAt) : '—';
+    document.getElementById('meta-id').textContent = c.id || '—';
+}
+
+function collectForm() {
+    return {
+        typ: document.getElementById('f-typ').value,
+        priorita: document.getElementById('f-priorita').value,
+        stav: document.getElementById('f-stav').value,
+        segment: document.getElementById('f-segment').value,
+        firma: document.getElementById('f-firma').value.trim(),
+        ico: document.getElementById('f-ico').value.trim(),
+        sidlo: document.getElementById('f-sidlo').value.trim(),
+        kontaktniOsoba: document.getElementById('f-kontaktniOsoba').value.trim(),
+        role: document.getElementById('f-role').value.trim(),
+        email: document.getElementById('f-email').value.trim(),
+        telefon: document.getElementById('f-telefon').value.trim(),
+        web: document.getElementById('f-web').value.trim(),
+        linkedinUrl: document.getElementById('f-linkedinUrl').value.trim(),
+        facebookUrl: document.getElementById('f-facebookUrl').value.trim(),
+        tagy: document.getElementById('f-tagy').value.trim(),
+        zdrojUrl: document.getElementById('f-zdrojUrl').value.trim(),
+        poznamka: document.getElementById('f-poznamka').value.trim(),
+        osloven_kdy: document.getElementById('f-osloven_kdy').value,
+        osloven_kanal: document.getElementById('f-osloven_kanal').value
+    };
+}
+
+async function saveContact() {
+    const data = collectForm();
+    if (!data.firma && !data.kontaktniOsoba) {
+        toast('warning', 'Vyplň alespoň jméno kontaktní osoby nebo název firmy.');
+        return;
+    }
+
+    const now = new Date().toISOString();
+
+    if (state.selectedId) {
+        // UPDATE
+        const c = state.contacts.find(x => x.id === state.selectedId);
+        if (!c) { toast('error', 'Kontakt nenalezen.'); return; }
+        Object.assign(c, data);
+        c.updatedAt = now;
+        try {
+            await sheetsUpdateRow(SHEET_TABS.contacts, c._rowIndex, contactToRow(c));
+            await logActivity(c.id, 'update', 'Upraven kontakt');
+            toast('success', 'Uloženo.');
+            renderAll();
+            closeDetail();
+        } catch (err) {
+            console.error('Update error:', err);
+            toast('error', 'Uložení selhalo: ' + err.message);
+        }
+    } else {
+        // CREATE
+        const newContact = Object.assign({
+            id: generateId(),
+            createdAt: now,
+            updatedAt: now,
+            spolehlivost: 'ručně'
+        }, data);
+        try {
+            await sheetsAppend(SHEET_TABS.contacts, [contactToRow(newContact)]);
+            newContact._rowIndex = state.contacts.length + 2;
+            state.contacts.push(newContact);
+            await logActivity(newContact.id, 'create', 'Vytvořen kontakt: ' + (newContact.kontaktniOsoba || newContact.firma));
+            toast('success', 'Přidáno.');
+            renderAll();
+            closeDetail();
+        } catch (err) {
+            console.error('Create error:', err);
+            toast('error', 'Uložení selhalo: ' + err.message);
+        }
+    }
+}
+
+async function deleteContact() {
+    if (!state.selectedId) return;
+    const c = state.contacts.find(x => x.id === state.selectedId);
+    if (!c) return;
+    if (!confirm('Smazat tento kontakt? Akce je nevratná.')) return;
+
+    try {
+        await sheetsClearRow(SHEET_TABS.contacts, c._rowIndex);
+        await logActivity(c.id, 'delete', 'Smazán kontakt: ' + (c.kontaktniOsoba || c.firma));
+        // Re-fetch to get correct rowIndex for remaining contacts
+        await syncFromSheet();
+        toast('success', 'Smazáno.');
+        closeDetail();
+    } catch (err) {
+        console.error('Delete error:', err);
+        toast('error', 'Mazání selhalo: ' + err.message);
+    }
+}
+
+function generateId() {
+    return 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+// ============================================================
+// ARES LOOKUP
+// ============================================================
+async function aresLookup() {
+    const ico = document.getElementById('f-ico').value.trim();
+    if (!ico || ico.length !== 8 || !/^\d{8}$/.test(ico)) {
+        toast('warning', 'IČO musí být 8 číslic.');
+        return;
+    }
+    try {
+        toast('info', 'Hledám v ARES…');
+        // Vercel serverless /api/ares — relativní URL, funguje na production deploy
+        const res = await fetch('/api/ares?ico=' + encodeURIComponent(ico));
+        const data = await res.json();
+        if (!res.ok) {
+            toast('error', 'ARES: ' + (data.error || ('HTTP ' + res.status)));
+            return;
+        }
+        if (!data.success || !data.data || data.data.length === 0) {
+            toast('warning', data.message || 'Subjekt s IČO ' + ico + ' nenalezen.');
+            return;
+        }
+        const subj = data.data[0];
+        if (subj.nazev) document.getElementById('f-firma').value = subj.nazev;
+        if (subj.sidlo) document.getElementById('f-sidlo').value = subj.sidlo;
+        toast('success', 'Údaje doplněny z ARES.');
+    } catch (err) {
+        console.error('ARES error:', err);
+        toast('error', 'ARES selhal: ' + err.message);
+    }
+}
+
+// ============================================================
+// FILTERS / SEARCH / SORT
+// ============================================================
+function applyFilters() {
+    const f = state.filters;
+    state.filteredContacts = state.contacts.filter(c => {
+        if (f.typ !== 'all' && c.typ !== f.typ) return false;
+        if (f.prio !== 'all' && String(c.priorita) !== f.prio) return false;
+        if (f.stav !== 'all' && c.stav !== f.stav) return false;
+        if (f.segment !== 'all' && c.segment !== f.segment) return false;
+        if (f.search) {
+            const s = f.search.toLowerCase();
+            const hay = [c.firma, c.kontaktniOsoba, c.email, c.ico, c.web, c.role, c.tagy, c.poznamka]
+                .map(x => String(x || '').toLowerCase()).join(' ');
+            if (hay.indexOf(s) === -1) return false;
+        }
+        return true;
+    });
+
+    // Sort
+    const { col, dir } = state.sort;
+    const factor = dir === 'asc' ? 1 : -1;
+    state.filteredContacts.sort((a, b) => {
+        let va = a[col] || '';
+        let vb = b[col] || '';
+        if (col === 'priorita') { va = parseInt(va) || 99; vb = parseInt(vb) || 99; }
+        if (va < vb) return -1 * factor;
+        if (va > vb) return 1 * factor;
+        return 0;
+    });
+}
+
+function clearFilters() {
+    state.filters = { typ: 'all', prio: 'all', stav: 'all', segment: 'all', search: '' };
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.filter-pill[data-typ="all"], .filter-pill[data-prio="all"], .filter-pill[data-stav="all"]').forEach(p => p.classList.add('active'));
+    document.getElementById('filter-segment').value = 'all';
+    document.getElementById('search-input').value = '';
+    renderAll();
+}
+
+function onSearch() {
+    state.filters.search = document.getElementById('search-input').value;
+    renderContacts();
+}
+
+function setupFilterPills() {
+    function bind(group, key) {
+        document.querySelectorAll('#filter-' + group + ' .filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('#filter-' + group + ' .filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                state.filters[key] = pill.getAttribute('data-' + group);
+                renderContacts();
+            });
+        });
+    }
+    bind('typ', 'typ');
+    bind('prio', 'prio');
+    bind('stav', 'stav');
+
+    document.getElementById('filter-segment').addEventListener('change', e => {
+        state.filters.segment = e.target.value;
+        renderContacts();
+    });
+
+    document.querySelectorAll('.contacts-table thead th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.getAttribute('data-sort');
+            if (state.sort.col === col) {
+                state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                state.sort.col = col;
+                state.sort.dir = 'asc';
+            }
+            renderContacts();
+        });
+    });
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+function renderAll() {
+    renderContacts();
+    renderDashboard();
+    renderSettings();
+    populateSegmentFilter();
+}
+
+function renderContacts() {
+    applyFilters();
+    const tbody = document.getElementById('contacts-tbody');
+    const empty = document.getElementById('empty-state');
+    const table = document.getElementById('contacts-table');
+    document.getElementById('results-count').textContent = state.filteredContacts.length +
+        (state.filteredContacts.length === 1 ? ' kontakt' :
+         state.filteredContacts.length >= 2 && state.filteredContacts.length <= 4 ? ' kontakty' : ' kontaktů');
+
+    // Sort indicator
+    document.querySelectorAll('.contacts-table thead th').forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+        if (th.getAttribute('data-sort') === state.sort.col) {
+            th.classList.add(state.sort.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+        }
+    });
+
+    if (state.filteredContacts.length === 0) {
+        tbody.innerHTML = '';
+        table.style.display = state.contacts.length === 0 ? 'none' : 'table';
+        empty.style.display = state.contacts.length === 0 ? 'block' : 'none';
+        if (state.contacts.length > 0 && state.filteredContacts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-mute);">Žádný kontakt neodpovídá filtrům.</td></tr>';
+        }
+        return;
+    }
+
+    table.style.display = 'table';
+    empty.style.display = 'none';
+    tbody.innerHTML = state.filteredContacts.map(c => {
+        const typCls = c.typ === 'Klient' ? 'typ-klient' : c.typ === 'Zprostředkovatel' ? 'typ-zprostredkovatel' : 'typ-oboje';
+        const stavCls = 'stav-' + slug(c.stav || 'novy');
+        return '<tr onclick="openEditContact(\'' + escapeAttr(c.id) + '\')">' +
+            '<td class="col-name">' + (escapeHtml(c.kontaktniOsoba) || '<span style="color:var(--text-faint);">—</span>') + '</td>' +
+            '<td class="col-firma">' + (escapeHtml(c.firma) || '<span style="color:var(--text-faint);">—</span>') + '</td>' +
+            '<td><span class="typ-badge ' + typCls + '">' + escapeHtml(c.typ || '—') + '</span></td>' +
+            '<td style="font-size:12px;color:var(--text-mute);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(c.segment || '—') + '</td>' +
+            '<td><span class="prio-dot prio-' + (c.priorita || '3') + '"></span>' + escapeHtml(c.priorita || '—') + '</td>' +
+            '<td><span class="stav-badge ' + stavCls + '">' + escapeHtml(c.stav || '—') + '</span></td>' +
+            '<td class="col-email" style="font-size:12px;color:var(--text-mute);">' + (escapeHtml(c.email) || '<span style="color:var(--text-faint);">—</span>') + '</td>' +
+        '</tr>';
+    }).join('');
+}
+
+function renderDashboard() {
+    const total = state.contacts.length;
+    const klienti = state.contacts.filter(c => c.typ === 'Klient' || c.typ === 'Oboje').length;
+    const zprostredkovatele = state.contacts.filter(c => c.typ === 'Zprostředkovatel' || c.typ === 'Oboje').length;
+    const prio1 = state.contacts.filter(c => String(c.priorita) === '1').length;
+
+    document.getElementById('dash-total').innerHTML = total === 0 ? '<em>0</em>' : String(total);
+    document.getElementById('dash-total-meta').textContent = total === 0 ? 'začni přidáním' : 'aktivních záznamů';
+    document.getElementById('dash-klienti').textContent = klienti;
+    document.getElementById('dash-zprostredkovatele').textContent = zprostredkovatele;
+    document.getElementById('dash-prio1').innerHTML = prio1 === 0 ? '<em>0</em>' : String(prio1);
+    document.getElementById('danger-count').textContent = total;
+
+    // Breakdown
+    const breakdown = {};
+    state.segments.forEach(s => { breakdown[s.nazev] = 0; });
+    state.contacts.forEach(c => {
+        if (c.segment) breakdown[c.segment] = (breakdown[c.segment] || 0) + 1;
+    });
+    const sortedSegs = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+    document.getElementById('seg-breakdown').innerHTML = sortedSegs.length === 0
+        ? '<div style="color:var(--text-mute);font-size:13px;padding:8px;">Žádné segmenty.</div>'
+        : sortedSegs.map(([n, c]) => '<div class="seg-row"><span class="seg-row-name">' + escapeHtml(n) + '</span><span class="seg-row-count">' + c + '</span></div>').join('');
+
+    // Recent activity
+    const recent = state.activity.slice(-20).reverse();
+    document.getElementById('recent-activity').innerHTML = recent.length === 0
+        ? '<div class="log-row"><span class="log-when">—</span><span class="log-what">Žádná aktivita</span></div>'
+        : recent.map(a => '<div class="log-row"><span class="log-when">' + formatDateTime(a.when) + '</span><span class="log-what">' + escapeHtml(a.what) + (a.detail ? ' — ' + escapeHtml(a.detail) : '') + '</span></div>').join('');
+}
+
+function renderSettings() {
+    const list = document.getElementById('settings-seg-list');
+    if (state.segments.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:8px;">Segmenty zatím nejsou načtené.</div>';
+    } else {
+        list.innerHTML = state.segments.map(s =>
+            '<div class="seg-row">' +
+            '<span class="seg-row-name"><span class="prio-dot prio-' + s.priorita + '"></span>' + escapeHtml(s.nazev) + ' <span style="color:var(--text-faint);font-size:11px;">(' + escapeHtml(s.typ) + ')</span></span>' +
+            '<span class="seg-row-count">' + s.pocetZdroju + ' zdrojů</span>' +
+            '</div>'
+        ).join('');
+    }
+}
+
+function populateSegmentFilter() {
+    const sel = document.getElementById('filter-segment');
+    const current = sel.value;
+    sel.innerHTML = '<option value="all">Všechny segmenty</option>' +
+        state.segments.map(s => '<option value="' + escapeAttr(s.nazev) + '">' + escapeHtml(s.nazev) + '</option>').join('');
+    if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+}
+
+function populateSegmentSelect(id) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">— vyber segment —</option>' +
+        state.segments.map(s => '<option value="' + escapeAttr(s.nazev) + '">' + escapeHtml(s.nazev) + ' (P' + s.priorita + ')</option>').join('');
+}
+
+// ============================================================
+// DETAIL SLIDE-OVER
+// ============================================================
+function openDetail() {
+    document.getElementById('detail-overlay').classList.add('visible');
+    document.getElementById('detail-panel').classList.add('visible');
+}
+function closeDetail() {
+    document.getElementById('detail-overlay').classList.remove('visible');
+    document.getElementById('detail-panel').classList.remove('visible');
+    state.selectedId = null;
+}
+
+// ============================================================
+// SECTION TABS
+// ============================================================
+document.querySelectorAll('.section-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        const target = tab.getAttribute('data-section');
+        document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.db-section').forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelector('.db-section[data-section="' + target + '"]').classList.add('active');
+    });
+});
+
+// ============================================================
+// IMPORT CSV
+// ============================================================
+function openImportModal() {
+    document.getElementById('import-modal').classList.add('visible');
+}
+function closeImportModal() {
+    document.getElementById('import-modal').classList.remove('visible');
+    document.getElementById('csv-file-input').value = '';
+    document.getElementById('csv-preview').innerHTML = '';
+    document.getElementById('btn-do-import').disabled = true;
+    state.csvRows = [];
+}
+
+function onCsvFileChosen(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const text = ev.target.result;
+        const parsed = parseCSV(text);
+        if (parsed.length < 2) {
+            document.getElementById('csv-preview').innerHTML = '<span style="color:var(--danger);">CSV je prázdné nebo bez hlavičky.</span>';
+            return;
+        }
+        state.csvRows = parsed;
+        const headerRow = parsed[0];
+        const dataCount = parsed.length - 1;
+        const mapped = headerRow.map(h => mapCsvHeader(h));
+        const recognized = mapped.filter(m => m !== null).length;
+        document.getElementById('csv-preview').innerHTML =
+            '<div style="margin-bottom:10px;">Nalezeno <strong>' + dataCount + '</strong> řádků, <strong>' + recognized + ' z ' + headerRow.length + '</strong> sloupců rozpoznáno.</div>' +
+            '<div style="font-size:11.5px;color:var(--text-mute);font-family:var(--font-mono);max-height:160px;overflow:auto;background:var(--bg-input);padding:10px;border-radius:6px;">' +
+            headerRow.map((h, i) => escapeHtml(h) + ' → ' + (mapped[i] ? '<span style="color:var(--amber-warm);">' + mapped[i] + '</span>' : '<span style="color:var(--text-faint);">(ignorováno)</span>')).join('<br>') +
+            '</div>';
+        document.getElementById('btn-do-import').disabled = false;
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+const CSV_HEADER_MAP = {
+    'firma': 'firma', 'company': 'firma', 'společnost': 'firma',
+    'ico': 'ico', 'ičo': 'ico', 'identifikační číslo': 'ico',
+    'sidlo': 'sidlo', 'sídlo': 'sidlo', 'adresa': 'sidlo', 'address': 'sidlo',
+    'kontaktniosoba': 'kontaktniOsoba', 'kontaktni osoba': 'kontaktniOsoba', 'jmeno': 'kontaktniOsoba', 'jméno': 'kontaktniOsoba', 'name': 'kontaktniOsoba',
+    'role': 'role', 'pozice': 'role', 'title': 'role',
+    'email': 'email', 'e-mail': 'email',
+    'telefon': 'telefon', 'phone': 'telefon', 'tel': 'telefon',
+    'web': 'web', 'website': 'web', 'url': 'web',
+    'linkedin': 'linkedinUrl', 'linkedinurl': 'linkedinUrl', 'linkedin url': 'linkedinUrl',
+    'facebook': 'facebookUrl', 'facebookurl': 'facebookUrl', 'fb': 'facebookUrl',
+    'segment': 'segment',
+    'typ': 'typ', 'type': 'typ',
+    'priorita': 'priorita', 'priority': 'priorita',
+    'stav': 'stav', 'status': 'stav',
+    'tagy': 'tagy', 'tags': 'tagy',
+    'zdroj': 'zdrojUrl', 'zdrojurl': 'zdrojUrl', 'zdroj url': 'zdrojUrl', 'source': 'zdrojUrl',
+    'poznamka': 'poznamka', 'poznámka': 'poznamka', 'notes': 'poznamka', 'note': 'poznamka'
+};
+
+function mapCsvHeader(h) {
+    const norm = String(h || '').toLowerCase().trim();
+    return CSV_HEADER_MAP[norm] || null;
+}
+
+function parseCSV(text) {
+    // Simple CSV parser — handles quoted fields with embedded commas and newlines
+    const rows = [];
+    let cur = [];
+    let field = '';
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (inQuotes) {
+            if (ch === '"' && text[i + 1] === '"') { field += '"'; i++; }
+            else if (ch === '"') { inQuotes = false; }
+            else { field += ch; }
+        } else {
+            if (ch === '"') { inQuotes = true; }
+            else if (ch === ',') { cur.push(field); field = ''; }
+            else if (ch === '\n' || ch === '\r') {
+                if (ch === '\r' && text[i + 1] === '\n') i++;
+                cur.push(field); field = '';
+                if (cur.some(c => c.trim() !== '')) rows.push(cur);
+                cur = [];
+            } else { field += ch; }
+        }
+    }
+    if (field !== '' || cur.length > 0) { cur.push(field); if (cur.some(c => c.trim() !== '')) rows.push(cur); }
+    return rows;
+}
+
+async function doImport() {
+    if (state.csvRows.length < 2) return;
+    const headerRow = state.csvRows[0];
+    const mapped = headerRow.map(h => mapCsvHeader(h));
+    const dataRows = state.csvRows.slice(1);
+    const now = new Date().toISOString();
+    const newContacts = dataRows.map(row => {
+        const c = {
+            id: generateId(),
+            createdAt: now,
+            updatedAt: now,
+            typ: 'Zprostředkovatel',
+            priorita: '2',
+            stav: 'Nový',
+            spolehlivost: 'import-csv'
+        };
+        mapped.forEach((field, i) => {
+            if (field && row[i] !== undefined) c[field] = String(row[i]).trim();
+        });
+        return c;
+    }).filter(c => c.firma || c.kontaktniOsoba);
+
+    if (newContacts.length === 0) {
+        toast('warning', 'Žádný řádek neměl vyplněnou firmu ani jméno.');
+        return;
+    }
+
+    try {
+        toast('info', 'Importuji ' + newContacts.length + ' kontaktů…');
+        await sheetsAppend(SHEET_TABS.contacts, newContacts.map(contactToRow));
+        await logActivity('', 'import', 'Importováno ' + newContacts.length + ' kontaktů z CSV');
+        toast('success', 'Importováno ' + newContacts.length + ' kontaktů.');
+        closeImportModal();
+        await syncFromSheet();
+    } catch (err) {
+        console.error('Import error:', err);
+        toast('error', 'Import selhal: ' + err.message);
+    }
+}
+
+// ============================================================
+// EXPORT CSV
+// ============================================================
+function exportCSV() {
+    if (state.contacts.length === 0) {
+        toast('warning', 'Nic k exportu.');
+        return;
+    }
+    const header = CONTACTS_HEADER.filter(h => h !== 'spolehlivost'); // friendly export
+    const rows = [header.join(',')];
+    state.contacts.forEach(c => {
+        const r = header.map(k => csvEscape(c[k] || ''));
+        rows.push(r.join(','));
+    });
+    const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'profilend-database-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('success', 'Exportováno ' + state.contacts.length + ' kontaktů.');
+}
+
+function csvEscape(v) {
+    const s = String(v == null ? '' : v);
+    if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+        return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+}
+
+// ============================================================
+// DATABASE CHECK
+// ============================================================
+function checkDatabase() {
+    const issues = { duplicates: [], missing: [] };
+    const seen = { ico: {}, email: {}, namefirma: {}, linkedin: {} };
+
+    state.contacts.forEach(c => {
+        // Missing required
+        if (!c.firma && !c.kontaktniOsoba) issues.missing.push({ id: c.id, why: 'Chybí firma i jméno' });
+        // Duplicate detection
+        if (c.ico && c.ico.length === 8) {
+            if (seen.ico[c.ico]) issues.duplicates.push({ id: c.id, dupOf: seen.ico[c.ico], why: 'IČO ' + c.ico });
+            else seen.ico[c.ico] = c.id;
+        }
+        if (c.email) {
+            const e = c.email.toLowerCase();
+            if (seen.email[e]) issues.duplicates.push({ id: c.id, dupOf: seen.email[e], why: 'Email ' + e });
+            else seen.email[e] = c.id;
+        }
+        if (c.linkedinUrl) {
+            const l = c.linkedinUrl.toLowerCase().replace(/\/$/, '');
+            if (seen.linkedin[l]) issues.duplicates.push({ id: c.id, dupOf: seen.linkedin[l], why: 'LinkedIn URL' });
+            else seen.linkedin[l] = c.id;
+        }
+        if (c.kontaktniOsoba && c.firma) {
+            const k = (c.kontaktniOsoba + '|' + c.firma).toLowerCase();
+            if (seen.namefirma[k]) issues.duplicates.push({ id: c.id, dupOf: seen.namefirma[k], why: 'Jméno + firma' });
+            else seen.namefirma[k] = c.id;
+        }
+    });
+
+    const container = document.getElementById('check-results');
+    document.getElementById('check-meta').textContent = 'Spuštěno ' + formatDateTime(new Date().toISOString());
+    container.style.display = 'block';
+
+    const total = issues.duplicates.length + issues.missing.length;
+    if (total === 0) {
+        container.innerHTML = '<div class="info-note success"><strong>Vše OK.</strong> Žádné duplicity ani chybějící povinná pole.</div>';
+        return;
+    }
+
+    let html = '<div class="info-note warning"><strong>Nalezeno ' + total + ' problémů.</strong></div>';
+    if (issues.duplicates.length > 0) {
+        html += '<div style="margin-top:14px;"><strong style="color:var(--text);font-size:13px;">Možné duplicity (' + issues.duplicates.length + ')</strong><div style="margin-top:8px;max-height:240px;overflow-y:auto;">';
+        issues.duplicates.forEach(d => {
+            const c = state.contacts.find(x => x.id === d.id);
+            const orig = state.contacts.find(x => x.id === d.dupOf);
+            if (!c || !orig) return;
+            html += '<div style="padding:8px;border:1px solid var(--line-faint);border-radius:6px;margin-bottom:6px;font-size:12.5px;">' +
+                '<div style="color:var(--text);">' + escapeHtml(c.kontaktniOsoba || c.firma) + ' = ' + escapeHtml(orig.kontaktniOsoba || orig.firma) + '</div>' +
+                '<div style="color:var(--text-mute);font-size:11px;margin-top:3px;">Shoda: ' + escapeHtml(d.why) + '</div>' +
+                '<div style="margin-top:6px;display:flex;gap:6px;">' +
+                '<button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="openEditContact(\'' + escapeAttr(c.id) + '\')">Otevřít duplicitu</button>' +
+                '<button class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="openEditContact(\'' + escapeAttr(orig.id) + '\')">Otevřít originál</button>' +
+                '</div></div>';
+        });
+        html += '</div></div>';
+    }
+    if (issues.missing.length > 0) {
+        html += '<div style="margin-top:14px;"><strong style="color:var(--text);font-size:13px;">Chybějící údaje (' + issues.missing.length + ')</strong><div style="margin-top:8px;max-height:200px;overflow-y:auto;">';
+        issues.missing.forEach(m => {
+            html += '<div style="padding:6px 8px;font-size:12px;color:var(--text-mute);">' + escapeHtml(m.id) + ' — ' + escapeHtml(m.why) + '</div>';
+        });
+        html += '</div></div>';
+    }
+    container.innerHTML = html;
+}
+
+// ============================================================
+// WIPE
+// ============================================================
+async function wipeContacts() {
+    if (state.contacts.length === 0) {
+        toast('info', 'Databáze je už prázdná.');
+        return;
+    }
+    const c = state.contacts.length;
+    if (!confirm('Smazat všechny ' + c + ' kontaktů? Audit log zůstane. Operace je nevratná.')) return;
+    if (!confirm('Opravdu? Tohle smaže všechno.')) return;
+    try {
+        await sheetsClearAll(SHEET_TABS.contacts);
+        await logActivity('', 'wipe', 'Vyprázdněna databáze (' + c + ' kontaktů)');
+        toast('success', 'Vyprázdněno.');
+        await syncFromSheet();
+    } catch (err) {
+        console.error('Wipe error:', err);
+        toast('error', 'Vyprázdnění selhalo: ' + err.message);
+    }
+}
+
+// ============================================================
+// OPEN SHEET IN DRIVE
+// ============================================================
+function openSheetInDrive() {
+    if (!state.spreadsheetId) return;
+    window.open('https://docs.google.com/spreadsheets/d/' + state.spreadsheetId, '_blank');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastCounter = 0;
+function toast(type, message, duration) {
+    const host = document.getElementById('toast-host');
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = message;
+    host.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => {
+        t.classList.remove('show');
+        setTimeout(() => t.remove(), 400);
+    }, duration || 3500);
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function escapeHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function escapeAttr(s) {
+    return String(s == null ? '' : s).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+function slug(s) {
+    return String(s || '').toLowerCase()
+        .replace(/[áäà]/g, 'a').replace(/[éěè]/g, 'e').replace(/[íì]/g, 'i')
+        .replace(/[óöò]/g, 'o').replace(/[úůü]/g, 'u').replace(/[ý]/g, 'y')
+        .replace(/[čć]/g, 'c').replace(/[ďđ]/g, 'd').replace(/[ň]/g, 'n')
+        .replace(/[ř]/g, 'r').replace(/[š]/g, 's').replace(/[ť]/g, 't').replace(/[ž]/g, 'z')
+        .replace(/[^a-z0-9]/g, '');
+}
+function formatDateTime(iso) {
+    if (!iso) return '—';
+    try {
+        const d = new Date(iso);
+        return d.toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return iso; }
+}
+
+// ============================================================
+// CUSTOM DROPDOWN CONVERSION
+// Convert native <select> elements to editorial dropdown widget
+// (matches loan-documentation.html / termsheet-generator.html pattern).
+// ============================================================
+function destroyDropdown(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    sel.hidden = false;
+    delete sel.dataset.cdInit;
+    // Remove sibling .dropdown-field if present
+    const sib = document.querySelector('.dropdown-field[data-target-select="' + selectId + '"]');
+    if (sib) sib.remove();
+}
+
+function rebuildDropdown(selectId) {
+    destroyDropdown(selectId);
+    if (window.convertSelectsToDropdowns) {
+        window.convertSelectsToDropdowns('#' + selectId);
+    }
+}
+
+function initStaticDropdowns() {
+    if (!window.convertSelectsToDropdowns) return;
+    // Static-options selects (form selecty se stálými hodnotami)
+    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal'].forEach(id => {
+        window.convertSelectsToDropdowns('#' + id);
+    });
+}
+
+// Override populateSegmentFilter to rebuild custom dropdown after options change
+const _origPopulateSegmentFilter = populateSegmentFilter;
+populateSegmentFilter = function() {
+    _origPopulateSegmentFilter();
+    rebuildDropdown('filter-segment');
+};
+
+// Override populateSegmentSelect to rebuild custom dropdown after options change
+const _origPopulateSegmentSelect = populateSegmentSelect;
+populateSegmentSelect = function(id) {
+    _origPopulateSegmentSelect(id);
+    rebuildDropdown(id);
+};
+
+// Override populateForm to sync custom dropdowns after .value is set
+const _origPopulateForm = populateForm;
+populateForm = function(c) {
+    _origPopulateForm(c);
+    ['f-typ', 'f-priorita', 'f-stav', 'f-segment', 'f-osloven_kanal'].forEach(id => {
+        if (window.syncCustomDropdown) window.syncCustomDropdown(id);
+    });
+};
+
+// Override resetForm to sync custom dropdowns to default values
+const _origResetForm = resetForm;
+resetForm = function() {
+    _origResetForm();
+    ['f-typ', 'f-priorita', 'f-stav', 'f-segment', 'f-osloven_kanal'].forEach(id => {
+        if (window.syncCustomDropdown) window.syncCustomDropdown(id);
+    });
+};
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', () => {
+    initTokenClient();
+    setupFilterPills();
+    // Init static-options dropdowns (form selecty) — segment + filter dropdowns
+    // se inicializují později, jakmile máme segments z Sheets
+    initStaticDropdowns();
+});
+</script>
+
+</body>
+</html>
