@@ -2015,6 +2015,19 @@
             </div>
 
             <div class="settings-panel">
+                <h4>Struktura Sheetu (migrace schematu)</h4>
+                <p class="panel-desc">Když aplikace přidá nový sloupec (např. nedávno <code>linkedinStav</code>), automatická migrace by ho měla doplnit do hlavičky Sheetu při prvním sync. Pokud z nějakého důvodu neproběhne (rate-limit, expired token, cached JS), klikni Migrovat — aplikace zkontroluje všechny 4 listy (Contacts, Sources, Segments, Activity) a doplní chybějící sloupce.</p>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Poslední migrace</div>
+                        <div class="settings-row-meta" id="migrate-meta">Nespouštěno</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="migrateStructureManually()" id="btn-migrate">Migrovat strukturu</button>
+                </div>
+                <div id="migrate-results" style="margin-top:14px;display:none;"></div>
+            </div>
+
+            <div class="settings-panel">
                 <h4>Segmenty a zdroje</h4>
                 <p class="panel-desc">Z plánu rozvoje sítě (Markdown). Při prvním připojení se nahrály do listu <em>Segments</em> a <em>Sources</em> v Sheetu. Tady je vidíš v aplikaci; editovat můžeš přímo v Google Sheets (změny se načtou po kliknutí na „Načíst znovu" nahoře).</p>
                 <div class="seg-list" id="settings-seg-list"></div>
@@ -2931,16 +2944,26 @@ async function seedNewSpreadsheet() {
     await logActivity('', 'init', 'Vytvořen nový spreadsheet a načteny segmenty (' + SEGMENTS_SEED.length + ')');
 }
 
+async function checkSheetsResponse(res, op) {
+    if (res.ok) return;
+    const body = await res.text().catch(() => '');
+    throw new Error(op + ' selhalo HTTP ' + res.status + ': ' + body.slice(0, 300));
+}
+
 async function sheetsAppend(tabName, rows) {
     if (!rows || rows.length === 0) return;
+    // Pro UPDATE/APPEND musíme range specifikovat jako A1:LASTCOL aby Sheets API
+    // nepřepisovala existující data jiných sloupců. Range "A1" by Sheets vzal jako
+    // single cell a multi-column values by buď silently ignored nebo failed.
     const range = encodeURIComponent(tabName + '!A1');
     const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
         '/values/' + range + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
-    await gfetch(url, {
+    const res = await gfetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ values: rows })
     });
+    await checkSheetsResponse(res, 'sheetsAppend(' + tabName + ')');
 }
 
 async function sheetsRead(tabName) {
@@ -2948,19 +2971,36 @@ async function sheetsRead(tabName) {
     const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
         '/values/' + range;
     const res = await gfetch(url);
+    await checkSheetsResponse(res, 'sheetsRead(' + tabName + ')');
     const data = await res.json();
     return data.values || [];
 }
 
+// Pro UPDATE potřebujeme přesný range A{row}:{lastCol}{row}, jinak Sheets API zapíše
+// jen do A{row} a ostatní hodnoty (sloupce B-X) ignoruje. To byl důvod, proč
+// auto-migrace tichá failovala (range "A1" + multi-column values = silent no-op).
+function colLetter(n) {
+    // 1-based: 1='A', 26='Z', 27='AA', atd.
+    let s = '';
+    while (n > 0) {
+        const r = (n - 1) % 26;
+        s = String.fromCharCode(65 + r) + s;
+        n = Math.floor((n - 1) / 26);
+    }
+    return s;
+}
+
 async function sheetsUpdateRow(tabName, rowIndex /* 1-based incl. header */, rowValues) {
-    const range = encodeURIComponent(tabName + '!A' + rowIndex);
+    const lastCol = colLetter(rowValues.length);
+    const range = encodeURIComponent(tabName + '!A' + rowIndex + ':' + lastCol + rowIndex);
     const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
         '/values/' + range + '?valueInputOption=RAW';
-    await gfetch(url, {
+    const res = await gfetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ values: [rowValues] })
     });
+    await checkSheetsResponse(res, 'sheetsUpdateRow(' + tabName + '!' + rowIndex + ')');
 }
 
 async function sheetsClearRow(tabName, rowIndex) {
@@ -3041,23 +3081,46 @@ async function syncFromSheet() {
     }
 }
 
-// Migration helper — pokud Sheet header je shorter than CONTACTS_HEADER (např. po update
-// aplikace s novými sloupci), update header row a vyrovnat. Existing data rows zůstávají
-// jak jsou, nové sloupce vrátí '' přes rowsToObjects fallback.
-async function migrateContactsHeader(contactRows) {
-    if (!contactRows || contactRows.length < 1) return;
-    const headerRow = contactRows[0] || [];
-    let needsUpdate = false;
-    CONTACTS_HEADER.forEach((field, i) => {
-        if (headerRow[i] !== field) needsUpdate = true;
-    });
-    if (!needsUpdate) return;
+// Generic migration helper — porovná header existujícího sheetu s očekávaným headerem a doplní rozdíl.
+// Vrací { tab, action: 'no-change'|'migrated'|'created'|'error', oldCount, newCount, error? }.
+// Existing data rows zůstávají, nové sloupce mají prázdné cell (rowsToObjects fallback = '').
+async function migrateSheetHeader(tabName, expectedHeader, opts) {
+    opts = opts || {};
     try {
-        console.log('Migrating contacts header: ' + headerRow.length + ' → ' + CONTACTS_HEADER.length + ' columns');
-        await sheetsUpdateRow(SHEET_TABS.contacts, 1, CONTACTS_HEADER);
-        contactRows[0] = CONTACTS_HEADER.slice(); // sync in-memory
+        let rows;
+        if (opts.cachedRows) {
+            rows = opts.cachedRows;
+        } else {
+            rows = await sheetsRead(tabName);
+        }
+        if (!rows || rows.length === 0) {
+            // Prázdný sheet — jen zapíšeme header
+            await sheetsAppend(tabName, [expectedHeader]);
+            return { tab: tabName, action: 'created', oldCount: 0, newCount: expectedHeader.length };
+        }
+        const headerRow = rows[0] || [];
+        let needsUpdate = false;
+        for (let i = 0; i < expectedHeader.length; i++) {
+            if (headerRow[i] !== expectedHeader[i]) { needsUpdate = true; break; }
+        }
+        if (!needsUpdate) {
+            return { tab: tabName, action: 'no-change', oldCount: headerRow.length, newCount: headerRow.length };
+        }
+        await sheetsUpdateRow(tabName, 1, expectedHeader);
+        if (opts.cachedRows) opts.cachedRows[0] = expectedHeader.slice();
+        return { tab: tabName, action: 'migrated', oldCount: headerRow.length, newCount: expectedHeader.length };
     } catch (err) {
-        console.warn('Header migration failed (non-fatal):', err);
+        return { tab: tabName, action: 'error', error: (err && err.message) || String(err) };
+    }
+}
+
+// Auto-migration volaná ze syncFromSheet — jen contacts tab (nejčastější změny schematu).
+async function migrateContactsHeader(contactRows) {
+    const result = await migrateSheetHeader(SHEET_TABS.contacts, CONTACTS_HEADER, { cachedRows: contactRows });
+    if (result.action === 'migrated') {
+        console.log('Migrated contacts header: ' + result.oldCount + ' → ' + result.newCount + ' columns');
+    } else if (result.action === 'error') {
+        console.warn('Auto-migration of contacts header failed:', result.error);
     }
 }
 
@@ -5075,6 +5138,77 @@ function frontendDedupeDeep(arrays) {
         return ca - cb;
     });
     return out;
+}
+
+// ============================================================
+// MANUAL MIGRATION (explicit tlačítko v Nastavení)
+// Projde všechny 4 listy a doplní chybějící sloupce v hlavičkách.
+// ============================================================
+async function migrateStructureManually() {
+    const meta = document.getElementById('migrate-meta');
+    const container = document.getElementById('migrate-results');
+    const btn = document.getElementById('btn-migrate');
+
+    if (!state.spreadsheetId) {
+        toast('error', 'Sheet není připojený. Nejdřív se přihlas přes Google.');
+        return;
+    }
+
+    meta.textContent = 'Migrace probíhá…';
+    container.style.display = 'block';
+    container.innerHTML = '<div style="font-size:13px;color:var(--text-mute);padding:8px;">Kontroluji 4 listy…</div>';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+
+    const tabs = [
+        { tab: SHEET_TABS.contacts, header: CONTACTS_HEADER },
+        { tab: SHEET_TABS.sources, header: SOURCES_HEADER },
+        { tab: SHEET_TABS.segments, header: SEGMENTS_HEADER },
+        { tab: SHEET_TABS.activity, header: ACTIVITY_HEADER }
+    ];
+
+    const reports = [];
+    for (const t of tabs) {
+        const r = await migrateSheetHeader(t.tab, t.header);
+        reports.push(r);
+    }
+
+    meta.textContent = 'Spuštěno ' + formatDateTime(new Date().toISOString());
+    container.innerHTML = reports.map(r => {
+        let icon, color, detail;
+        if (r.action === 'error') {
+            icon = '✗'; color = 'var(--danger)';
+            detail = 'Chyba: ' + (r.error || 'neznámá');
+        } else if (r.action === 'migrated') {
+            icon = '✓'; color = 'var(--success)';
+            detail = 'Migrováno ' + r.oldCount + ' → ' + r.newCount + ' sloupců (přidán chybějící header)';
+        } else if (r.action === 'created') {
+            icon = '✓'; color = 'var(--success)';
+            detail = 'Vytvořen header (' + r.newCount + ' sloupců)';
+        } else {
+            icon = '○'; color = 'var(--text-mute)';
+            detail = 'Header je v pořádku (' + r.newCount + ' sloupců, žádná změna)';
+        }
+        return '<div style="padding:10px 14px;margin-bottom:6px;background:var(--bg-input);border-left:3px solid ' + color + ';border-radius:6px;font-size:12.5px;">' +
+            '<div style="color:var(--text);font-weight:500;">' + icon + ' List „' + escapeHtml(r.tab) + '"</div>' +
+            '<div style="color:var(--text-mute);margin-top:4px;">' + escapeHtml(detail) + '</div>' +
+        '</div>';
+    }).join('');
+
+    const anyMigrated = reports.some(r => r.action === 'migrated' || r.action === 'created');
+    const anyError = reports.some(r => r.action === 'error');
+
+    if (anyError) {
+        toast('error', 'Migrace s chybou — viz detaily v Nastavení.');
+    } else if (anyMigrated) {
+        toast('success', 'Migrace dokončena. Načítám fresh data ze Sheetu…');
+        await syncFromSheet();
+    } else {
+        toast('info', 'Žádné změny — všechny listy mají správnou strukturu.');
+    }
+
+    btn.disabled = false;
+    btn.style.opacity = '';
 }
 
 // ============================================================

@@ -3755,6 +3755,16 @@
             return xml;
         }
 
+        // OOXML track-changes wrapping. <w:del> a <w:ins> MUSÍ být na run level
+        // (sibling of <w:r>), NIKDY uvnitř <w:t>. Starý přístup (split.join na XML
+        // s del+ins markupem) generoval nevalidní strukturu typu
+        // <w:t>...<w:del><w:r><w:delText>FIND</w:delText></w:r></w:del>...</w:t>
+        // — Word soubor odmítal otevřít.
+        //
+        // Nový přístup: regex najde parent run <w:r [...]><w:rPr>?<w:t [...]>text...FIND...</w:t></w:r>
+        // a rozdělí ho na max 4 části: před-find run, deleted block, inserted block,
+        // po-find run. Zachová <w:rPr> (formátování) na všech částech, aby revize
+        // vypadaly v Wordu konzistentně s okolním textem.
         function applyReplacementsWithTracking(originalXml, replacements) {
             var xml = originalXml;
             var date = new Date().toISOString();
@@ -3762,14 +3772,48 @@
             var id = 0;
             replacements.forEach(function(r) {
                 if (!r || typeof r.find !== 'string' || typeof r.replace !== 'string') return;
+                if (r.find.length === 0) return;
                 var findEsc = escapeXml(r.find);
                 var replaceEsc = escapeXml(r.replace);
-                var del = '<w:del w:id="' + (id * 2) + '" w:author="' + author + '" w:date="' + date + '"><w:r><w:delText>' + findEsc + '</w:delText></w:r></w:del>';
-                var ins = '<w:ins w:id="' + (id * 2 + 1) + '" w:author="' + author + '" w:date="' + date + '"><w:r><w:t>' + replaceEsc + '</w:t></w:r></w:ins>';
-                var searchKey = (xml.indexOf(r.find) !== -1) ? r.find : findEsc;
-                if (xml.indexOf(searchKey) === -1) return;
-                xml = xml.split(searchKey).join(del + ins);
-                id++;
+
+                // Hledáme run obsahující buď XML-escapovaný find (typický případ — XML text
+                // content má escaped & < >), nebo raw find (fallback pro ASCII-only texty).
+                var findRegexEsc = findEsc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                var pattern = new RegExp(
+                    '(<w:r(?:\\s[^>]*)?>)' +                         // 1: <w:r> open
+                    '((?:<w:rPr>[\\s\\S]*?</w:rPr>)?)' +              // 2: optional <w:rPr>
+                    '(<w:t(?:\\s[^>]*)?>)' +                          // 3: <w:t> open
+                    '((?:(?!</w:t>)[\\s\\S])*?' + findRegexEsc + '(?:(?!</w:t>)[\\s\\S])*?)' +  // 4: text containing find
+                    '(</w:t>)' +                                      // 5: </w:t>
+                    '(</w:r>)',                                       // 6: </w:r>
+                    'g'
+                );
+
+                xml = xml.replace(pattern, function(match, rOpen, rPr, tOpen, text, tClose, rClose) {
+                    var idx = text.indexOf(findEsc);
+                    if (idx === -1) return match;  // safety check
+                    var before = text.substring(0, idx);
+                    var after = text.substring(idx + findEsc.length);
+                    var thisId = id;
+                    id++;
+
+                    var out = '';
+                    if (before.length > 0) {
+                        out += rOpen + rPr + tOpen + before + tClose + rClose;
+                    }
+                    // Deleted run: <w:del> obaluje <w:r> s <w:delText> (NIKDY <w:t> uvnitř <w:del>!)
+                    out += '<w:del w:id="' + (thisId * 2) + '" w:author="' + author + '" w:date="' + date + '">';
+                    out += rOpen + rPr + '<w:delText xml:space="preserve">' + findEsc + '</w:delText>' + rClose;
+                    out += '</w:del>';
+                    // Inserted run: <w:ins> obaluje <w:r> s <w:t>
+                    out += '<w:ins w:id="' + (thisId * 2 + 1) + '" w:author="' + author + '" w:date="' + date + '">';
+                    out += rOpen + rPr + tOpen + replaceEsc + tClose + rClose;
+                    out += '</w:ins>';
+                    if (after.length > 0) {
+                        out += rOpen + rPr + tOpen + after + tClose + rClose;
+                    }
+                    return out;
+                });
             });
             return xml;
         }
