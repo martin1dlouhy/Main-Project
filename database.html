@@ -4155,7 +4155,7 @@ async function runAIDiscovery() {
 
         state.lastVyhlSuggestions = data.suggestions || [];
         state.vyhlSelected = new Set();
-        state.vyhlLastMode = mode;
+        state.vyhlLastMode = payload.mode;
         state.vyhlLastContext = payload;
         renderVyhlResults();
 
