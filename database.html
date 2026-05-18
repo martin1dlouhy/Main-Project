@@ -3449,14 +3449,27 @@ function renderSettings() {
     const list = document.getElementById('settings-seg-list');
     if (state.segments.length === 0) {
         list.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:8px;">Segmenty zatím nejsou načtené.</div>';
-    } else {
-        list.innerHTML = state.segments.map(s =>
-            '<div class="seg-row">' +
-            '<span class="seg-row-name"><span class="prio-dot prio-' + s.priorita + '"></span>' + escapeHtml(s.nazev) + ' <span style="color:var(--text-faint);font-size:11px;">(' + escapeHtml(s.typ) + ')</span></span>' +
-            '<span class="seg-row-count">' + s.pocetZdroju + ' zdrojů</span>' +
-            '</div>'
-        ).join('');
+        return;
     }
+    // Počet zdrojů počítáme dynamicky ze state.sources — list Sources je zdroj pravdy,
+    // sloupec pocetZdroju v Segments byl jen seed hodnota a po přidání přes Vyhledávač
+    // by nesouhlasil s realitou.
+    const sourceCounts = {};
+    state.sources.forEach(src => {
+        if (src.segment) sourceCounts[src.segment] = (sourceCounts[src.segment] || 0) + 1;
+    });
+    list.innerHTML = state.segments.map(s => {
+        const liveCount = sourceCounts[s.nazev] || 0;
+        const seedCount = parseInt(s.pocetZdroju) || 0;
+        const diff = liveCount - seedCount;
+        const diffBadge = diff > 0
+            ? ' <span style="color:var(--amber-warm);font-size:10.5px;">(+' + diff + ' nové)</span>'
+            : '';
+        return '<div class="seg-row">' +
+            '<span class="seg-row-name"><span class="prio-dot prio-' + s.priorita + '"></span>' + escapeHtml(s.nazev) + ' <span style="color:var(--text-faint);font-size:11px;">(' + escapeHtml(s.typ) + ')</span></span>' +
+            '<span class="seg-row-count">' + liveCount + ' zdrojů' + diffBadge + '</span>' +
+            '</div>';
+    }).join('');
 }
 
 // ============================================================
