@@ -1315,6 +1315,10 @@
             color: var(--info);
             background: var(--info-tint);
         }
+        .vyhl-badge-gemini {
+            color: var(--warning);
+            background: var(--warning-tint);
+        }
 
         .activity-log {
             background: var(--bg-raised);
@@ -1906,34 +1910,45 @@
                                     <button class="btn btn-secondary" onclick="window.open('https://chatgpt.com/', '_blank')">
                                         Otevřít ChatGPT ↗
                                     </button>
+                                    <button class="btn btn-secondary" onclick="window.open('https://gemini.google.com/app', '_blank')">
+                                        Otevřít Gemini ↗
+                                    </button>
                                 </div>
                             </div>
 
                             <div class="vyhl-manual-step">
                                 <div class="vyhl-manual-step-title">3. Vlož odpovědi zpět</div>
-                                <div class="vyhl-manual-step-desc">Když AI dokončí (může trvat dlouho), zkopíruj <strong>celý code block</strong> (```json ... ```) z chatu a vlož sem. Můžeš vložit jen jednu z odpovědí, nebo obě — pak deduplikace najde shody.</div>
+                                <div class="vyhl-manual-step-desc">Když AI dokončí (může trvat dlouho), zkopíruj <strong>celý code block</strong> (```json ... ```) z chatu a vlož sem. Můžeš vložit jednu, dvě, nebo všechny tři odpovědi — čím víc AI dohromady, tím spolehlivější výsledek (kontakty, které najdou všechny 3 AI, jsou s nejvyšší pravděpodobností reálné).</div>
                                 <div style="margin-bottom:14px;">
                                     <div class="vyhl-paste-label">
-                                        <span>Odpověď z Claude (volitelně)</span>
+                                        <span>Odpověď z <strong>Claude</strong> (volitelně)</span>
                                         <span class="vyhl-paste-status" id="paste-status-claude">prázdné</span>
                                     </div>
                                     <textarea class="vyhl-paste-textarea" id="vyhl-paste-claude" placeholder='Sem vlož odpověď z Claude.ai…&#10;&#10;Aplikace najde JSON v code blocku automaticky.' oninput="validateManualPaste()"></textarea>
                                 </div>
-                                <div>
+                                <div style="margin-bottom:14px;">
                                     <div class="vyhl-paste-label">
-                                        <span>Odpověď z ChatGPT (volitelně)</span>
+                                        <span>Odpověď z <strong>ChatGPT</strong> (volitelně)</span>
                                         <span class="vyhl-paste-status" id="paste-status-openai">prázdné</span>
                                     </div>
                                     <textarea class="vyhl-paste-textarea" id="vyhl-paste-openai" placeholder='Sem vlož odpověď z ChatGPT…&#10;&#10;Aplikace najde JSON v code blocku automaticky.' oninput="validateManualPaste()"></textarea>
                                 </div>
+                                <div>
+                                    <div class="vyhl-paste-label">
+                                        <span>Odpověď z <strong>Gemini</strong> (volitelně)</span>
+                                        <span class="vyhl-paste-status" id="paste-status-gemini">prázdné</span>
+                                    </div>
+                                    <textarea class="vyhl-paste-textarea" id="vyhl-paste-gemini" placeholder='Sem vlož odpověď z Gemini…&#10;&#10;Aplikace najde JSON v code blocku automaticky.' oninput="validateManualPaste()"></textarea>
+                                </div>
                             </div>
 
                             <div class="vyhl-manual-step">
-                                <div class="vyhl-manual-step-title">4. Zparsovat a deduplikovat</div>
+                                <div class="vyhl-manual-step-title">4. Sloučit odpovědi do unikátních návrhů</div>
+                                <div class="vyhl-manual-step-desc">Aplikace porovná všechny odpovědi mezi sebou (odstraní duplicity napříč AI), porovná je s Tvou existující databází (odstraní kontakty, které už máš) a ukáže Ti jen <strong>unikátní nové návrhy</strong>. Pak teprve vybereš, které chceš zapsat do databáze.</div>
                                 <div class="vyhl-manual-buttons">
                                     <button class="btn btn-primary btn-lg" onclick="parseManualResponses()" id="btn-parse-manual">
                                         <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                                        Zparsovat odpovědi
+                                        Sloučit a zobrazit unikátní návrhy
                                     </button>
                                     <button class="btn btn-ghost" onclick="resetManualMode()">Začít znova</button>
                                 </div>
@@ -4125,10 +4140,12 @@ async function runAIDiscovery() {
         const stats = data.stats || {};
         let msg = 'Hotovo. Claude: ' + (stats.claudeCount || 0) +
                   ' · ChatGPT: ' + (stats.openaiCount || 0) +
-                  ' · po dedupe: ' + (stats.mergedCount || 0) +
-                  ' (' + (stats.duplicates || 0) + ' duplicit/shody odstraněno)';
+                  ' · Gemini: ' + (stats.geminiCount || 0) +
+                  ' · po sloučení: ' + (stats.mergedCount || 0) + ' unikátních' +
+                  ' (' + (stats.duplicates || 0) + ' duplicit/existujících odstraněno)';
         if (stats.claudeError) msg += ' · Claude err: ' + stats.claudeError;
         if (stats.openaiError) msg += ' · ChatGPT err: ' + stats.openaiError;
+        if (stats.geminiError) msg += ' · Gemini err: ' + stats.geminiError;
         showVyhlStatus('success', msg);
     } catch (err) {
         console.error('AI discovery error:', err);
@@ -4158,9 +4175,20 @@ function renderVyhlResults() {
 }
 
 function makeBadge(sources) {
-    if (sources.length === 2) return '<span class="vyhl-badge vyhl-badge-both">Claude + ChatGPT</span>';
-    if (sources[0] === 'claude') return '<span class="vyhl-badge vyhl-badge-claude">jen Claude</span>';
-    return '<span class="vyhl-badge vyhl-badge-openai">jen ChatGPT</span>';
+    if (!sources || sources.length === 0) return '';
+    const labels = { claude: 'Claude', openai: 'ChatGPT', gemini: 'Gemini' };
+    const names = sources.map(s => labels[s] || s);
+    if (sources.length === 3) {
+        return '<span class="vyhl-badge vyhl-badge-both">Všechny 3 AI</span>';
+    }
+    if (sources.length === 2) {
+        return '<span class="vyhl-badge vyhl-badge-both">' + names.join(' + ') + '</span>';
+    }
+    // Jediný zdroj
+    const cls = sources[0] === 'claude' ? 'vyhl-badge-claude'
+              : sources[0] === 'openai' ? 'vyhl-badge-openai'
+              : 'vyhl-badge-gemini';
+    return '<span class="vyhl-badge ' + cls + '">jen ' + names[0] + '</span>';
 }
 
 function renderContactSuggestions() {
@@ -4665,9 +4693,12 @@ function fallbackCopy(text) {
 function validateManualPaste() {
     const claudeText = document.getElementById('vyhl-paste-claude').value;
     const openaiText = document.getElementById('vyhl-paste-openai').value;
+    const geminiText = document.getElementById('vyhl-paste-gemini').value;
     updatePasteStatus('paste-status-claude', claudeText, state.vyhlLastMode);
     updatePasteStatus('paste-status-openai', openaiText, state.vyhlLastMode);
-    document.getElementById('btn-parse-manual').disabled = !claudeText.trim() && !openaiText.trim();
+    updatePasteStatus('paste-status-gemini', geminiText, state.vyhlLastMode);
+    document.getElementById('btn-parse-manual').disabled =
+        !claudeText.trim() && !openaiText.trim() && !geminiText.trim();
 }
 
 function updatePasteStatus(elementId, text, mode) {
@@ -4692,56 +4723,65 @@ function parseManualResponses() {
     const mode = state.vyhlLastMode;
     const claudeText = document.getElementById('vyhl-paste-claude').value;
     const openaiText = document.getElementById('vyhl-paste-openai').value;
+    const geminiText = document.getElementById('vyhl-paste-gemini').value;
 
-    if (!claudeText.trim() && !openaiText.trim()) {
+    if (!claudeText.trim() && !openaiText.trim() && !geminiText.trim()) {
         toast('warning', 'Vlož aspoň jednu odpověď.');
         return;
     }
 
     const claudeItems = claudeText.trim() ? frontendParseAIResponse(claudeText, mode) : [];
     const openaiItems = openaiText.trim() ? frontendParseAIResponse(openaiText, mode) : [];
+    const geminiItems = geminiText.trim() ? frontendParseAIResponse(geminiText, mode) : [];
 
-    if (claudeItems.length === 0 && openaiItems.length === 0) {
-        showVyhlStatus('error', 'Nepodařilo se zparsovat JSON z žádné odpovědi. Zkontroluj, že jsi vložil celý code block včetně ```json``` značek (nebo jen JSON object).');
+    const totalFromAI = claudeItems.length + openaiItems.length + geminiItems.length;
+    if (totalFromAI === 0) {
+        showVyhlStatus('error', 'Nepodařilo se zparsovat JSON z žádné odpovědi. Zkontroluj, že jsi vložil celý code block včetně ```json``` značek (nebo jen samotný JSON object).');
         return;
     }
 
-    // Dedupe + merge
+    const arrays = [
+        { items: claudeItems, source: 'claude' },
+        { items: openaiItems, source: 'openai' },
+        { items: geminiItems, source: 'gemini' }
+    ];
+
     let merged;
     const ctx = state.vyhlLastContext;
     if (mode === 'contacts') {
-        merged = frontendDedupeContacts(claudeItems, openaiItems, getExistingContactKeys());
+        merged = frontendDedupeContacts(arrays, getExistingContactKeys());
     } else if (mode === 'sources') {
         const existingUrls = state.sources.filter(s => s.segment === ctx.segmentNazev).map(s => s.url).filter(Boolean);
-        merged = frontendDedupeSources(claudeItems, openaiItems, existingUrls);
+        merged = frontendDedupeSources(arrays, existingUrls);
     } else {
-        merged = frontendDedupeDeep(claudeItems, openaiItems);
+        merged = frontendDedupeDeep(arrays);
     }
 
     state.lastVyhlSuggestions = merged;
     state.vyhlSelected = new Set();
     renderVyhlResults();
 
-    const dupCount = claudeItems.length + openaiItems.length - merged.length;
+    const dupCount = totalFromAI - merged.length;
     showVyhlStatus('success',
         'Hotovo (manuálně). Claude: ' + claudeItems.length +
         ' · ChatGPT: ' + openaiItems.length +
-        ' · po dedupe: ' + merged.length +
-        ' (' + dupCount + ' duplicit/shody odstraněno)');
+        ' · Gemini: ' + geminiItems.length +
+        ' · po sloučení: ' + merged.length + ' unikátních' +
+        ' (' + dupCount + ' duplicit/existujících odstraněno)');
 }
 
 function resetManualMode() {
     state.vyhlManualPrompt = '';
     const display = document.getElementById('vyhl-prompt-display');
     if (display) display.style.display = 'none';
-    const cl = document.getElementById('vyhl-paste-claude');
-    const op = document.getElementById('vyhl-paste-openai');
-    if (cl) cl.value = '';
-    if (op) op.value = '';
-    const sc = document.getElementById('paste-status-claude');
-    const so = document.getElementById('paste-status-openai');
-    if (sc) { sc.textContent = 'prázdné'; sc.className = 'vyhl-paste-status'; }
-    if (so) { so.textContent = 'prázdné'; so.className = 'vyhl-paste-status'; }
+    ['vyhl-paste-claude', 'vyhl-paste-openai', 'vyhl-paste-gemini'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    ['paste-status-claude', 'paste-status-openai', 'paste-status-gemini'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.textContent = 'prázdné'; el.className = 'vyhl-paste-status'; }
+    });
     const pb = document.getElementById('btn-parse-manual');
     if (pb) pb.disabled = true;
 }
@@ -4813,7 +4853,7 @@ function urlHostnameFE(u) {
     }
 }
 
-function frontendDedupeContacts(claudeItems, openaiItems, existingKeys) {
+function frontendDedupeContacts(arrays, existingKeys) {
     const eIcos = new Set((existingKeys.icos || []).map(normalizeKeyFE).filter(Boolean));
     const eEmails = new Set((existingKeys.emails || []).map(normalizeKeyFE).filter(Boolean));
     const eLin = new Set((existingKeys.linkedins || []).map(normalizeKeyFE).filter(Boolean));
@@ -4850,8 +4890,7 @@ function frontendDedupeContacts(claudeItems, openaiItems, existingKeys) {
             if (nf) sNF[nf] = newIdx;
         }
     }
-    claudeItems.forEach(c => one(c, 'claude'));
-    openaiItems.forEach(c => one(c, 'openai'));
+    (arrays || []).forEach(a => (a.items || []).forEach(c => one(c, a.source)));
     out.sort((a, b) => {
         if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
         return String(a.firma || '').localeCompare(String(b.firma || ''), 'cs');
@@ -4859,7 +4898,7 @@ function frontendDedupeContacts(claudeItems, openaiItems, existingKeys) {
     return out;
 }
 
-function frontendDedupeSources(claudeItems, openaiItems, existingUrls) {
+function frontendDedupeSources(arrays, existingUrls) {
     const eHosts = new Set((existingUrls || []).map(urlHostnameFE).filter(Boolean));
     const sHosts = {};
     const out = [];
@@ -4876,8 +4915,7 @@ function frontendDedupeSources(claudeItems, openaiItems, existingUrls) {
         }
         sHosts[host] = out.push(Object.assign({}, s, { _sources: [src] })) - 1;
     }
-    claudeItems.forEach(s => one(s, 'claude'));
-    openaiItems.forEach(s => one(s, 'openai'));
+    (arrays || []).forEach(a => (a.items || []).forEach(s => one(s, a.source)));
     const qO = { 'high': 0, 'mid': 1, 'low': 2 };
     out.sort((a, b) => {
         if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
@@ -4889,7 +4927,7 @@ function frontendDedupeSources(claudeItems, openaiItems, existingUrls) {
     return out;
 }
 
-function frontendDedupeDeep(claudeItems, openaiItems) {
+function frontendDedupeDeep(arrays) {
     const seen = {};
     const out = [];
     function one(f, src) {
@@ -4904,8 +4942,7 @@ function frontendDedupeDeep(claudeItems, openaiItems) {
         }
         seen[key] = out.push(Object.assign({}, f, { _sources: [src] })) - 1;
     }
-    claudeItems.forEach(f => one(f, 'claude'));
-    openaiItems.forEach(f => one(f, 'openai'));
+    (arrays || []).forEach(a => (a.items || []).forEach(f => one(f, a.source)));
     const cO = { 'news': 0, 'role': 1, 'board': 2, 'kontakt': 3, 'warning': 4 };
     out.sort((a, b) => {
         if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;

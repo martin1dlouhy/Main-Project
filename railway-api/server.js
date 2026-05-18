@@ -1424,7 +1424,8 @@ app.post('/api/database/find-contacts', async function (req, res) {
 
     var anthropicKey = process.env.ANTHROPIC_API_KEY;
     var openaiKey = process.env.OPENAI_API_KEY;
-    if (!anthropicKey && !openaiKey) {
+    var geminiKey = process.env.GEMINI_API_KEY;
+    if (!anthropicKey && !openaiKey && !geminiKey) {
         return res.status(500).json({ error: 'Žádný AI API klíč není nakonfigurovaný na serveru.' });
     }
 
@@ -1469,44 +1470,52 @@ app.post('/api/database/find-contacts', async function (req, res) {
     console.log('[find-contacts] mode=' + mode + ' segment="' + segmentNazev + '" max=' + maxResults + ' thorough=' + thorough);
 
     var promises = [];
-    if (anthropicKey) promises.push(callClaudeWithWebSearch(anthropicKey, prompt, mode, thorough));
-    else promises.push(Promise.resolve({ items: [], skipped: 'no key' }));
-    if (openaiKey) promises.push(callOpenAIWithWebSearch(openaiKey, prompt, mode, thorough));
-    else promises.push(Promise.resolve({ items: [], skipped: 'no key' }));
+    promises.push(anthropicKey ? callClaudeWithWebSearch(anthropicKey, prompt, mode, thorough) : Promise.resolve({ items: [], skipped: 'no key' }));
+    promises.push(openaiKey ? callOpenAIWithWebSearch(openaiKey, prompt, mode, thorough) : Promise.resolve({ items: [], skipped: 'no key' }));
+    promises.push(geminiKey ? callGeminiWithWebSearch(geminiKey, prompt, mode, thorough) : Promise.resolve({ items: [], skipped: 'no key' }));
 
     var results = await Promise.allSettled(promises);
 
-    var claudeResult = results[0].status === 'fulfilled'
-        ? results[0].value
-        : { items: [], error: results[0].reason && results[0].reason.message || 'Claude call failed' };
-    var openaiResult = results[1].status === 'fulfilled'
-        ? results[1].value
-        : { items: [], error: results[1].reason && results[1].reason.message || 'OpenAI call failed' };
+    function extractResult(r, name) {
+        if (r.status === 'fulfilled') return r.value;
+        return { items: [], error: (r.reason && r.reason.message) || (name + ' call failed') };
+    }
+    var claudeResult = extractResult(results[0], 'Claude');
+    var openaiResult = extractResult(results[1], 'OpenAI');
+    var geminiResult = extractResult(results[2], 'Gemini');
 
-    console.log('[find-contacts] mode=' + mode + ' claude=' + claudeResult.items.length +
-        (claudeResult.error ? ' (ERR: ' + claudeResult.error + ')' : '') +
-        ' openai=' + openaiResult.items.length +
-        (openaiResult.error ? ' (ERR: ' + openaiResult.error + ')' : ''));
+    console.log('[find-contacts] mode=' + mode +
+        ' claude=' + claudeResult.items.length + (claudeResult.error ? ' (ERR: ' + claudeResult.error + ')' : '') +
+        ' openai=' + openaiResult.items.length + (openaiResult.error ? ' (ERR: ' + openaiResult.error + ')' : '') +
+        ' gemini=' + geminiResult.items.length + (geminiResult.error ? ' (ERR: ' + geminiResult.error + ')' : ''));
 
+    var allArrays = [
+        { items: claudeResult.items, source: 'claude' },
+        { items: openaiResult.items, source: 'openai' },
+        { items: geminiResult.items, source: 'gemini' }
+    ];
     var merged;
     if (mode === 'contacts') {
-        merged = mergeAndDedupeContacts(claudeResult.items, openaiResult.items, existingKeys);
+        merged = mergeAndDedupeContacts(allArrays, existingKeys);
     } else if (mode === 'sources') {
-        merged = mergeAndDedupeSources(claudeResult.items, openaiResult.items, existingSourceUrls);
+        merged = mergeAndDedupeSources(allArrays, existingSourceUrls);
     } else { // deep
-        merged = mergeDeepEnrichment(claudeResult.items, openaiResult.items);
+        merged = mergeDeepEnrichment(allArrays);
     }
 
+    var totalFromAI = claudeResult.items.length + openaiResult.items.length + geminiResult.items.length;
     return res.json({
         mode: mode,
         suggestions: merged,
         stats: {
             claudeCount: claudeResult.items.length,
             openaiCount: openaiResult.items.length,
+            geminiCount: geminiResult.items.length,
             mergedCount: merged.length,
-            duplicates: claudeResult.items.length + openaiResult.items.length - merged.length,
+            duplicates: totalFromAI - merged.length,
             claudeError: claudeResult.error || null,
-            openaiError: openaiResult.error || null
+            openaiError: openaiResult.error || null,
+            geminiError: geminiResult.error || null
         }
     });
 });
@@ -1775,6 +1784,54 @@ async function callOpenAIWithWebSearch(apiKey, prompt, mode, thorough) {
 }
 
 // =============================================
+// Gemini — generative-ai SDK s Google search retrieval tool
+// =============================================
+async function callGeminiWithWebSearch(apiKey, prompt, mode, thorough) {
+    var genAI = new GoogleGenerativeAI(apiKey);
+    var maxTokens = thorough ? 16000 : 8000;
+
+    // Gemini 2.0 Flash s google_search tool (preview od 2024-12)
+    // Fallback bez search tool, pokud SDK nepodporuje
+    var modelConfig = {
+        model: 'gemini-2.0-flash-exp',
+        generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: 0.4
+        }
+    };
+
+    var result;
+    try {
+        // Pokus 1: s google_search tool
+        var modelWithSearch = genAI.getGenerativeModel(Object.assign({}, modelConfig, {
+            tools: [{ googleSearch: {} }]
+        }));
+        result = await modelWithSearch.generateContent(prompt);
+    } catch (toolErr) {
+        console.warn('[gemini] google_search tool nedostupný, fallback bez něj:', toolErr.message);
+        try {
+            var model = genAI.getGenerativeModel(modelConfig);
+            result = await model.generateContent(prompt);
+        } catch (fallbackErr) {
+            // Fallback na starší model
+            console.warn('[gemini] gemini-2.0-flash-exp selhalo, fallback na gemini-1.5-flash:', fallbackErr.message);
+            var oldModel = genAI.getGenerativeModel({
+                model: 'gemini-1.5-flash',
+                generationConfig: { maxOutputTokens: maxTokens, temperature: 0.4 }
+            });
+            result = await oldModel.generateContent(prompt);
+        }
+    }
+
+    var text = '';
+    if (result && result.response) {
+        text = typeof result.response.text === 'function' ? result.response.text() : '';
+    }
+    var parsed = tryParseAIResponse(text, mode);
+    return { items: parsed };
+}
+
+// =============================================
 // JSON extraction — robust proti markdown obalům, partial responses, multiple objects
 // =============================================
 function tryParseAIResponse(text, mode) {
@@ -1829,9 +1886,9 @@ function normalizeKey(s) {
 }
 
 // =============================================
-// Dedupe — contacts
+// Dedupe — contacts (přijímá pole { items, source } pro N modelů)
 // =============================================
-function mergeAndDedupeContacts(claudeContacts, openaiContacts, existingKeys) {
+function mergeAndDedupeContacts(arrays, existingKeys) {
     var existingIcos = new Set((existingKeys.icos || []).map(normalizeKey).filter(Boolean));
     var existingEmails = new Set((existingKeys.emails || []).map(normalizeKey).filter(Boolean));
     var existingLinkedins = new Set((existingKeys.linkedins || []).map(normalizeKey).filter(Boolean));
@@ -1873,8 +1930,9 @@ function mergeAndDedupeContacts(claudeContacts, openaiContacts, existingKeys) {
         }
     }
 
-    (claudeContacts || []).forEach(function (c) { processOne(c, 'claude'); });
-    (openaiContacts || []).forEach(function (c) { processOne(c, 'openai'); });
+    (arrays || []).forEach(function (a) {
+        (a.items || []).forEach(function (c) { processOne(c, a.source); });
+    });
 
     output.sort(function (a, b) {
         if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
@@ -1897,7 +1955,7 @@ function urlHostname(u) {
     }
 }
 
-function mergeAndDedupeSources(claudeSources, openaiSources, existingSourceUrls) {
+function mergeAndDedupeSources(arrays, existingSourceUrls) {
     var existingHosts = new Set((existingSourceUrls || []).map(urlHostname).filter(Boolean));
     var seenHosts = {};
     var output = [];
@@ -1910,7 +1968,6 @@ function mergeAndDedupeSources(claudeSources, openaiSources, existingSourceUrls)
         if (seenHosts[host] !== undefined) {
             var existing = output[seenHosts[host]];
             if (existing._sources.indexOf(sourceModel) === -1) existing._sources.push(sourceModel);
-            // Merge in missing fields
             ['poznamka', 'typZdroje', 'kvalita'].forEach(function (f) {
                 if (!existing[f] && s[f]) existing[f] = s[f];
             });
@@ -1920,10 +1977,10 @@ function mergeAndDedupeSources(claudeSources, openaiSources, existingSourceUrls)
         seenHosts[host] = output.push(newS) - 1;
     }
 
-    (claudeSources || []).forEach(function (s) { processOne(s, 'claude'); });
-    (openaiSources || []).forEach(function (s) { processOne(s, 'openai'); });
+    (arrays || []).forEach(function (a) {
+        (a.items || []).forEach(function (s) { processOne(s, a.source); });
+    });
 
-    // Sort: both-sources first, then high quality first
     var qualOrder = { 'high': 0, 'mid': 1, 'low': 2 };
     output.sort(function (a, b) {
         if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
@@ -1938,7 +1995,7 @@ function mergeAndDedupeSources(claudeSources, openaiSources, existingSourceUrls)
 // =============================================
 // Merge — deep enrichment (1 contact → many findings)
 // =============================================
-function mergeDeepEnrichment(claudeFindings, openaiFindings) {
+function mergeDeepEnrichment(arrays) {
     var seen = {};
     var output = [];
 
@@ -1956,10 +2013,10 @@ function mergeDeepEnrichment(claudeFindings, openaiFindings) {
         seen[key] = output.push(newF) - 1;
     }
 
-    (claudeFindings || []).forEach(function (f) { processOne(f, 'claude'); });
-    (openaiFindings || []).forEach(function (f) { processOne(f, 'openai'); });
+    (arrays || []).forEach(function (a) {
+        (a.items || []).forEach(function (f) { processOne(f, a.source); });
+    });
 
-    // Sort: both-sources first, then by category (warning na konec, news nahoře)
     var catOrder = { 'news': 0, 'role': 1, 'board': 2, 'kontakt': 3, 'warning': 4 };
     output.sort(function (a, b) {
         if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
