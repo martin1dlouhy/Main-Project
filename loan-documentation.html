@@ -3617,9 +3617,17 @@
             return xml;
         }
 
+        // PizZip 3.1.7 s STORE compression zapisuje špatné velikosti v Local File Headers
+        // (Central Directory je OK, Local Headers ale lžou — Word odmítne otevřít). DEFLATE
+        // forsuje jinou code path, která Local Headers zapíše korektně.
         function repackDocx(zip, newXml) {
             zip.file('word/document.xml', newXml);
-            return zip.generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            return zip.generate({
+                type: 'blob',
+                compression: 'DEFLATE',
+                compressionOptions: { level: 6 },
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            });
         }
 
         /* ─── RESULTS ─── */
