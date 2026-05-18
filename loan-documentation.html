@@ -3578,9 +3578,23 @@
             return { xml: xml, text: text, zip: zip };
         }
 
+        // Vždy escapuj `replace` (vstupuje doslova do XML, jinak rozbije DOCX při znacích & < >).
+        // Find hledej v obou formách — Claude občas vrátí find s un-escaped znaky ('Klient & spol.'
+        // místo 'Klient &amp; spol.'). Bez tohoto fallbacku nahrazení tiše selže.
         function applyReplacements(originalXml, replacements) {
             var xml = originalXml;
-            replacements.forEach(function(r) { xml = xml.split(r.find).join(r.replace); });
+            replacements.forEach(function(r) {
+                if (!r || typeof r.find !== 'string' || typeof r.replace !== 'string') return;
+                var safeReplace = escapeXml(r.replace);
+                if (xml.indexOf(r.find) !== -1) {
+                    xml = xml.split(r.find).join(safeReplace);
+                    return;
+                }
+                var findEsc = escapeXml(r.find);
+                if (findEsc !== r.find && xml.indexOf(findEsc) !== -1) {
+                    xml = xml.split(findEsc).join(safeReplace);
+                }
+            });
             return xml;
         }
 
@@ -3590,11 +3604,14 @@
             var author = 'ProfiLend Investment Tools';
             var id = 0;
             replacements.forEach(function(r) {
-                var find = escapeXml(r.find);
-                var replace = escapeXml(r.replace);
-                var del = '<w:del w:id="' + (id * 2) + '" w:author="' + author + '" w:date="' + date + '"><w:r><w:delText>' + find + '</w:delText></w:r></w:del>';
-                var ins = '<w:ins w:id="' + (id * 2 + 1) + '" w:author="' + author + '" w:date="' + date + '"><w:r><w:t>' + replace + '</w:t></w:r></w:ins>';
-                xml = xml.split(r.find).join(del + ins);
+                if (!r || typeof r.find !== 'string' || typeof r.replace !== 'string') return;
+                var findEsc = escapeXml(r.find);
+                var replaceEsc = escapeXml(r.replace);
+                var del = '<w:del w:id="' + (id * 2) + '" w:author="' + author + '" w:date="' + date + '"><w:r><w:delText>' + findEsc + '</w:delText></w:r></w:del>';
+                var ins = '<w:ins w:id="' + (id * 2 + 1) + '" w:author="' + author + '" w:date="' + date + '"><w:r><w:t>' + replaceEsc + '</w:t></w:r></w:ins>';
+                var searchKey = (xml.indexOf(r.find) !== -1) ? r.find : findEsc;
+                if (xml.indexOf(searchKey) === -1) return;
+                xml = xml.split(searchKey).join(del + ins);
                 id++;
             });
             return xml;
