@@ -4072,13 +4072,19 @@ function buildAIPayload() {
         if (sources.length === 0) {
             return { error: 'Segment nemá zdroje. Nejdřív spusť „Objevit zdroje" nebo doplň ručně v Sheetu.' };
         }
+        // Existing kontakty pro tento segment — pro PROMPT (AI ví, co nehledat).
+        // Cap 80 kvůli velikosti promptu; nad to backend přidá "...a dalších N".
+        const segmentContacts = state.contacts
+            .filter(c => c.segment === segmentNazev && (c.firma || c.kontaktniOsoba))
+            .map(c => ({ firma: c.firma || '', kontaktniOsoba: c.kontaktniOsoba || '' }));
         return {
             payload: {
                 mode: 'contacts',
                 segmentNazev: segmentNazev,
                 segmentUseCase: segment.useCase || '',
                 sources: sources.map(s => ({ nazev: s.nazev, url: s.url, poznamka: s.poznamka })),
-                existingContactsKeys: getExistingContactKeys(),
+                existingContactsKeys: getExistingContactKeys(),       // pro post-AI dedupe (univerzální napříč všemi segmenty)
+                existingContactsSummary: segmentContacts,              // pro prompt (jen tento segment)
                 region: document.getElementById('vyhl-region').value.trim() || 'celá ČR',
                 maxResults: parseInt(document.getElementById('vyhl-max').value) || 20,
                 thorough: thorough
@@ -4596,6 +4602,17 @@ function buildPromptFE(mode, ctx) {
             return line;
         }).join('\n');
 
+        // Existing kontakty v tomto segmentu — ať AI nehledá to, co už máme.
+        const existing = (ctx.existingContactsSummary || []).filter(c => c.firma || c.kontaktniOsoba);
+        const existingCap = 80;
+        const existingText = existing.length > 0
+            ? '\n\nKONTAKTY KTERÉ UŽ MÁM V DATABÁZI PRO TENTO SEGMENT (NEHLEDEJ tyto, najdi DALŠÍ):\n' +
+              existing.slice(0, existingCap).map(c =>
+                '- ' + (c.firma || '?') + (c.kontaktniOsoba ? ' (' + c.kontaktniOsoba + ')' : '')
+              ).join('\n') +
+              (existing.length > existingCap ? '\n... a dalších ' + (existing.length - existingCap) + ' kontaktů (z prostorových důvodů zde nezahrnuto).' : '')
+            : '';
+
         return [
             header, '',
             'CÍL: Najdi konkrétní reálné kontakty pro segment "' + ctx.segmentNazev + '" v regionu ' + ctx.region + '.',
@@ -4604,6 +4621,7 @@ function buildPromptFE(mode, ctx) {
             '',
             'ZDROJE K PROZKOUMÁNÍ (použij web search pokud máš tool dostupný):',
             sourcesText,
+            existingText,
             '',
             'INSTRUKCE:',
             '- Použij web search pro každý zdroj a vytahej konkrétní jména + role + kontakty',
@@ -4636,12 +4654,22 @@ function buildPromptFE(mode, ctx) {
     }
 
     if (mode === 'sources') {
+        // Existing zdroje pro tento segment — ať AI nehledá to, co už máme.
+        const existingUrls = (ctx.existingSourceUrls || []).filter(Boolean);
+        const existingCap = 50;
+        const existingText = existingUrls.length > 0
+            ? '\n\nZDROJE KTERÉ UŽ MÁM PRO TENTO SEGMENT (NEHLEDEJ tyto, najdi DALŠÍ):\n' +
+              existingUrls.slice(0, existingCap).map(u => '- ' + u).join('\n') +
+              (existingUrls.length > existingCap ? '\n... a dalších ' + (existingUrls.length - existingCap) + ' URL.' : '')
+            : '';
+
         return [
             header, '',
             'CÍL: Najdi DALŠÍ relevantní zdroje (weby, registry, asociace, žebříčky, eventy, oborové publikace) ',
             'pro segment "' + ctx.segmentNazev + '" v ČR. Žádné kontakty osob — jen zdroje.',
             '',
             'USE-CASE SEGMENTU: ' + (ctx.segmentUseCase || 'Zprostředkovatelé obchodů.'),
+            existingText,
             '',
             'INSTRUKCE:',
             '- Použij web search a najdi nové weby/registry, které se dají využít jako zdroj kontaktů',

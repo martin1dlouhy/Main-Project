@@ -1624,6 +1624,17 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             return line;
         }).join('\n');
 
+        // Existing kontakty v tomto segmentu — ať AI nehledá to, co už máme.
+        var existing = (ctx.existingContactsSummary || []).filter(function (c) { return c && (c.firma || c.kontaktniOsoba); });
+        var existingCap = 80;
+        var existingText = existing.length > 0
+            ? '\n\nKONTAKTY KTERÉ UŽ MÁM V DATABÁZI PRO TENTO SEGMENT (NEHLEDEJ tyto, najdi DALŠÍ):\n' +
+              existing.slice(0, existingCap).map(function (c) {
+                return '- ' + (c.firma || '?') + (c.kontaktniOsoba ? ' (' + c.kontaktniOsoba + ')' : '');
+              }).join('\n') +
+              (existing.length > existingCap ? '\n... a dalších ' + (existing.length - existingCap) + ' kontaktů (z prostorových důvodů zde nezahrnuto).' : '')
+            : '';
+
         return [
             header, '',
             'CÍL: Najdi konkrétní reálné kontakty pro segment "' + ctx.segmentNazev + '" v regionu ' + ctx.region + '.',
@@ -1632,6 +1643,7 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '',
             'ZDROJE K PROZKOUMÁNÍ (použij web search pokud máš tool dostupný):',
             sourcesText,
+            existingText,
             '',
             'INSTRUKCE:',
             '- Použij web search pro každý zdroj a vytahej konkrétní jména + role + kontakty',
@@ -1664,12 +1676,22 @@ function buildAIDiscoveryPrompt(mode, ctx) {
     }
 
     if (mode === 'sources') {
+        // Existing zdroje pro tento segment — ať AI nehledá to, co už máme.
+        var existingUrls = (ctx.existingSourceUrls || []).filter(Boolean);
+        var existingCap = 50;
+        var existingText = existingUrls.length > 0
+            ? '\n\nZDROJE KTERÉ UŽ MÁM PRO TENTO SEGMENT (NEHLEDEJ tyto, najdi DALŠÍ):\n' +
+              existingUrls.slice(0, existingCap).map(function (u) { return '- ' + u; }).join('\n') +
+              (existingUrls.length > existingCap ? '\n... a dalších ' + (existingUrls.length - existingCap) + ' URL.' : '')
+            : '';
+
         return [
             header, '',
             'CÍL: Najdi DALŠÍ relevantní zdroje (weby, registry, asociace, žebříčky, eventy, oborové publikace) ',
             'pro segment "' + ctx.segmentNazev + '" v ČR. Žádné kontakty osob — jen zdroje.',
             '',
             'USE-CASE SEGMENTU: ' + (ctx.segmentUseCase || 'Zprostředkovatelé obchodů.'),
+            existingText,
             '',
             'INSTRUKCE:',
             '- Použij web search a najdi nové weby/registry, které se dají využít jako zdroj kontaktů',
