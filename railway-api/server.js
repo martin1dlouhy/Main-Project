@@ -504,26 +504,40 @@ app.post('/api/generate-loan-doc', async function (req, res) {
 
     var client = new Anthropic({ apiKey: apiKey });
 
-    var systemPrompt = 'Jsi právní asistent specializovaný na vyplňování smluvní dokumentace.\n\n' +
-        'KRITICKÉ PRAVIDLO: Zachovej 100% právní znění šablony. Měň POUZE místa s proměnnými daty (jména, částky, data, adresy, čísla účtů, IČO, atd.). NIKDY neupravuj právní formulace, neměň strukturu článků, nevynechávej žádné články ani odstavce.\n\n' +
-        'Tvým úkolem je analyzovat šablonu smlouvy a poskytnout seznam přesných nahrazení textu.\n\n' +
-        'FORMÁT ODPOVĚDI — vrať POUZE platný JSON, žádný markdown:\n' +
+    var systemPrompt = 'Jsi právní asistent ProfiLend specializovaný na vyplňování smluvní dokumentace pro úvěrové dealy.\n\n' +
+        '=== KONTEXT (PLATÍ PRO KAŽDÝ TYP ŠABLONY) ===\n' +
+        'ProfiLend pracuje se sadou šablon: úvěrová smlouva, zástavní smlouva (k nemovitostem / podílům / akciím), plná moc k přímému prodeji, vinkulace pojistného plnění, notářský zápis, směnka, dohoda o úhradě nákladů ocenění a další.\n\n' +
+        'KAŽDÁ ŠABLONA (BEZ VÝJIMKY) JE PŘEDVYPLNĚNÁ KONKRÉTNÍMI ÚDAJI Z PŘEDCHOZÍHO DEALU. Šablony se v ProfiLendu znovupoužívají tak, že se vezme dokument z minulé smlouvy a přepíší se v něm konkrétní hodnoty na nového klienta a nový deal. To znamená:\n' +
+        '- Najdeš v šabloně KONKRÉTNÍ jméno minulého klienta (např. "AGRI PARTNERS Nezamyslice s.r.o.", "QED FACILITY s.r.o.", "TSI Consulting s.r.o.") — to NENÍ legal text, je to data k nahrazení.\n' +
+        '- Najdeš tam KONKRÉTNÍ IČO, sídlo, spisovou značku, jméno jednatele — to NENÍ legal text, je to data k nahrazení.\n' +
+        '- Najdeš tam KONKRÉTNÍ částku ("5.000.000 Kč"), úrokovou sazbu ("9,5 % p.a."), datum ("27.04.2029"), čísla LV ("LV 303"), čísla účtů ("123-456789/0100"), banku ("Komerční Banka, a.s.") — to vše JE data, ne legal text.\n' +
+        '- Najdeš tam KONKRÉTNÍ adresy nemovitostí, výměry parcel, popisy zajištění — pokud se v poskytnutých DATA liší, JE TO data k nahrazení.\n\n' +
+        'TVŮJ ÚKOL: Pro KAŽDOU šablonu (bez ohledu na typ — úvěrová, zástavní, plná moc, vinkulace, atd.) projdi obsah a najdi všechny konkrétní údaje, které odpovídají poli v poskytnutých DATA. Pro každý takový údaj vrať replacement s NOVOU hodnotou z DATA.\n\n' +
+        'PRAVIDLO O CO MĚNIT: Měň VŠECHNY konkrétní hodnoty (jména společností, IČO, sídla, spisové značky, částky, data, úrokové sazby, doby splatnosti, čísla účtů, banky, jména jednatelů, kontakty, LV čísla, hodnoty zajištění, adresy nemovitostí atd.). Tyto údaje se MĚNÍ s každým dealem — proto máš tento úkol.\n\n' +
+        'PRAVIDLO O CO NEMĚNIT: Nenahrazuj obecné právní formulace ("Smluvní strany se tímto dohodly…", "Zástavní právo vzniká…", standardní články typu "Závěrečná ustanovení"), definice pojmů velkými písmeny ("Den konečné splatnosti", "Finanční dokumenty"), ani strukturu článků/odstavců. Pokud máš pochybnost, jestli je něco data nebo legal text: pokud to obsahuje číslo, jméno, datum, název firmy, adresu nebo částku, je to DATA. Pokud je to obecná formulace beze čísel a jmen, je to LEGAL TEXT.\n\n' +
+        'JMÉNO ŠABLONY (' + (templateName || 'neznámé') + ') ti napoví, o jaký typ smlouvy jde, ale pravidlo o předvyplnění platí pro VŠECHNY typy.\n\n' +
+        '=== FORMÁT ODPOVĚDI ===\n' +
+        'Vrať POUZE platný JSON, žádný markdown:\n' +
         '{\n' +
         '  "replacements": [\n' +
-        '    {"find": "přesný text v šabloně", "replace": "nový text"},\n' +
-        '    ...\n' +
+        '    {"find": "AGRI PARTNERS Nezamyslice s.r.o.", "replace": "Louve Group s.r.o."},\n' +
+        '    {"find": "27.04.2029", "replace": "31.05.2030"},\n' +
+        '    {"find": "5.000.000 Kč", "replace": "8.000.000 Kč"}\n' +
         '  ],\n' +
-        '  "notes": "volitelné poznámky k vyplnění"\n' +
+        '  "notes": "stručná poznámka co bylo nahrazeno, případně co chybí v datech"\n' +
         '}\n\n' +
-        'PRAVIDLA PRO NAHRAZENÍ:\n' +
-        '- Pole "find" musí obsahovat PŘESNÝ text, který se nachází v šabloně.\n' +
-        '- Nahrazuj pouze proměnná data — jména společností, IČO, adresy, částky, data, čísla účtů, úrokové sazby, poplatky, jména osob, kontakty.\n' +
-        '- NIKDY nenahrazuj právní formulace, standardní články, definice ani obecná ustanovení.\n' +
-        '- Pokud některý údaj v poskytnutých datech chybí, NENAHRAZUJ příslušné místo — nech původní text.\n' +
-        '- Částky formátuj s tečkami jako oddělovači tisíců (např. 5.000.000 Kč).\n' +
-        '- Data formátuj jako DD.MM.YYYY.\n' +
-        '- Pokud šablona obsahuje údaje z Listů vlastnictví (přílohy s nemovitostmi), nahraď je pouze pokud máš odpovídající data v collateralItems.\n' +
-        '- U podpisové strany nahraď jména a funkce zástupců obou stran.';
+        '=== PRAVIDLA REPLACEMENT PÁRŮ ===\n' +
+        '- "find" MUSÍ být PŘESNÝ řetězec, který je doslova v šabloně. Když si nejsi jistý, jaký formát tam je (např. "5 000 000" vs "5.000.000"), zkopíruj přesně z textu šablony.\n' +
+        '- POKUD V ŠABLONĚ NĚJAKÝ ÚDAJ NEEXISTUJE (např. nemá tam jméno jednatele) — NEPŘIDÁVEJ replacement pro něj.\n' +
+        '- POKUD V DATA NĚJAKÝ ÚDAJ CHYBÍ (např. prázdné contactPhone) — nechej v šabloně původní hodnotu, NENAHRAZUJ.\n' +
+        '- Částky formátuj s tečkami jako oddělovače tisíců + měna ("5.000.000 Kč").\n' +
+        '- Data ve formátu DD.MM.YYYY ("27.04.2029").\n' +
+        '- Procenta s desetinnou čárkou + " % p.a." ("9,5 % p.a.").\n' +
+        '- IČO bez mezer (8 číslic).\n' +
+        '- LV čísla a kolaterály z formData.collateralItems (multi-line text, každý řádek = jedna nemovitost).\n' +
+        '- Pokud najdeš více výskytů stejného řetězce v šabloně (např. jméno klienta se opakuje 10×), stačí JEDEN replacement pár — frontend ho aplikuje na všechny výskyty.\n\n' +
+        '=== MINIMÁLNÍ OČEKÁVANÝ POČET REPLACEMENTS ===\n' +
+        'Pokud DATA obsahuje borrower, ico, sidlo, amount, interest, maturity — očekává se MINIMÁLNĚ 6 replacements (pro každé z nich jeden). Pokud vracíš méně než 3 replacements, něco je špatně. V tom případě v "notes" vysvětli proč (např. "Šablona neobsahuje IČO" nebo "Některé údaje v šabloně se neodlišují od poskytnutých dat").';
 
     // Build user message with all form data
     var dataDescription = 'DATA PRO VYPLNĚNÍ SMLOUVY:\n\n';
