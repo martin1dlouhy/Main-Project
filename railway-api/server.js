@@ -1420,6 +1420,7 @@ function buildServerImagePrompt(visualType, people, scene, mood, format, theme, 
 // Vyžaduje session token z /api/verify-pin v X-Database-Token header.
 // =============================================
 app.post('/api/database/find-contacts', async function (req, res) {
+    try {
     if (!verifyDatabaseToken(req)) {
         return res.status(401).json({ error: 'Unauthorized — chybí nebo neplatný session token. Přihlas se znovu.' });
     }
@@ -1477,9 +1478,16 @@ app.post('/api/database/find-contacts', async function (req, res) {
     // Bezpečně pod typickými edge/CDN timeoutmi (Cloudflare 100s, Railway edge ~150s),
     // aby jeden pomalý model neshodil celý request.
     var perModelTimeout = thorough ? 120000 : 80000;
+
+    // KRITICKÉ: withTimeout MUSÍ zachytit i reject z `p` (druhý argument .then()).
+    // Bez něj API errors (rate limit, invalid key, network) propagují do Promise.all,
+    // celý handler crashne → klient dostane "Failed to fetch" místo strukturované chyby.
     function withTimeout(p, ms, name) {
         return Promise.race([
-            p.then(function (v) { return { ok: true, value: v }; }),
+            p.then(
+                function (v) { return { ok: true, value: v }; },
+                function (err) { return { ok: false, error: name + ' API selhalo: ' + (err && err.message || String(err)) }; }
+            ),
             new Promise(function (resolve) {
                 setTimeout(function () {
                     resolve({ ok: false, error: name + ' timeout po ' + Math.round(ms / 1000) + 's' });
@@ -1548,6 +1556,16 @@ app.post('/api/database/find-contacts', async function (req, res) {
             totalTimeMs: tTotal
         }
     });
+    } catch (handlerErr) {
+        // Defensivní safety net — pokud cokoli unexpected throws (parsing, DB, atd.),
+        // vrátíme strukturovanou JSON chybu místo aby Express crashnul a klient dostal
+        // "Failed to fetch" connection reset.
+        console.error('[find-contacts] uncaught handler error:', handlerErr && handlerErr.stack || handlerErr);
+        return res.status(500).json({
+            error: 'Server error: ' + (handlerErr && handlerErr.message || String(handlerErr)),
+            stack: process.env.NODE_ENV === 'production' ? undefined : (handlerErr && handlerErr.stack)
+        });
+    }
 });
 
 // =============================================

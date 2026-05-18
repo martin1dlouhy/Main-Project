@@ -2010,6 +2010,19 @@
             </div>
 
             <div class="settings-panel">
+                <h4>Test backendu (diagnostika)</h4>
+                <p class="panel-desc">Když Vyhledávač padá s „Network error", klikni sem a uvidíš, jestli je Railway dosažitelný a jestli máš platný session token.</p>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Stav backendu</div>
+                        <div class="settings-row-meta" id="backend-test-meta">Nespouštěno</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="testBackend()">Otestovat</button>
+                </div>
+                <div id="backend-test-results" style="margin-top:14px;display:none;"></div>
+            </div>
+
+            <div class="settings-panel">
                 <h4>Kontrola databáze</h4>
                 <p class="panel-desc">Najde duplicity (stejné IČO, email, nebo jméno+firma) a chybějící povinná pole. Sloučení duplicit zatím manuálně — aplikace na ně upozorní.</p>
                 <div class="settings-row">
@@ -4158,8 +4171,12 @@ async function runAIDiscovery() {
         showVyhlStatus('success', msg);
     } catch (err) {
         console.error('AI discovery error:', err);
+        console.error('  - error.name:', err && err.name);
+        console.error('  - error.message:', err && err.message);
+        console.error('  - token present:', !!sessionStorage.getItem(DB_TOKEN_KEY));
+        console.error('  - token length:', (sessionStorage.getItem(DB_TOKEN_KEY) || '').length);
         const msg = (err && err.message === 'Failed to fetch')
-            ? 'Network error — nepřišla odpověď z Railway. Zkus: 1) obnovit stránku Ctrl+Shift+R (zadat PIN znovu kvůli session tokenu), 2) vypnout ad-blocker / VPN, 3) zkontrolovat připojení.'
+            ? 'Network error — Railway nedostupný nebo zrušený. Diagnostika: 1) klik "Test backendu" v Nastavení, 2) obnov stránku Ctrl+Shift+R (re-PIN), 3) DevTools F12 → Console → najít error detail.'
             : 'Vyhledávání selhalo: ' + (err && err.message ? err.message : 'neznámá chyba');
         showVyhlStatus('error', msg);
     } finally {
@@ -4964,6 +4981,80 @@ function frontendDedupeDeep(arrays) {
         return ca - cb;
     });
     return out;
+}
+
+// ============================================================
+// BACKEND TEST (diagnostika "Failed to fetch")
+// ============================================================
+async function testBackend() {
+    const container = document.getElementById('backend-test-results');
+    const meta = document.getElementById('backend-test-meta');
+    container.style.display = 'block';
+    container.innerHTML = '<div style="font-size:13px;color:var(--text-mute);">Testuji…</div>';
+    meta.textContent = 'Spuštěno ' + formatDateTime(new Date().toISOString());
+
+    const results = [];
+
+    // Test 1: /health (no auth)
+    try {
+        const t0 = Date.now();
+        const r = await fetch(RAILWAY_API + '/health');
+        const elapsed = Date.now() - t0;
+        if (r.ok) {
+            results.push({ ok: true, label: '/health endpoint', detail: 'HTTP ' + r.status + ' za ' + elapsed + 'ms — Railway běží' });
+        } else {
+            results.push({ ok: false, label: '/health endpoint', detail: 'HTTP ' + r.status + ' — Railway běží, ale zlobí' });
+        }
+    } catch (err) {
+        results.push({ ok: false, label: '/health endpoint', detail: 'Network error: ' + err.message + ' — Railway nedostupný nebo blokován (ad-blocker/VPN/síť)' });
+    }
+
+    // Test 2: session token
+    const token = sessionStorage.getItem(DB_TOKEN_KEY);
+    if (token && token.length > 10) {
+        results.push({ ok: true, label: 'Session token', detail: 'Přítomen (' + token.length + ' znaků: ' + token.slice(0, 8) + '…' + token.slice(-4) + ')' });
+    } else {
+        results.push({ ok: false, label: 'Session token', detail: 'CHYBÍ — obnov stránku Ctrl+Shift+R a zadej PIN' });
+    }
+
+    // Test 3: POST /api/database/find-contacts s minimálním payloadem (jen ověřit že prošlo CORS + auth)
+    if (token) {
+        try {
+            const t0 = Date.now();
+            const r = await fetch(RAILWAY_API + '/api/database/find-contacts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Database-Token': token },
+                body: JSON.stringify({ mode: 'contacts' }) // záměrně neúplný — backend vrátí 400
+            });
+            const elapsed = Date.now() - t0;
+            let detail = 'HTTP ' + r.status + ' za ' + elapsed + 'ms';
+            if (r.status === 400) detail += ' — POST + CORS + auth funguje (400 je očekávané pro neúplný payload)';
+            else if (r.status === 401) detail += ' — token neplatný (Railway restartoval? Obnov stránku + PIN)';
+            else if (r.ok) detail += ' — funguje';
+            else detail += ' — neočekávaný stav';
+            results.push({ ok: r.status === 400 || r.ok, label: 'POST /api/database/find-contacts', detail: detail });
+        } catch (err) {
+            results.push({ ok: false, label: 'POST /api/database/find-contacts', detail: 'Network error: ' + err.message + ' — POST neprošel (CORS / browser block / network)' });
+        }
+    } else {
+        results.push({ ok: false, label: 'POST /api/database/find-contacts', detail: 'Přeskočeno (chybí token)' });
+    }
+
+    // Render
+    const ok = results.every(r => r.ok);
+    container.innerHTML = results.map(r =>
+        '<div style="padding:10px 14px;margin-bottom:6px;background:var(--bg-input);border-left:3px solid ' +
+        (r.ok ? 'var(--success)' : 'var(--danger)') +
+        ';border-radius:6px;font-size:12.5px;">' +
+        '<div style="color:var(--text);font-weight:500;">' + (r.ok ? '✓' : '✗') + ' ' + escapeHtml(r.label) + '</div>' +
+        '<div style="color:var(--text-mute);margin-top:4px;">' + escapeHtml(r.detail) + '</div>' +
+        '</div>'
+    ).join('') +
+    '<div class="info-note' + (ok ? ' success' : ' danger') + '" style="margin-top:14px;">' +
+        '<strong>' + (ok ? 'Vše OK.' : 'Problém nalezen.') + '</strong> ' +
+        (ok ? 'Backend je dosažitelný a request funguje. Pokud Vyhledávač pořád padá, problém je v konkrétním requestu (timeout, příliš velký payload).' :
+              'Viz detaily výše. Nejčastější příčina: chybějící session token → obnov stránku a zadej PIN znovu.') +
+    '</div>';
 }
 
 // ============================================================
