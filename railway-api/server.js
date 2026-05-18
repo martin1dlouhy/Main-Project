@@ -1551,10 +1551,14 @@ function buildAIDiscoveryPrompt(mode, ctx) {
         '(HNWI debt financing, úvěry 10–250M CZK proti komerčním nemovitostem v ČR).';
 
     var manualInstr = ctx.manual
-        ? '\n\nDŮLEŽITÉ PRO CHAT UI: Pokud máš dostupný web search / browsing tool, použij ho. ' +
-          'Po dokončení vrať odpověď ve formátu:\n' +
-          '\n```json\n{ ... JSON podle schématu níže ... }\n```\n' +
-          '\nKromě JSON code bloku nepiš žádný další text před ani za. Aplikace bude parsovat výhradně obsah code bloku.'
+        ? '\n\nJAK VRÁTIT ODPOVĚĎ (důležité pro strojové zpracování):\n' +
+          '- Pokud máš dostupný web search / browsing tool, použij ho pro maximální přesnost.\n' +
+          '- Hotový JSON (podle struktury výše) ZABAL do markdown code bloku takto:\n\n' +
+          '```json\n' +
+          '{ ... JSON podle struktury výše ... }\n' +
+          '```\n\n' +
+          '- Mimo code block nepiš ŽÁDNÝ další text — žádný úvod, komentáře ani závěr.\n' +
+          '- Aplikace přečte pouze obsah code bloku, všechno ostatní bude ignorovat.'
         : '';
 
     var thoroughInstr = ctx.thorough
@@ -1590,7 +1594,7 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '- Email/telefon/LinkedIn = jen pokud je v reálu veřejně dostupné. Jinak null.',
             thoroughInstr,
             '',
-            'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
+            (ctx.manual ? 'STRUKTURA JSON ODPOVĚDI (jak ji obalit viz pokyn na konci):' : 'FORMÁT ODPOVĚDI: vrať POUZE platný JSON, bez markdown obalu.'),
             '{',
             '  "contacts": [',
             '    {',
@@ -1628,7 +1632,7 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '- Pro každý zdroj odhadni jeho "kvalitu" (high / mid / low) — kolik kvalitních kontaktů z něj půjde získat',
             thoroughInstr,
             '',
-            'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
+            (ctx.manual ? 'STRUKTURA JSON ODPOVĚDI (jak ji obalit viz pokyn na konci):' : 'FORMÁT ODPOVĚDI: vrať POUZE platný JSON, bez markdown obalu.'),
             '{',
             '  "sources": [',
             '    {',
@@ -1665,7 +1669,7 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '- Pokud kontakt neexistuje v reálu, vrať prázdné pole',
             thoroughInstr,
             '',
-            'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
+            (ctx.manual ? 'STRUKTURA JSON ODPOVĚDI (jak ji obalit viz pokyn na konci):' : 'FORMÁT ODPOVĚDI: vrať POUZE platný JSON, bez markdown obalu.'),
             '{',
             '  "enrichments": [',
             '    {',
