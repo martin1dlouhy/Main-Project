@@ -1874,6 +1874,9 @@
                     <button class="active" data-source="auto" onclick="setVyhlSource('auto')">Auto (API)</button>
                     <button data-source="manual" onclick="setVyhlSource('manual')">Manuálně (copy-paste)</button>
                 </div>
+                <div class="vyhl-thorough-meta" id="vyhl-source-desc" style="margin-left:0;margin-top:0;margin-bottom:8px;">
+                    Volá Claude + ChatGPT API paralelně s web search. Gemini je dostupný pouze v manuálním módu.
+                </div>
 
                 <!-- AUTO actions -->
                 <div id="vyhl-auto-actions" class="vyhl-actions">
@@ -3977,6 +3980,12 @@ function setVyhlSource(source) {
     document.getElementById('vyhl-auto-actions').style.display = source === 'auto' ? 'flex' : 'none';
     document.getElementById('vyhl-manual-actions').style.display = source === 'manual' ? 'block' : 'none';
     document.getElementById('vyhl-status').style.display = 'none';
+    const desc = document.getElementById('vyhl-source-desc');
+    if (desc) {
+        desc.textContent = source === 'auto'
+            ? 'Volá Claude + ChatGPT API paralelně s web search. Gemini je dostupný pouze v manuálním módu.'
+            : 'Vygeneruje prompt který zkopíruješ do Claude.ai / ChatGPT / Gemini chat UI. Žádné API náklady — využiješ své měsíční subscription, AI může běžet libovolně dlouho.';
+    }
     if (source === 'auto') {
         resetManualMode();
     }
@@ -4138,14 +4147,14 @@ async function runAIDiscovery() {
         renderVyhlResults();
 
         const stats = data.stats || {};
+        const elapsed = stats.totalTimeMs ? ' · čas ' + Math.round(stats.totalTimeMs / 1000) + 's' : '';
         let msg = 'Hotovo. Claude: ' + (stats.claudeCount || 0) +
                   ' · ChatGPT: ' + (stats.openaiCount || 0) +
-                  ' · Gemini: ' + (stats.geminiCount || 0) +
                   ' · po sloučení: ' + (stats.mergedCount || 0) + ' unikátních' +
-                  ' (' + (stats.duplicates || 0) + ' duplicit/existujících odstraněno)';
+                  ' (' + (stats.duplicates || 0) + ' duplicit/existujících odstraněno)' +
+                  elapsed;
         if (stats.claudeError) msg += ' · Claude err: ' + stats.claudeError;
         if (stats.openaiError) msg += ' · ChatGPT err: ' + stats.openaiError;
-        if (stats.geminiError) msg += ' · Gemini err: ' + stats.geminiError;
         showVyhlStatus('success', msg);
     } catch (err) {
         console.error('AI discovery error:', err);

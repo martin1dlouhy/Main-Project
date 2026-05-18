@@ -59,7 +59,9 @@ app.use(cors({
         return callback(new Error('CORS not allowed'), false);
     },
     methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type']
+    // X-Database-Token: custom header pro session token na /api/database/* endpointy.
+    // Bez něj browser zruší POST request po preflightu (CORS error).
+    allowedHeaders: ['Content-Type', 'X-Database-Token']
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -1424,8 +1426,9 @@ app.post('/api/database/find-contacts', async function (req, res) {
 
     var anthropicKey = process.env.ANTHROPIC_API_KEY;
     var openaiKey = process.env.OPENAI_API_KEY;
-    var geminiKey = process.env.GEMINI_API_KEY;
-    if (!anthropicKey && !openaiKey && !geminiKey) {
+    // Gemini odebráno z auto módu — Martin ho používá výhradně manuálně (frontend-only,
+    // kompletně bez API nákladů). Tím se auto request zrychlí (2 paralelní modely místo 3).
+    if (!anthropicKey && !openaiKey) {
         return res.status(500).json({ error: 'Žádný AI API klíč není nakonfigurovaný na serveru.' });
     }
 
@@ -1467,32 +1470,60 @@ app.post('/api/database/find-contacts', async function (req, res) {
         thorough: thorough
     });
 
-    console.log('[find-contacts] mode=' + mode + ' segment="' + segmentNazev + '" max=' + maxResults + ' thorough=' + thorough);
+    console.log('[find-contacts] mode=' + mode + ' segment="' + segmentNazev + '" max=' + maxResults + ' thorough=' + thorough + ' START');
+    var tStart = Date.now();
+
+    // Per-model timeout: 80s standard, 120s thorough.
+    // Bezpečně pod typickými edge/CDN timeoutmi (Cloudflare 100s, Railway edge ~150s),
+    // aby jeden pomalý model neshodil celý request.
+    var perModelTimeout = thorough ? 120000 : 80000;
+    function withTimeout(p, ms, name) {
+        return Promise.race([
+            p.then(function (v) { return { ok: true, value: v }; }),
+            new Promise(function (resolve) {
+                setTimeout(function () {
+                    resolve({ ok: false, error: name + ' timeout po ' + Math.round(ms / 1000) + 's' });
+                }, ms);
+            })
+        ]);
+    }
+
+    function timed(p, name) {
+        var t0 = Date.now();
+        return p.then(function (v) {
+            console.log('[' + name + '] dokončeno za ' + (Date.now() - t0) + 'ms, items=' + (v && v.items ? v.items.length : 0));
+            return v;
+        }, function (err) {
+            console.log('[' + name + '] selhalo za ' + (Date.now() - t0) + 'ms: ' + (err && err.message || err));
+            throw err;
+        });
+    }
 
     var promises = [];
-    promises.push(anthropicKey ? callClaudeWithWebSearch(anthropicKey, prompt, mode, thorough) : Promise.resolve({ items: [], skipped: 'no key' }));
-    promises.push(openaiKey ? callOpenAIWithWebSearch(openaiKey, prompt, mode, thorough) : Promise.resolve({ items: [], skipped: 'no key' }));
-    promises.push(geminiKey ? callGeminiWithWebSearch(geminiKey, prompt, mode, thorough) : Promise.resolve({ items: [], skipped: 'no key' }));
+    promises.push(anthropicKey
+        ? withTimeout(timed(callClaudeWithWebSearch(anthropicKey, prompt, mode, thorough), 'claude'), perModelTimeout, 'Claude')
+        : Promise.resolve({ ok: true, value: { items: [], skipped: 'no key' } }));
+    promises.push(openaiKey
+        ? withTimeout(timed(callOpenAIWithWebSearch(openaiKey, prompt, mode, thorough), 'openai'), perModelTimeout, 'OpenAI')
+        : Promise.resolve({ ok: true, value: { items: [], skipped: 'no key' } }));
 
-    var results = await Promise.allSettled(promises);
+    var raceResults = await Promise.all(promises);
 
-    function extractResult(r, name) {
-        if (r.status === 'fulfilled') return r.value;
-        return { items: [], error: (r.reason && r.reason.message) || (name + ' call failed') };
+    function extractRace(r, name) {
+        if (r.ok && r.value) return r.value;
+        return { items: [], error: r.error || (name + ' selhalo') };
     }
-    var claudeResult = extractResult(results[0], 'Claude');
-    var openaiResult = extractResult(results[1], 'OpenAI');
-    var geminiResult = extractResult(results[2], 'Gemini');
+    var claudeResult = extractRace(raceResults[0], 'Claude');
+    var openaiResult = extractRace(raceResults[1], 'OpenAI');
 
-    console.log('[find-contacts] mode=' + mode +
-        ' claude=' + claudeResult.items.length + (claudeResult.error ? ' (ERR: ' + claudeResult.error + ')' : '') +
-        ' openai=' + openaiResult.items.length + (openaiResult.error ? ' (ERR: ' + openaiResult.error + ')' : '') +
-        ' gemini=' + geminiResult.items.length + (geminiResult.error ? ' (ERR: ' + geminiResult.error + ')' : ''));
+    var tTotal = Date.now() - tStart;
+    console.log('[find-contacts] mode=' + mode + ' DONE in ' + tTotal + 'ms — ' +
+        'claude=' + claudeResult.items.length + (claudeResult.error ? ' (ERR: ' + claudeResult.error + ')' : '') +
+        ' openai=' + openaiResult.items.length + (openaiResult.error ? ' (ERR: ' + openaiResult.error + ')' : ''));
 
     var allArrays = [
         { items: claudeResult.items, source: 'claude' },
-        { items: openaiResult.items, source: 'openai' },
-        { items: geminiResult.items, source: 'gemini' }
+        { items: openaiResult.items, source: 'openai' }
     ];
     var merged;
     if (mode === 'contacts') {
@@ -1503,19 +1534,18 @@ app.post('/api/database/find-contacts', async function (req, res) {
         merged = mergeDeepEnrichment(allArrays);
     }
 
-    var totalFromAI = claudeResult.items.length + openaiResult.items.length + geminiResult.items.length;
+    var totalFromAI = claudeResult.items.length + openaiResult.items.length;
     return res.json({
         mode: mode,
         suggestions: merged,
         stats: {
             claudeCount: claudeResult.items.length,
             openaiCount: openaiResult.items.length,
-            geminiCount: geminiResult.items.length,
             mergedCount: merged.length,
             duplicates: totalFromAI - merged.length,
             claudeError: claudeResult.error || null,
             openaiError: openaiResult.error || null,
-            geminiError: geminiResult.error || null
+            totalTimeMs: tTotal
         }
     });
 });
