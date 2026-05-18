@@ -707,6 +707,70 @@
             gap: 0.25rem;
         }
 
+        /* Global Vše/Nic header nad documentCheckboxes — Martin chce globální
+           ovladač, ne per-kategorii. */
+        .docs-to-gen-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .docs-to-gen-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        /* Generating panel — visible overlay během 30–90s Claude API volání.
+           Toast vlevo nahoře Martin přehlížel; panel je v sekci výsledků, prominent. */
+        .generating-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2.5rem 1.5rem;
+            background: var(--bg-raised, var(--bg-surface));
+            border: 1px solid var(--line-amber, var(--accent-light));
+            border-radius: 12px;
+            margin-top: 1.5rem;
+            text-align: center;
+            gap: 0.75rem;
+        }
+        .generating-panel[hidden] { display: none; }
+        .generating-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: gen-spin 0.9s linear infinite;
+        }
+        @keyframes gen-spin { to { transform: rotate(360deg); } }
+        .generating-title {
+            font-family: var(--font-display, inherit);
+            font-size: 1.125rem;
+            color: var(--text-primary);
+            font-weight: 400;
+        }
+        .generating-progress {
+            font-family: var(--font-mono, monospace);
+            font-size: 1rem;
+            color: var(--accent-hover, var(--accent));
+            letter-spacing: 0.02em;
+        }
+        .generating-meta {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+        .generating-hint {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            opacity: 0.7;
+            max-width: 420px;
+            line-height: 1.5;
+            margin-top: 0.25rem;
+        }
+
         .btn-mini {
             background: transparent;
             border: 1px solid var(--border-color);
@@ -754,6 +818,16 @@
             padding: 0.5rem 0.75rem;
             border-radius: 8px;
             transition: var(--transition);
+            min-width: 0;  /* grid item musí mít min-width 0, jinak dlouhé .checkbox-label přetéká cell */
+        }
+
+        .checkbox-label {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            min-width: 0;
+            flex: 1;
+            font-size: 0.8125rem;
+            line-height: 1.35;
         }
 
         .checkbox-item:hover {
@@ -1398,7 +1472,13 @@
                         <div id="templateList" class="template-list"></div>
 
                         <div style="margin-top: 1rem;">
-                            <label class="form-label">Dokumenty k vygenerování</label>
+                            <div class="docs-to-gen-header">
+                                <label class="form-label" style="margin: 0;">Dokumenty k vygenerování</label>
+                                <div class="docs-to-gen-actions">
+                                    <button type="button" class="btn-mini" onclick="toggleAllCheckboxes(true)">Vše</button>
+                                    <button type="button" class="btn-mini" onclick="toggleAllCheckboxes(false)">Nic</button>
+                                </div>
+                            </div>
                             <div class="checkbox-group" id="documentCheckboxes"></div>
                         </div>
                     </div>
@@ -1682,6 +1762,15 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                     Reset
                 </button>
+            </div>
+
+            <!-- GENERATING PANEL — visible during long Claude API calls -->
+            <div class="generating-panel" id="generatingPanel" hidden>
+                <div class="generating-spinner"></div>
+                <div class="generating-title">Generuji dokumenty</div>
+                <div class="generating-progress" id="generatingProgress">0 / 1 dokumentů</div>
+                <div class="generating-meta" id="generatingMeta">Připojuji se k Claude AI…</div>
+                <div class="generating-hint">Generování trvá typicky 30–90 sekund. Tlačítka neklikat — panel zmizí po dokončení.</div>
             </div>
 
             <!-- RESULTS -->
@@ -3143,10 +3232,6 @@
                         var s = '<div class="checkbox-group-section">';
                         s += '<div class="checkbox-group-header">';
                         s += '<span class="checkbox-group-title">' + escapeHtml(catLabel) + '</span>';
-                        s += '<div class="checkbox-group-actions">';
-                        s += '<button type="button" class="btn-mini" onclick="toggleCategoryCheckboxes(\'' + groupId + '\', true)">Vše</button>';
-                        s += '<button type="button" class="btn-mini" onclick="toggleCategoryCheckboxes(\'' + groupId + '\', false)">Nic</button>';
-                        s += '</div>';
                         s += '</div>';
                         s += '<div class="checkbox-group-items" data-group="' + groupId + '">';
                         items.forEach(function(template) {
@@ -3185,6 +3270,15 @@
 
         function toggleCategoryCheckboxes(groupId, checked) {
             document.querySelectorAll('#documentCheckboxes [data-group="' + groupId + '"] input[type="checkbox"]').forEach(function(cb) {
+                cb.checked = !!checked;
+            });
+            updateSelectedDocs();
+        }
+
+        // Globální Vše/Nic — ovládá všechny checkboxy v "Dokumenty k vygenerování" naráz,
+        // napříč všemi kategoriemi (Martin preferuje jediný ovladač místo per-kategorii).
+        function toggleAllCheckboxes(checked) {
+            document.querySelectorAll('#documentCheckboxes input[type="checkbox"]').forEach(function(cb) {
                 cb.checked = !!checked;
             });
             updateSelectedDocs();
@@ -3489,10 +3583,15 @@
             var total = templateIds.length;
             var failed = 0;
 
-            // Persistent toast — generace přes Claude trvá 30–60s, default 3s zmizí dřív
-            // než si Martin stihne přečíst. Aktualizujeme textContent po každém dokumentu
-            // a smažeme až po dokončení.
-            var progressToast = showToast('Generuji 0/' + total + ' dokumentů — připojuji se k Claude AI…', 'info', 0);
+            // Loading panel — viditelný v sekci výsledků po celou dobu Claude API volání.
+            // Toast je malý a v rohu, Martin ho přehlížel; tohle je prominent panel
+            // se spinnerem + progress čítačem.
+            var genPanel = document.getElementById('generatingPanel');
+            var genProgress = document.getElementById('generatingProgress');
+            var genMeta = document.getElementById('generatingMeta');
+            if (genPanel) genPanel.hidden = false;
+            if (genProgress) genProgress.textContent = '0 / ' + total + ' dokumentů';
+            if (genMeta) genMeta.textContent = 'Připojuji se k Claude AI…';
 
             templateIds.forEach(function(templateId) {
                 var templateName = selectedTemplates[templateId];
@@ -3504,14 +3603,13 @@
                                 generatedDocuments[templateName] = result;
                             } else {
                                 failed++;
-                                showToast('Chyba při generování: ' + templateName, 'error', 6000);
+                                showToast('Chyba při generování: ' + templateName + (result.error ? ' (' + result.error + ')' : ''), 'error', 6000);
                             }
                             processed++;
-                            if (progressToast) {
-                                progressToast.textContent = 'Generuji ' + processed + '/' + total + ' dokumentů…';
-                            }
+                            if (genProgress) genProgress.textContent = processed + ' / ' + total + ' dokumentů';
+                            if (genMeta) genMeta.textContent = processed < total ? 'Claude AI vyplňuje dokumenty…' : 'Hotovo, ukládám…';
                             if (processed === total) {
-                                if (progressToast) { progressToast.remove(); }
+                                if (genPanel) genPanel.hidden = true;
                                 var ok = Object.keys(generatedDocuments).length;
                                 if (ok > 0) {
                                     showToast('Hotovo — vygenerováno ' + ok + '/' + total + (failed > 0 ? ' (' + failed + ' selhalo)' : ''), 'success', 6000);
@@ -3564,45 +3662,53 @@
             }
         }
 
+        // JSZip async pipeline. PizZip (3.1.7 i 3.2.0) zapisuje špatné velikosti v Local
+        // File Headers — Word odmítá výsledný DOCX otevřít, i když Central Directory
+        // hodnoty sedí. JSZip 3.10.1 zapisuje Local Headers korektně.
         function processTemplate(template, formData, withTrackedChanges, callback) {
-            var extracted = extractDocxText(template.data);
-
-            var payload = {
-                templateText: extracted.text,
-                formData: formData,
-                templateName: template.name,
-                withTrackedChanges: withTrackedChanges
-            };
-
-            fetch(LOAN_API_BASE + '/api/generate-loan-doc', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                if (data.replacements) {
-                    var newXml = withTrackedChanges
-                        ? applyReplacementsWithTracking(extracted.xml, data.replacements)
-                        : applyReplacements(extracted.xml, data.replacements);
-
-                    var newDocx = repackDocx(extracted.zip, newXml);
-                    callback({ success: true, docx: newDocx, filename: template.name });
-                } else {
-                    callback({ success: false });
+            JSZip.loadAsync(template.data).then(function(zip) {
+                var docFile = zip.file('word/document.xml');
+                if (!docFile) {
+                    callback({ success: false, error: 'Šablona neobsahuje word/document.xml' });
+                    return null;
                 }
-            })
-            .catch(function(error) {
-                console.error('API Error:', error);
-                callback({ success: false });
+                return docFile.async('string').then(function(originalXml) {
+                    var plainText = originalXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                    var payload = {
+                        templateText: plainText,
+                        formData: formData,
+                        templateName: template.name,
+                        withTrackedChanges: withTrackedChanges
+                    };
+                    return fetch(LOAN_API_BASE + '/api/generate-loan-doc', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }).then(function(response) {
+                        return response.json();
+                    }).then(function(data) {
+                        if (!data || !data.replacements) {
+                            callback({ success: false, error: data && data.error });
+                            return null;
+                        }
+                        var newXml = withTrackedChanges
+                            ? applyReplacementsWithTracking(originalXml, data.replacements)
+                            : applyReplacements(originalXml, data.replacements);
+                        zip.file('word/document.xml', newXml);
+                        return zip.generateAsync({
+                            type: 'blob',
+                            compression: 'DEFLATE',
+                            compressionOptions: { level: 6 },
+                            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                        }).then(function(newDocx) {
+                            callback({ success: true, docx: newDocx, filename: template.name });
+                        });
+                    });
+                });
+            }).catch(function(error) {
+                console.error('processTemplate error:', error);
+                callback({ success: false, error: error.message });
             });
-        }
-
-        function extractDocxText(arrayBuffer) {
-            var zip = new PizZip(arrayBuffer);
-            var xml = zip.file('word/document.xml').asText();
-            var text = xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-            return { xml: xml, text: text, zip: zip };
         }
 
         // Vždy escapuj `replace` (vstupuje doslova do XML, jinak rozbije DOCX při znacích & < >).
@@ -3644,18 +3750,6 @@
             return xml;
         }
 
-        // PizZip 3.1.7 s STORE compression zapisuje špatné velikosti v Local File Headers
-        // (Central Directory je OK, Local Headers ale lžou — Word odmítne otevřít). DEFLATE
-        // forsuje jinou code path, která Local Headers zapíše korektně.
-        function repackDocx(zip, newXml) {
-            zip.file('word/document.xml', newXml);
-            return zip.generate({
-                type: 'blob',
-                compression: 'DEFLATE',
-                compressionOptions: { level: 6 },
-                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            });
-        }
 
         /* ─── RESULTS ─── */
         function displayResults() {
