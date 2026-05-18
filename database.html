@@ -2527,10 +2527,16 @@ const state = {
 // PIN AUTHENTICATION (server-side)
 // ============================================================
 (function initPIN() {
-    if (sessionStorage.getItem(PIN_SESSION_KEY) === 'true') {
+    // Pre-F2 sessions neměly DB_TOKEN_KEY. Pokud chybí, donutit re-PIN
+    // (PIN flow vygeneruje token + uloží do sessionStorage).
+    if (sessionStorage.getItem(PIN_SESSION_KEY) === 'true' && sessionStorage.getItem(DB_TOKEN_KEY)) {
         document.getElementById('pin-overlay').classList.add('hidden');
         onPinSuccess();
         return;
+    }
+    // Vyčistit potencálně stale flag (migrace ze starší verze bez tokenu)
+    if (!sessionStorage.getItem(DB_TOKEN_KEY)) {
+        sessionStorage.removeItem(PIN_SESSION_KEY);
     }
     const digits = document.querySelectorAll('.pin-digit');
     digits.forEach(function(d, i) {
@@ -4126,7 +4132,10 @@ async function runAIDiscovery() {
         showVyhlStatus('success', msg);
     } catch (err) {
         console.error('AI discovery error:', err);
-        showVyhlStatus('error', 'Vyhledávání selhalo: ' + err.message);
+        const msg = (err && err.message === 'Failed to fetch')
+            ? 'Network error — nepřišla odpověď z Railway. Zkus: 1) obnovit stránku Ctrl+Shift+R (zadat PIN znovu kvůli session tokenu), 2) vypnout ad-blocker / VPN, 3) zkontrolovat připojení.'
+            : 'Vyhledávání selhalo: ' + (err && err.message ? err.message : 'neznámá chyba');
+        showVyhlStatus('error', msg);
     } finally {
         btn.disabled = false;
         btn.style.opacity = '';
@@ -4464,50 +4473,168 @@ function resetVyhlResults() {
 }
 
 // ============================================================
-// MANUAL MODE (copy-paste do chat UI)
-// Aplikace složí prompt → Martin ho dá do Claude.ai / ChatGPT → výsledek paste zpět
-// → frontend parser + dedupe → render výsledků (stejný UI jako auto mode)
+// MANUAL MODE (copy-paste do chat UI) — kompletně offline, žádný backend
+// Aplikace složí prompt LOKÁLNĚ → Martin ho dá do Claude.ai / ChatGPT
+// → výsledek paste zpět → frontend parser + dedupe → render.
+// Žádná síťová komunikace, žádný token, funguje i bez Railway.
 // ============================================================
-async function showManualPrompt() {
+function showManualPrompt() {
     const built = buildAIPayload();
     if (built.error) { toast('warning', built.error); return; }
 
-    const token = sessionStorage.getItem(DB_TOKEN_KEY);
-    if (!token) { toast('error', 'Chybí session token.'); return; }
+    const prompt = buildPromptFE(built.payload.mode, Object.assign({}, built.payload, { manual: true }));
 
-    const btn = document.getElementById('btn-show-prompt');
-    btn.disabled = true;
+    state.vyhlManualPrompt = prompt;
+    state.vyhlLastContext = built.payload;
+    state.vyhlLastMode = built.payload.mode;
 
-    try {
-        const resp = await fetch(RAILWAY_API + '/api/database/build-prompt', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Database-Token': token },
-            body: JSON.stringify(built.payload)
-        });
-        if (resp.status === 401) {
-            sessionStorage.removeItem(DB_TOKEN_KEY);
-            sessionStorage.removeItem(PIN_SESSION_KEY);
-            toast('error', 'Session vypršela.');
-            return;
-        }
-        const data = await resp.json();
-        if (!resp.ok) { toast('error', data.error || ('HTTP ' + resp.status)); return; }
+    document.getElementById('vyhl-prompt-text').textContent = prompt;
+    document.getElementById('vyhl-prompt-display').style.display = 'block';
+    // Reset paste textareas (nová sezení = nové paste-y)
+    document.getElementById('vyhl-paste-claude').value = '';
+    document.getElementById('vyhl-paste-openai').value = '';
+    validateManualPaste();
+}
 
-        state.vyhlManualPrompt = data.prompt || '';
-        state.vyhlLastContext = built.payload; // pro pozdější parsing/apply
-        state.vyhlLastMode = built.payload.mode;
+// ============================================================
+// FRONTEND PROMPT BUILDER (port backendu — pro offline manual mode)
+// ============================================================
+function buildPromptFE(mode, ctx) {
+    const header = 'Jsi expert na vyhledávání B2B kontaktů a zdrojů v České republice pro investiční firmu ProfiLend ' +
+        '(HNWI debt financing, úvěry 10–250M CZK proti komerčním nemovitostem v ČR).';
 
-        document.getElementById('vyhl-prompt-text').textContent = state.vyhlManualPrompt;
-        document.getElementById('vyhl-prompt-display').style.display = 'block';
-        // Reset paste textareas
-        document.getElementById('vyhl-paste-claude').value = '';
-        document.getElementById('vyhl-paste-openai').value = '';
-        validateManualPaste();
-    } catch (err) {
-        toast('error', 'Selhalo: ' + err.message);
-    } finally {
-        btn.disabled = false;
+    const manualInstr = ctx.manual
+        ? '\n\nDŮLEŽITÉ PRO CHAT UI: Pokud máš dostupný web search / browsing tool, použij ho. ' +
+          'Po dokončení vrať odpověď ve formátu:\n' +
+          '\n```json\n{ ... JSON podle schématu níže ... }\n```\n' +
+          '\nKromě JSON code bloku nepiš žádný další text před ani za. Aplikace bude parsovat výhradně obsah code bloku.'
+        : '';
+
+    const thoroughInstr = ctx.thorough
+        ? '\n\nHLOUBKOVÝ PRŮZKUM: Toto je důkladná verze. Projdi VŠECHNY uvedené zdroje detailně, ' +
+          'hledej i okrajové weby (eventy, články, profil pages, ranking žebříčky). ' +
+          'Cílíme na ' + ctx.maxResults + '+ návrhů — kvalita stále důležitá, ale nebrn se rozsahu. ' +
+          'Spotřebuj víc web search dotazů, projdi víc stránek.'
+        : '';
+
+    if (mode === 'contacts') {
+        const sourcesText = (ctx.sources || []).map((s, i) => {
+            let line = (i + 1) + '. ' + (s.nazev || 'Zdroj');
+            if (s.url) line += ' — ' + s.url;
+            if (s.poznamka) line += ' (' + s.poznamka + ')';
+            return line;
+        }).join('\n');
+
+        return [
+            header, '',
+            'CÍL: Najdi konkrétní reálné kontakty pro segment "' + ctx.segmentNazev + '" v regionu ' + ctx.region + '.',
+            '',
+            'USE-CASE SEGMENTU: ' + (ctx.segmentUseCase || 'Zprostředkovatelé obchodů pro debt financing.'),
+            '',
+            'ZDROJE K PROZKOUMÁNÍ (použij web search pokud máš tool dostupný):',
+            sourcesText,
+            '',
+            'INSTRUKCE:',
+            '- Použij web search pro každý zdroj a vytahej konkrétní jména + role + kontakty',
+            '- Vrať MAX ' + ctx.maxResults + ' nejlepších kontaktů (kvalita > kvantita)',
+            '- KAŽDÝ kontakt MUSÍ být ověřitelný v reálu — žádné halucinace',
+            '- Cílíme na decision-makery: Partner, Managing Partner, Director, CEO, Owner, Head of, Senior',
+            '- Vyhni se juniorům, asistentům, info@/contact@ adresám',
+            '- Email/telefon/LinkedIn = jen pokud je v reálu veřejně dostupné. Jinak null.',
+            thoroughInstr,
+            '',
+            'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
+            '{',
+            '  "contacts": [',
+            '    {',
+            '      "firma": "název s.r.o./a.s. (povinné)",',
+            '      "ico": "8místné IČO | null",',
+            '      "kontaktniOsoba": "Jméno Příjmení | null",',
+            '      "role": "Managing Partner | null",',
+            '      "email": "veřejný email | null",',
+            '      "telefon": "veřejný tel | null",',
+            '      "web": "https://… | null",',
+            '      "linkedinUrl": "https://linkedin.com/in/… | null",',
+            '      "sidlo": "adresa | null",',
+            '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
+            '    }',
+            '  ]',
+            '}',
+            manualInstr
+        ].join('\n');
     }
+
+    if (mode === 'sources') {
+        return [
+            header, '',
+            'CÍL: Najdi DALŠÍ relevantní zdroje (weby, registry, asociace, žebříčky, eventy, oborové publikace) ',
+            'pro segment "' + ctx.segmentNazev + '" v ČR. Žádné kontakty osob — jen zdroje.',
+            '',
+            'USE-CASE SEGMENTU: ' + (ctx.segmentUseCase || 'Zprostředkovatelé obchodů.'),
+            '',
+            'INSTRUKCE:',
+            '- Použij web search a najdi nové weby/registry, které se dají využít jako zdroj kontaktů',
+            '- Vrať MAX ' + ctx.maxResults + ' zdrojů',
+            '- Pro každý zdroj uveď jeho URL, krátký název, popis (co konkrétně se tam dá vytěžit)',
+            '- Typy: profesní registr, oborová asociace, žebříček/ranking, konferenční speakers, oborový časopis, deal feed',
+            '- Vyhni se Wikipedii, obecným adresářům typu Firmy.cz (ledaže by měly specifickou kategorii)',
+            '- Pro každý zdroj odhadni jeho "kvalitu" (high / mid / low) — kolik kvalitních kontaktů z něj půjde získat',
+            thoroughInstr,
+            '',
+            'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
+            '{',
+            '  "sources": [',
+            '    {',
+            '      "nazev": "Krátký název zdroje (povinné)",',
+            '      "url": "https://… (povinné)",',
+            '      "poznamka": "Co se tam dá vytěžit, koho hledat",',
+            '      "typZdroje": "registr | asociace | ranking | konference | publikace | dealfeed",',
+            '      "kvalita": "high | mid | low"',
+            '    }',
+            '  ]',
+            '}',
+            manualInstr
+        ].join('\n');
+    }
+
+    if (mode === 'deep') {
+        const t = ctx.targetContact || {};
+        return [
+            header, '',
+            'CÍL: Hloubkový průzkum konkrétního kontaktu. Najdi co nejvíc informací o této osobě / firmě.',
+            '',
+            'CÍLOVÝ KONTAKT:',
+            '- Firma: ' + (t.firma || '?'),
+            '- IČO: ' + (t.ico || '?'),
+            '- Osoba: ' + (t.kontaktniOsoba || '?'),
+            '- Role: ' + (t.role || '?'),
+            '- Web: ' + (t.web || '?'),
+            '- LinkedIn: ' + (t.linkedinUrl || '?'),
+            '',
+            'INSTRUKCE:',
+            '- Použij web search pro hledání: LinkedIn profil, email, telefon, board memberships, historie pozic, news mentions, kontroverze',
+            '- Najdi i jiné firmy, kde tato osoba sedí v boardu nebo má vlastnický podíl',
+            '- Najdi recent news o této osobě nebo firmě (poslední 12 měsíců)',
+            '- Pokud kontakt neexistuje v reálu, vrať prázdné pole',
+            thoroughInstr,
+            '',
+            'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
+            '{',
+            '  "enrichments": [',
+            '    {',
+            '      "kategorie": "kontakt | role | board | news | warning",',
+            '      "klic": "stručný popis (např. \'LinkedIn URL\', \'Board člen XY\', \'Akvizice 2024\')",',
+            '      "hodnota": "konkrétní info / URL / popis",',
+            '      "zdrojUrl": "URL zdroje pokud znáš | null",',
+            '      "datum": "YYYY-MM nebo YYYY pokud relevantní | null"',
+            '    }',
+            '  ]',
+            '}',
+            manualInstr
+        ].join('\n');
+    }
+
+    return header;
 }
 
 function copyManualPrompt() {
