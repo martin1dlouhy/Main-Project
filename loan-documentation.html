@@ -3197,42 +3197,99 @@
         }
 
         /* ─── IMPORT TERM SHEET ─── */
-        function openImportModal() {
-            var termSheetRequest = indexedDB.open('termSheetDB', 1);
-            termSheetRequest.onsuccess = function(event) {
-                var termDb = event.target.result;
-                if (!termDb.objectStoreNames.contains('termSheets')) {
-                    document.getElementById('importList').innerHTML = '<p style="color: var(--text-secondary); padding: 20px; text-align: center;">Žádné uložené term sheety</p>';
-                    document.getElementById('importModal').classList.add('visible');
-                    return;
-                }
-                var transaction = termDb.transaction(['termSheets'], 'readonly');
-                var store = transaction.objectStore('termSheets');
-                var getAllRequest = store.getAll();
+        // Cache term sheetů aktuálně zobrazených v modalu (sloučení Drive + lokální IndexedDB).
+        // Klíč = ts.id ('ts-<timestamp>'). Drive vyhrává nad lokálním pro stejné id.
+        var importableTermSheets = {};
 
-                getAllRequest.onsuccess = function() {
-                    var termSheets = getAllRequest.result;
-                    var html = '';
+        async function loadDriveTermSheets() {
+            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return [];
+            try {
+                var txt = await GDriveSync.loadShared('Term Sheet Generator/termsheets.json');
+                if (!txt) return [];
+                var arr = JSON.parse(txt);
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                console.warn('Drive term sheets load failed:', e);
+                return [];
+            }
+        }
 
-                    if (termSheets.length === 0) {
-                        html = '<p style="color: var(--text-secondary); padding: 20px; text-align: center;">Žádné uložené term sheety</p>';
-                    } else {
-                        termSheets.forEach(function(sheet) {
-                            html += '<div class="modal-item" onclick="importTermSheet(' + sheet.id + ')">';
-                            html += '<strong>' + escapeHtml(sheet.borrowerName || 'Bez jména') + '</strong>';
-                            html += '<div class="modal-item-meta">' + new Date(sheet.createdAt).toLocaleDateString('cs-CZ') + '</div>';
-                            html += '</div>';
-                        });
-                    }
-
-                    document.getElementById('importList').innerHTML = html;
-                    document.getElementById('importModal').classList.add('visible');
+        function loadLocalTermSheets() {
+            // Termsheet-generator ukládá do 'ProfiLendTermSheets'/'termsheets' (NE 'termSheetDB').
+            return new Promise(function(resolve) {
+                var req = indexedDB.open('ProfiLendTermSheets', 1);
+                req.onupgradeneeded = function(ev) {
+                    // DB neexistuje (termsheet zde nikdy neukládal) — neinicializuj, vrať prázdné.
+                    ev.target.transaction.abort();
                 };
-            };
-            termSheetRequest.onerror = function() {
-                document.getElementById('importList').innerHTML = '<p style="color: var(--text-secondary); padding: 20px; text-align: center;">Žádné uložené term sheety</p>';
-                document.getElementById('importModal').classList.add('visible');
-            };
+                req.onsuccess = function(ev) {
+                    var db = ev.target.result;
+                    if (!db.objectStoreNames.contains('termsheets')) {
+                        db.close();
+                        return resolve([]);
+                    }
+                    var tx = db.transaction(['termsheets'], 'readonly');
+                    var get = tx.objectStore('termsheets').getAll();
+                    get.onsuccess = function() { db.close(); resolve(get.result || []); };
+                    get.onerror = function() { db.close(); resolve([]); };
+                };
+                req.onerror = function() { resolve([]); };
+                req.onblocked = function() { resolve([]); };
+            });
+        }
+
+        async function openImportModal() {
+            var listEl = document.getElementById('importList');
+            var modalEl = document.getElementById('importModal');
+            listEl.innerHTML = '<p style="color: var(--text-secondary); padding: 20px; text-align: center;">Načítám term sheety…</p>';
+            modalEl.classList.add('visible');
+
+            var results = await Promise.all([loadDriveTermSheets(), loadLocalTermSheets()]);
+            var driveResults = results[0];
+            var localResults = results[1];
+
+            importableTermSheets = {};
+            localResults.forEach(function(ts) {
+                if (ts && ts.id != null) importableTermSheets[ts.id] = { source: 'local', data: ts };
+            });
+            driveResults.forEach(function(ts) {
+                if (ts && ts.id != null) importableTermSheets[ts.id] = { source: 'drive', data: ts };
+            });
+
+            var all = Object.keys(importableTermSheets).map(function(k) { return importableTermSheets[k]; });
+            all.sort(function(a, b) {
+                var ad = a.data.updatedAt || a.data.createdAt || '';
+                var bd = b.data.updatedAt || b.data.createdAt || '';
+                return String(bd).localeCompare(String(ad));
+            });
+
+            if (all.length === 0) {
+                var driveOn = window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected();
+                var hint = driveOn
+                    ? 'Hledáno v Google Drive (ProfiLend Investment Tools/Term Sheet Generator/termsheets.json) i v lokálním prohlížeči.'
+                    : 'Tip: připojte Google Drive vpravo dole — termsheety se synchronizují z Term Sheet Generátoru.';
+                listEl.innerHTML = '<p style="color: var(--text-secondary); padding: 20px; text-align: center;">Žádné uložené term sheety<br><span style="font-size:12px;color:var(--text-mute);">' + hint + '</span></p>';
+                return;
+            }
+
+            var html = '';
+            all.forEach(function(item) {
+                var ts = item.data;
+                var idStr = String(ts.id).replace(/'/g, "\\'");
+                var name = escapeHtml(ts.borrower || ts.borrowerName || 'Bez jména');
+                var amount = ts.amount ? (String(ts.amount) + ' ' + (ts.currency || 'CZK')) : '';
+                var dateStr = ts.updatedAt || ts.createdAt;
+                var dateFmt = dateStr ? new Date(dateStr).toLocaleDateString('cs-CZ') : '';
+                var meta = [amount, dateFmt].filter(Boolean).join(' · ');
+                var badge = item.source === 'drive'
+                    ? '<span style="font-size:10px;color:var(--amber-warm);margin-left:8px;letter-spacing:0.05em;">● DRIVE</span>'
+                    : '<span style="font-size:10px;color:var(--text-mute);margin-left:8px;letter-spacing:0.05em;">● LOKÁLNÍ</span>';
+                html += '<div class="modal-item" onclick="importTermSheet(\'' + idStr + '\')">';
+                html += '<strong>' + name + '</strong>' + badge;
+                if (meta) html += '<div class="modal-item-meta">' + escapeHtml(meta) + '</div>';
+                html += '</div>';
+            });
+            listEl.innerHTML = html;
         }
 
         function closeModal(modalId) {
@@ -3240,22 +3297,40 @@
         }
 
         function importTermSheet(id) {
-            var termSheetRequest = indexedDB.open('termSheetDB', 1);
-            termSheetRequest.onsuccess = function(event) {
-                var termDb = event.target.result;
-                var transaction = termDb.transaction(['termSheets'], 'readonly');
-                var store = transaction.objectStore('termSheets');
-                var getRequest = store.get(id);
+            var item = importableTermSheets[id];
+            if (!item) {
+                showToast('Term sheet nenalezen v cache. Otevřete dialog znovu.', 'error');
+                return;
+            }
+            populateFormFromTermSheet(item.data);
+            closeModal('importModal');
+            showToast('Term sheet importován: ' + (item.data.borrower || item.data.borrowerName || ''), 'success');
+        }
 
-                getRequest.onsuccess = function() {
-                    var sheet = getRequest.result;
-                    if (sheet) {
-                        populateForm(sheet);
-                        closeModal('importModal');
-                        showToast('Term sheet importován', 'success');
-                    }
-                };
-            };
+        // Adaptér: termsheet schema → loan-doc populateForm() fields.
+        // Hlavní mismatch: termsheet 'borrower' = loan-doc 'uvereovany';
+        // termsheet 'collateralItems' je pole, loan-doc textarea = string oddělený \n.
+        function populateFormFromTermSheet(ts) {
+            var collateralStr = '';
+            if (Array.isArray(ts.collateralItems)) collateralStr = ts.collateralItems.join('\n');
+            else if (typeof ts.collateralItems === 'string') collateralStr = ts.collateralItems;
+
+            var adapted = Object.assign({}, ts, {
+                uvereovany: ts.borrower || ts.borrowerName || '',
+                collateralItems: collateralStr
+            });
+            populateForm(adapted);
+
+            if (typeof window.syncCustomDropdown === 'function') {
+                ['currency', 'drawdownType', 'interestPayment', 'maturityUnit', 'originationFeeType'].forEach(function(selId) {
+                    window.syncCustomDropdown(selId);
+                });
+            }
+
+            ['amount', 'otherCosts', 'collateralValue', 'appraisalValue'].forEach(function(fid) {
+                var el = document.getElementById(fid);
+                if (el && el.value && typeof formatAmount === 'function') formatAmount(el);
+            });
         }
 
         /* ─── FORM ─── */
