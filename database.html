@@ -1684,6 +1684,17 @@
         </div>
 
         <div class="filter-block">
+            <label class="filter-label">LinkedIn workflow</label>
+            <div class="filter-pills" id="filter-linkedinStav">
+                <span class="filter-pill active" data-linkedinstav="all">Vše</span>
+                <span class="filter-pill" data-linkedinstav="">Nic</span>
+                <span class="filter-pill" data-linkedinstav="Posláno">Posláno</span>
+                <span class="filter-pill" data-linkedinstav="Přijato">Přijato</span>
+                <span class="filter-pill" data-linkedinstav="Zpráva">Zpráva</span>
+            </div>
+        </div>
+
+        <div class="filter-block">
             <label class="filter-label">Segmenty</label>
             <div class="multi-segment" id="seg-multi">
                 <button class="multi-segment-trigger" type="button" onclick="toggleSegmentMenu(event)">
@@ -2138,13 +2149,23 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label">Facebook URL</label>
-                    <input type="url" class="form-input" id="f-facebookUrl" placeholder="https://facebook.com/...">
+                    <label class="form-label">LinkedIn workflow</label>
+                    <select class="form-input" id="f-linkedinStav">
+                        <option value="">— bez akce —</option>
+                        <option value="Posláno">Posláno (pozvánka odeslaná, čekám na přijetí)</option>
+                        <option value="Přijato">Přijato (spojení je, mohu napsat zprávu)</option>
+                        <option value="Zpráva">Zpráva (zprávu jsem poslal, čekám na odpověď)</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Tagy (oddělené čárkou)</label>
                     <input type="text" class="form-input" id="f-tagy" placeholder="Praha, M&A, top-100">
                 </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Facebook URL</label>
+                <input type="url" class="form-input" id="f-facebookUrl" placeholder="https://facebook.com/...">
             </div>
 
             <div class="form-group">
@@ -2545,6 +2566,7 @@ const state = {
         typ: 'all',
         prio: 'all',
         stav: 'all',
+        linkedinStav: 'all',
         segments: [],  // multi-select — prázdné = všechny segmenty
         search: ''
     },
@@ -2880,7 +2902,8 @@ const CONTACTS_HEADER = [
     'id', 'createdAt', 'updatedAt', 'typ', 'segment', 'priorita', 'stav',
     'firma', 'ico', 'sidlo', 'web', 'email', 'telefon',
     'kontaktniOsoba', 'role', 'linkedinUrl', 'facebookUrl',
-    'zdrojUrl', 'tagy', 'poznamka', 'osloven_kdy', 'osloven_kanal', 'spolehlivost'
+    'zdrojUrl', 'tagy', 'poznamka', 'osloven_kdy', 'osloven_kanal', 'spolehlivost',
+    'linkedinStav'  // LinkedIn outreach workflow: '' (nic) / Posláno / Přijato / Zpráva
 ];
 const SOURCES_HEADER = ['segment', 'idx', 'nazev', 'url', 'poznamka'];
 const SEGMENTS_HEADER = ['nazev', 'typ', 'priorita', 'useCase', 'pocetZdroju'];
@@ -2995,6 +3018,10 @@ async function syncFromSheet() {
             sheetsRead(SHEET_TABS.activity)
         ]);
 
+        // Migration: pokud header Sheet contacts neobsahuje všechny aktuální sloupce
+        // (např. nový linkedinStav přidaný v pozdější verzi), doplnit ho.
+        await migrateContactsHeader(contactRows);
+
         state.contacts = rowsToObjects(contactRows, CONTACTS_HEADER);
         // Re-index rowIndex (2-based, +1 for header)
         state.contacts.forEach((c, i) => { c._rowIndex = i + 2; });
@@ -3011,6 +3038,26 @@ async function syncFromSheet() {
     } catch (err) {
         console.error('Sync error:', err);
         toast('error', 'Sync selhal: ' + err.message);
+    }
+}
+
+// Migration helper — pokud Sheet header je shorter than CONTACTS_HEADER (např. po update
+// aplikace s novými sloupci), update header row a vyrovnat. Existing data rows zůstávají
+// jak jsou, nové sloupce vrátí '' přes rowsToObjects fallback.
+async function migrateContactsHeader(contactRows) {
+    if (!contactRows || contactRows.length < 1) return;
+    const headerRow = contactRows[0] || [];
+    let needsUpdate = false;
+    CONTACTS_HEADER.forEach((field, i) => {
+        if (headerRow[i] !== field) needsUpdate = true;
+    });
+    if (!needsUpdate) return;
+    try {
+        console.log('Migrating contacts header: ' + headerRow.length + ' → ' + CONTACTS_HEADER.length + ' columns');
+        await sheetsUpdateRow(SHEET_TABS.contacts, 1, CONTACTS_HEADER);
+        contactRows[0] = CONTACTS_HEADER.slice(); // sync in-memory
+    } catch (err) {
+        console.warn('Header migration failed (non-fatal):', err);
     }
 }
 
@@ -3077,6 +3124,7 @@ function resetForm() {
     document.getElementById('f-priorita').value = '2';
     document.getElementById('f-stav').value = 'Nový';
     document.getElementById('f-segment').value = '';
+    document.getElementById('f-linkedinStav').value = '';
     ['f-firma','f-ico','f-sidlo','f-kontaktniOsoba','f-role','f-email','f-telefon',
      'f-web','f-linkedinUrl','f-facebookUrl','f-tagy','f-zdrojUrl','f-poznamka',
      'f-osloven_kdy','f-osloven_kanal'].forEach(id => {
@@ -3104,6 +3152,7 @@ function populateForm(c) {
     document.getElementById('f-poznamka').value = c.poznamka || '';
     document.getElementById('f-osloven_kdy').value = c.osloven_kdy || '';
     document.getElementById('f-osloven_kanal').value = c.osloven_kanal || '';
+    document.getElementById('f-linkedinStav').value = c.linkedinStav || '';
     document.getElementById('meta-created').textContent = c.createdAt ? formatDateTime(c.createdAt) : '—';
     document.getElementById('meta-updated').textContent = c.updatedAt ? formatDateTime(c.updatedAt) : '—';
     document.getElementById('meta-id').textContent = c.id || '—';
@@ -3129,7 +3178,8 @@ function collectForm() {
         zdrojUrl: document.getElementById('f-zdrojUrl').value.trim(),
         poznamka: document.getElementById('f-poznamka').value.trim(),
         osloven_kdy: document.getElementById('f-osloven_kdy').value,
-        osloven_kanal: document.getElementById('f-osloven_kanal').value
+        osloven_kanal: document.getElementById('f-osloven_kanal').value,
+        linkedinStav: document.getElementById('f-linkedinStav').value
     };
 }
 
@@ -3283,6 +3333,7 @@ function applyFilters() {
         if (f.typ !== 'all' && c.typ !== f.typ) return false;
         if (f.prio !== 'all' && String(c.priorita) !== f.prio) return false;
         if (f.stav !== 'all' && c.stav !== f.stav) return false;
+        if (f.linkedinStav !== 'all' && (c.linkedinStav || '') !== f.linkedinStav) return false;
         if (f.segments.length > 0 && f.segments.indexOf(c.segment) === -1) return false;
         if (f.search) {
             const s = f.search.toLowerCase();
@@ -3307,9 +3358,9 @@ function applyFilters() {
 }
 
 function clearFilters() {
-    state.filters = { typ: 'all', prio: 'all', stav: 'all', segments: [], search: '' };
+    state.filters = { typ: 'all', prio: 'all', stav: 'all', linkedinStav: 'all', segments: [], search: '' };
     document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.filter-pill[data-typ="all"], .filter-pill[data-prio="all"], .filter-pill[data-stav="all"]').forEach(p => p.classList.add('active'));
+    document.querySelectorAll('.filter-pill[data-typ="all"], .filter-pill[data-prio="all"], .filter-pill[data-stav="all"], .filter-pill[data-linkedinstav="all"]').forEach(p => p.classList.add('active'));
     document.getElementById('search-input').value = '';
     document.getElementById('seg-search').value = '';
     updateSegmentTriggerLabel();
@@ -3336,6 +3387,7 @@ function setupFilterPills() {
     bind('typ', 'typ');
     bind('prio', 'prio');
     bind('stav', 'stav');
+    bind('linkedinStav', 'linkedinStav');
 
     // Multi-segment filter — click-outside closes the menu
     document.addEventListener('click', (e) => {
@@ -3653,7 +3705,8 @@ const CSV_HEADER_MAP = {
     'stav': 'stav', 'status': 'stav',
     'tagy': 'tagy', 'tags': 'tagy',
     'zdroj': 'zdrojUrl', 'zdrojurl': 'zdrojUrl', 'zdroj url': 'zdrojUrl', 'source': 'zdrojUrl',
-    'poznamka': 'poznamka', 'poznámka': 'poznamka', 'notes': 'poznamka', 'note': 'poznamka'
+    'poznamka': 'poznamka', 'poznámka': 'poznamka', 'notes': 'poznamka', 'note': 'poznamka',
+    'linkedinstav': 'linkedinStav', 'linkedin stav': 'linkedinStav', 'linkedin workflow': 'linkedinStav'
 };
 
 function mapCsvHeader(h) {
@@ -5175,7 +5228,7 @@ function rebuildDropdown(selectId) {
 function initStaticDropdowns() {
     if (!window.convertSelectsToDropdowns) return;
     // Static-options selects (form selecty se stálými hodnotami)
-    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal'].forEach(id => {
+    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal', 'f-linkedinStav'].forEach(id => {
         window.convertSelectsToDropdowns('#' + id);
     });
 }
@@ -5200,7 +5253,7 @@ populateSegmentSelect = function(id) {
 const _origPopulateForm = populateForm;
 populateForm = function(c) {
     _origPopulateForm(c);
-    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal'].forEach(id => {
+    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal', 'f-linkedinStav'].forEach(id => {
         if (window.syncCustomDropdown) window.syncCustomDropdown(id);
     });
     renderSearchableMenu('f-segment');
@@ -5210,7 +5263,7 @@ populateForm = function(c) {
 const _origResetForm = resetForm;
 resetForm = function() {
     _origResetForm();
-    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal'].forEach(id => {
+    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal', 'f-linkedinStav'].forEach(id => {
         if (window.syncCustomDropdown) window.syncCustomDropdown(id);
     });
     renderSearchableMenu('f-segment');

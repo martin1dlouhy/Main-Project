@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="design-system/tokens.css">
     <link rel="stylesheet" href="design-system/app-shell.css">
-    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.2.0/dist/pizzip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -2348,22 +2348,33 @@
         function uploadTemplate(file) {
             var reader = new FileReader();
             reader.onload = function(e) {
-                // Auto-detekce kategorie
+                // Auto-detekce kategorie + dedup podle name (jinak druhý drag&drop stejné
+                // šablony vytvořil další entry s autoIncrement id — typický původ duplikátů
+                // mezi "Úvěrové smlouvy" a "Nezařazeno").
                 getAllFromDB('categories', function(cats) {
-                    var detected = detectCategory(file.name, cats);
-                    var record = {
-                        name: file.name,
-                        data: e.target.result,
-                        category: detected ? detected.name : null,
-                        uploadedAt: new Date().toISOString()
-                    };
-                    saveToDb('templates', record, function(id) {
-                        if (id) {
-                            var catNote = detected
-                                ? ' → kategorie "' + detected.name + '"'
-                                : ' → "Nezařazeno" (přiřaď kategorii ručně)';
-                            showToast('Šablona ' + file.name + ' nahrána' + catNote, 'success');
-                            renderTemplateList();
+                    getAllFromDB('templates', function(existing) {
+                        var prior = (existing || []).find(function(t) { return t.name === file.name; });
+                        var detected = detectCategory(file.name, cats);
+                        var record = {
+                            name: file.name,
+                            data: e.target.result,
+                            // Pokud už existuje s manuálně přiřazenou kategorií, neignoruj ji.
+                            category: (prior && prior.category) ? prior.category : (detected ? detected.name : null),
+                            uploadedAt: new Date().toISOString()
+                        };
+                        if (prior) record.id = prior.id;
+                        saveToDb('templates', record, function(id) {
+                            if (id) {
+                                var catNote;
+                                if (prior) {
+                                    catNote = ' → aktualizováno (kategorie zachována: "' + (record.category || 'Nezařazeno') + '")';
+                                } else {
+                                    catNote = detected
+                                        ? ' → kategorie "' + detected.name + '"'
+                                        : ' → "Nezařazeno" (přiřaď kategorii ručně)';
+                                }
+                                showToast('Šablona ' + file.name + (prior ? ' přepsána' : ' nahrána') + catNote, 'success');
+                                renderTemplateList();
                             // Also push to Google Drive (shared Šablony folder)
                             if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
                                 try {
@@ -2383,6 +2394,7 @@
                         } else {
                             showToast('Chyba při nahrávání šablony', 'error');
                         }
+                    });
                     });
                 });
             };
@@ -3475,8 +3487,12 @@
             var templateIds = Object.keys(selectedTemplates);
             var processed = 0;
             var total = templateIds.length;
+            var failed = 0;
 
-            showToast('Generuji ' + total + ' dokument' + (total > 1 ? 'y' : '') + '...', 'info');
+            // Persistent toast — generace přes Claude trvá 30–60s, default 3s zmizí dřív
+            // než si Martin stihne přečíst. Aktualizujeme textContent po každém dokumentu
+            // a smažeme až po dokončení.
+            var progressToast = showToast('Generuji 0/' + total + ' dokumentů — připojuji se k Claude AI…', 'info', 0);
 
             templateIds.forEach(function(templateId) {
                 var templateName = selectedTemplates[templateId];
@@ -3487,12 +3503,23 @@
                             if (result.success) {
                                 generatedDocuments[templateName] = result;
                             } else {
-                                showToast('Chyba při generování ' + templateName, 'error');
+                                failed++;
+                                showToast('Chyba při generování: ' + templateName, 'error', 6000);
                             }
                             processed++;
+                            if (progressToast) {
+                                progressToast.textContent = 'Generuji ' + processed + '/' + total + ' dokumentů…';
+                            }
                             if (processed === total) {
+                                if (progressToast) { progressToast.remove(); }
+                                var ok = Object.keys(generatedDocuments).length;
+                                if (ok > 0) {
+                                    showToast('Hotovo — vygenerováno ' + ok + '/' + total + (failed > 0 ? ' (' + failed + ' selhalo)' : ''), 'success', 6000);
+                                } else {
+                                    showToast('Generování selhalo — žádný dokument se nepodařilo vyplnit', 'error', 8000);
+                                }
                                 displayResults();
-                                if (Object.keys(generatedDocuments).length > 0) {
+                                if (ok > 0) {
                                     saveDocumentSet();
                                     saveGeneratedToDrive(formData, withTrackedChanges);
                                 }
@@ -3755,17 +3782,24 @@
         /* Theme je řešen přes script.js (setTheme) */
 
         /* ─── TOAST ─── */
-        function showToast(message, type) {
+        // duration: ms do automatického zmizení (default 3000). Hodnota 0 = persistent
+        // (zůstane, dokud volající nesmaže toast.remove()). Funkce vrací DOM element,
+        // takže volající může toast aktualizovat (toast.textContent = '...') nebo zrušit.
+        function showToast(message, type, duration) {
             var container = document.getElementById('toastContainer');
             var toast = document.createElement('div');
             toast.className = 'toast ' + (type || 'info');
             toast.textContent = message;
             container.appendChild(toast);
 
-            setTimeout(function() {
-                toast.classList.add('exit');
-                setTimeout(function() { toast.remove(); }, 300);
-            }, 3000);
+            var ms = (typeof duration === 'number') ? duration : 3000;
+            if (ms > 0) {
+                setTimeout(function() {
+                    toast.classList.add('exit');
+                    setTimeout(function() { toast.remove(); }, 300);
+                }, ms);
+            }
+            return toast;
         }
 
         /* ─── UTILS ─── */
