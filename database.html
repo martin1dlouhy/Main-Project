@@ -903,6 +903,269 @@
             margin-top: 4px;
         }
         .vyhl-deep-meta a { color: var(--amber-warm); }
+
+        /* ===== Searchable single-select (recycluje multi-segment vzhled) ===== */
+        .searchable-select { position: relative; }
+        .ss-trigger {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            color: var(--text);
+            font-size: 13.5px;
+            font-family: inherit;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            transition: all var(--dur) var(--ease);
+        }
+        .ss-trigger:hover { background: var(--bg-input-hover); border-color: var(--line-strong); }
+        .searchable-select.open .ss-trigger {
+            background: var(--bg-input-hover);
+            border-color: var(--amber);
+            box-shadow: 0 0 0 3px var(--amber-glow);
+        }
+        .ss-trigger-label {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-faint);
+        }
+        .ss-trigger-label.has-selection { color: var(--text); }
+        .ss-menu {
+            position: absolute;
+            top: calc(100% + 6px); left: 0; right: 0;
+            background: var(--bg-elevated);
+            border: 1px solid var(--line-strong);
+            border-radius: var(--r-sm);
+            padding: 8px;
+            box-shadow: var(--shadow-lg);
+            z-index: 60;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-4px);
+            transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+            max-height: min(420px, 60vh);
+            display: flex;
+            flex-direction: column;
+        }
+        .searchable-select.open .ss-menu {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+        .ss-search {
+            width: 100%;
+            padding: 8px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-xs);
+            color: var(--text);
+            font-size: 12.5px;
+            font-family: inherit;
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+        .ss-search:focus {
+            outline: none;
+            border-color: var(--amber);
+            box-shadow: 0 0 0 2px var(--amber-glow);
+        }
+        .ss-list {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+            margin: 0;
+            padding: 0;
+        }
+        .ss-option {
+            padding: 7px 10px;
+            font-size: 12.5px;
+            color: var(--text-soft);
+            border-radius: var(--r-xs);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background var(--dur-fast) var(--ease);
+            user-select: none;
+        }
+        .ss-option:hover { background: var(--bg-input); color: var(--text); }
+        .ss-option.selected {
+            color: var(--amber-warm);
+            background: var(--amber-tint);
+        }
+        .ss-option.selected::after {
+            content: '';
+            width: 5px; height: 5px;
+            border-radius: 50%;
+            background: var(--amber);
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+        .ss-option-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ===== Mode toggle Auto / Manuálně ===== */
+        .vyhl-source-toggle {
+            display: inline-flex;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            padding: 3px;
+            gap: 2px;
+            margin: 14px 0;
+        }
+        .vyhl-source-toggle button {
+            padding: 7px 14px;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-mute);
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all var(--dur) var(--ease);
+        }
+        .vyhl-source-toggle button:hover { color: var(--text-soft); }
+        .vyhl-source-toggle button.active {
+            background: var(--bg-elevated);
+            color: var(--amber-warm);
+        }
+
+        /* ===== Thorough checkbox ===== */
+        .vyhl-thorough {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--text-soft);
+            cursor: pointer;
+            user-select: none;
+        }
+        .vyhl-thorough input { display: none; }
+        .vyhl-thorough .thorough-check {
+            width: 18px; height: 18px;
+            border: 1.5px solid var(--line);
+            border-radius: var(--r-xs);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--dur-fast) var(--ease);
+            flex-shrink: 0;
+        }
+        .vyhl-thorough .thorough-check svg {
+            width: 12px; height: 12px;
+            color: #1a1207;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0;
+            transition: opacity var(--dur-fast) var(--ease);
+        }
+        .vyhl-thorough input:checked + .thorough-check {
+            background: var(--amber);
+            border-color: var(--amber);
+        }
+        .vyhl-thorough input:checked + .thorough-check svg { opacity: 1; }
+        .vyhl-thorough-meta {
+            font-size: 11.5px;
+            color: var(--text-mute);
+            margin-left: 28px;
+            line-height: 1.5;
+        }
+
+        /* ===== Manual mode UI ===== */
+        .vyhl-manual-block {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--line);
+            border-radius: var(--r-md);
+        }
+        .vyhl-manual-step {
+            margin-bottom: 16px;
+        }
+        .vyhl-manual-step:last-child { margin-bottom: 0; }
+        .vyhl-manual-step-title {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--amber-warm);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 8px;
+        }
+        .vyhl-manual-step-desc {
+            font-size: 12.5px;
+            color: var(--text-soft);
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .vyhl-prompt-preview {
+            background: var(--bg-deep);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            padding: 12px;
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            color: var(--text-mute);
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 10px;
+        }
+        .vyhl-manual-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .vyhl-manual-buttons .btn { padding: 8px 14px; font-size: 12.5px; }
+        .vyhl-paste-textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px 12px;
+            background: var(--bg-deep);
+            border: 1px solid var(--line);
+            border-radius: var(--r-sm);
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            resize: vertical;
+            font-feature-settings: 'liga' 0;
+        }
+        .vyhl-paste-textarea:focus {
+            outline: none;
+            border-color: var(--amber);
+            box-shadow: 0 0 0 2px var(--amber-glow);
+        }
+        .vyhl-paste-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11.5px;
+            color: var(--text-mute);
+            margin-bottom: 6px;
+        }
+        .vyhl-paste-status {
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+        }
+        .vyhl-paste-status.valid { color: var(--success); }
+        .vyhl-paste-status.invalid { color: var(--danger); }
         .vyhl-status {
             margin-top: 18px;
             padding: 14px 18px;
@@ -1554,7 +1817,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Max návrhů</label>
-                        <input type="number" class="form-input" id="vyhl-max" value="20" min="5" max="50">
+                        <input type="number" class="form-input" id="vyhl-max" value="20" min="5" max="80">
                     </div>
                 </div>
 
@@ -1566,7 +1829,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Max nových zdrojů</label>
-                        <input type="number" class="form-input" id="vyhl-max-sources" value="10" min="3" max="30">
+                        <input type="number" class="form-input" id="vyhl-max-sources" value="10" min="3" max="50">
                     </div>
                 </div>
 
@@ -1588,11 +1851,91 @@
                     </div>
                 </div>
 
-                <div class="vyhl-actions">
+                <!-- Hloubkový průzkum checkbox (jen contacts + sources) -->
+                <label class="vyhl-thorough" id="vyhl-thorough-wrap">
+                    <input type="checkbox" id="vyhl-thorough">
+                    <span class="thorough-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                    <span>Hloubkový průzkum</span>
+                </label>
+                <div class="vyhl-thorough-meta" id="vyhl-thorough-meta">
+                    Vyšší max_uses web search (25 vs. 8) + vyšší max_tokens (16k vs. 8k) + agresivnější prompt. ~3–4× delší čas (2–4 min) a ~3–4× vyšší cena u API. V manuálním módu zdarma, ale v chatu Claude/ChatGPT může trvat 5–15 min.
+                </div>
+
+                <!-- Auto / Manual toggle -->
+                <div class="vyhl-source-toggle">
+                    <button class="active" data-source="auto" onclick="setVyhlSource('auto')">Auto (API)</button>
+                    <button data-source="manual" onclick="setVyhlSource('manual')">Manuálně (copy-paste)</button>
+                </div>
+
+                <!-- AUTO actions -->
+                <div id="vyhl-auto-actions" class="vyhl-actions">
                     <button class="btn btn-primary btn-lg" onclick="runAIDiscovery()" id="vyhl-btn">
                         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        Hledat
+                        Hledat (přes API)
                     </button>
+                </div>
+
+                <!-- MANUAL actions -->
+                <div id="vyhl-manual-actions" style="display:none;">
+                    <div class="vyhl-manual-block">
+                        <div class="vyhl-manual-step">
+                            <div class="vyhl-manual-step-title">1. Vygeneruj prompt</div>
+                            <div class="vyhl-manual-step-desc">Aplikace složí kompletní prompt vč. zdrojů, instrukcí a JSON schématu. Pak otevři Claude.ai nebo ChatGPT.com a vlož ho.</div>
+                            <button class="btn btn-primary" onclick="showManualPrompt()" id="btn-show-prompt">
+                                <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h12"/></svg>
+                                Zobrazit prompt
+                            </button>
+                        </div>
+
+                        <div id="vyhl-prompt-display" style="display:none;">
+                            <div class="vyhl-manual-step">
+                                <div class="vyhl-manual-step-title">2. Zkopíruj a vlož do chatu</div>
+                                <div class="vyhl-prompt-preview" id="vyhl-prompt-text"></div>
+                                <div class="vyhl-manual-buttons">
+                                    <button class="btn btn-primary" onclick="copyManualPrompt()">
+                                        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                        Kopírovat prompt
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="window.open('https://claude.ai/new', '_blank')">
+                                        Otevřít Claude.ai ↗
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="window.open('https://chatgpt.com/', '_blank')">
+                                        Otevřít ChatGPT ↗
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="vyhl-manual-step">
+                                <div class="vyhl-manual-step-title">3. Vlož odpovědi zpět</div>
+                                <div class="vyhl-manual-step-desc">Když AI dokončí (může trvat dlouho), zkopíruj <strong>celý code block</strong> (```json ... ```) z chatu a vlož sem. Můžeš vložit jen jednu z odpovědí, nebo obě — pak deduplikace najde shody.</div>
+                                <div style="margin-bottom:14px;">
+                                    <div class="vyhl-paste-label">
+                                        <span>Odpověď z Claude (volitelně)</span>
+                                        <span class="vyhl-paste-status" id="paste-status-claude">prázdné</span>
+                                    </div>
+                                    <textarea class="vyhl-paste-textarea" id="vyhl-paste-claude" placeholder='Sem vlož odpověď z Claude.ai…&#10;&#10;Aplikace najde JSON v code blocku automaticky.' oninput="validateManualPaste()"></textarea>
+                                </div>
+                                <div>
+                                    <div class="vyhl-paste-label">
+                                        <span>Odpověď z ChatGPT (volitelně)</span>
+                                        <span class="vyhl-paste-status" id="paste-status-openai">prázdné</span>
+                                    </div>
+                                    <textarea class="vyhl-paste-textarea" id="vyhl-paste-openai" placeholder='Sem vlož odpověď z ChatGPT…&#10;&#10;Aplikace najde JSON v code blocku automaticky.' oninput="validateManualPaste()"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="vyhl-manual-step">
+                                <div class="vyhl-manual-step-title">4. Zparsovat a deduplikovat</div>
+                                <div class="vyhl-manual-buttons">
+                                    <button class="btn btn-primary btn-lg" onclick="parseManualResponses()" id="btn-parse-manual">
+                                        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                                        Zparsovat odpovědi
+                                    </button>
+                                    <button class="btn btn-ghost" onclick="resetManualMode()">Začít znova</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="vyhl-status" class="vyhl-status" style="display:none;"></div>
@@ -3433,16 +3776,144 @@ function checkDatabase() {
 }
 
 // ============================================================
+// SEARCHABLE SINGLE-SELECT WIDGET
+// Generic widget pro select s search inputem v menu.
+// Náhrada za nav.js dropdown widget tam, kde má smysl search.
+// Native <select> se schová, hodnota se synchronizuje (zachová JS API).
+// ============================================================
+function makeSearchableSelect(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+
+    // Idempotent — pokud wrapper existuje, jen re-render menu (options mohly změnit)
+    const existingWrapper = sel.parentNode.querySelector('.searchable-select[data-target="' + selectId + '"]');
+    if (existingWrapper) {
+        renderSearchableMenu(selectId);
+        return;
+    }
+
+    // Skryj případnou nav.js .dropdown-field konverzi
+    const navDropdown = sel.parentNode.querySelector('.dropdown-field[data-target-select="' + selectId + '"]');
+    if (navDropdown) navDropdown.remove();
+    delete sel.dataset.cdInit;
+
+    sel.style.display = 'none';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'searchable-select';
+    wrapper.setAttribute('data-target', selectId);
+    wrapper.innerHTML =
+        '<button class="ss-trigger" type="button">' +
+            '<span class="ss-trigger-label">— vyber —</span>' +
+            '<svg class="multi-segment-chevron" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>' +
+        '</button>' +
+        '<div class="ss-menu">' +
+            '<input type="text" class="ss-search" placeholder="Hledat…">' +
+            '<ul class="ss-list"></ul>' +
+        '</div>';
+    sel.parentNode.insertBefore(wrapper, sel);
+
+    const trigger = wrapper.querySelector('.ss-trigger');
+    const search = wrapper.querySelector('.ss-search');
+    trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleSearchableMenu(selectId);
+    });
+    search.addEventListener('input', function () { renderSearchableMenu(selectId); });
+    search.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    renderSearchableMenu(selectId);
+}
+
+function renderSearchableMenu(selectId) {
+    const sel = document.getElementById(selectId);
+    const wrapper = document.querySelector('.searchable-select[data-target="' + selectId + '"]');
+    if (!sel || !wrapper) return;
+    const list = wrapper.querySelector('.ss-list');
+    const label = wrapper.querySelector('.ss-trigger-label');
+    const searchEl = wrapper.querySelector('.ss-search');
+    const searchRaw = (searchEl ? searchEl.value : '').toLowerCase().trim();
+    const searchSlug = slug(searchRaw);
+
+    const options = Array.from(sel.options);
+    const filtered = options.filter(o => {
+        if (!o.value && searchRaw) return false; // empty placeholder skrýt při search
+        if (!searchRaw) return true;
+        const text = (o.textContent || '').toLowerCase();
+        return text.indexOf(searchRaw) !== -1 ||
+               slug(text).indexOf(searchSlug) !== -1;
+    });
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="multi-segment-empty">Nic neodpovídá.</div>';
+    } else {
+        list.innerHTML = filtered.map(o => {
+            const isSel = o.value === sel.value && o.value !== '';
+            return '<li class="ss-option' + (isSel ? ' selected' : '') + '" data-value="' + escapeAttr(o.value) + '" onclick="selectSearchableOption(\'' + selectId + '\', this, event)">' +
+                '<span class="ss-option-name">' + escapeHtml(o.textContent) + '</span>' +
+            '</li>';
+        }).join('');
+    }
+
+    // Update label
+    const currentOpt = options.find(o => o.value === sel.value);
+    if (currentOpt && currentOpt.value) {
+        label.textContent = currentOpt.textContent.trim();
+        label.classList.add('has-selection');
+    } else {
+        label.textContent = (currentOpt && currentOpt.textContent.trim()) || '— vyber —';
+        label.classList.remove('has-selection');
+    }
+}
+
+function toggleSearchableMenu(selectId) {
+    const wrapper = document.querySelector('.searchable-select[data-target="' + selectId + '"]');
+    if (!wrapper) return;
+    document.querySelectorAll('.searchable-select.open').forEach(w => {
+        if (w !== wrapper) w.classList.remove('open');
+    });
+    const willOpen = !wrapper.classList.contains('open');
+    wrapper.classList.toggle('open', willOpen);
+    if (willOpen) {
+        renderSearchableMenu(selectId);
+        setTimeout(() => {
+            const s = wrapper.querySelector('.ss-search');
+            if (s) { s.value = ''; s.focus(); }
+        }, 50);
+    }
+}
+
+function selectSearchableOption(selectId, optEl, e) {
+    if (e) e.stopPropagation();
+    const sel = document.getElementById(selectId);
+    sel.value = optEl.getAttribute('data-value');
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    const wrapper = document.querySelector('.searchable-select[data-target="' + selectId + '"]');
+    if (wrapper) wrapper.classList.remove('open');
+    renderSearchableMenu(selectId);
+}
+
+// Click outside zavře všechny searchable menu
+document.addEventListener('click', function (e) {
+    document.querySelectorAll('.searchable-select.open').forEach(w => {
+        if (!w.contains(e.target)) w.classList.remove('open');
+    });
+});
+
+// ============================================================
 // AI VYHLEDÁVAČ (F2.1-3)
 // Tři módy: contacts (kontakty), sources (zdroje), deep (hloubkový průzkum).
+// Dva zdroje: auto (API) nebo manual (copy-paste do chat UI).
 // Volá Railway /api/database/find-contacts paralelně Claude+GPT-4o s web search,
 // deduplikuje napříč modely + proti existující DB, ukáže návrhy s badge.
 // ============================================================
 state.lastVyhlSuggestions = [];
 state.vyhlSelected = new Set();
 state.vyhlMode = 'contacts';
+state.vyhlSource = 'auto';  // 'auto' | 'manual'
 state.vyhlLastMode = 'contacts';
 state.vyhlLastContext = {};
+state.vyhlManualPrompt = '';
 
 // ----- Mode tabs -----
 function setVyhlMode(mode) {
@@ -3460,12 +3931,33 @@ function setVyhlMode(mode) {
     };
     document.getElementById('vyhl-mode-desc').textContent = descMap[mode] || '';
 
+    // Thorough checkbox: jen contacts + sources (deep je hloubkový už ze své povahy)
+    const thoroughWrap = document.getElementById('vyhl-thorough-wrap');
+    const thoroughMeta = document.getElementById('vyhl-thorough-meta');
+    const showThorough = mode === 'contacts' || mode === 'sources';
+    if (thoroughWrap) thoroughWrap.style.display = showThorough ? 'flex' : 'none';
+    if (thoroughMeta) thoroughMeta.style.display = showThorough ? 'block' : 'none';
+
     // Skryj předchozí výsledky a status (jiný mode = jiná data)
     document.getElementById('vyhl-results-wrap').style.display = 'none';
     document.getElementById('vyhl-status').style.display = 'none';
+    resetManualMode();
 }
 
-// ----- Populate dropdowny -----
+// ----- Auto / Manual source toggle -----
+function setVyhlSource(source) {
+    state.vyhlSource = source;
+    document.querySelectorAll('.vyhl-source-toggle button').forEach(b =>
+        b.classList.toggle('active', b.dataset.source === source));
+    document.getElementById('vyhl-auto-actions').style.display = source === 'auto' ? 'flex' : 'none';
+    document.getElementById('vyhl-manual-actions').style.display = source === 'manual' ? 'block' : 'none';
+    document.getElementById('vyhl-status').style.display = 'none';
+    if (source === 'auto') {
+        resetManualMode();
+    }
+}
+
+// ----- Populate dropdowny (přes searchable widget) -----
 function populateVyhlSegmentSelect() {
     const opts = '<option value="">— vyber segment —</option>' +
         state.segments.map(s =>
@@ -3477,7 +3969,7 @@ function populateVyhlSegmentSelect() {
         const current = sel.value;
         sel.innerHTML = opts;
         if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
-        rebuildDropdown(id);
+        makeSearchableSelect(id);
     });
 
     // Target contact dropdown for deep mode
@@ -3492,7 +3984,7 @@ function populateVyhlSegmentSelect() {
                 return '<option value="' + escapeAttr(c.id) + '">' + escapeHtml(label) + '</option>';
             }).join('');
         if (current && [...target.options].some(o => o.value === current)) target.value = current;
-        rebuildDropdown('vyhl-target-contact');
+        makeSearchableSelect('vyhl-target-contact');
     }
 }
 
@@ -3506,53 +3998,55 @@ function getExistingContactKeys() {
     };
 }
 
-// ----- Main: spustit AI discovery -----
-async function runAIDiscovery() {
+// ----- Build payload (společné pro auto + manual) -----
+function buildAIPayload() {
     const mode = state.vyhlMode;
-    const btn = document.getElementById('vyhl-btn');
-
-    let payload;
-    let waitingFor;
+    const thorough = document.getElementById('vyhl-thorough').checked;
 
     if (mode === 'contacts') {
         const segmentNazev = document.getElementById('vyhl-segment').value;
-        if (!segmentNazev) { toast('warning', 'Vyber segment.'); return; }
+        if (!segmentNazev) return { error: 'Vyber segment.' };
         const segment = state.segments.find(s => s.nazev === segmentNazev);
-        if (!segment) { toast('error', 'Segment nenalezen.'); return; }
+        if (!segment) return { error: 'Segment nenalezen.' };
         const sources = state.sources.filter(s => s.segment === segmentNazev);
         if (sources.length === 0) {
-            toast('warning', 'Segment nemá zdroje. Nejdřív spusť „Objevit zdroje" nebo doplň ručně v Sheetu.');
-            return;
+            return { error: 'Segment nemá zdroje. Nejdřív spusť „Objevit zdroje" nebo doplň ručně v Sheetu.' };
         }
-        payload = {
-            mode: 'contacts',
-            segmentNazev: segmentNazev,
-            segmentUseCase: segment.useCase || '',
-            sources: sources.map(s => ({ nazev: s.nazev, url: s.url, poznamka: s.poznamka })),
-            existingContactsKeys: getExistingContactKeys(),
-            region: document.getElementById('vyhl-region').value.trim() || 'celá ČR',
-            maxResults: parseInt(document.getElementById('vyhl-max').value) || 20
+        return {
+            payload: {
+                mode: 'contacts',
+                segmentNazev: segmentNazev,
+                segmentUseCase: segment.useCase || '',
+                sources: sources.map(s => ({ nazev: s.nazev, url: s.url, poznamka: s.poznamka })),
+                existingContactsKeys: getExistingContactKeys(),
+                region: document.getElementById('vyhl-region').value.trim() || 'celá ČR',
+                maxResults: parseInt(document.getElementById('vyhl-max').value) || 20,
+                thorough: thorough
+            },
+            label: 'kontakty pro „' + segmentNazev + '"' + (thorough ? ' (hloubkový)' : '')
         };
-        waitingFor = 'kontakty pro „' + segmentNazev + '"';
     } else if (mode === 'sources') {
         const segmentNazev = document.getElementById('vyhl-segment-sources').value;
-        if (!segmentNazev) { toast('warning', 'Vyber segment.'); return; }
+        if (!segmentNazev) return { error: 'Vyber segment.' };
         const segment = state.segments.find(s => s.nazev === segmentNazev);
-        if (!segment) { toast('error', 'Segment nenalezen.'); return; }
-        payload = {
-            mode: 'sources',
-            segmentNazev: segmentNazev,
-            segmentUseCase: segment.useCase || '',
-            existingSourceUrls: state.sources.filter(s => s.segment === segmentNazev).map(s => s.url).filter(Boolean),
-            maxResults: parseInt(document.getElementById('vyhl-max-sources').value) || 10
+        if (!segment) return { error: 'Segment nenalezen.' };
+        return {
+            payload: {
+                mode: 'sources',
+                segmentNazev: segmentNazev,
+                segmentUseCase: segment.useCase || '',
+                existingSourceUrls: state.sources.filter(s => s.segment === segmentNazev).map(s => s.url).filter(Boolean),
+                maxResults: parseInt(document.getElementById('vyhl-max-sources').value) || 10,
+                thorough: thorough
+            },
+            label: 'nové zdroje pro „' + segmentNazev + '"' + (thorough ? ' (hloubkový)' : '')
         };
-        waitingFor = 'nové zdroje pro „' + segmentNazev + '"';
     } else if (mode === 'deep') {
         const targetId = document.getElementById('vyhl-target-contact').value;
         let target;
         if (targetId) {
             const c = state.contacts.find(c => c.id === targetId);
-            if (!c) { toast('error', 'Kontakt nenalezen.'); return; }
+            if (!c) return { error: 'Kontakt nenalezen.' };
             target = {
                 firma: c.firma, ico: c.ico, kontaktniOsoba: c.kontaktniOsoba,
                 role: c.role, web: c.web, linkedinUrl: c.linkedinUrl
@@ -3560,12 +4054,24 @@ async function runAIDiscovery() {
         } else {
             const firma = document.getElementById('vyhl-manual-firma').value.trim();
             const osoba = document.getElementById('vyhl-manual-osoba').value.trim();
-            if (!firma) { toast('warning', 'Vyber kontakt z DB nebo zadej firmu.'); return; }
+            if (!firma) return { error: 'Vyber kontakt z DB nebo zadej firmu.' };
             target = { firma: firma, kontaktniOsoba: osoba || null };
         }
-        payload = { mode: 'deep', targetContact: target };
-        waitingFor = 'info o „' + (target.kontaktniOsoba || target.firma) + '"';
+        return {
+            payload: { mode: 'deep', targetContact: target, thorough: false },
+            label: 'info o „' + (target.kontaktniOsoba || target.firma) + '"'
+        };
     }
+    return { error: 'Neznámý mode' };
+}
+
+// ----- Main: spustit AI discovery (Auto / API) -----
+async function runAIDiscovery() {
+    const btn = document.getElementById('vyhl-btn');
+    const built = buildAIPayload();
+    if (built.error) { toast('warning', built.error); return; }
+    const payload = built.payload;
+    const waitingFor = built.label;
 
     const token = sessionStorage.getItem(DB_TOKEN_KEY);
     if (!token) {
@@ -3573,7 +4079,9 @@ async function runAIDiscovery() {
         return;
     }
 
-    showVyhlStatus('loading', 'Hledám paralelně u Claude a ChatGPT (web search aktivní) — ' + waitingFor + '… (30–90 s)');
+    const isThorough = payload.thorough;
+    const timeEst = isThorough ? '2–4 min' : '30–90 s';
+    showVyhlStatus('loading', 'Hledám paralelně u Claude a ChatGPT (web search aktivní) — ' + waitingFor + '… (' + timeEst + ')');
     document.getElementById('vyhl-results-wrap').style.display = 'none';
     btn.disabled = true;
     btn.style.opacity = '0.6';
@@ -3952,6 +4460,332 @@ function resetVyhlResults() {
 }
 
 // ============================================================
+// MANUAL MODE (copy-paste do chat UI)
+// Aplikace složí prompt → Martin ho dá do Claude.ai / ChatGPT → výsledek paste zpět
+// → frontend parser + dedupe → render výsledků (stejný UI jako auto mode)
+// ============================================================
+async function showManualPrompt() {
+    const built = buildAIPayload();
+    if (built.error) { toast('warning', built.error); return; }
+
+    const token = sessionStorage.getItem(DB_TOKEN_KEY);
+    if (!token) { toast('error', 'Chybí session token.'); return; }
+
+    const btn = document.getElementById('btn-show-prompt');
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch(RAILWAY_API + '/api/database/build-prompt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Database-Token': token },
+            body: JSON.stringify(built.payload)
+        });
+        if (resp.status === 401) {
+            sessionStorage.removeItem(DB_TOKEN_KEY);
+            sessionStorage.removeItem(PIN_SESSION_KEY);
+            toast('error', 'Session vypršela.');
+            return;
+        }
+        const data = await resp.json();
+        if (!resp.ok) { toast('error', data.error || ('HTTP ' + resp.status)); return; }
+
+        state.vyhlManualPrompt = data.prompt || '';
+        state.vyhlLastContext = built.payload; // pro pozdější parsing/apply
+        state.vyhlLastMode = built.payload.mode;
+
+        document.getElementById('vyhl-prompt-text').textContent = state.vyhlManualPrompt;
+        document.getElementById('vyhl-prompt-display').style.display = 'block';
+        // Reset paste textareas
+        document.getElementById('vyhl-paste-claude').value = '';
+        document.getElementById('vyhl-paste-openai').value = '';
+        validateManualPaste();
+    } catch (err) {
+        toast('error', 'Selhalo: ' + err.message);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function copyManualPrompt() {
+    const text = state.vyhlManualPrompt || '';
+    if (!text) { toast('warning', 'Nejdřív klikni „Zobrazit prompt"'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+            () => toast('success', 'Prompt v clipboardu. Vlož ho do Claude.ai / ChatGPT.'),
+            () => fallbackCopy(text)
+        );
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('success', 'Prompt v clipboardu.'); }
+    catch (e) { toast('error', 'Kopírování selhalo. Označ text a zkopíruj ručně.'); }
+    finally { document.body.removeChild(ta); }
+}
+
+function validateManualPaste() {
+    const claudeText = document.getElementById('vyhl-paste-claude').value;
+    const openaiText = document.getElementById('vyhl-paste-openai').value;
+    updatePasteStatus('paste-status-claude', claudeText, state.vyhlLastMode);
+    updatePasteStatus('paste-status-openai', openaiText, state.vyhlLastMode);
+    document.getElementById('btn-parse-manual').disabled = !claudeText.trim() && !openaiText.trim();
+}
+
+function updatePasteStatus(elementId, text, mode) {
+    const el = document.getElementById(elementId);
+    if (!text.trim()) {
+        el.textContent = 'prázdné';
+        el.className = 'vyhl-paste-status';
+        return;
+    }
+    const items = frontendParseAIResponse(text, mode);
+    if (items.length === 0) {
+        el.textContent = '⚠ nepodařilo se zparsovat JSON';
+        el.className = 'vyhl-paste-status invalid';
+    } else {
+        const noun = mode === 'contacts' ? 'kontaktů' : mode === 'sources' ? 'zdrojů' : 'nálezů';
+        el.textContent = '✓ ' + items.length + ' ' + noun;
+        el.className = 'vyhl-paste-status valid';
+    }
+}
+
+function parseManualResponses() {
+    const mode = state.vyhlLastMode;
+    const claudeText = document.getElementById('vyhl-paste-claude').value;
+    const openaiText = document.getElementById('vyhl-paste-openai').value;
+
+    if (!claudeText.trim() && !openaiText.trim()) {
+        toast('warning', 'Vlož aspoň jednu odpověď.');
+        return;
+    }
+
+    const claudeItems = claudeText.trim() ? frontendParseAIResponse(claudeText, mode) : [];
+    const openaiItems = openaiText.trim() ? frontendParseAIResponse(openaiText, mode) : [];
+
+    if (claudeItems.length === 0 && openaiItems.length === 0) {
+        showVyhlStatus('error', 'Nepodařilo se zparsovat JSON z žádné odpovědi. Zkontroluj, že jsi vložil celý code block včetně ```json``` značek (nebo jen JSON object).');
+        return;
+    }
+
+    // Dedupe + merge
+    let merged;
+    const ctx = state.vyhlLastContext;
+    if (mode === 'contacts') {
+        merged = frontendDedupeContacts(claudeItems, openaiItems, getExistingContactKeys());
+    } else if (mode === 'sources') {
+        const existingUrls = state.sources.filter(s => s.segment === ctx.segmentNazev).map(s => s.url).filter(Boolean);
+        merged = frontendDedupeSources(claudeItems, openaiItems, existingUrls);
+    } else {
+        merged = frontendDedupeDeep(claudeItems, openaiItems);
+    }
+
+    state.lastVyhlSuggestions = merged;
+    state.vyhlSelected = new Set();
+    renderVyhlResults();
+
+    const dupCount = claudeItems.length + openaiItems.length - merged.length;
+    showVyhlStatus('success',
+        'Hotovo (manuálně). Claude: ' + claudeItems.length +
+        ' · ChatGPT: ' + openaiItems.length +
+        ' · po dedupe: ' + merged.length +
+        ' (' + dupCount + ' duplicit/shody odstraněno)');
+}
+
+function resetManualMode() {
+    state.vyhlManualPrompt = '';
+    const display = document.getElementById('vyhl-prompt-display');
+    if (display) display.style.display = 'none';
+    const cl = document.getElementById('vyhl-paste-claude');
+    const op = document.getElementById('vyhl-paste-openai');
+    if (cl) cl.value = '';
+    if (op) op.value = '';
+    const sc = document.getElementById('paste-status-claude');
+    const so = document.getElementById('paste-status-openai');
+    if (sc) { sc.textContent = 'prázdné'; sc.className = 'vyhl-paste-status'; }
+    if (so) { so.textContent = 'prázdné'; so.className = 'vyhl-paste-status'; }
+    const pb = document.getElementById('btn-parse-manual');
+    if (pb) pb.disabled = true;
+}
+
+// ============================================================
+// FRONTEND JSON PARSER (port backendu — pro manual mode)
+// ============================================================
+function frontendParseAIResponse(text, mode) {
+    if (!text) return [];
+    const key = mode === 'contacts' ? 'contacts' : mode === 'sources' ? 'sources' : 'enrichments';
+
+    function pull(obj) {
+        if (!obj || typeof obj !== 'object') return null;
+        if (Array.isArray(obj[key])) return obj[key];
+        // Někdy AI zabalí jinak — zkus najít jakékoli pole objektů
+        const keys = Object.keys(obj);
+        for (let i = 0; i < keys.length; i++) {
+            const v = obj[keys[i]];
+            if (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object') return v;
+        }
+        return null;
+    }
+
+    // Strategie 1: kompletní parse
+    try {
+        const p = JSON.parse(text.trim());
+        const r = pull(p);
+        if (r) return r;
+    } catch (e) { }
+
+    // Strategie 2: extract z markdown code blocku ```json ... ```
+    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+    if (codeBlockMatch) {
+        try {
+            const p = JSON.parse(codeBlockMatch[1].trim());
+            const r = pull(p);
+            if (r) return r;
+        } catch (e) { }
+    }
+
+    // Strategie 3: první { do posledního }
+    const startObj = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (startObj !== -1 && lastBrace > startObj) {
+        try {
+            const p = JSON.parse(text.substring(startObj, lastBrace + 1));
+            const r = pull(p);
+            if (r) return r;
+        } catch (e) { }
+    }
+
+    return [];
+}
+
+// ============================================================
+// FRONTEND DEDUPE (port backendu — pro manual mode)
+// ============================================================
+function normalizeKeyFE(s) {
+    return String(s == null ? '' : s).toLowerCase().trim().replace(/\s+/g, ' ').replace(/\/+$/, '');
+}
+
+function urlHostnameFE(u) {
+    if (!u) return '';
+    try {
+        const withProto = /^https?:\/\//i.test(u) ? u : 'https://' + u;
+        return new URL(withProto).hostname.replace(/^www\./, '').toLowerCase();
+    } catch (e) {
+        return String(u).toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+    }
+}
+
+function frontendDedupeContacts(claudeItems, openaiItems, existingKeys) {
+    const eIcos = new Set((existingKeys.icos || []).map(normalizeKeyFE).filter(Boolean));
+    const eEmails = new Set((existingKeys.emails || []).map(normalizeKeyFE).filter(Boolean));
+    const eLin = new Set((existingKeys.linkedins || []).map(normalizeKeyFE).filter(Boolean));
+    const eNF = new Set((existingKeys.namesFirmas || []).map(normalizeKeyFE).filter(Boolean));
+    const sIcos = {}, sEmails = {}, sLin = {}, sNF = {};
+    const out = [];
+
+    function one(c, src) {
+        if (!c || !c.firma) return;
+        const ico = normalizeKeyFE(c.ico);
+        const email = normalizeKeyFE(c.email);
+        const lin = normalizeKeyFE(c.linkedinUrl);
+        const nf = c.kontaktniOsoba && c.firma ? normalizeKeyFE(c.kontaktniOsoba + '|' + c.firma) : '';
+        if (ico && eIcos.has(ico)) return;
+        if (email && eEmails.has(email)) return;
+        if (lin && eLin.has(lin)) return;
+        if (nf && eNF.has(nf)) return;
+        let idx = -1;
+        if (ico && sIcos[ico] !== undefined) idx = sIcos[ico];
+        else if (email && sEmails[email] !== undefined) idx = sEmails[email];
+        else if (lin && sLin[lin] !== undefined) idx = sLin[lin];
+        else if (nf && sNF[nf] !== undefined) idx = sNF[nf];
+        if (idx >= 0) {
+            if (out[idx]._sources.indexOf(src) === -1) out[idx]._sources.push(src);
+            ['ico', 'email', 'telefon', 'linkedinUrl', 'web', 'sidlo', 'role', 'zdrojUrl', 'kontaktniOsoba'].forEach(f => {
+                if (!out[idx][f] && c[f]) out[idx][f] = c[f];
+            });
+        } else {
+            const newC = Object.assign({}, c, { _sources: [src] });
+            const newIdx = out.push(newC) - 1;
+            if (ico) sIcos[ico] = newIdx;
+            if (email) sEmails[email] = newIdx;
+            if (lin) sLin[lin] = newIdx;
+            if (nf) sNF[nf] = newIdx;
+        }
+    }
+    claudeItems.forEach(c => one(c, 'claude'));
+    openaiItems.forEach(c => one(c, 'openai'));
+    out.sort((a, b) => {
+        if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
+        return String(a.firma || '').localeCompare(String(b.firma || ''), 'cs');
+    });
+    return out;
+}
+
+function frontendDedupeSources(claudeItems, openaiItems, existingUrls) {
+    const eHosts = new Set((existingUrls || []).map(urlHostnameFE).filter(Boolean));
+    const sHosts = {};
+    const out = [];
+    function one(s, src) {
+        if (!s || !s.url || !s.nazev) return;
+        const host = urlHostnameFE(s.url);
+        if (!host) return;
+        if (eHosts.has(host)) return;
+        if (sHosts[host] !== undefined) {
+            const ex = out[sHosts[host]];
+            if (ex._sources.indexOf(src) === -1) ex._sources.push(src);
+            ['poznamka', 'typZdroje', 'kvalita'].forEach(f => { if (!ex[f] && s[f]) ex[f] = s[f]; });
+            return;
+        }
+        sHosts[host] = out.push(Object.assign({}, s, { _sources: [src] })) - 1;
+    }
+    claudeItems.forEach(s => one(s, 'claude'));
+    openaiItems.forEach(s => one(s, 'openai'));
+    const qO = { 'high': 0, 'mid': 1, 'low': 2 };
+    out.sort((a, b) => {
+        if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
+        const qa = qO[(a.kvalita || '').toLowerCase()] != null ? qO[(a.kvalita || '').toLowerCase()] : 3;
+        const qb = qO[(b.kvalita || '').toLowerCase()] != null ? qO[(b.kvalita || '').toLowerCase()] : 3;
+        if (qa !== qb) return qa - qb;
+        return String(a.nazev || '').localeCompare(String(b.nazev || ''), 'cs');
+    });
+    return out;
+}
+
+function frontendDedupeDeep(claudeItems, openaiItems) {
+    const seen = {};
+    const out = [];
+    function one(f, src) {
+        if (!f || !f.hodnota) return;
+        const key = normalizeKeyFE((f.kategorie || '') + '|' + (f.klic || '') + '|' + (f.hodnota || ''));
+        if (seen[key] !== undefined) {
+            const ex = out[seen[key]];
+            if (ex._sources.indexOf(src) === -1) ex._sources.push(src);
+            if (!ex.zdrojUrl && f.zdrojUrl) ex.zdrojUrl = f.zdrojUrl;
+            if (!ex.datum && f.datum) ex.datum = f.datum;
+            return;
+        }
+        seen[key] = out.push(Object.assign({}, f, { _sources: [src] })) - 1;
+    }
+    claudeItems.forEach(f => one(f, 'claude'));
+    openaiItems.forEach(f => one(f, 'openai'));
+    const cO = { 'news': 0, 'role': 1, 'board': 2, 'kontakt': 3, 'warning': 4 };
+    out.sort((a, b) => {
+        if (b._sources.length !== a._sources.length) return b._sources.length - a._sources.length;
+        const ca = cO[(a.kategorie || '').toLowerCase()] != null ? cO[(a.kategorie || '').toLowerCase()] : 5;
+        const cb = cO[(b.kategorie || '').toLowerCase()] != null ? cO[(b.kategorie || '').toLowerCase()] : 5;
+        return ca - cb;
+    });
+    return out;
+}
+
+// ============================================================
 // OPEN SHEET IN DRIVE
 // ============================================================
 function openSheetInDrive() {
@@ -4036,29 +4870,37 @@ function initStaticDropdowns() {
 // Multi-segment filter sidebar is rendered directly (not a custom dropdown widget).
 // Only form-segment select uses the custom dropdown auto-converter.
 
-// Override populateSegmentSelect to rebuild custom dropdown after options change
+// Override populateSegmentSelect to rebuild custom dropdown after options change.
+// f-segment v detail panelu používá searchable widget (kontaktů může být víc, search se hodí).
 const _origPopulateSegmentSelect = populateSegmentSelect;
 populateSegmentSelect = function(id) {
     _origPopulateSegmentSelect(id);
-    rebuildDropdown(id);
+    if (id === 'f-segment') {
+        makeSearchableSelect(id);
+    } else {
+        rebuildDropdown(id);
+    }
 };
 
 // Override populateForm to sync custom dropdowns after .value is set
+// f-segment používá searchable widget (renderSearchableMenu), ostatní nav.js dropdown
 const _origPopulateForm = populateForm;
 populateForm = function(c) {
     _origPopulateForm(c);
-    ['f-typ', 'f-priorita', 'f-stav', 'f-segment', 'f-osloven_kanal'].forEach(id => {
+    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal'].forEach(id => {
         if (window.syncCustomDropdown) window.syncCustomDropdown(id);
     });
+    renderSearchableMenu('f-segment');
 };
 
 // Override resetForm to sync custom dropdowns to default values
 const _origResetForm = resetForm;
 resetForm = function() {
     _origResetForm();
-    ['f-typ', 'f-priorita', 'f-stav', 'f-segment', 'f-osloven_kanal'].forEach(id => {
+    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal'].forEach(id => {
         if (window.syncCustomDropdown) window.syncCustomDropdown(id);
     });
+    renderSearchableMenu('f-segment');
 };
 
 // ============================================================

@@ -1440,7 +1440,8 @@ app.post('/api/database/find-contacts', async function (req, res) {
     var existingKeys = body.existingContactsKeys || {};
     var existingSourceUrls = body.existingSourceUrls || [];
     var region = (body.region || 'celá ČR').toString().trim();
-    var maxResults = Math.min(50, Math.max(5, parseInt(body.maxResults) || 20));
+    var maxResults = Math.min(80, Math.max(5, parseInt(body.maxResults) || 20));
+    var thorough = !!body.thorough; // hloubkový průzkum — vyšší max_uses + max_tokens + agresivnější prompt
     var targetContact = body.targetContact || null; // pro mode=deep
 
     // Validace mode-specific inputů
@@ -1461,15 +1462,16 @@ app.post('/api/database/find-contacts', async function (req, res) {
         sources: sources,
         region: region,
         maxResults: maxResults,
-        targetContact: targetContact
+        targetContact: targetContact,
+        thorough: thorough
     });
 
-    console.log('[find-contacts] mode=' + mode + ' segment="' + segmentNazev + '" max=' + maxResults);
+    console.log('[find-contacts] mode=' + mode + ' segment="' + segmentNazev + '" max=' + maxResults + ' thorough=' + thorough);
 
     var promises = [];
-    if (anthropicKey) promises.push(callClaudeWithWebSearch(anthropicKey, prompt, mode));
+    if (anthropicKey) promises.push(callClaudeWithWebSearch(anthropicKey, prompt, mode, thorough));
     else promises.push(Promise.resolve({ items: [], skipped: 'no key' }));
-    if (openaiKey) promises.push(callOpenAIWithWebSearch(openaiKey, prompt, mode));
+    if (openaiKey) promises.push(callOpenAIWithWebSearch(openaiKey, prompt, mode, thorough));
     else promises.push(Promise.resolve({ items: [], skipped: 'no key' }));
 
     var results = await Promise.allSettled(promises);
@@ -1510,11 +1512,48 @@ app.post('/api/database/find-contacts', async function (req, res) {
 });
 
 // =============================================
-// Prompt builders pro 3 módy
+// Prompt builders pro 3 módy (+ thorough variant)
+// Exposed jako endpoint pro manuální copy-paste mode (frontend volá GET /prompt-only).
 // =============================================
+app.post('/api/database/build-prompt', function (req, res) {
+    if (!verifyDatabaseToken(req)) {
+        return res.status(401).json({ error: 'Unauthorized — chybí nebo neplatný session token.' });
+    }
+    var body = req.body || {};
+    var mode = body.mode || 'contacts';
+    if (['contacts', 'sources', 'deep'].indexOf(mode) === -1) {
+        return res.status(400).json({ error: 'mode musí být contacts | sources | deep.' });
+    }
+    var prompt = buildAIDiscoveryPrompt(mode, {
+        segmentNazev: body.segmentNazev || '',
+        segmentUseCase: body.segmentUseCase || '',
+        sources: body.sources || [],
+        region: body.region || 'celá ČR',
+        maxResults: Math.min(80, Math.max(5, parseInt(body.maxResults) || 20)),
+        targetContact: body.targetContact || null,
+        thorough: !!body.thorough,
+        manual: true // přidá explicit instrukce pro chat UI
+    });
+    res.json({ prompt: prompt });
+});
+
 function buildAIDiscoveryPrompt(mode, ctx) {
     var header = 'Jsi expert na vyhledávání B2B kontaktů a zdrojů v České republice pro investiční firmu ProfiLend ' +
         '(HNWI debt financing, úvěry 10–250M CZK proti komerčním nemovitostem v ČR).';
+
+    var manualInstr = ctx.manual
+        ? '\n\nDŮLEŽITÉ PRO CHAT UI: Pokud máš dostupný web search / browsing tool, použij ho. ' +
+          'Po dokončení vrať odpověď ve formátu:\n' +
+          '\n```json\n{ ... JSON podle schématu níže ... }\n```\n' +
+          '\nKromě JSON code bloku nepiš žádný další text před ani za. Aplikace bude parsovat výhradně obsah code bloku.'
+        : '';
+
+    var thoroughInstr = ctx.thorough
+        ? '\n\nHLOUBKOVÝ PRŮZKUM: Toto je důkladná verze. Projdi VŠECHNY uvedené zdroje detailně, ' +
+          'hledej i okrajové weby (eventy, články, profil pages, ranking žebříčky). ' +
+          'Cílíme na ' + ctx.maxResults + '+ návrhů — kvalita stále důležitá, ale nebrn se rozsahu. ' +
+          'Spotřebuj víc web search dotazů, projdi víc stránek.'
+        : '';
 
     if (mode === 'contacts') {
         var sourcesText = ctx.sources.map(function (s, i) {
@@ -1540,6 +1579,7 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '- Cílíme na decision-makery: Partner, Managing Partner, Director, CEO, Owner, Head of, Senior',
             '- Vyhni se juniorům, asistentům, info@/contact@ adresám',
             '- Email/telefon/LinkedIn = jen pokud je v reálu veřejně dostupné. Jinak null.',
+            thoroughInstr,
             '',
             'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
             '{',
@@ -1557,7 +1597,8 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
             '    }',
             '  ]',
-            '}'
+            '}',
+            manualInstr
         ].join('\n');
     }
 
@@ -1576,6 +1617,7 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '- Typy: profesní registr, oborová asociace, žebříček/ranking, konferenční speakers, oborový časopis, deal feed',
             '- Vyhni se Wikipedii, obecným adresářům typu Firmy.cz (ledaže by měly specifickou kategorii)',
             '- Pro každý zdroj odhadni jeho "kvalitu" (high / mid / low) — kolik kvalitních kontaktů z něj půjde získat',
+            thoroughInstr,
             '',
             'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
             '{',
@@ -1588,7 +1630,8 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '      "kvalita": "high | mid | low"',
             '    }',
             '  ]',
-            '}'
+            '}',
+            manualInstr
         ].join('\n');
     }
 
@@ -1611,6 +1654,7 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '- Najdi i jiné firmy, kde tato osoba sedí v boardu nebo má vlastnický podíl',
             '- Najdi recent news o této osobě nebo firmě (poslední 12 měsíců)',
             '- Pokud kontakt neexistuje v reálu, vrať prázdné pole',
+            thoroughInstr,
             '',
             'FORMÁT ODPOVĚDI: vrať POUZE platný JSON.',
             '{',
@@ -1623,7 +1667,8 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '      "datum": "YYYY-MM nebo YYYY pokud relevantní | null"',
             '    }',
             '  ]',
-            '}'
+            '}',
+            manualInstr
         ].join('\n');
     }
 
@@ -1633,21 +1678,23 @@ function buildAIDiscoveryPrompt(mode, ctx) {
 // =============================================
 // Claude — multi-block content extraction with web search
 // =============================================
-async function callClaudeWithWebSearch(apiKey, prompt, mode) {
+async function callClaudeWithWebSearch(apiKey, prompt, mode, thorough) {
     var client = new Anthropic({ apiKey: apiKey });
+    var maxTokens = thorough ? 16000 : 8000;
+    var maxUses = thorough ? 25 : 8;
 
     // web_search tool je beta — pokud Anthropic účet nemá přístup, fallback bez toolu
     var tools = [{
         type: 'web_search_20250305',
         name: 'web_search',
-        max_uses: 8
+        max_uses: maxUses
     }];
 
     var msg;
     try {
         msg = await client.messages.create({
             model: 'claude-sonnet-4-20250514',
-            max_tokens: 8000,
+            max_tokens: maxTokens,
             temperature: 0.4,
             tools: tools,
             messages: [{ role: 'user', content: prompt }]
@@ -1657,7 +1704,7 @@ async function callClaudeWithWebSearch(apiKey, prompt, mode) {
         console.warn('[claude] web_search tool nedostupný, fallback bez něj:', toolErr.message);
         msg = await client.messages.create({
             model: 'claude-sonnet-4-20250514',
-            max_tokens: 8000,
+            max_tokens: maxTokens,
             temperature: 0.4,
             messages: [{ role: 'user', content: prompt }]
         });
@@ -1678,9 +1725,10 @@ async function callClaudeWithWebSearch(apiKey, prompt, mode) {
 // =============================================
 // OpenAI — Responses API s web_search_preview, fallback na chat.completions bez search
 // =============================================
-async function callOpenAIWithWebSearch(apiKey, prompt, mode) {
+async function callOpenAIWithWebSearch(apiKey, prompt, mode, thorough) {
     if (!OpenAI) throw new Error('OpenAI SDK not loaded on server');
     var openai = new OpenAI({ apiKey: apiKey });
+    var maxTokens = thorough ? 16000 : 4096;
 
     // Pokus 1: Responses API s web_search_preview
     if (typeof openai.responses !== 'undefined' && typeof openai.responses.create === 'function') {
@@ -1714,7 +1762,7 @@ async function callOpenAIWithWebSearch(apiKey, prompt, mode) {
     var completion = await openai.chat.completions.create({
         model: 'gpt-4o',
         temperature: 0.4,
-        max_tokens: 4096,
+        max_tokens: maxTokens,
         response_format: { type: 'json_object' },
         messages: [
             { role: 'system', content: 'Jsi vyhledávač B2B kontaktů a zdrojů. Vrať POUZE platný JSON podle schématu v promptu.' },
