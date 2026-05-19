@@ -1063,19 +1063,32 @@
 
         .result-card {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column;
             padding: 1rem 1.25rem;
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
             border-radius: 10px;
             margin-bottom: 0.75rem;
             transition: var(--transition);
+            gap: 0.75rem;
         }
-
         .result-card:hover {
             border-color: var(--accent);
             box-shadow: 0 2px 8px var(--accent-glow);
+        }
+        .result-card-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .result-card-main {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 0;
+            flex: 1;
         }
 
         .result-name {
@@ -1086,16 +1099,45 @@
             align-items: center;
             gap: 0.5rem;
         }
-
         .result-name svg {
             width: 18px;
             height: 18px;
             color: var(--success);
         }
 
+        .result-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: var(--font-mono, 'Menlo', 'Consolas', monospace);
+            padding-left: 1.6rem; /* odsazení pod ikonu v result-name */
+        }
+
         .result-actions {
             display: flex;
             gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        /* AI poznámky pod každým vygenerovaným dokumentem — viditelné v UI,
+           NEvkládají se do .docx. Amber-tinted info box. */
+        .result-notes {
+            font-size: 0.8125rem;
+            color: var(--text-primary);
+            background: var(--accent-light, rgba(232, 185, 124, 0.08));
+            border-left: 3px solid var(--accent);
+            border-radius: 6px;
+            padding: 0.75rem 0.9rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .result-notes strong {
+            color: var(--accent);
+            display: block;
+            font-size: 0.6875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.25rem;
         }
 
         /* ─── MODAL ─── */
@@ -4200,11 +4242,29 @@
             var html = '';
             Object.keys(generatedDocuments).forEach(function(name) {
                 var safeName = name.replace(/'/g, "\\'");
+                var result = generatedDocuments[name] || {};
+                var metaParts = [];
+                if (result.model) metaParts.push(result.model);
+                if (typeof result.applied === 'number' && typeof result.attempted === 'number') {
+                    metaParts.push(result.applied + '/' + result.attempted + ' náhrad aplikováno');
+                }
+                var metaText = metaParts.join(' · ');
+
                 html += '<div class="result-card">';
+                html += '<div class="result-card-row">';
+                html += '<div class="result-card-main">';
                 html += '<span class="result-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' + escapeHtml(name) + (lastGenerationTracked ? ' (se změnami)' : '') + '</span>';
+                if (metaText) html += '<div class="result-meta">' + escapeHtml(metaText) + '</div>';
+                html += '</div>';
                 html += '<div class="result-actions">';
                 html += '<button class="btn btn-generate btn-small" onclick="downloadSingle(\'' + safeName + '\', ' + lastGenerationTracked + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Stáhnout</button>';
-                html += '</div></div>';
+                html += '</div>';
+                html += '</div>';
+                // AI poznámky — viditelné jen v UI, NEjsou v .docx
+                if (result.notes && typeof result.notes === 'string' && result.notes.trim().length > 0) {
+                    html += '<div class="result-notes"><strong>Poznámka AI</strong>' + escapeHtml(result.notes) + '</div>';
+                }
+                html += '</div>';
             });
 
             if (Object.keys(generatedDocuments).length === 0) {

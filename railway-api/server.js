@@ -512,23 +512,52 @@ app.post('/api/generate-loan-doc', async function (req, res) {
         '- Najdeš tam KONKRÉTNÍ IČO, sídlo, spisovou značku, jméno jednatele — to NENÍ legal text, je to data k nahrazení.\n' +
         '- Najdeš tam KONKRÉTNÍ částku ("5.000.000 Kč"), úrokovou sazbu ("9,5 % p.a."), datum ("27.04.2029"), čísla LV ("LV 303"), čísla účtů ("123-456789/0100"), banku ("Komerční Banka, a.s.") — to vše JE data, ne legal text.\n' +
         '- Najdeš tam KONKRÉTNÍ adresy nemovitostí, výměry parcel, popisy zajištění — pokud se v poskytnutých DATA liší, JE TO data k nahrazení.\n\n' +
-        'TVŮJ ÚKOL: Pro KAŽDOU šablonu (bez ohledu na typ — úvěrová, zástavní, plná moc, vinkulace, atd.) projdi obsah a najdi všechny konkrétní údaje, které odpovídají poli v poskytnutých DATA. Pro každý takový údaj vrať replacement s NOVOU hodnotou z DATA.\n\n' +
-        'PRAVIDLO O CO MĚNIT: Měň VŠECHNY konkrétní hodnoty (jména společností, IČO, sídla, spisové značky, částky, data, úrokové sazby, doby splatnosti, čísla účtů, banky, jména jednatelů, kontakty, LV čísla, hodnoty zajištění, adresy nemovitostí atd.). Tyto údaje se MĚNÍ s každým dealem — proto máš tento úkol.\n\n' +
-        'PRAVIDLO O CO NEMĚNIT: Nenahrazuj obecné právní formulace ("Smluvní strany se tímto dohodly…", "Zástavní právo vzniká…", standardní články typu "Závěrečná ustanovení"), definice pojmů velkými písmeny ("Den konečné splatnosti", "Finanční dokumenty"), ani strukturu článků/odstavců. Pokud máš pochybnost, jestli je něco data nebo legal text: pokud to obsahuje číslo, jméno, datum, název firmy, adresu nebo částku, je to DATA. Pokud je to obecná formulace beze čísel a jmen, je to LEGAL TEXT.\n\n' +
+        'TVŮJ ÚKOL: Pro KAŽDOU šablonu (bez ohledu na typ — úvěrová, zástavní, plná moc, vinkulace, atd.) udělej KOMPLETNÍ REVIZI celého obsahu od první do poslední věty. NESTAČÍ jen najít konkrétní údaje a nahradit je — musíš celou smlouvu projít jako právník dělající due diligence revizi a zajistit, aby výsledný dokument DÁVAL SMYSL jako celek pro NOVÝ deal.\n\n' +
+        '=== PROCES REVIZE (postupuj přesně v tomto pořadí) ===\n' +
+        '1. PŘEČTI CELOU SMLOUVU. Pochop, o jaký typ smlouvy jde, jaké strany, jaké zajištění, jaké přílohy, jakou strukturu článků.\n' +
+        '2. IDENTIFIKUJ KONKRÉTNÍ ÚDAJE Z MINULÉHO DEALU. Projdi od začátku do konce a najdi všechna jména firem, IČO, sídla, jména jednatelů, částky, data, úroky, doby splatnosti, LV čísla, čísla účtů, banky, adresy, výměry, jména odhadců — VŠE konkrétní, co je specifické pro nějaký konkrétní deal.\n' +
+        '3. POROVNEJ S NOVÝMI DATA. Pro každý identifikovaný údaj: existuje v DATA odpovídající nová hodnota? Pokud ano → ZMĚŇ. Pokud DATA tento údaj NEMÁ (např. minulý deal měl ručitele, nový ne) → SMAŽ celou pasáž / klauzuli / přílohu týkající se tohoto údaje.\n' +
+        '4. KONTROLA KONZISTENCE NAPŘÍČ DOKUMENTEM. Jeden údaj se v šabloně OPAKUJE na mnoha místech (jméno klienta třeba 20×, částka úvěru 5×, splatnost 8×). MUSÍŠ zachytit VŠECHNY výskyty — pokud frontend dostane "find" string který se v textu opakuje, aplikuje ho na všechny výskyty (1 replacement pár stačí). Ale POZOR — pokud se hodnota v různých místech zapisuje různě (např. "5.000.000 Kč" v hlavičce, "pět miliónů Kč" v textu, "5 mil. Kč" v příloze), MUSÍŠ vrátit SEPARÁTNÍ replacement pár pro KAŽDOU variantu zápisu.\n' +
+        '5. KONTROLA LOGIKY. Pokud jsi v kroku 3 něco smazala (např. ručitele), projdi zbytek smlouvy a HLEDEJ křížové reference. Pokud článek X zmiňuje "ručitel" / "rezervní fond" / "vinkulace" / přílohu, kterou jsi smazala, MUSÍŠ tento odkaz taky upravit / smazat / přeformulovat. Smlouva nesmí obsahovat odkazy na neexistující články, přílohy, osoby ani závazky.\n' +
+        '6. KONTROLA HISTORICKÝCH ZBYTKŮ. Šablona je historická smlouva — mohou tam být i poznámky pod čarou, komentáře, datumy revizí, jména autorů, číslování verzí ("verze 3 ze dne 12.4.2023"), interní reference ("dle úvěrové komise z 5.5.2022"), schvalovací podpisy. Tyto historické otisky NEPATŘÍ do nového dokumentu — SMAŽ je nebo aktualizuj.\n' +
+        '7. KONTROLA ÚPLNOSTI POKRYTÍ DATA. Po prvních 6 krocích zpětně projdi formData a ověř: každé pole, které Martin vyplnil (borrower, ico, sidlo, amount, interest, ...), MUSÍ být ve smlouvě někde použito. Pokud Martin vyplnil contactPhone, ale ve smlouvě žádné telefonní číslo neexistuje, tak nic neměníš. Ale pokud Martin vyplnil borrower a ve smlouvě je staré jméno klienta, MUSELA jsi to v kroku 3 zachytit.\n' +
+        '8. NOTES. V "notes" stručně shrň výsledek revize: kolik změn jsi udělala, co jsi smazala (a proč), co jsi přidala, kde si nejsi 100% jistá a doporučuješ manuální revizi.\n\n' +
         'JMÉNO ŠABLONY (' + (templateName || 'neznámé') + ') ti napoví, o jaký typ smlouvy jde, ale pravidlo o předvyplnění platí pro VŠECHNY typy.\n\n' +
+        '=== ČTYŘI TYPY OPERACÍ ===\n' +
+        'Šablona je HISTORICKÁ smlouva, ne placeholder template. Některé části jsou specifické pro MINULÝ deal a v novém dealu nemají místo. Máš 4 typy operací — všechny se zapisují stejným formátem {"find": "...", "replace": "..."}:\n\n' +
+        '1. ZMĚNIT HODNOTU (nejčastější) — najdi konkrétní údaj a nahraď ho novou hodnotou z DATA.\n' +
+        '   Příklad: {"find": "AGRI PARTNERS Nezamyslice s.r.o.", "replace": "Louve Group s.r.o."}\n\n' +
+        '2. SMAZAT IRRELEVANTNÍ OBSAH — vrať prázdný "replace". Použij, když:\n' +
+        '   - Šablona má přílohu o nemovitosti (LV 303), kterou nový klient v collateralItems NEMÁ.\n' +
+        '   - Šablona má klauzuli o ručiteli, ale nový deal ručitele nemá.\n' +
+        '   - Šablona má specifické ustanovení pro minulý deal, které pro nový nedává smysl.\n' +
+        '   Příklad: {"find": "Příloha 3 — Nemovitosti LV 303\\n[celý obsah přílohy doslova]", "replace": ""}\n\n' +
+        '3. PŘIDAT CHYBĚJÍCÍ OBSAH — najdi anchor v dokumentu a vrať "replace" = anchor + nový text.\n' +
+        '   Použij, když má nový deal víc LV/zajištění než minulý a šablona je neobsahuje.\n' +
+        '   Příklad: {"find": "Příloha 2 — Nemovitosti LV 100", "replace": "Příloha 2 — Nemovitosti LV 100\\n\\nPříloha 3 — Nemovitosti LV 4587\\n[obsah nové přílohy]"}\n\n' +
+        '4. PŘEFORMULOVAT — i celé věty/odstavce. Použij, když nový deal má jinou strukturu (např. jiný typ splácení, jiný splátkový kalendář).\n' +
+        '   Příklad: {"find": "Úvěrovaný splatí úvěr jednorázově ke Dni konečné splatnosti.", "replace": "Úvěrovaný splatí úvěr ve 12 měsíčních splátkách počínaje dnem čerpání."}\n\n' +
+        '=== CO NEMĚNIT ===\n' +
+        'Nesahej na obecné právní formulace BEZ čísel/jmen ("Smluvní strany se tímto dohodly…", definice pojmů typu "Den konečné splatnosti", standardní hlavičky článků). Heuristika: obsahuje-li věta číslo / jméno firmy / datum / částku / adresu → JE TO DATA k revizi. Obecná formulace beze čísel a jmen → LEGAL TEXT, neměnit.\n\n' +
+        '=== POZNÁMKY (notes) — MARTIN JE UVIDÍ V UI ===\n' +
+        'V "notes" stručně shrň co jsi udělala — Martin to uvidí pod každým vygenerovaným dokumentem v aplikaci (NE v samotné smlouvě). Sem patří:\n' +
+        '- Co jsi SMAZALA a proč (např. "Smazala jsem 3 přílohy LV 303, 321, 100 — nový klient má v collateralItems jen LV 4587.").\n' +
+        '- Co jsi PŘIDALA (např. "Přidala jsem novou přílohu pro LV 4587 — odhad mu doplň ručně.").\n' +
+        '- Co jsi musela odhadovat / kde si nejsi 100% jistá (např. "Článek 5.3 zmiňoval rezervní fond — nechala jsem beze změny, ověř manuálně.").\n' +
+        '- Co Martin musí doplnit ručně (např. "Datum podpisu nebylo v DATA — nechala jsem prázdné.").\n' +
+        'Pokud si NEJSI 100% jistá, jestli něco smazat, NESMAŽ a místo toho do notes napiš doporučení k manuální revizi. Lepší méně agresivní změna než zlikvidovat něco potřebného.\n\n' +
         '=== FORMÁT ODPOVĚDI ===\n' +
         'Vrať POUZE platný JSON, žádný markdown:\n' +
         '{\n' +
         '  "replacements": [\n' +
         '    {"find": "AGRI PARTNERS Nezamyslice s.r.o.", "replace": "Louve Group s.r.o."},\n' +
         '    {"find": "27.04.2029", "replace": "31.05.2030"},\n' +
-        '    {"find": "5.000.000 Kč", "replace": "8.000.000 Kč"}\n' +
+        '    {"find": "Příloha 3 — Nemovitosti LV 303 ...", "replace": ""}\n' +
         '  ],\n' +
-        '  "notes": "stručná poznámka co bylo nahrazeno, případně co chybí v datech"\n' +
+        '  "notes": "Nahradila jsem klienta + datum. Smazala přílohu LV 303 (nový deal má jen LV 4587). Doporučuji ověřit článek 5.3."\n' +
         '}\n\n' +
         '=== PRAVIDLA REPLACEMENT PÁRŮ ===\n' +
-        '- "find" MUSÍ být PŘESNÝ řetězec, který je doslova v šabloně. Když si nejsi jistý, jaký formát tam je (např. "5 000 000" vs "5.000.000"), zkopíruj přesně z textu šablony.\n' +
-        '- POKUD V ŠABLONĚ NĚJAKÝ ÚDAJ NEEXISTUJE (např. nemá tam jméno jednatele) — NEPŘIDÁVEJ replacement pro něj.\n' +
+        '- "find" MUSÍ být PŘESNÝ řetězec, který je doslova v šabloně. Zkopíruj přesně z textu šablony včetně mezer, diakritiky, formátování. Pokud "find" nesedí přesně, frontend nahrazení neaplikuje (tichý fail) — proto kopíruj doslova.\n' +
         '- POKUD V DATA NĚJAKÝ ÚDAJ CHYBÍ (např. prázdné contactPhone) — nechej v šabloně původní hodnotu, NENAHRAZUJ.\n' +
         '- Částky formátuj s tečkami jako oddělovače tisíců + měna ("5.000.000 Kč").\n' +
         '- Data ve formátu DD.MM.YYYY ("27.04.2029").\n' +
@@ -537,7 +566,7 @@ app.post('/api/generate-loan-doc', async function (req, res) {
         '- LV čísla a kolaterály z formData.collateralItems (multi-line text, každý řádek = jedna nemovitost).\n' +
         '- Pokud najdeš více výskytů stejného řetězce v šabloně (např. jméno klienta se opakuje 10×), stačí JEDEN replacement pár — frontend ho aplikuje na všechny výskyty.\n\n' +
         '=== MINIMÁLNÍ OČEKÁVANÝ POČET REPLACEMENTS ===\n' +
-        'Pokud DATA obsahuje borrower, ico, sidlo, amount, interest, maturity — očekává se MINIMÁLNĚ 6 replacements (pro každé z nich jeden). Pokud vracíš méně než 3 replacements, něco je špatně. V tom případě v "notes" vysvětli proč (např. "Šablona neobsahuje IČO" nebo "Některé údaje v šabloně se neodlišují od poskytnutých dat").';
+        'Pro typickou úvěrovou smlouvu se očekává 10-30 replacements (změny hodnot + případné smazání irrelevantních příloh). Pokud vracíš méně než 5 replacements, něco je špatně — v "notes" vysvětli proč.';
 
     // Build user message with all form data
     var dataDescription = 'DATA PRO VYPLNĚNÍ SMLOUVY:\n\n';
