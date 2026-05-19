@@ -1140,6 +1140,55 @@
             margin-bottom: 0.25rem;
         }
 
+        /* Warning panel: pole z formuláře, která AI v dokumentu nepokryla.
+           Žlutý/warning tón — Martin si může doplnit ručně nebo spustit Pass 2. */
+        .result-coverage {
+            font-size: 0.8125rem;
+            color: var(--text-primary);
+            background: rgba(240, 176, 86, 0.08);
+            border-left: 3px solid var(--warning, #f0b056);
+            border-radius: 6px;
+            padding: 0.75rem 0.9rem;
+            line-height: 1.55;
+        }
+        .result-coverage strong {
+            color: var(--warning, #f0b056);
+            display: block;
+            font-size: 0.6875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.4rem;
+        }
+        .result-coverage ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 0.4rem 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 0.25rem 1rem;
+        }
+        .result-coverage li {
+            font-size: 0.75rem;
+        }
+        .result-coverage .coverage-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .result-coverage code {
+            font-family: var(--font-mono, 'Menlo', 'Consolas', monospace);
+            font-size: 0.6875rem;
+            padding: 0.05rem 0.3rem;
+            background: var(--bg-surface);
+            border-radius: 3px;
+            color: var(--text-primary);
+        }
+        .result-coverage .coverage-hint {
+            font-size: 0.6875rem;
+            color: var(--text-secondary);
+            opacity: 0.85;
+            line-height: 1.5;
+        }
+
         /* ─── MODAL ─── */
         .modal-overlay {
             position: fixed;
@@ -4038,7 +4087,12 @@
         // JSZip async pipeline. PizZip (3.1.7 i 3.2.0) zapisuje špatné velikosti v Local
         // File Headers — Word odmítá výsledný DOCX otevřít, i když Central Directory
         // hodnoty sedí. JSZip 3.10.1 zapisuje Local Headers korektně.
-        function processTemplate(template, formData, withTrackedChanges, callback) {
+        //
+        // Volitelný 4. parametr previousReplacements aktivuje Pass 2: AI dostane seznam
+        // co už bylo aplikováno a hledá co zbylo. Combined (Pass 1 + Pass 2) replacements
+        // se aplikují na original XML — Pass 2 NENÍ inkrementální aplikace na Pass 1 výstup,
+        // ale rozšířený seznam aplikovaný na čistý originál (kvůli track-changes ID konzistenci).
+        function processTemplate(template, formData, withTrackedChanges, callback, previousReplacements) {
             JSZip.loadAsync(template.data).then(function(zip) {
                 var docFile = zip.file('word/document.xml');
                 if (!docFile) {
@@ -4054,6 +4108,9 @@
                         withTrackedChanges: withTrackedChanges,
                         provider: (typeof getCurrentAiProvider === 'function') ? getCurrentAiProvider() : 'claude'
                     };
+                    if (previousReplacements && previousReplacements.length > 0) {
+                        payload.previousReplacements = previousReplacements;
+                    }
                     return fetch(LOAN_API_BASE + '/api/generate-loan-doc', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -4076,14 +4133,22 @@
                                 else if (typeof escapeXml === 'function' && originalXml.indexOf(escapeXml(r.find)) !== -1) applied++;
                             }
                         });
-                        console.log('[loan-doc] Claude returned ' + attempted + ' replacement pairs, ' + applied + ' matched in template XML:', data.replacements);
-                        if (data.notes) console.log('[loan-doc] Claude notes:', data.notes);
+                        console.log('[loan-doc] Pass ' + (data.pass || 1) + ' returned ' + attempted + ' replacement pairs, ' + applied + ' matched in template XML:', data.replacements);
+                        if (data.notes) console.log('[loan-doc] AI notes (Pass ' + (data.pass || 1) + '):', data.notes);
+
+                        // Pass 2: kombinuj Pass 1 replacements + Pass 2 nové, aplikuj všechny
+                        // na ORIGINÁL XML (ne na výstup Pass 1). Důvod: track-changes IDs musí
+                        // být sekvenční a konzistentní, aby Word redlines vykreslil korektně.
+                        var combinedReplacements = data.replacements;
+                        if (previousReplacements && previousReplacements.length > 0) {
+                            combinedReplacements = previousReplacements.concat(data.replacements);
+                        }
 
                         // applyReplacementsWithTracking je async (yield na event loop),
                         // applyReplacements je sync. Promise.resolve() je sjednotí.
                         var newXmlPromise = withTrackedChanges
-                            ? applyReplacementsWithTracking(originalXml, data.replacements)
-                            : Promise.resolve(applyReplacements(originalXml, data.replacements));
+                            ? applyReplacementsWithTracking(originalXml, combinedReplacements)
+                            : Promise.resolve(applyReplacements(originalXml, combinedReplacements));
 
                         return newXmlPromise.then(function(newXml) {
                             zip.file('word/document.xml', newXml);
@@ -4094,7 +4159,25 @@
                                 mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                             });
                         }).then(function(newDocx) {
-                            callback({ success: true, docx: newDocx, filename: template.name, attempted: attempted, applied: applied, notes: data.notes, provider: data.provider, model: data.model });
+                            callback({
+                                success: true,
+                                docx: newDocx,
+                                filename: template.name,
+                                attempted: attempted,
+                                applied: applied,
+                                notes: data.notes,
+                                provider: data.provider,
+                                model: data.model,
+                                pass: data.pass || 1,
+                                // pro Pass 2 — pošli zpět originální XML + template id, abychom
+                                // mohli na request 'Hlubší revize' znovu načíst stejnou šablonu.
+                                originalXml: originalXml,
+                                templateId: template.id,
+                                templateData: template.data,
+                                allReplacements: combinedReplacements,
+                                withTrackedChanges: withTrackedChanges,
+                                formData: formData
+                            });
                         });
                     });
                 });
@@ -4237,6 +4320,106 @@
         }
 
 
+        /* ─── COVERAGE CHECK (formData × applied replacements) ─── */
+        // Které klíčové pole z formData se ne-objevuje v žádném "replace" stringu.
+        // Slouží jako warning pro Martina: "AI nepokryla tato pole — doplň ručně nebo
+        // spusť Pass 2." Loose match — strip non-alphanumeric, lowercase, prefix 4 znaky.
+        function computeCoverage(result) {
+            var fd = result && result.formData;
+            if (!fd || !result.allReplacements) return { uncovered: [] };
+            var keyFields = [
+                { key: 'borrower', label: 'Klient' },
+                { key: 'ico', label: 'IČO' },
+                { key: 'sidlo', label: 'Sídlo' },
+                { key: 'spisovaZnacka', label: 'Spisová značka' },
+                { key: 'purpose', label: 'Účel úvěru' },
+                { key: 'amount', label: 'Výše úvěru' },
+                { key: 'interest', label: 'Úroková sazba' },
+                { key: 'maturity', label: 'Doba splatnosti' },
+                { key: 'maturityDate', label: 'Datum splatnosti' },
+                { key: 'drawdownDate', label: 'Datum čerpání' },
+                { key: 'collateralValue', label: 'Hodnota zajištění' },
+                { key: 'collateralItems', label: 'Položky zajištění' },
+                { key: 'representativeName', label: 'Jednatel/zástupce' },
+                { key: 'borrowerAccount', label: 'Účet dlužníka' },
+                { key: 'borrowerBank', label: 'Banka dlužníka' },
+                { key: 'appraisalRef', label: 'Číslo odhadu' },
+                { key: 'appraiser', label: 'Odhadce' },
+                { key: 'appraisalValue', label: 'Hodnota z odhadu' },
+                { key: 'signDate', label: 'Datum podpisu' },
+                { key: 'signPlace', label: 'Místo podpisu' }
+            ];
+            function normalize(s) {
+                return String(s || '').toLowerCase().replace(/[^a-z0-9á-ž]/gi, '');
+            }
+            var uncovered = [];
+            keyFields.forEach(function(field) {
+                var raw = fd[field.key];
+                if (!raw || typeof raw !== 'string' || !raw.trim()) return;
+                var normVal = normalize(raw);
+                if (normVal.length < 3) return;
+                // Pro krátké hodnoty (např. IČO 8 znaků) hledáme celé;
+                // pro delší stačí prefix 4 znaků.
+                var needle = normVal.length > 8 ? normVal.substring(0, 6) : normVal;
+                var found = result.allReplacements.some(function(r) {
+                    return r && typeof r.replace === 'string' && normalize(r.replace).indexOf(needle) !== -1;
+                });
+                if (!found) uncovered.push({ label: field.label, value: raw });
+            });
+            return { uncovered: uncovered };
+        }
+
+        /* ─── PASS 2 (Hlubší revize) ─── */
+        async function runSecondPass(docName) {
+            var result = generatedDocuments[docName];
+            if (!result) { showToast('Dokument nenalezen', 'error'); return; }
+            if (result.pass && result.pass >= 2) { showToast('Pass 2 už proběhl', 'info'); return; }
+            if (!result.templateId || !result.formData || !result.allReplacements) {
+                showToast('Chybí data pro Pass 2 — vygeneruj znovu', 'error');
+                return;
+            }
+
+            var genPanel = document.getElementById('generatingPanel');
+            var genProgress = document.getElementById('generatingProgress');
+            var genMeta = document.getElementById('generatingMeta');
+            var providerLabel = (typeof getCurrentAiProvider === 'function' && getCurrentAiProvider() === 'openai') ? 'ChatGPT' : 'Claude AI';
+            if (genPanel) genPanel.hidden = false;
+            if (genProgress) genProgress.textContent = 'Pass 2 — hloubková revize';
+            if (genMeta) genMeta.textContent = providerLabel + ' hledá co zbylo z minulého dealu…';
+
+            getAllFromDB('templates', function(templates) {
+                var template = (templates || []).find(function(t) { return t.id === result.templateId; });
+                if (!template) {
+                    if (genPanel) genPanel.hidden = true;
+                    showToast('Šablona nenalezena v DB', 'error');
+                    return;
+                }
+                processTemplate(template, result.formData, result.withTrackedChanges, function(pass2Result) {
+                    if (genPanel) genPanel.hidden = true;
+                    if (!pass2Result.success) {
+                        showToast('Pass 2 selhal: ' + (pass2Result.error || 'neznámá chyba'), 'error', 8000);
+                        return;
+                    }
+                    // pass2Result.allReplacements už zahrnuje Pass 1 + Pass 2 (processTemplate je kombinuje).
+                    // attempted/applied jsou jen za Pass 2 nové replacements.
+                    var combinedNotes = (result.notes ? '[Pass 1] ' + result.notes + '\n\n' : '') +
+                        (pass2Result.notes ? '[Pass 2] ' + pass2Result.notes : '');
+                    generatedDocuments[docName] = Object.assign({}, pass2Result, {
+                        notes: combinedNotes,
+                        // attempted/applied za totál (Pass 1 + Pass 2)
+                        attempted: (result.attempted || 0) + (pass2Result.attempted || 0),
+                        applied: (result.applied || 0) + (pass2Result.applied || 0)
+                    });
+                    displayResults();
+                    var newApplied = pass2Result.applied || 0;
+                    showToast('Pass 2 hotov · ' + newApplied + ' dodatečných náhrad', newApplied > 0 ? 'success' : 'info', 6000);
+                    // Re-save do IDB + Drive
+                    if (typeof saveDocumentSet === 'function') saveDocumentSet();
+                    if (typeof saveGeneratedToDrive === 'function') saveGeneratedToDrive(result.formData, result.withTrackedChanges);
+                }, result.allReplacements);
+            });
+        }
+
         /* ─── RESULTS ─── */
         function displayResults() {
             var html = '';
@@ -4250,16 +4433,34 @@
                 }
                 var metaText = metaParts.join(' · ');
 
+                var passLabel = (result.pass && result.pass >= 2) ? ' · Pass 2' : '';
                 html += '<div class="result-card">';
                 html += '<div class="result-card-row">';
                 html += '<div class="result-card-main">';
-                html += '<span class="result-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' + escapeHtml(name) + (lastGenerationTracked ? ' (se změnami)' : '') + '</span>';
+                html += '<span class="result-name"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' + escapeHtml(name) + (lastGenerationTracked ? ' (se změnami)' : '') + passLabel + '</span>';
                 if (metaText) html += '<div class="result-meta">' + escapeHtml(metaText) + '</div>';
                 html += '</div>';
                 html += '<div class="result-actions">';
+                // Pass 2 button — jen pokud Pass 2 ještě neproběhl + máme potřebná data
+                if ((!result.pass || result.pass < 2) && result.allReplacements && result.formData && result.templateId) {
+                    html += '<button class="btn btn-outline btn-small" onclick="runSecondPass(\'' + safeName + '\')" title="Druhý průchod AI: hledá co zbylo z minulého dealu (čísla řízení, klauzule o vinkulaci, atd.). Stojí další API volání."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Hlubší revize</button>';
+                }
                 html += '<button class="btn btn-generate btn-small" onclick="downloadSingle(\'' + safeName + '\', ' + lastGenerationTracked + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Stáhnout</button>';
                 html += '</div>';
                 html += '</div>';
+                // Coverage warning — pole co AI nepokryla
+                var coverage = computeCoverage(result);
+                if (coverage.uncovered.length > 0) {
+                    html += '<div class="result-coverage">';
+                    html += '<strong>⚠ AI možná nepokryla tato pole</strong>';
+                    html += '<ul>';
+                    coverage.uncovered.forEach(function(item) {
+                        html += '<li><span class="coverage-label">' + escapeHtml(item.label) + ':</span> <code>' + escapeHtml(item.value) + '</code></li>';
+                    });
+                    html += '</ul>';
+                    html += '<div class="coverage-hint">Loose check — možné false positives (např. když AI hodnotu mírně přeformátovala). Otevři DOCX a vizuálně ověř, případně spusť „Hlubší revize".</div>';
+                    html += '</div>';
+                }
                 // AI poznámky — viditelné jen v UI, NEjsou v .docx
                 if (result.notes && typeof result.notes === 'string' && result.notes.trim().length > 0) {
                     html += '<div class="result-notes"><strong>Poznámka AI</strong>' + escapeHtml(result.notes) + '</div>';

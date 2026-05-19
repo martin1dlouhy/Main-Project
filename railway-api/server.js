@@ -493,6 +493,10 @@ app.post('/api/generate-loan-doc', async function (req, res) {
     var templateText = req.body && req.body.templateText;
     var formData = req.body && req.body.formData;
     var templateName = req.body && req.body.templateName;
+    // Two-pass režim: previousReplacements = co už bylo aplikováno v Pass 1.
+    // Když má položky, prompt řekne AI 'tohle už je vyřízeno, najdi co ZBYLO'.
+    var previousReplacements = (req.body && Array.isArray(req.body.previousReplacements)) ? req.body.previousReplacements : null;
+    var passNumber = (previousReplacements && previousReplacements.length > 0) ? 2 : 1;
 
     if (!templateText || templateText.trim().length < 50) {
         return res.status(400).json({ error: 'Šablona je prázdná nebo příliš krátká.' });
@@ -522,6 +526,16 @@ app.post('/api/generate-loan-doc', async function (req, res) {
         '6. KONTROLA HISTORICKÝCH ZBYTKŮ. Šablona je historická smlouva — mohou tam být i poznámky pod čarou, komentáře, datumy revizí, jména autorů, číslování verzí ("verze 3 ze dne 12.4.2023"), interní reference ("dle úvěrové komise z 5.5.2022"), schvalovací podpisy. Tyto historické otisky NEPATŘÍ do nového dokumentu — SMAŽ je nebo aktualizuj.\n' +
         '7. KONTROLA ÚPLNOSTI POKRYTÍ DATA. Po prvních 6 krocích zpětně projdi formData a ověř: každé pole, které Martin vyplnil (borrower, ico, sidlo, amount, interest, ...), MUSÍ být ve smlouvě někde použito. Pokud Martin vyplnil contactPhone, ale ve smlouvě žádné telefonní číslo neexistuje, tak nic neměníš. Ale pokud Martin vyplnil borrower a ve smlouvě je staré jméno klienta, MUSELA jsi to v kroku 3 zachytit.\n' +
         '8. NOTES. V "notes" stručně shrň výsledek revize: kolik změn jsi udělala, co jsi smazala (a proč), co jsi přidala, kde si nejsi 100% jistá a doporučuješ manuální revizi.\n\n' +
+        '=== TYPICKÉ HISTORICKÉ ZBYTKY (často přehlížené, AKTIVNĚ hledej) ===\n' +
+        'Z PRAXE: tyto věci AI často přehlíží, protože vypadají jako "legal text". NEJSOU — jsou to konkrétní zbytky z minulého dealu. AKTIVNĚ je hledej a řeš:\n\n' +
+        '1. ČÍSLA ŘÍZENÍ KATASTRU — formát "V-XXXX/YYYY-ZZZ" nebo "Z-XXXX/YYYY-ZZZ" (např. "V-722/2010-433", "V-1245/2026-406"). Tato čísla jsou SPECIFICKÁ pro minulý deal. Pokud DATA neobsahují nové číslo řízení, SMAŽ celou závorku "(pod sp. zn. V-XXXX/YYYY-ZZZ)" nebo nahraď "(pod sp. zn. [DOPLNIT])".\n\n' +
+        '2. STARÉ ZÁSTAVNÍ BANKY — názvy jako "Raiffeisenbank a.s.", "Komerční banka, a.s.", "Česká spořitelna, a.s.", "ČSOB a.s." pokud se v textu vyskytují JAKO zastavni věřitel (nikoli jako "Banka úvěrového účtu Dlužníka"). Pokud DATA má existingPledge, nahraď. Pokud DATA nemá existingPledge, SMAŽ celou klauzuli o starém zástavním právu k výmazu — v novém dealu žádné staré zástavní právo neexistuje.\n\n' +
+        '3. ČERPÁNÍ ÚVĚRU — pokud šablona popisuje čerpání ve TRANŠÍCH (např. články typu "Úvěr se čerpá v 5 tranších", "1. tranše do data X, 2. tranše po splnění podmínky Y") a DATA má drawdownType="Jednorázové", MUSÍŠ tyto články PŘEFORMULOVAT na jednorázové čerpání. Stejně opačně — pokud šablona má jednorázové a DATA má tranše, přeformuluj na tranše.\n\n' +
+        '4. POPLATEK Z ČERPANÉ ČÁSTKY — pokud šablona má "1 % z každé čerpané tranše", ale DATA má originationFeeType="percent" + originationFee=X, MUSÍŠ článek upravit aby odpovídal (např. "X % z celkové výše úvěru" pro jednorázové čerpání). Pokud DATA má originationFeeType="amount" + originationFee=X, přeformuluj jako paušální poplatek X Kč.\n\n' +
+        '5. VINKULACE POJISTNÉHO PLNĚNÍ — klauzule typu "Úvěrovaný zajistí vinkulaci pojistného plnění z nemovitostí na LV X, LV Y ve prospěch Věřitele." Pokud DATA má v collateralItems jiné nemovitosti, MUSÍŠ aktualizovat seznam LV. Pokud DATA nemá nemovitosti (jen jiný typ zajištění — podíly, akcie), SMAŽ celou klauzuli o vinkulaci.\n\n' +
+        '6. POŘADÍ ČLÁNKŮ A KŘÍŽOVÉ ODKAZY — odkazy typu "viz článek 5.3", "dle Přílohy 1C", "v souladu s ustanovením článku 12 odst. 4". Pokud jsi smazala Přílohu 1C, MUSÍŠ taky smazat / upravit všechny odkazy na ni v hlavním textu.\n\n' +
+        '7. DATUMY MIMO RÁMEC DEALU — datumy interních úvěrových komisí ("schváleno na úvěrové komisi z 5.5.2022"), datumy revizí šablony ("verze 3 ze dne 12.4.2023"), datumy předchozího odhadu nemovitosti pokud DATA má appraisalDate. SMAŽ nebo aktualizuj.\n\n' +
+        '8. ČÍSLA ÚČTŮ MIMO DATA — pokud najdeš v textu číslo účtu (formát "XXX-XXXXXXXXXX/YYYY"), které není ani borrowerAccount ani lenderAccount z DATA, je to zbytek z minulého dealu. SMAŽ kontext, ve kterém se nachází, nebo nahraď za odpovídající nový.\n\n' +
         'JMÉNO ŠABLONY (' + (templateName || 'neznámé') + ') ti napoví, o jaký typ smlouvy jde, ale pravidlo o předvyplnění platí pro VŠECHNY typy.\n\n' +
         '=== ČTYŘI TYPY OPERACÍ ===\n' +
         'Šablona je HISTORICKÁ smlouva, ne placeholder template. Některé části jsou specifické pro MINULÝ deal a v novém dealu nemají místo. Máš 4 typy operací — všechny se zapisují stejným formátem {"find": "...", "replace": "..."}:\n\n' +
@@ -567,6 +581,21 @@ app.post('/api/generate-loan-doc', async function (req, res) {
         '- Pokud najdeš více výskytů stejného řetězce v šabloně (např. jméno klienta se opakuje 10×), stačí JEDEN replacement pár — frontend ho aplikuje na všechny výskyty.\n\n' +
         '=== MINIMÁLNÍ OČEKÁVANÝ POČET REPLACEMENTS ===\n' +
         'Pro typickou úvěrovou smlouvu se očekává 10-30 replacements (změny hodnot + případné smazání irrelevantních příloh). Pokud vracíš méně než 5 replacements, něco je špatně — v "notes" vysvětli proč.';
+
+    // Pass 2: previousReplacements existují. Doplníme dodatečnou instrukci.
+    if (passNumber === 2) {
+        systemPrompt += '\n\n=== PASS 2 — HLUBOKÁ REVIZE PO PRVNÍM PRŮCHODU ===\n' +
+            'TOTO JE DRUHÝ PRŮCHOD revize. V Pass 1 už byly aplikovány nějaké změny (viz "JIŽ APLIKOVANÉ ZMĚNY" v user message). Tvůj úkol nyní:\n\n' +
+            '1. NEDUPLIKUJ co už bylo nahrazeno. Pokud Pass 1 už změnila "AGRI PARTNERS s.r.o." → "Louve Group s.r.o.", NEVRACEJ stejný pár.\n' +
+            '2. HLEDEJ CO ZBYLO. Projdi text smlouvy znovu — co tam je z minulého dealu a NEBYLO Pass 1 odstraněno? Specificky:\n' +
+            '   - Čísla řízení katastru, která zůstala\n' +
+            '   - Stará čísla LV, která zůstala v křížových odkazech\n' +
+            '   - Klauzule o vinkulaci / čerpání / poplatcích, které stále neodpovídají DATA\n' +
+            '   - Historické datumy, jména bank, čísla účtů\n' +
+            '   - Přílohy o nemovitostech, které měly být smazány v Pass 1, ale find string nesedl\n' +
+            '3. ZAMĚŘ SE NA TIŠÉ FAILED REPLACEMENTS. Pokud Pass 1 měla replacement "Příloha 1C — LV 100..." s prázdným replace (= mělo smazat), ale text Přílohy 1C v dokumentu STÁLE existuje, znamená to že find string nesedl přesně. Najdi přesný text Přílohy 1C v dokumentu a vrať NOVÝ replacement s correct find.\n' +
+            '4. V NOTES uveď, kolik dodatečných změn Pass 2 přidala a jakého typu.';
+    }
 
     // Build user message with all form data
     var dataDescription = 'DATA PRO VYPLNĚNÍ SMLOUVY:\n\n';
@@ -617,12 +646,32 @@ app.post('/api/generate-loan-doc', async function (req, res) {
     if (formData.signDate) dataDescription += 'Datum podpisu: ' + formData.signDate + '\n';
     if (formData.signPlace) dataDescription += 'Místo podpisu: ' + formData.signPlace + '\n';
 
+    // Pass 2: připoj seznam již aplikovaných replacementů aby AI nevracela duplikáty
+    // a místo toho hledala co zbylo. Limit 100 párů (token saving + AI pozornost).
+    var previouslyAppliedSection = '';
+    if (passNumber === 2 && previousReplacements && previousReplacements.length > 0) {
+        var capped = previousReplacements.slice(0, 100);
+        previouslyAppliedSection = '\n\n=== JIŽ APLIKOVANÉ ZMĚNY V PASS 1 (NEDUPLIKOVAT) ===\n';
+        capped.forEach(function(r, idx) {
+            if (r && typeof r.find === 'string' && typeof r.replace === 'string') {
+                var f = r.find.length > 80 ? r.find.substring(0, 80) + '…' : r.find;
+                var rep = r.replace.length > 80 ? r.replace.substring(0, 80) + '…' : r.replace;
+                if (rep === '') rep = '(SMAZÁNO)';
+                previouslyAppliedSection += (idx + 1) + '. "' + f + '" → "' + rep + '"\n';
+            }
+        });
+        if (previousReplacements.length > 100) {
+            previouslyAppliedSection += '… a dalších ' + (previousReplacements.length - 100) + ' změn.\n';
+        }
+    }
+
     var userContent = 'Vyplň následující šablonu smlouvy (' + (templateName || 'smlouva') + ') poskytnutými daty.\n\n' +
-        dataDescription + '\n\n' +
+        dataDescription +
+        previouslyAppliedSection + '\n\n' +
         '=== ŠABLONA SMLOUVY ===\n\n' +
         templateText.substring(0, 50000);
 
-    console.log('Loan doc generation request:', { templateName: templateName, templateLength: templateText.length, dataFields: Object.keys(formData).length });
+    console.log('Loan doc generation request:', { templateName: templateName, pass: passNumber, templateLength: templateText.length, dataFields: Object.keys(formData).length, previouslyApplied: previousReplacements ? previousReplacements.length : 0 });
 
     // Helper: try to extract JSON from Claude response text
     function tryParseJSON(responseText) {
@@ -706,6 +755,7 @@ app.post('/api/generate-loan-doc', async function (req, res) {
                 notes: parsed.notes || null,
                 provider: provider,
                 model: modelUsed,
+                pass: passNumber,
                 usage: usage
             });
         } else {
