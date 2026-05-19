@@ -3764,6 +3764,12 @@
         // Otevře modal a vyplní obsah dle aktuálního formuláře + první vybrané šablony.
         // Pokud žádná šablona není vybraná, použije se název '(žádná šablona vybrána)'
         // a textová oblast pro šablonu zůstane prázdná s nápovědou.
+        // Single source of truth: zavolá BACKEND endpoint /api/generate-loan-doc/preview
+        // který vrátí přesně tentýž prompt, jaký by reálně letěl do Claude/ChatGPT.
+        // Pokud Railway endpoint selže (network down, deploy v běhu), fallback na
+        // lokální build (buildSystemPromptPreview + buildDataDescriptionPreview).
+        // Tj. Martin v náhledu vidí AI text 1:1 s tím, co se reálně pošle při generování
+        // — žádný drift, žádné ruční syncování.
         function openPromptPreview() {
             var modal = document.getElementById('promptPreviewModal');
             var sysEl = document.getElementById('promptPreviewSystem');
@@ -3776,28 +3782,23 @@
             var formData = collectFormData();
             var templateIds = Object.keys(selectedTemplates);
 
-            // System prompt (může se ukázat hned, není závislý na šabloně)
-            // Šablonový název doplníme po načtení template z IDB
-            sysEl.value = buildSystemPromptPreview('(načítám…)');
-            dataEl.value = buildDataDescriptionPreview(formData);
+            sysEl.value = 'Načítám prompt ze serveru…';
+            dataEl.value = 'Načítám…';
             tplEl.value = 'Načítám obsah šablony…';
             fullEl.value = 'Načítám…';
-
             modal.classList.add('visible');
 
+            // Bez vybrané šablony — ukážeme prompt + data, šablona prázdná.
             if (templateIds.length === 0) {
-                tplInfo.textContent = 'Žádná šablona není zaškrtnuta — náhled ukáže jen DATA. Pro plný náhled zaškrtni alespoň jednu šablonu v "Dokumenty k vygenerování".';
-                tplEl.value = '(žádná šablona vybraná)';
-                sysEl.value = buildSystemPromptPreview('(žádná šablona vybraná)');
-                fullEl.value = 'Vyplň následující šablonu smlouvy ((žádná šablona)) poskytnutými daty.\n\n' +
-                    dataEl.value + '\n\n' +
-                    '=== ŠABLONA SMLOUVY ===\n\n' +
-                    '(žádná šablona vybraná)';
+                tplInfo.textContent = 'Žádná šablona není zaškrtnuta — náhled ukáže jen system prompt + DATA. Pro plný náhled zaškrtni alespoň jednu šablonu v "Dokumenty k vygenerování".';
+                fetchPromptPreviewFromServer({
+                    formData: formData,
+                    templateText: '',
+                    templateName: '(žádná šablona vybraná)'
+                }, sysEl, dataEl, tplEl, fullEl, formData, '(žádná šablona vybraná)', '');
                 return;
             }
 
-            // Vezmi PRVNÍ vybranou šablonu pro preview (i kdyby Martin zaškrtl víc).
-            // Pokud má víc šablon, prompt pro každou bude identický kromě obsahu šablony.
             var firstId = templateIds[0];
             var firstName = selectedTemplates[firstId];
             tplInfo.textContent = 'Náhled pro šablonu: ' + firstName + (templateIds.length > 1 ? ' (vybraných: ' + templateIds.length + ' — preview ukazuje první)' : '') + '. Server text zkrátí na max 50 000 znaků.';
@@ -3817,15 +3818,44 @@
                     return docFile.async('string').then(function(originalXml) {
                         var plainText = originalXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
                         tplEl.value = plainText;
-                        sysEl.value = buildSystemPromptPreview(template.name);
-                        fullEl.value = 'Vyplň následující šablonu smlouvy (' + template.name + ') poskytnutými daty.\n\n' +
-                            dataEl.value + '\n\n' +
-                            '=== ŠABLONA SMLOUVY ===\n\n' +
-                            plainText.substring(0, 50000);
+                        return fetchPromptPreviewFromServer({
+                            formData: formData,
+                            templateText: plainText,
+                            templateName: template.name
+                        }, sysEl, dataEl, tplEl, fullEl, formData, template.name, plainText);
                     });
                 }).catch(function(err) {
                     tplEl.value = '(chyba při čtení šablony: ' + err.message + ')';
                 });
+            });
+        }
+
+        // Volá backend /api/generate-loan-doc/preview a vyplní textareas.
+        // Při selhání použije lokální fallback (zachová stávající chování).
+        function fetchPromptPreviewFromServer(payload, sysEl, dataEl, tplEl, fullEl, formData, templateName, plainText) {
+            return fetch(LOAN_API_BASE + '/api/generate-loan-doc/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(function(resp) {
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                return resp.json();
+            }).then(function(data) {
+                if (!data || !data.success) throw new Error('Neplatná odpověď serveru');
+                sysEl.value = data.systemPrompt || '';
+                dataEl.value = data.dataDescription || '';
+                fullEl.value = data.userContent || '';
+                // tplEl už je vyplněn z extractu před voláním (plainText)
+            }).catch(function(err) {
+                console.warn('[loan-doc] Server prompt preview selhal, používám lokální fallback:', err);
+                // Fallback: lokální build (zachová stávající chování, ale možná drift).
+                sysEl.value = buildSystemPromptPreview(templateName);
+                dataEl.value = buildDataDescriptionPreview(formData);
+                fullEl.value = 'Vyplň následující šablonu smlouvy (' + templateName + ') poskytnutými daty.\n\n' +
+                    dataEl.value + '\n\n' +
+                    '=== ŠABLONA SMLOUVY ===\n\n' +
+                    (plainText || '').substring(0, 50000);
+                showToast('Náhled promptu: server nedostupný — používám lokální verzi (může být zastaralá)', 'info', 5000);
             });
         }
 

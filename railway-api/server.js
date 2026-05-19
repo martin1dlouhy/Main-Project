@@ -480,34 +480,13 @@ app.post('/api/parse-lv', async function (req, res) {
 });
 
 // =============================================
-// POST /api/generate-loan-doc — Loan document generation
-// Claude fills in a contract template with provided data
-// No timeout limit — complex templates may take 2-3 minutes
+// Loan doc prompt builders — single source of truth.
+// Tyto funkce VOLÁ jak /api/generate-loan-doc (reálné AI volání), tak
+// /api/generate-loan-doc/preview (jen vrátí prompt bez API volání).
+// Tj. preview na frontendu je VŽDY identický s tím, co AI reálně dostane —
+// žádný drift mezi backend a "buildSystemPromptPreview" v loan-documentation.html.
 // =============================================
-app.post('/api/generate-loan-doc', async function (req, res) {
-    var apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-        return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not set.' });
-    }
-
-    var templateText = req.body && req.body.templateText;
-    var formData = req.body && req.body.formData;
-    var templateName = req.body && req.body.templateName;
-    // Two-pass režim: previousReplacements = co už bylo aplikováno v Pass 1.
-    // Když má položky, prompt řekne AI 'tohle už je vyřízeno, najdi co ZBYLO'.
-    var previousReplacements = (req.body && Array.isArray(req.body.previousReplacements)) ? req.body.previousReplacements : null;
-    var passNumber = (previousReplacements && previousReplacements.length > 0) ? 2 : 1;
-
-    if (!templateText || templateText.trim().length < 50) {
-        return res.status(400).json({ error: 'Šablona je prázdná nebo příliš krátká.' });
-    }
-
-    if (!formData) {
-        return res.status(400).json({ error: 'Chybí data pro vyplnění smlouvy.' });
-    }
-
-    var client = new Anthropic({ apiKey: apiKey });
-
+function buildLoanDocSystemPrompt(templateName, passNumber) {
     var systemPrompt = 'Jsi právní asistent ProfiLend specializovaný na vyplňování smluvní dokumentace pro úvěrové dealy.\n\n' +
         '=== KONTEXT (PLATÍ PRO KAŽDÝ TYP ŠABLONY) ===\n' +
         'ProfiLend pracuje se sadou šablon: úvěrová smlouva, zástavní smlouva (k nemovitostem / podílům / akciím), plná moc k přímému prodeji, vinkulace pojistného plnění, notářský zápis, směnka, dohoda o úhradě nákladů ocenění a další.\n\n' +
@@ -516,6 +495,7 @@ app.post('/api/generate-loan-doc', async function (req, res) {
         '- Najdeš tam KONKRÉTNÍ IČO, sídlo, spisovou značku, jméno jednatele — to NENÍ legal text, je to data k nahrazení.\n' +
         '- Najdeš tam KONKRÉTNÍ částku ("5.000.000 Kč"), úrokovou sazbu ("9,5 % p.a."), datum ("27.04.2029"), čísla LV ("LV 303"), čísla účtů ("123-456789/0100"), banku ("Komerční Banka, a.s.") — to vše JE data, ne legal text.\n' +
         '- Najdeš tam KONKRÉTNÍ adresy nemovitostí, výměry parcel, popisy zajištění — pokud se v poskytnutých DATA liší, JE TO data k nahrazení.\n\n' +
+        'JMÉNO ŠABLONY (' + (templateName || 'neznámé') + ') ti napoví, o jaký typ smlouvy jde, ale pravidlo o předvyplnění platí pro VŠECHNY typy.\n\n' +
         'TVŮJ ÚKOL: Pro KAŽDOU šablonu (bez ohledu na typ — úvěrová, zástavní, plná moc, vinkulace, atd.) udělej KOMPLETNÍ REVIZI celého obsahu od první do poslední věty. NESTAČÍ jen najít konkrétní údaje a nahradit je — musíš celou smlouvu projít jako právník dělající due diligence revizi a zajistit, aby výsledný dokument DÁVAL SMYSL jako celek pro NOVÝ deal.\n\n' +
         '=== PROCES REVIZE (postupuj přesně v tomto pořadí) ===\n' +
         '1. PŘEČTI CELOU SMLOUVU. Pochop, o jaký typ smlouvy jde, jaké strany, jaké zajištění, jaké přílohy, jakou strukturu článků.\n' +
@@ -536,7 +516,6 @@ app.post('/api/generate-loan-doc', async function (req, res) {
         '6. POŘADÍ ČLÁNKŮ A KŘÍŽOVÉ ODKAZY — odkazy typu "viz článek 5.3", "dle Přílohy 1C", "v souladu s ustanovením článku 12 odst. 4". Pokud jsi smazala Přílohu 1C, MUSÍŠ taky smazat / upravit všechny odkazy na ni v hlavním textu.\n\n' +
         '7. DATUMY MIMO RÁMEC DEALU — datumy interních úvěrových komisí ("schváleno na úvěrové komisi z 5.5.2022"), datumy revizí šablony ("verze 3 ze dne 12.4.2023"), datumy předchozího odhadu nemovitosti pokud DATA má appraisalDate. SMAŽ nebo aktualizuj.\n\n' +
         '8. ČÍSLA ÚČTŮ MIMO DATA — pokud najdeš v textu číslo účtu (formát "XXX-XXXXXXXXXX/YYYY"), které není ani borrowerAccount ani lenderAccount z DATA, je to zbytek z minulého dealu. SMAŽ kontext, ve kterém se nachází, nebo nahraď za odpovídající nový.\n\n' +
-        'JMÉNO ŠABLONY (' + (templateName || 'neznámé') + ') ti napoví, o jaký typ smlouvy jde, ale pravidlo o předvyplnění platí pro VŠECHNY typy.\n\n' +
         '=== ČTYŘI TYPY OPERACÍ ===\n' +
         'Šablona je HISTORICKÁ smlouva, ne placeholder template. Některé části jsou specifické pro MINULÝ deal a v novém dealu nemají místo. Máš 4 typy operací — všechny se zapisují stejným formátem {"find": "...", "replace": "..."}:\n\n' +
         '1. ZMĚNIT HODNOTU (nejčastější) — najdi konkrétní údaj a nahraď ho novou hodnotou z DATA.\n' +
@@ -582,7 +561,6 @@ app.post('/api/generate-loan-doc', async function (req, res) {
         '=== MINIMÁLNÍ OČEKÁVANÝ POČET REPLACEMENTS ===\n' +
         'Pro typickou úvěrovou smlouvu se očekává 10-30 replacements (změny hodnot + případné smazání irrelevantních příloh). Pokud vracíš méně než 5 replacements, něco je špatně — v "notes" vysvětli proč.';
 
-    // Pass 2: previousReplacements existují. Doplníme dodatečnou instrukci.
     if (passNumber === 2) {
         systemPrompt += '\n\n=== PASS 2 — HLUBOKÁ REVIZE PO PRVNÍM PRŮCHODU ===\n' +
             'TOTO JE DRUHÝ PRŮCHOD revize. V Pass 1 už byly aplikovány nějaké změny (viz "JIŽ APLIKOVANÉ ZMĚNY" v user message). Tvůj úkol nyní:\n\n' +
@@ -597,79 +575,146 @@ app.post('/api/generate-loan-doc', async function (req, res) {
             '4. V NOTES uveď, kolik dodatečných změn Pass 2 přidala a jakého typu.';
     }
 
-    // Build user message with all form data
-    var dataDescription = 'DATA PRO VYPLNĚNÍ SMLOUVY:\n\n';
-    dataDescription += '=== DLUŽNÍK ===\n';
-    if (formData.borrower) dataDescription += 'Název: ' + formData.borrower + '\n';
-    if (formData.ico) dataDescription += 'IČO: ' + formData.ico + '\n';
-    if (formData.spisovaZnacka) dataDescription += 'Spisová značka: ' + formData.spisovaZnacka + '\n';
-    if (formData.sidlo) dataDescription += 'Sídlo: ' + formData.sidlo + '\n';
+    return systemPrompt;
+}
 
-    dataDescription += '\n=== PARAMETRY ÚVĚRU ===\n';
-    if (formData.purpose) dataDescription += 'Účel úvěru: ' + formData.purpose + '\n';
-    if (formData.amount) dataDescription += 'Výše úvěru: ' + formData.amount + ' ' + (formData.currency || 'CZK') + '\n';
-    if (formData.currency) dataDescription += 'Měna: ' + formData.currency + '\n';
-    if (formData.drawdownDate) dataDescription += 'Datum čerpání: ' + formData.drawdownDate + '\n';
-    if (formData.drawdownType) dataDescription += 'Typ čerpání: ' + formData.drawdownType + '\n';
-    if (formData.interest) dataDescription += 'Úroková sazba: ' + formData.interest + ' % p.a.\n';
-    if (formData.interestPayment) dataDescription += 'Placení úroků: ' + formData.interestPayment + '\n';
-    if (formData.maturity) dataDescription += 'Doba splatnosti: ' + formData.maturity + ' ' + (formData.maturityUnit || 'let') + '\n';
-    if (formData.maturityDate) dataDescription += 'Datum splatnosti (Den konečné splatnosti): ' + formData.maturityDate + '\n';
-    if (formData.earlyRepayment) dataDescription += 'Předčasné splacení: ' + formData.earlyRepayment + '\n';
+function buildLoanDocDataDescription(formData) {
+    formData = formData || {};
+    var d = 'DATA PRO VYPLNĚNÍ SMLOUVY:\n\n';
+    d += '=== DLUŽNÍK ===\n';
+    if (formData.borrower) d += 'Název: ' + formData.borrower + '\n';
+    if (formData.ico) d += 'IČO: ' + formData.ico + '\n';
+    if (formData.spisovaZnacka) d += 'Spisová značka: ' + formData.spisovaZnacka + '\n';
+    if (formData.sidlo) d += 'Sídlo: ' + formData.sidlo + '\n';
 
-    dataDescription += '\n=== POPLATKY ===\n';
-    if (formData.originationFee) dataDescription += 'Poplatek za sjednání: ' + formData.originationFee + (formData.originationFeeType === 'percent' ? ' %' : ' ' + (formData.currency || 'CZK')) + '\n';
-    if (formData.otherCosts) dataDescription += 'Ostatní náklady: ' + formData.otherCosts + '\n';
+    d += '\n=== PARAMETRY ÚVĚRU ===\n';
+    if (formData.purpose) d += 'Účel úvěru: ' + formData.purpose + '\n';
+    if (formData.amount) d += 'Výše úvěru: ' + formData.amount + ' ' + (formData.currency || 'CZK') + '\n';
+    if (formData.currency) d += 'Měna: ' + formData.currency + '\n';
+    if (formData.drawdownDate) d += 'Datum čerpání: ' + formData.drawdownDate + '\n';
+    if (formData.drawdownType) d += 'Typ čerpání: ' + formData.drawdownType + '\n';
+    if (formData.interest) d += 'Úroková sazba: ' + formData.interest + ' % p.a.\n';
+    if (formData.interestPayment) d += 'Placení úroků: ' + formData.interestPayment + '\n';
+    if (formData.maturity) d += 'Doba splatnosti: ' + formData.maturity + ' ' + (formData.maturityUnit || 'let') + '\n';
+    if (formData.maturityDate) d += 'Datum splatnosti (Den konečné splatnosti): ' + formData.maturityDate + '\n';
+    if (formData.earlyRepayment) d += 'Předčasné splacení: ' + formData.earlyRepayment + '\n';
 
-    dataDescription += '\n=== ZAJIŠTĚNÍ ===\n';
-    if (formData.collateralValue) dataDescription += 'Hodnota zajištění: ' + formData.collateralValue + '\n';
-    if (formData.collateralItems) dataDescription += 'Položky zajištění:\n' + formData.collateralItems + '\n';
+    d += '\n=== POPLATKY ===\n';
+    if (formData.originationFee) d += 'Poplatek za sjednání: ' + formData.originationFee + (formData.originationFeeType === 'percent' ? ' %' : ' ' + (formData.currency || 'CZK')) + '\n';
+    if (formData.otherCosts) d += 'Ostatní náklady: ' + formData.otherCosts + '\n';
 
-    dataDescription += '\n=== DODATEČNÉ ÚDAJE ===\n';
-    if (formData.representativeName) dataDescription += 'Jednatel/zástupce dlužníka: ' + formData.representativeName + ', funkce: ' + (formData.representativeRole || '') + '\n';
-    if (formData.contactName) dataDescription += 'Kontaktní osoba: ' + formData.contactName + ', tel: ' + (formData.contactPhone || '') + ', e-mail: ' + (formData.contactEmail || '') + '\n';
-    if (formData.deliveryAddress) dataDescription += 'Adresa pro doručování: ' + formData.deliveryAddress + '\n';
-    if (formData.borrowerAccount) dataDescription += 'Účet dlužníka: ' + formData.borrowerAccount + ' u ' + (formData.borrowerBank || '') + '\n';
-    if (formData.lenderAccount) dataDescription += 'Účet věřitele: ' + formData.lenderAccount + ' u ' + (formData.lenderBank || '') + '\n';
-    if (formData.appraisalRef) dataDescription += 'Odhad: ' + formData.appraisalRef + '\n';
-    // Frontend posílá 'appraiser' (HTML id="appraiser"). Akceptujeme oba názvy kvůli
-    // backwards-compat s případnými staršími klienty/integracemi.
+    d += '\n=== ZAJIŠTĚNÍ ===\n';
+    if (formData.collateralValue) d += 'Hodnota zajištění: ' + formData.collateralValue + '\n';
+    if (formData.collateralItems) d += 'Položky zajištění:\n' + formData.collateralItems + '\n';
+
+    d += '\n=== DODATEČNÉ ÚDAJE ===\n';
+    if (formData.representativeName) d += 'Jednatel/zástupce dlužníka: ' + formData.representativeName + ', funkce: ' + (formData.representativeRole || '') + '\n';
+    if (formData.contactName) d += 'Kontaktní osoba: ' + formData.contactName + ', tel: ' + (formData.contactPhone || '') + ', e-mail: ' + (formData.contactEmail || '') + '\n';
+    if (formData.deliveryAddress) d += 'Adresa pro doručování: ' + formData.deliveryAddress + '\n';
+    if (formData.borrowerAccount) d += 'Účet dlužníka: ' + formData.borrowerAccount + ' u ' + (formData.borrowerBank || '') + '\n';
+    if (formData.lenderAccount) d += 'Účet věřitele: ' + formData.lenderAccount + ' u ' + (formData.lenderBank || '') + '\n';
+    if (formData.appraisalRef) d += 'Odhad: ' + formData.appraisalRef + '\n';
     var appraiser = formData.appraiser || formData.appraisalAuthor;
-    if (appraiser) dataDescription += 'Odhadce: ' + appraiser + '\n';
-    if (formData.appraisalDate) dataDescription += 'Datum odhadu: ' + formData.appraisalDate + '\n';
-    if (formData.appraisalValue) dataDescription += 'Hodnota z odhadu: ' + formData.appraisalValue + '\n';
-    if (formData.existingPledge) dataDescription += 'Existující zástavní právo k výmazu: ' + formData.existingPledge + '\n';
-    if (formData.propertyOwners) dataDescription += 'Vlastníci nemovitostí: ' + formData.propertyOwners + '\n';
-    if (formData.defaultInterest) dataDescription += 'Úrok z prodlení: ' + formData.defaultInterest + ' % p.a.\n';
-    if (formData.accelerationPenalty) dataDescription += 'Smluvní pokuta při zesplatnění: ' + formData.accelerationPenalty + ' %\n';
-    if (formData.breachPenalty) dataDescription += 'Smluvní pokuta za porušení: ' + formData.breachPenalty + ' %\n';
-    if (formData.signDate) dataDescription += 'Datum podpisu: ' + formData.signDate + '\n';
-    if (formData.signPlace) dataDescription += 'Místo podpisu: ' + formData.signPlace + '\n';
+    if (appraiser) d += 'Odhadce: ' + appraiser + '\n';
+    if (formData.appraisalDate) d += 'Datum odhadu: ' + formData.appraisalDate + '\n';
+    if (formData.appraisalValue) d += 'Hodnota z odhadu: ' + formData.appraisalValue + '\n';
+    if (formData.existingPledge) d += 'Existující zástavní právo k výmazu: ' + formData.existingPledge + '\n';
+    if (formData.propertyOwners) d += 'Vlastníci nemovitostí: ' + formData.propertyOwners + '\n';
+    if (formData.defaultInterest) d += 'Úrok z prodlení: ' + formData.defaultInterest + ' % p.a.\n';
+    if (formData.accelerationPenalty) d += 'Smluvní pokuta při zesplatnění: ' + formData.accelerationPenalty + ' %\n';
+    if (formData.breachPenalty) d += 'Smluvní pokuta za porušení: ' + formData.breachPenalty + ' %\n';
+    if (formData.signDate) d += 'Datum podpisu: ' + formData.signDate + '\n';
+    if (formData.signPlace) d += 'Místo podpisu: ' + formData.signPlace + '\n';
+    return d;
+}
 
-    // Pass 2: připoj seznam již aplikovaných replacementů aby AI nevracela duplikáty
-    // a místo toho hledala co zbylo. Limit 100 párů (token saving + AI pozornost).
-    var previouslyAppliedSection = '';
-    if (passNumber === 2 && previousReplacements && previousReplacements.length > 0) {
-        var capped = previousReplacements.slice(0, 100);
-        previouslyAppliedSection = '\n\n=== JIŽ APLIKOVANÉ ZMĚNY V PASS 1 (NEDUPLIKOVAT) ===\n';
-        capped.forEach(function(r, idx) {
-            if (r && typeof r.find === 'string' && typeof r.replace === 'string') {
-                var f = r.find.length > 80 ? r.find.substring(0, 80) + '…' : r.find;
-                var rep = r.replace.length > 80 ? r.replace.substring(0, 80) + '…' : r.replace;
-                if (rep === '') rep = '(SMAZÁNO)';
-                previouslyAppliedSection += (idx + 1) + '. "' + f + '" → "' + rep + '"\n';
-            }
-        });
-        if (previousReplacements.length > 100) {
-            previouslyAppliedSection += '… a dalších ' + (previousReplacements.length - 100) + ' změn.\n';
+function buildLoanDocPreviousReplacementsSection(previousReplacements) {
+    if (!Array.isArray(previousReplacements) || previousReplacements.length === 0) return '';
+    var capped = previousReplacements.slice(0, 100);
+    var section = '\n\n=== JIŽ APLIKOVANÉ ZMĚNY V PASS 1 (NEDUPLIKOVAT) ===\n';
+    capped.forEach(function (r, idx) {
+        if (r && typeof r.find === 'string' && typeof r.replace === 'string') {
+            var f = r.find.length > 80 ? r.find.substring(0, 80) + '…' : r.find;
+            var rep = r.replace.length > 80 ? r.replace.substring(0, 80) + '…' : r.replace;
+            if (rep === '') rep = '(SMAZÁNO)';
+            section += (idx + 1) + '. "' + f + '" → "' + rep + '"\n';
         }
+    });
+    if (previousReplacements.length > 100) {
+        section += '… a dalších ' + (previousReplacements.length - 100) + ' změn.\n';
+    }
+    return section;
+}
+
+function buildLoanDocUserContent(templateName, dataDescription, previousReplacements, templateText) {
+    return 'Vyplň následující šablonu smlouvy (' + (templateName || 'smlouva') + ') poskytnutými daty.\n\n' +
+        dataDescription +
+        buildLoanDocPreviousReplacementsSection(previousReplacements) + '\n\n' +
+        '=== ŠABLONA SMLOUVY ===\n\n' +
+        (templateText || '').substring(0, 50000);
+}
+
+// =============================================
+// POST /api/generate-loan-doc/preview — vrátí sestavený prompt BEZ volání AI.
+// Žádná API náklady. Frontend "Náhled promptu" má tímto identický prompt
+// s tím, co AI reálně dostane v /api/generate-loan-doc. Plus Martin může
+// prompt zkopírovat a paste do externí ChatGPT/Claude (manuální fallback).
+// =============================================
+app.post('/api/generate-loan-doc/preview', function (req, res) {
+    var formData = (req.body && req.body.formData) || {};
+    var templateText = (req.body && req.body.templateText) || '';
+    var templateName = (req.body && req.body.templateName) || '';
+    var previousReplacements = (req.body && Array.isArray(req.body.previousReplacements)) ? req.body.previousReplacements : null;
+    var passNumber = (previousReplacements && previousReplacements.length > 0) ? 2 : 1;
+
+    var systemPrompt = buildLoanDocSystemPrompt(templateName, passNumber);
+    var dataDescription = buildLoanDocDataDescription(formData);
+    var userContent = buildLoanDocUserContent(templateName, dataDescription, previousReplacements, templateText);
+
+    return res.status(200).json({
+        success: true,
+        systemPrompt: systemPrompt,
+        dataDescription: dataDescription,
+        userContent: userContent,
+        pass: passNumber,
+        templateTextWasTruncated: (templateText || '').length > 50000,
+        templateTextOriginalLength: (templateText || '').length
+    });
+});
+
+// =============================================
+// POST /api/generate-loan-doc — Loan document generation
+// Claude/OpenAI fills in a contract template with provided data
+// No timeout limit — complex templates may take 2-3 minutes
+// =============================================
+app.post('/api/generate-loan-doc', async function (req, res) {
+    var apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+        return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not set.' });
     }
 
-    var userContent = 'Vyplň následující šablonu smlouvy (' + (templateName || 'smlouva') + ') poskytnutými daty.\n\n' +
-        dataDescription +
-        previouslyAppliedSection + '\n\n' +
-        '=== ŠABLONA SMLOUVY ===\n\n' +
-        templateText.substring(0, 50000);
+    var templateText = req.body && req.body.templateText;
+    var formData = req.body && req.body.formData;
+    var templateName = req.body && req.body.templateName;
+    // Two-pass režim: previousReplacements = co už bylo aplikováno v Pass 1.
+    // Když má položky, prompt řekne AI 'tohle už je vyřízeno, najdi co ZBYLO'.
+    var previousReplacements = (req.body && Array.isArray(req.body.previousReplacements)) ? req.body.previousReplacements : null;
+    var passNumber = (previousReplacements && previousReplacements.length > 0) ? 2 : 1;
+
+    if (!templateText || templateText.trim().length < 50) {
+        return res.status(400).json({ error: 'Šablona je prázdná nebo příliš krátká.' });
+    }
+
+    if (!formData) {
+        return res.status(400).json({ error: 'Chybí data pro vyplnění smlouvy.' });
+    }
+
+    var client = new Anthropic({ apiKey: apiKey });
+
+    // Sestavení promptu — single source of truth (sdíleno s /preview endpointem).
+    var systemPrompt = buildLoanDocSystemPrompt(templateName, passNumber);
+    var dataDescription = buildLoanDocDataDescription(formData);
+    var userContent = buildLoanDocUserContent(templateName, dataDescription, previousReplacements, templateText);
 
     console.log('Loan doc generation request:', { templateName: templateName, pass: passNumber, templateLength: templateText.length, dataFields: Object.keys(formData).length, previouslyApplied: previousReplacements ? previousReplacements.length : 0 });
 
