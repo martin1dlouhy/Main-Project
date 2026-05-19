@@ -4313,10 +4313,43 @@
                 return -1;
             }
 
-            for (var i = 0; i < replacements.length; i++) {
-                var r = replacements[i];
-                if (!r || typeof r.find !== 'string' || typeof r.replace !== 'string') continue;
-                if (r.find.length === 0) continue;
+            // True pokud `position` je uvnitř (neuzavřeného) <w:ins> nebo <w:del> bloku.
+            // V Pass 2 combined replacements obsahují páry, kde find = výstup předchozí
+            // iterace, takže pos může být uvnitř už existujícího track-changes markupu.
+            // Pokud bychom tam zapsali další <w:del>/<w:ins>, vznikla by nested struktura
+            // (Word odmítne otevřít) + tStart/tCloseAt se najdou v různých runech.
+            function isInsideTrackChangesBlock(s, position) {
+                var insOpen1 = s.lastIndexOf('<w:ins ', position);
+                var insOpen2 = s.lastIndexOf('<w:ins>', position);
+                var insOpen = (insOpen1 > insOpen2) ? insOpen1 : insOpen2;
+                var insClose = s.lastIndexOf('</w:ins>', position);
+                if (insOpen > insClose) return true;
+                var delOpen1 = s.lastIndexOf('<w:del ', position);
+                var delOpen2 = s.lastIndexOf('<w:del>', position);
+                var delOpen = (delOpen1 > delOpen2) ? delOpen1 : delOpen2;
+                var delClose = s.lastIndexOf('</w:del>', position);
+                if (delOpen > delClose) return true;
+                return false;
+            }
+
+            // Dedup: některé Pass 2 odpovědi obsahují páry, které byly už v Pass 1.
+            // Plus AI občas vrátí cyklické páry (find: "A" → replace: "B"; find: "B" → replace: "C")
+            // které vedou k aplikaci na výstup předchozího replacementu = invalid markup.
+            // Necháváme jen první výskyt {find, replace} kombinace.
+            var seen = {};
+            var dedupReplacements = [];
+            for (var di = 0; di < replacements.length; di++) {
+                var dr = replacements[di];
+                if (!dr || typeof dr.find !== 'string' || typeof dr.replace !== 'string') continue;
+                if (dr.find.length === 0) continue;
+                var key = dr.find + '' + dr.replace;
+                if (seen[key]) continue;
+                seen[key] = true;
+                dedupReplacements.push(dr);
+            }
+
+            for (var i = 0; i < dedupReplacements.length; i++) {
+                var r = dedupReplacements[i];
                 var findEsc = escapeXml(r.find);
                 var replaceEsc = escapeXml(r.replace);
 
@@ -4329,6 +4362,11 @@
                     var pos = xml.indexOf(findEsc, cursor);
                     if (pos === -1) break;
 
+                    // Skip pokud match je uvnitř už existujícího <w:ins>/<w:del> bloku.
+                    // Klíčový fix — Pass 2 jinak vytvoří nested track changes
+                    // (např. <w:del> uvnitř <w:ins>) → Word DOCX odmítne otevřít.
+                    if (isInsideTrackChangesBlock(xml, pos)) { cursor = pos + 1; continue; }
+
                     // Najdi obklopující <w:t [...]>...</w:t>
                     var tStart = xml.lastIndexOf('<w:t', pos);
                     if (tStart === -1) { cursor = pos + 1; continue; }
@@ -4336,6 +4374,12 @@
                     if (tOpenEnd === -1 || tOpenEnd >= pos) { cursor = pos + 1; continue; }
                     var tCloseAt = xml.indexOf('</w:t>', pos);
                     if (tCloseAt === -1) { cursor = pos + 1; continue; }
+
+                    // Sanity check: obsah <w:t>...</w:t> nesmí obsahovat XML tag '<'.
+                    // Pokud ano, tStart a tCloseAt jsou v různých runech (chyba lookupu) —
+                    // skip, jinak rewrap zničí strukturu mezi nimi.
+                    var textCandidate = xml.substring(tOpenEnd + 1, tCloseAt);
+                    if (textCandidate.indexOf('<') !== -1) { cursor = pos + 1; continue; }
 
                     // Najdi obklopující <w:r ...>
                     var rStart = findRunStart(xml, tStart);
@@ -4358,7 +4402,7 @@
 
                     var rOpen = xml.substring(rStart, rOpenEnd);
                     var tOpen = xml.substring(tStart, tOpenEnd + 1);
-                    var text = xml.substring(tOpenEnd + 1, tCloseAt);
+                    var text = textCandidate;
                     var posInText = text.indexOf(findEsc);
                     if (posInText === -1) { cursor = pos + 1; continue; }
                     var before = text.substring(0, posInText);
