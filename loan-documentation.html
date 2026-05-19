@@ -4085,71 +4085,111 @@
         // OOXML track-changes wrapping. <w:del> a <w:ins> MUSÍ být na run level
         // (sibling of <w:r>), NIKDY uvnitř <w:t>.
         //
-        // Pattern: <w:r [...]>(<w:rPr>...</w:rPr>)?<w:t [...]>text...FIND...</w:t></w:r>
-        // → split na max 4 části: před-find run, <w:del>, <w:ins>, po-find run.
-        // Zachová <w:rPr> (formátování) na všech.
-        //
-        // Performance: starší verze používala (?:(?!</w:t>)[\s\S])*? — negative
-        // lookahead s lazy quantifier = catastrophic backtracking na 400 KB XML
-        // blokoval main thread > 10 s. Nový pattern [^<]*? je řádově rychlejší
-        // (text uvnitř <w:t> nemůže obsahovat literální <, je escaped na &lt;).
-        // Plus yield na event loop mezi replacementy aby browser nehlásil
-        // "Stránka nereaguje".
+        // Performance approach: NO regex — čistá indexOf + substring manipulace.
+        // Předchozí regex verze měly catastrophic backtracking u některých
+        // promptů (negative lookahead) nebo synchronní callback volaný 100×
+        // pro jeden replacement páru se opakujícím find stringem ([^<]*? + g flag).
+        // Manuální iterace umožňuje yield i UVNITŘ smyčky — pro každý match,
+        // ne jen mezi replacement páry. Browser zůstává responzivní i u extrémních
+        // šablon (50+ replacementů, 1+ MB XML, find string opakující se 100×).
         async function applyReplacementsWithTracking(originalXml, replacements) {
             var xml = originalXml;
             var date = new Date().toISOString();
             var author = 'ProfiLend Investment Tools';
             var id = 0;
+            var yieldFn = function() { return new Promise(function(r) { setTimeout(r, 0); }); };
+
+            // Najdi otevírací <w:r > nebo <w:r> před zadanou pozicí.
+            // (Pozor na <w:rPr — to NENÍ <w:r>.)
+            function findRunStart(s, beforePos) {
+                var p = beforePos;
+                while (p > 0) {
+                    p = s.lastIndexOf('<w:r', p - 1);
+                    if (p === -1) return -1;
+                    var c = s.charAt(p + 4);
+                    if (c === ' ' || c === '>') return p;
+                }
+                return -1;
+            }
+
             for (var i = 0; i < replacements.length; i++) {
                 var r = replacements[i];
                 if (!r || typeof r.find !== 'string' || typeof r.replace !== 'string') continue;
                 if (r.find.length === 0) continue;
                 var findEsc = escapeXml(r.find);
                 var replaceEsc = escapeXml(r.replace);
-                var findRegexEsc = findEsc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-                // Bez negative lookahead — text uvnitř <w:t> nesmí obsahovat <,
-                // takže [^<]*? bezpečně pokrývá XML text content.
-                var pattern = new RegExp(
-                    '(<w:r(?:\\s[^>]*)?>)' +                         // 1: <w:r> open
-                    '((?:<w:rPr>[\\s\\S]*?</w:rPr>)?)' +              // 2: optional <w:rPr>
-                    '(<w:t(?:\\s[^>]*)?>)' +                          // 3: <w:t> open
-                    '([^<]*?' + findRegexEsc + '[^<]*?)' +            // 4: text content with find
-                    '(</w:t>)' +                                      // 5: </w:t>
-                    '(</w:r>)',                                       // 6: </w:r>
-                    'g'
-                );
+                var result = '';
+                var lastEnd = 0;
+                var cursor = 0;
+                var matchCount = 0;
 
-                xml = xml.replace(pattern, function(match, rOpen, rPr, tOpen, text, tClose, rClose) {
-                    var idx = text.indexOf(findEsc);
-                    if (idx === -1) return match;
-                    var before = text.substring(0, idx);
-                    var after = text.substring(idx + findEsc.length);
+                while (cursor < xml.length) {
+                    var pos = xml.indexOf(findEsc, cursor);
+                    if (pos === -1) break;
+
+                    // Najdi obklopující <w:t [...]>...</w:t>
+                    var tStart = xml.lastIndexOf('<w:t', pos);
+                    if (tStart === -1) { cursor = pos + 1; continue; }
+                    var tOpenEnd = xml.indexOf('>', tStart);
+                    if (tOpenEnd === -1 || tOpenEnd >= pos) { cursor = pos + 1; continue; }
+                    var tCloseAt = xml.indexOf('</w:t>', pos);
+                    if (tCloseAt === -1) { cursor = pos + 1; continue; }
+
+                    // Najdi obklopující <w:r ...>
+                    var rStart = findRunStart(xml, tStart);
+                    if (rStart === -1) { cursor = pos + 1; continue; }
+                    var rOpenEnd = xml.indexOf('>', rStart) + 1;
+                    if (rOpenEnd === 0 || rOpenEnd > tStart) { cursor = pos + 1; continue; }
+                    var rCloseAt = xml.indexOf('</w:r>', tCloseAt);
+                    if (rCloseAt === -1) { cursor = pos + 1; continue; }
+                    var rEnd = rCloseAt + '</w:r>'.length;
+
+                    // Najdi <w:rPr>...</w:rPr> mezi <w:r> a <w:t>
+                    var rPr = '';
+                    var rPrStart = xml.indexOf('<w:rPr>', rOpenEnd);
+                    if (rPrStart !== -1 && rPrStart < tStart) {
+                        var rPrEndAt = xml.indexOf('</w:rPr>', rPrStart);
+                        if (rPrEndAt !== -1 && rPrEndAt + 8 <= tStart) {
+                            rPr = xml.substring(rPrStart, rPrEndAt + 8);
+                        }
+                    }
+
+                    var rOpen = xml.substring(rStart, rOpenEnd);
+                    var tOpen = xml.substring(tStart, tOpenEnd + 1);
+                    var text = xml.substring(tOpenEnd + 1, tCloseAt);
+                    var posInText = text.indexOf(findEsc);
+                    if (posInText === -1) { cursor = pos + 1; continue; }
+                    var before = text.substring(0, posInText);
+                    var after = text.substring(posInText + findEsc.length);
+
                     var thisId = id;
                     id++;
 
-                    var out = '';
-                    if (before.length > 0) {
-                        out += rOpen + rPr + tOpen + before + tClose + rClose;
-                    }
-                    out += '<w:del w:id="' + (thisId * 2) + '" w:author="' + author + '" w:date="' + date + '">';
-                    out += rOpen + rPr + '<w:delText xml:space="preserve">' + findEsc + '</w:delText>' + rClose;
-                    out += '</w:del>';
-                    out += '<w:ins w:id="' + (thisId * 2 + 1) + '" w:author="' + author + '" w:date="' + date + '">';
-                    out += rOpen + rPr + tOpen + replaceEsc + tClose + rClose;
-                    out += '</w:ins>';
-                    if (after.length > 0) {
-                        out += rOpen + rPr + tOpen + after + tClose + rClose;
-                    }
-                    return out;
-                });
+                    var rebuilt = '';
+                    if (before.length > 0) rebuilt += rOpen + rPr + tOpen + before + '</w:t></w:r>';
+                    rebuilt += '<w:del w:id="' + (thisId * 2) + '" w:author="' + author + '" w:date="' + date + '">';
+                    rebuilt += rOpen + rPr + '<w:delText xml:space="preserve">' + findEsc + '</w:delText></w:r>';
+                    rebuilt += '</w:del>';
+                    rebuilt += '<w:ins w:id="' + (thisId * 2 + 1) + '" w:author="' + author + '" w:date="' + date + '">';
+                    rebuilt += rOpen + rPr + tOpen + replaceEsc + '</w:t></w:r>';
+                    rebuilt += '</w:ins>';
+                    if (after.length > 0) rebuilt += rOpen + rPr + tOpen + after + '</w:t></w:r>';
 
-                // Yield to event loop každé 3 replacementy — browser zůstává responzivní
-                // (UI rendering + loading panel progress). Pro 20 párů to znamená 6-7
-                // mikropauz, celkový čas je téměř identický.
-                if (i % 3 === 2) {
-                    await new Promise(function(resolve) { setTimeout(resolve, 0); });
+                    result += xml.substring(lastEnd, rStart) + rebuilt;
+                    lastEnd = rEnd;
+                    cursor = rEnd;
+                    matchCount++;
+
+                    // Yield UVNITŘ smyčky každých 20 matches — pro find stringy,
+                    // které se opakují (jméno klienta může být v šabloně 100×).
+                    if (matchCount % 20 === 0) await yieldFn();
                 }
+                result += xml.substring(lastEnd);
+                xml = result;
+
+                // Plus yield mezi replacement páry (low cost).
+                await yieldFn();
             }
             return xml;
         }
