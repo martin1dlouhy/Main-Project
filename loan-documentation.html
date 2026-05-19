@@ -3749,6 +3749,28 @@
         }
 
         /* ─── PROMPT PREVIEW ─── */
+        // Helpers pro Czech number — zrcadlí server.js parseCzNumber / formatCzAmount.
+        // Použité ve buildDataDescriptionPreview pro spočtení absolutní výše poplatku
+        // z procenta + amount (např. "1 % z 38.000.000 = 380.000 Kč").
+        function parseCzNumberLocal(value) {
+            if (value === null || value === undefined) return NaN;
+            var s = String(value).replace(/\s/g, '').replace(/ /g, '');
+            var commaIdx = s.lastIndexOf(',');
+            var dotIdx = s.lastIndexOf('.');
+            if (commaIdx > -1 && (dotIdx === -1 || commaIdx > dotIdx)) {
+                s = s.replace(/\./g, '').replace(',', '.');
+            } else if (dotIdx > -1) {
+                var afterDot = s.length - dotIdx - 1;
+                if (afterDot === 3) s = s.replace(/\./g, '');
+            }
+            var n = parseFloat(s);
+            return isNaN(n) ? NaN : n;
+        }
+        function formatCzAmountLocal(num) {
+            if (typeof num !== 'number' || isNaN(num)) return String(num || '');
+            return Math.round(num).toLocaleString('cs-CZ').replace(/ /g, '.').replace(/\s/g, '.');
+        }
+
         // Sestaví strukturovaný blok DATA z formuláře — IDENTICKÝ s tím, co backend
         // (railway-api/server.js, /api/generate-loan-doc handler) sestavuje serverside.
         // Kdykoli měníš tento blok, syncni i server.js dataDescription — jinak preview
@@ -3774,7 +3796,21 @@
             if (formData.earlyRepayment) d += 'Předčasné splacení: ' + formData.earlyRepayment + '\n';
 
             d += '\n=== POPLATKY ===\n';
-            if (formData.originationFee) d += 'Poplatek za sjednání: ' + formData.originationFee + (formData.originationFeeType === 'percent' ? ' %' : ' ' + (formData.currency || 'CZK')) + '\n';
+            if (formData.originationFee) {
+                var currency = formData.currency || 'CZK';
+                if (formData.originationFeeType === 'percent') {
+                    var amountNum = parseCzNumberLocal(formData.amount);
+                    var feeNum = parseCzNumberLocal(formData.originationFee);
+                    if (amountNum > 0 && !isNaN(feeNum)) {
+                        var absoluteFee = (amountNum * feeNum) / 100;
+                        d += 'Poplatek za sjednání: ' + formData.originationFee + ' % z výše úvěru (' + formatCzAmountLocal(amountNum) + ' ' + currency + ') = ' + formatCzAmountLocal(absoluteFee) + ' ' + currency + '\n';
+                    } else {
+                        d += 'Poplatek za sjednání: ' + formData.originationFee + ' %\n';
+                    }
+                } else {
+                    d += 'Poplatek za sjednání: ' + formData.originationFee + ' ' + currency + '\n';
+                }
+            }
             if (formData.otherCosts) d += 'Ostatní náklady: ' + formData.otherCosts + '\n';
 
             d += '\n=== ZAJIŠTĚNÍ ===\n';

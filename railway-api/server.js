@@ -479,6 +479,42 @@ app.post('/api/parse-lv', async function (req, res) {
     }
 });
 
+// Helpers pro Czech number formátování — používané loan doc prompt buildery.
+// parseCzNumber: "38 000 000" / "38.000.000" / "38000000" / "1,5" → JS number.
+// formatCzAmount: 380000 → "380.000" (tečky jako oddělovače tisíců, žádné desetinné).
+function parseCzNumber(value) {
+    if (value === null || value === undefined) return NaN;
+    var s = String(value).replace(/\s/g, '').replace(/ /g, '');
+    // Pokud má string jen jeden výskyt . nebo , a před ním je <= 2 cifry, je to desetinný.
+    // Jinak (typicky "38.000.000") jsou to tisícové oddělovače — odstraníme.
+    var commaIdx = s.lastIndexOf(',');
+    var dotIdx = s.lastIndexOf('.');
+    if (commaIdx > -1 && (dotIdx === -1 || commaIdx > dotIdx)) {
+        // Čárka jako desetinný oddělovač (cs-CZ)
+        s = s.replace(/\./g, '').replace(',', '.');
+    } else if (dotIdx > -1) {
+        var afterDot = s.length - dotIdx - 1;
+        if (afterDot === 3 && s.indexOf('.') !== dotIdx) {
+            // Více teček + poslední s 3 ciframi za sebou → tisícové oddělovače
+            s = s.replace(/\./g, '');
+        } else if (afterDot === 3 && s.length > 5) {
+            // Jeden výskyt s 3 ciframi (např. "5.000") — typicky tisícový oddělovač pro velké částky
+            // Heuristika: pokud string má 5+ znaků a 3 cifry za tečkou, je to tisícový oddělovač
+            s = s.replace(/\./g, '');
+        }
+        // Jinak nech tečku jako desetinný
+    }
+    var n = parseFloat(s);
+    return isNaN(n) ? NaN : n;
+}
+
+function formatCzAmount(num) {
+    if (typeof num !== 'number' || isNaN(num)) return String(num || '');
+    // toLocaleString cs-CZ vrátí "380 000" (s nezalomitelnou mezerou). Nahradíme tečkou
+    // aby formát odpovídal konvenci promptu ("5.000.000 Kč").
+    return Math.round(num).toLocaleString('cs-CZ').replace(/ /g, '.').replace(/\s/g, '.');
+}
+
 // =============================================
 // Loan doc prompt builders — single source of truth.
 // Tyto funkce VOLÁ jak /api/generate-loan-doc (reálné AI volání), tak
@@ -600,7 +636,24 @@ function buildLoanDocDataDescription(formData) {
     if (formData.earlyRepayment) d += 'Předčasné splacení: ' + formData.earlyRepayment + '\n';
 
     d += '\n=== POPLATKY ===\n';
-    if (formData.originationFee) d += 'Poplatek za sjednání: ' + formData.originationFee + (formData.originationFeeType === 'percent' ? ' %' : ' ' + (formData.currency || 'CZK')) + '\n';
+    if (formData.originationFee) {
+        var currency = formData.currency || 'CZK';
+        if (formData.originationFeeType === 'percent') {
+            // Spočítáme absolutní částku, pokud máme amount — AI tak dostane
+            // hodnotu, kterou rovnou dosadí do smlouvy. Jinak by AI musela
+            // počítat sama a často by udělala chybu.
+            var amountNum = parseCzNumber(formData.amount);
+            var feeNum = parseCzNumber(formData.originationFee);
+            if (amountNum > 0 && !isNaN(feeNum)) {
+                var absoluteFee = (amountNum * feeNum) / 100;
+                d += 'Poplatek za sjednání: ' + formData.originationFee + ' % z výše úvěru (' + formatCzAmount(amountNum) + ' ' + currency + ') = ' + formatCzAmount(absoluteFee) + ' ' + currency + '\n';
+            } else {
+                d += 'Poplatek za sjednání: ' + formData.originationFee + ' %\n';
+            }
+        } else {
+            d += 'Poplatek za sjednání: ' + formData.originationFee + ' ' + currency + '\n';
+        }
+    }
     if (formData.otherCosts) d += 'Ostatní náklady: ' + formData.otherCosts + '\n';
 
     d += '\n=== ZAJIŠTĚNÍ ===\n';
