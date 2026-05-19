@@ -574,7 +574,10 @@ app.post('/api/generate-loan-doc', async function (req, res) {
     if (formData.borrowerAccount) dataDescription += 'Účet dlužníka: ' + formData.borrowerAccount + ' u ' + (formData.borrowerBank || '') + '\n';
     if (formData.lenderAccount) dataDescription += 'Účet věřitele: ' + formData.lenderAccount + ' u ' + (formData.lenderBank || '') + '\n';
     if (formData.appraisalRef) dataDescription += 'Odhad: ' + formData.appraisalRef + '\n';
-    if (formData.appraisalAuthor) dataDescription += 'Odhadce: ' + formData.appraisalAuthor + '\n';
+    // Frontend posílá 'appraiser' (HTML id="appraiser"). Akceptujeme oba názvy kvůli
+    // backwards-compat s případnými staršími klienty/integracemi.
+    var appraiser = formData.appraiser || formData.appraisalAuthor;
+    if (appraiser) dataDescription += 'Odhadce: ' + appraiser + '\n';
     if (formData.appraisalDate) dataDescription += 'Datum odhadu: ' + formData.appraisalDate + '\n';
     if (formData.appraisalValue) dataDescription += 'Hodnota z odhadu: ' + formData.appraisalValue + '\n';
     if (formData.existingPledge) dataDescription += 'Existující zástavní právo k výmazu: ' + formData.existingPledge + '\n';

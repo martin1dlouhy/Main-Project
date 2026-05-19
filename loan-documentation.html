@@ -999,6 +999,62 @@
             box-shadow: var(--shadow);
         }
 
+        /* ─── PROMPT PREVIEW MODAL ─── */
+        .modal-wide {
+            max-width: 880px !important;
+            width: 90vw;
+        }
+        .prompt-preview-intro {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            margin-bottom: 1.25rem;
+        }
+        .prompt-section {
+            margin-bottom: 1.25rem;
+        }
+        .prompt-section-head {
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+            margin-bottom: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .prompt-section-head strong {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+        .prompt-section-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            flex: 1;
+            min-width: 0;
+        }
+        .prompt-section-head .btn-mini {
+            flex-shrink: 0;
+        }
+        .prompt-preview-text {
+            width: 100%;
+            font-family: var(--font-mono, 'Menlo', 'Consolas', monospace);
+            font-size: 0.75rem;
+            line-height: 1.5;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 0.875rem;
+            color: var(--text-primary);
+            resize: vertical;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .prompt-preview-text-short { min-height: 100px; max-height: 200px; }
+        .prompt-preview-text-medium { min-height: 140px; max-height: 280px; }
+        .prompt-preview-text-long { min-height: 200px; max-height: 360px; }
+        .prompt-preview-text:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
         /* ─── RESULTS ─── */
         .result-container {
             padding: 2rem;
@@ -1768,6 +1824,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
                     Generovat dokumenty
                 </button>
+                <button class="btn btn-outline" onclick="openPromptPreview()" title="Náhled toho, co se pošle přes AI API — kontrola dat a šablony před voláním">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Náhled promptu
+                </button>
                 <button class="btn btn-outline" onclick="saveDocumentSet()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                     Uložit
@@ -1848,6 +1908,54 @@
             <div id="importList" class="modal-list"></div>
             <div class="modal-actions">
                 <button class="btn btn-outline btn-small" onclick="closeModal('importModal')">Zavřít</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROMPT PREVIEW MODAL -->
+    <div class="modal-overlay" id="promptPreviewModal">
+        <div class="modal modal-wide">
+            <h3>Náhled promptu pro AI</h3>
+            <p class="prompt-preview-intro">Přesně tohle se pošle přes API zvolené AI (Claude nebo ChatGPT). Šablona se z .docx extrahuje jako prostý text (XML tagy odstraněny), tvoje vyplněná data se přiloží strukturovaně. Můžeš zkontrolovat / zkopírovat před odesláním.</p>
+
+            <div class="prompt-section">
+                <div class="prompt-section-head">
+                    <strong>1. System instrukce</strong>
+                    <span class="prompt-section-meta">Pravidla pro AI — fixní, identické pro všechny šablony.</span>
+                    <button type="button" class="btn-mini" onclick="copyPromptSection('promptPreviewSystem')">Kopírovat</button>
+                </div>
+                <textarea id="promptPreviewSystem" class="prompt-preview-text prompt-preview-text-short" readonly></textarea>
+            </div>
+
+            <div class="prompt-section">
+                <div class="prompt-section-head">
+                    <strong>2. Tvoje data (z formuláře)</strong>
+                    <span class="prompt-section-meta">Strukturovaný blok, který se přiloží k šabloně. AI ho použije jako zdroj nových hodnot.</span>
+                    <button type="button" class="btn-mini" onclick="copyPromptSection('promptPreviewData')">Kopírovat</button>
+                </div>
+                <textarea id="promptPreviewData" class="prompt-preview-text prompt-preview-text-medium" readonly></textarea>
+            </div>
+
+            <div class="prompt-section">
+                <div class="prompt-section-head">
+                    <strong>3. Šablona (plain text z .docx)</strong>
+                    <span class="prompt-section-meta" id="promptPreviewTemplateInfo">Vybraná šablona — text bez formátování. Server ji zkrátí na max 50 000 znaků.</span>
+                    <button type="button" class="btn-mini" onclick="copyPromptSection('promptPreviewTemplate')">Kopírovat</button>
+                </div>
+                <textarea id="promptPreviewTemplate" class="prompt-preview-text prompt-preview-text-long" readonly></textarea>
+            </div>
+
+            <div class="prompt-section">
+                <div class="prompt-section-head">
+                    <strong>4. Kompletní user message</strong>
+                    <span class="prompt-section-meta">Sloučené části 2 + 3 — to, co skutečně letí jako "user" role do API. (System instrukce z bodu 1 jde jako "system" role.)</span>
+                    <button type="button" class="btn-mini" onclick="copyPromptSection('promptPreviewFull')">Kopírovat vše</button>
+                </div>
+                <textarea id="promptPreviewFull" class="prompt-preview-text prompt-preview-text-long" readonly></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-outline btn-small" onclick="closeModal('promptPreviewModal')">Zavřít</button>
             </div>
         </div>
     </div>
@@ -3444,6 +3552,171 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('visible');
+        }
+
+        /* ─── PROMPT PREVIEW ─── */
+        // Sestaví strukturovaný blok DATA z formuláře — IDENTICKÝ s tím, co backend
+        // (railway-api/server.js, /api/generate-loan-doc handler) sestavuje serverside.
+        // Kdykoli měníš tento blok, syncni i server.js dataDescription — jinak preview
+        // neodpovídá tomu, co AI reálně vidí.
+        function buildDataDescriptionPreview(formData) {
+            var d = 'DATA PRO VYPLNĚNÍ SMLOUVY:\n\n';
+            d += '=== DLUŽNÍK ===\n';
+            if (formData.borrower) d += 'Název: ' + formData.borrower + '\n';
+            if (formData.ico) d += 'IČO: ' + formData.ico + '\n';
+            if (formData.spisovaZnacka) d += 'Spisová značka: ' + formData.spisovaZnacka + '\n';
+            if (formData.sidlo) d += 'Sídlo: ' + formData.sidlo + '\n';
+
+            d += '\n=== PARAMETRY ÚVĚRU ===\n';
+            if (formData.purpose) d += 'Účel úvěru: ' + formData.purpose + '\n';
+            if (formData.amount) d += 'Výše úvěru: ' + formData.amount + ' ' + (formData.currency || 'CZK') + '\n';
+            if (formData.currency) d += 'Měna: ' + formData.currency + '\n';
+            if (formData.drawdownDate) d += 'Datum čerpání: ' + formData.drawdownDate + '\n';
+            if (formData.drawdownType) d += 'Typ čerpání: ' + formData.drawdownType + '\n';
+            if (formData.interest) d += 'Úroková sazba: ' + formData.interest + ' % p.a.\n';
+            if (formData.interestPayment) d += 'Placení úroků: ' + formData.interestPayment + '\n';
+            if (formData.maturity) d += 'Doba splatnosti: ' + formData.maturity + ' ' + (formData.maturityUnit || 'let') + '\n';
+            if (formData.maturityDate) d += 'Datum splatnosti (Den konečné splatnosti): ' + formData.maturityDate + '\n';
+            if (formData.earlyRepayment) d += 'Předčasné splacení: ' + formData.earlyRepayment + '\n';
+
+            d += '\n=== POPLATKY ===\n';
+            if (formData.originationFee) d += 'Poplatek za sjednání: ' + formData.originationFee + (formData.originationFeeType === 'percent' ? ' %' : ' ' + (formData.currency || 'CZK')) + '\n';
+            if (formData.otherCosts) d += 'Ostatní náklady: ' + formData.otherCosts + '\n';
+
+            d += '\n=== ZAJIŠTĚNÍ ===\n';
+            if (formData.collateralValue) d += 'Hodnota zajištění: ' + formData.collateralValue + '\n';
+            if (formData.collateralItems) d += 'Položky zajištění:\n' + formData.collateralItems + '\n';
+
+            d += '\n=== DODATEČNÉ ÚDAJE ===\n';
+            if (formData.representativeName) d += 'Jednatel/zástupce dlužníka: ' + formData.representativeName + ', funkce: ' + (formData.representativeRole || '') + '\n';
+            if (formData.contactName) d += 'Kontaktní osoba: ' + formData.contactName + ', tel: ' + (formData.contactPhone || '') + ', e-mail: ' + (formData.contactEmail || '') + '\n';
+            if (formData.deliveryAddress) d += 'Adresa pro doručování: ' + formData.deliveryAddress + '\n';
+            if (formData.borrowerAccount) d += 'Účet dlužníka: ' + formData.borrowerAccount + ' u ' + (formData.borrowerBank || '') + '\n';
+            if (formData.lenderAccount) d += 'Účet věřitele: ' + formData.lenderAccount + ' u ' + (formData.lenderBank || '') + '\n';
+            if (formData.appraisalRef) d += 'Odhad: ' + formData.appraisalRef + '\n';
+            // Mirror server.js: akceptuje 'appraiser' (frontend) i 'appraisalAuthor' (legacy).
+            var appraiser = formData.appraiser || formData.appraisalAuthor;
+            if (appraiser) d += 'Odhadce: ' + appraiser + '\n';
+            if (formData.appraisalDate) d += 'Datum odhadu: ' + formData.appraisalDate + '\n';
+            if (formData.appraisalValue) d += 'Hodnota z odhadu: ' + formData.appraisalValue + '\n';
+            if (formData.existingPledge) d += 'Existující zástavní právo k výmazu: ' + formData.existingPledge + '\n';
+            if (formData.propertyOwners) d += 'Vlastníci nemovitostí: ' + formData.propertyOwners + '\n';
+            if (formData.defaultInterest) d += 'Úrok z prodlení: ' + formData.defaultInterest + ' % p.a.\n';
+            if (formData.accelerationPenalty) d += 'Smluvní pokuta při zesplatnění: ' + formData.accelerationPenalty + ' %\n';
+            if (formData.breachPenalty) d += 'Smluvní pokuta za porušení: ' + formData.breachPenalty + ' %\n';
+            if (formData.signDate) d += 'Datum podpisu: ' + formData.signDate + '\n';
+            if (formData.signPlace) d += 'Místo podpisu: ' + formData.signPlace + '\n';
+
+            return d;
+        }
+
+        // System prompt — kopie ze server.js. Pokud měníš server.js systemPrompt,
+        // syncni sem (jinak preview ukáže staré pravidla).
+        function buildSystemPromptPreview(templateName) {
+            return 'Jsi právní asistent ProfiLend specializovaný na vyplňování smluvní dokumentace pro úvěrové dealy.\n\n' +
+                '=== KONTEXT (PLATÍ PRO KAŽDÝ TYP ŠABLONY) ===\n' +
+                'ProfiLend pracuje se sadou šablon: úvěrová smlouva, zástavní smlouva (k nemovitostem / podílům / akciím), plná moc k přímému prodeji, vinkulace pojistného plnění, notářský zápis, směnka, dohoda o úhradě nákladů ocenění a další.\n\n' +
+                'KAŽDÁ ŠABLONA (BEZ VÝJIMKY) JE PŘEDVYPLNĚNÁ KONKRÉTNÍMI ÚDAJI Z PŘEDCHOZÍHO DEALU. Šablony se v ProfiLendu znovupoužívají tak, že se vezme dokument z minulé smlouvy a přepíší se v něm konkrétní hodnoty na nového klienta a nový deal.\n\n' +
+                'TVŮJ ÚKOL: Pro KAŽDOU šablonu projdi obsah a najdi všechny konkrétní údaje, které odpovídají poli v DATA. Pro každý takový údaj vrať replacement s NOVOU hodnotou.\n\n' +
+                '… (zkrácený náhled — kompletní pravidla viz railway-api/server.js v repu)\n\n' +
+                'JMÉNO ŠABLONY: ' + (templateName || 'neznámé') + '\n\n' +
+                '=== FORMÁT ODPOVĚDI ===\n' +
+                'Vrať POUZE platný JSON: { "replacements": [{"find":"…","replace":"…"}, …], "notes": "…" }';
+        }
+
+        // Otevře modal a vyplní obsah dle aktuálního formuláře + první vybrané šablony.
+        // Pokud žádná šablona není vybraná, použije se název '(žádná šablona vybrána)'
+        // a textová oblast pro šablonu zůstane prázdná s nápovědou.
+        function openPromptPreview() {
+            var modal = document.getElementById('promptPreviewModal');
+            var sysEl = document.getElementById('promptPreviewSystem');
+            var dataEl = document.getElementById('promptPreviewData');
+            var tplEl = document.getElementById('promptPreviewTemplate');
+            var fullEl = document.getElementById('promptPreviewFull');
+            var tplInfo = document.getElementById('promptPreviewTemplateInfo');
+
+            updateSelectedDocs();
+            var formData = collectFormData();
+            var templateIds = Object.keys(selectedTemplates);
+
+            // System prompt (může se ukázat hned, není závislý na šabloně)
+            // Šablonový název doplníme po načtení template z IDB
+            sysEl.value = buildSystemPromptPreview('(načítám…)');
+            dataEl.value = buildDataDescriptionPreview(formData);
+            tplEl.value = 'Načítám obsah šablony…';
+            fullEl.value = 'Načítám…';
+
+            modal.classList.add('visible');
+
+            if (templateIds.length === 0) {
+                tplInfo.textContent = 'Žádná šablona není zaškrtnuta — náhled ukáže jen DATA. Pro plný náhled zaškrtni alespoň jednu šablonu v "Dokumenty k vygenerování".';
+                tplEl.value = '(žádná šablona vybraná)';
+                sysEl.value = buildSystemPromptPreview('(žádná šablona vybraná)');
+                fullEl.value = 'Vyplň následující šablonu smlouvy ((žádná šablona)) poskytnutými daty.\n\n' +
+                    dataEl.value + '\n\n' +
+                    '=== ŠABLONA SMLOUVY ===\n\n' +
+                    '(žádná šablona vybraná)';
+                return;
+            }
+
+            // Vezmi PRVNÍ vybranou šablonu pro preview (i kdyby Martin zaškrtl víc).
+            // Pokud má víc šablon, prompt pro každou bude identický kromě obsahu šablony.
+            var firstId = templateIds[0];
+            var firstName = selectedTemplates[firstId];
+            tplInfo.textContent = 'Náhled pro šablonu: ' + firstName + (templateIds.length > 1 ? ' (vybraných: ' + templateIds.length + ' — preview ukazuje první)' : '') + '. Server text zkrátí na max 50 000 znaků.';
+
+            getAllFromDB('templates', function(templates) {
+                var template = (templates || []).find(function(t) { return t.id.toString() === firstId; });
+                if (!template || !template.data) {
+                    tplEl.value = '(šablonu se nepodařilo načíst z IndexedDB)';
+                    return;
+                }
+                JSZip.loadAsync(template.data).then(function(zip) {
+                    var docFile = zip.file('word/document.xml');
+                    if (!docFile) {
+                        tplEl.value = '(šablona neobsahuje word/document.xml)';
+                        return;
+                    }
+                    return docFile.async('string').then(function(originalXml) {
+                        var plainText = originalXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                        tplEl.value = plainText;
+                        sysEl.value = buildSystemPromptPreview(template.name);
+                        fullEl.value = 'Vyplň následující šablonu smlouvy (' + template.name + ') poskytnutými daty.\n\n' +
+                            dataEl.value + '\n\n' +
+                            '=== ŠABLONA SMLOUVY ===\n\n' +
+                            plainText.substring(0, 50000);
+                    });
+                }).catch(function(err) {
+                    tplEl.value = '(chyba při čtení šablony: ' + err.message + ')';
+                });
+            });
+        }
+
+        // Kopíruje obsah textarea do clipboardu + krátký toast jako feedback.
+        function copyPromptSection(textareaId) {
+            var el = document.getElementById(textareaId);
+            if (!el) return;
+            var text = el.value || '';
+            if (!text) { showToast('Nic k zkopírování', 'info'); return; }
+            // Modern API + legacy fallback (Vercel produkce má HTTPS, takže clipboard funguje;
+            // localhost http přes IP fallback potřebuje execCommand).
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() {
+                    showToast('Zkopírováno (' + text.length.toLocaleString('cs-CZ') + ' znaků)', 'success');
+                }).catch(function() { fallbackCopy(el); });
+            } else {
+                fallbackCopy(el);
+            }
+        }
+        function fallbackCopy(textareaEl) {
+            try {
+                textareaEl.select();
+                textareaEl.setSelectionRange(0, textareaEl.value.length);
+                document.execCommand('copy');
+                showToast('Zkopírováno', 'success');
+            } catch (e) {
+                showToast('Kopírování selhalo — vyber text ručně (Ctrl+A, Ctrl+C)', 'error');
+            }
         }
 
         function importTermSheet(id) {
