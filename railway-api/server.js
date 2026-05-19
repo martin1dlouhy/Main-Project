@@ -606,49 +606,91 @@ app.post('/api/generate-loan-doc', async function (req, res) {
         return null;
     }
 
+    // Provider dispatch — Claude (default) nebo OpenAI (GPT-4o).
+    // Martin má obě API aktivní, dle typu šablony volí lepší model.
+    var providerRaw = (req.body && req.body.provider) || 'claude';
+    var provider = (providerRaw === 'openai' || providerRaw === 'chatgpt' || providerRaw === 'gpt') ? 'openai' : 'claude';
+
     try {
-        var message = await client.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 16384,
-            temperature: 0,
-            messages: [
-                { role: 'user', content: userContent },
-                { role: 'assistant', content: '{' }
-            ],
-            system: systemPrompt
-        });
+        var rawText = '';
+        var modelUsed = '';
+        var usage = null;
 
-        var responseText = '{' + message.content[0].text;
-        console.log('Loan doc response length:', responseText.length);
+        if (provider === 'openai') {
+            var openaiKey = process.env.OPENAI_API_KEY;
+            if (!openaiKey) {
+                return res.status(500).json({ error: 'OPENAI_API_KEY není nastavený na Railway.' });
+            }
+            if (typeof OpenAI === 'undefined' || !OpenAI) {
+                return res.status(500).json({ error: 'OpenAI SDK není dostupné na serveru.' });
+            }
+            var openaiClient = new OpenAI({ apiKey: openaiKey });
+            modelUsed = 'gpt-4o';
+            var completion = await openaiClient.chat.completions.create({
+                model: modelUsed,
+                temperature: 0,
+                max_tokens: 16384,
+                response_format: { type: 'json_object' },
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userContent }
+                ]
+            });
+            rawText = (completion.choices && completion.choices[0] && completion.choices[0].message && completion.choices[0].message.content) || '';
+            usage = {
+                input_tokens: completion.usage && completion.usage.prompt_tokens,
+                output_tokens: completion.usage && completion.usage.completion_tokens
+            };
+        } else {
+            modelUsed = 'claude-sonnet-4-20250514';
+            var message = await client.messages.create({
+                model: modelUsed,
+                max_tokens: 16384,
+                temperature: 0,
+                messages: [
+                    { role: 'user', content: userContent },
+                    { role: 'assistant', content: '{' }
+                ],
+                system: systemPrompt
+            });
+            rawText = '{' + message.content[0].text;
+            usage = {
+                input_tokens: message.usage.input_tokens,
+                output_tokens: message.usage.output_tokens
+            };
+        }
 
-        var parsed = tryParseJSON(responseText);
+        console.log('Loan doc generation (' + provider + '/' + modelUsed + ') response length:', rawText.length);
+
+        var parsed = tryParseJSON(rawText);
 
         if (parsed && parsed.replacements && Array.isArray(parsed.replacements)) {
             return res.status(200).json({
                 success: true,
                 replacements: parsed.replacements,
                 notes: parsed.notes || null,
-                usage: {
-                    input_tokens: message.usage.input_tokens,
-                    output_tokens: message.usage.output_tokens
-                }
+                provider: provider,
+                model: modelUsed,
+                usage: usage
             });
         } else {
-            console.error('Invalid response format:', responseText.substring(0, 500));
+            console.error('Invalid response format from ' + provider + ':', rawText.substring(0, 500));
             return res.status(200).json({
                 success: false,
-                error: 'Claude nevrátil platný formát nahrazení. Zkuste to znovu.',
-                raw: responseText.substring(0, 1000)
+                error: (provider === 'openai' ? 'ChatGPT' : 'Claude') + ' nevrátil platný formát nahrazení. Zkuste to znovu.',
+                provider: provider,
+                model: modelUsed,
+                raw: rawText.substring(0, 1000)
             });
         }
     } catch (err) {
-        console.error('Claude API error (loan doc):', err.message);
+        console.error('API error (loan doc, ' + provider + '):', err.message);
         var errorMsg = err.message || 'Neznámá chyba';
         var statusCode = 500;
-        if (err.status === 401) { errorMsg = 'Neplatný API klíč.'; statusCode = 401; }
-        else if (err.status === 429) { errorMsg = 'Příliš mnoho požadavků. Počkejte chvíli.'; statusCode = 429; }
-        else if (err.status === 529 || err.status === 503) { errorMsg = 'Claude API je přetížené.'; statusCode = 503; }
-        return res.status(statusCode).json({ error: errorMsg });
+        if (err.status === 401) { errorMsg = 'Neplatný API klíč (' + provider + ').'; statusCode = 401; }
+        else if (err.status === 429) { errorMsg = 'Příliš mnoho požadavků na ' + provider + '. Počkejte chvíli.'; statusCode = 429; }
+        else if (err.status === 529 || err.status === 503) { errorMsg = (provider === 'openai' ? 'ChatGPT' : 'Claude') + ' API je přetížené.'; statusCode = 503; }
+        return res.status(statusCode).json({ error: errorMsg, provider: provider });
     }
 });
 

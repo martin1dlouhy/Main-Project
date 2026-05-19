@@ -958,8 +958,8 @@
             flex-shrink: 0;
         }
 
-        /* ─── GENERATE MODE TOGGLE ─── */
-        .generate-mode-toggle {
+        /* ─── GENERATE MODE TOGGLE + AI PROVIDER TOGGLE ─── */
+        .generate-mode-toggle, .ai-provider-toggle {
             display: inline-flex;
             background: var(--bg-surface);
             border: 1.5px solid var(--border-color);
@@ -967,7 +967,8 @@
             padding: 3px;
             gap: 2px;
         }
-        .generate-mode-toggle .mode-option {
+        .generate-mode-toggle .mode-option,
+        .ai-provider-toggle .mode-option {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
@@ -982,14 +983,17 @@
             cursor: pointer;
             transition: var(--transition);
         }
-        .generate-mode-toggle .mode-option svg {
+        .generate-mode-toggle .mode-option svg,
+        .ai-provider-toggle .mode-option svg {
             width: 16px;
             height: 16px;
         }
-        .generate-mode-toggle .mode-option:hover {
+        .generate-mode-toggle .mode-option:hover,
+        .ai-provider-toggle .mode-option:hover {
             color: var(--text-primary);
         }
-        .generate-mode-toggle .mode-option.active {
+        .generate-mode-toggle .mode-option.active,
+        .ai-provider-toggle .mode-option.active {
             background: var(--bg-primary);
             color: var(--accent);
             box-shadow: var(--shadow);
@@ -1740,6 +1744,16 @@
 
             <!-- ACTION BAR -->
             <div class="action-bar">
+                <div class="ai-provider-toggle" title="AI model pro vyplnění šablony — Claude (Anthropic) nebo ChatGPT (OpenAI GPT-4o)">
+                    <button type="button" class="mode-option active" data-provider="claude" onclick="setAiProvider('claude')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                        Claude
+                    </button>
+                    <button type="button" class="mode-option" data-provider="openai" onclick="setAiProvider('openai')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.08V8l-6-5H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3.08"/><polyline points="14 3 14 8 19 8"/><circle cx="18" cy="18" r="3"/><path d="m22 22-1.5-1.5"/></svg>
+                        ChatGPT
+                    </button>
+                </div>
                 <div class="generate-mode-toggle" title="Přepínač: čistý dokument vs. s revizemi (track changes)">
                     <button type="button" class="mode-option active" data-mode="clean" onclick="setGenerateMode('clean')">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -3048,6 +3062,36 @@
             return generateMode === 'tracked';
         }
 
+        /* ─── AI PROVIDER (Claude vs. ChatGPT) ─── */
+        // Persistence v localStorage — user preference, ne testovací data. Default 'claude'.
+        var aiProvider = 'claude';
+        try {
+            var stored = localStorage.getItem('loanDoc.aiProvider');
+            if (stored === 'openai' || stored === 'claude') aiProvider = stored;
+        } catch (e) { /* localStorage neavailable — fallback na default */ }
+
+        function setAiProvider(provider) {
+            aiProvider = (provider === 'openai') ? 'openai' : 'claude';
+            try { localStorage.setItem('loanDoc.aiProvider', aiProvider); } catch (e) { }
+            document.querySelectorAll('.ai-provider-toggle .mode-option').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.provider === aiProvider);
+            });
+        }
+
+        function getCurrentAiProvider() { return aiProvider; }
+
+        // Apply stored preference to UI as soon as DOM is ready
+        function applyStoredAiProvider() {
+            document.querySelectorAll('.ai-provider-toggle .mode-option').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.provider === aiProvider);
+            });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyStoredAiProvider);
+        } else {
+            applyStoredAiProvider();
+        }
+
         /* ─── DRIVE TEMPLATES STATUS (header panel) ─── */
         async function updateDriveTemplatesStatus() {
             var el = document.getElementById('drive-templates-status');
@@ -3688,7 +3732,8 @@
                         templateText: plainText,
                         formData: formData,
                         templateName: template.name,
-                        withTrackedChanges: withTrackedChanges
+                        withTrackedChanges: withTrackedChanges,
+                        provider: (typeof getCurrentAiProvider === 'function') ? getCurrentAiProvider() : 'claude'
                     };
                     return fetch(LOAN_API_BASE + '/api/generate-loan-doc', {
                         method: 'POST',
