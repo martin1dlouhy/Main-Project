@@ -642,7 +642,10 @@ app.post('/api/generate-loan-doc', async function (req, res) {
                 output_tokens: completion.usage && completion.usage.completion_tokens
             };
         } else {
-            modelUsed = 'claude-sonnet-4-20250514';
+            // Sonnet 4.6 je nejlepší dostupný balanced model k 2026 (lepší než
+            // claude-sonnet-4-20250514 z května 2025). Opus 4.7 by byl chytřejší,
+            // ale pomalejší a dražší — pro vyplňování smluv stačí Sonnet.
+            modelUsed = 'claude-sonnet-4-6';
             var message = await client.messages.create({
                 model: modelUsed,
                 max_tokens: 16384,

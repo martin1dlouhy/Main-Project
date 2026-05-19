@@ -3626,8 +3626,9 @@
             var processed = 0;
             var total = templateIds.length;
             var failed = 0;
-            var totalAttempted = 0;  // kolik replacement párů celkem Claude vrátil
+            var totalAttempted = 0;  // kolik replacement párů celkem AI vrátila
             var totalApplied = 0;    // kolik z nich skutečně sedlo na text v XML
+            var modelUsed = '';      // konkrétní model (claude-sonnet-4-6 / gpt-4o atd.)
 
             // Loading panel — viditelný v sekci výsledků po celou dobu Claude API volání.
             // Toast je malý a v rohu, Martin ho přehlížel; tohle je prominent panel
@@ -3649,6 +3650,7 @@
                                 generatedDocuments[templateName] = result;
                                 totalAttempted += (result.attempted || 0);
                                 totalApplied += (result.applied || 0);
+                                if (result.model && !modelUsed) modelUsed = result.model;
                             } else {
                                 failed++;
                                 showToast('Chyba při generování: ' + templateName + (result.error ? ' (' + result.error + ')' : ''), 'error', 6000);
@@ -3660,12 +3662,13 @@
                                 if (genPanel) genPanel.hidden = true;
                                 var ok = Object.keys(generatedDocuments).length;
                                 if (ok > 0) {
-                                    // Replacement summary: pokud Claude vrátil ≥ 1 pár ale 0 se aplikovalo,
-                                    // problém je v matchování (Claude vymyslel find string, který v XML není).
-                                    // Pokud vrátil 0 párů celkem, problém je v promptu (Claude nic nenašel).
-                                    var replMsg = ' · ' + totalApplied + '/' + totalAttempted + ' náhrad aplikováno';
+                                    // Replacement summary: pokud AI vrátila ≥ 1 pár ale 0 se aplikovalo,
+                                    // problém je v matchování (AI vymyslela find string, který v XML není).
+                                    // Pokud vrátila 0 párů celkem, problém je v promptu (AI nic nenašla).
+                                    var modelLabel = modelUsed ? ' · ' + modelUsed : '';
+                                    var replMsg = modelLabel + ' · ' + totalApplied + '/' + totalAttempted + ' náhrad aplikováno';
                                     var tone = (totalApplied === 0) ? 'error' : (totalApplied < 3 ? 'info' : 'success');
-                                    var head = (totalApplied === 0) ? 'Dokument vygenerován, ale BEZ vyplnění — Claude nevrátil použitelné náhrady. Otevři F12 Console pro detail.' : 'Hotovo — vygenerováno ' + ok + '/' + total + (failed > 0 ? ' (' + failed + ' selhalo)' : '');
+                                    var head = (totalApplied === 0) ? 'Dokument vygenerován, ale BEZ vyplnění — AI nevrátila použitelné náhrady. Otevři F12 Console pro detail.' : 'Hotovo — vygenerováno ' + ok + '/' + total + (failed > 0 ? ' (' + failed + ' selhalo)' : '');
                                     showToast(head + replMsg, tone, totalApplied === 0 ? 10000 : 6000);
                                 } else {
                                     showToast('Generování selhalo — žádný dokument se nepodařilo vyplnit', 'error', 8000);
@@ -3770,7 +3773,7 @@
                             compressionOptions: { level: 6 },
                             mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                         }).then(function(newDocx) {
-                            callback({ success: true, docx: newDocx, filename: template.name, attempted: attempted, applied: applied, notes: data.notes });
+                            callback({ success: true, docx: newDocx, filename: template.name, attempted: attempted, applied: applied, notes: data.notes, provider: data.provider, model: data.model });
                         });
                     });
                 });
