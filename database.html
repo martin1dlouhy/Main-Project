@@ -2071,6 +2071,20 @@
             </div>
 
             <div class="settings-panel">
+                <h4>Srovnat sloupce podle obsahu (heuristická diagnostika + oprava)</h4>
+                <p class="panel-desc">Pokud header říká „linkedinUrl" v sloupci P, ale data v P obsahují <em>role</em> hodnoty — tj. data jsou posunutá oproti hlavičce — tato akce projde každý sloupec, podle obsahu (LinkedIn URL pattern, IČO 8 cifer, email s @, datum ISO formátu, atd.) detekuje, které pole tam ve skutečnosti je, a přepíše Sheet do kanonického pořadí 24 sloupců (A–X).</p>
+                <p class="panel-desc"><strong>Bezpečnost:</strong> nejprve ukáže preview tabulky „Header říká vs Detekováno z obsahu" se zvýrazněnými posuny. Teprve po potvrzení přepíše Sheet. Drive History tě vždy jistí (Soubor → Historie verzí).</p>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Diagnostika + realign listu Contacts</div>
+                        <div class="settings-row-meta">Použij když data nejsou pod správnou hlavičkou (např. role tam, kde má být LinkedIn).</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="diagnoseAndRealignSheet()" style="border-color:var(--warning);color:var(--warning);">Diagnostikovat a srovnat</button>
+                </div>
+                <div id="realign-result" style="margin-top:14px;display:none;"></div>
+            </div>
+
+            <div class="settings-panel">
                 <h4>Vyčistit AI LinkedIn URLs (halucinace + neúčinná vyhledávání)</h4>
                 <p class="panel-desc">AI obvykle vrátí buď halucinovanou profilovou URL (<code style="font-family:var(--font-mono);font-size:11.5px;color:var(--amber-warm);">linkedin.com/in/jan-novak</code> = 404), nebo LinkedIn vlastní vyhledávací URL (<code style="font-family:var(--font-mono);font-size:11.5px;color:var(--amber-warm);">linkedin.com/search/results/people/?keywords=…</code> — bez přihlášení vrací prázdno). Akce najde Tvé AI kontakty s těmito URLs a přepíše je na <strong>Google site:linkedin.com/in search</strong> — Google index obsahuje všechny veřejné LinkedIn profily, klikneš první výsledek a otevře se Ti reálná /in/ URL, kterou si můžeš zkopírovat zpět. Původní URL se zachová v poznámce.</p>
                 <div class="settings-row">
@@ -3115,8 +3129,11 @@ async function sheetsClearRow(tabName, rowIndex) {
 }
 
 async function sheetsClearAll(tabName) {
-    // Clear all rows except header
-    const range = encodeURIComponent(tabName + '!A2:Z');
+    // Clear all rows except header. Range jde až do ZZ (676 sloupců) pro případ,
+    // že by data tekla dál než A:Z (např. po starší buggy migraci, která posunula
+    // sloupce). 26 sloupců (A:Z) by stačilo pro CONTACTS_HEADER (24), ale historicky
+    // by tu mohly být remnants — bezpečnější vymést široký range.
+    const range = encodeURIComponent(tabName + '!A2:ZZ');
     const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
         '/values/' + range + ':clear';
     await gfetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
@@ -5455,6 +5472,327 @@ async function executeRestoreSheetStructure() {
         console.error('executeRestoreSheetStructure error:', err);
         resultEl.innerHTML = '<div class="info-note danger"><strong>Chyba uprostřed restrukturalizace:</strong> ' + escapeHtml(err.message || String(err)) +
             '<br><br>Sheet může být v polovičním stavu. <strong>Otevři Sheet a zkontroluj data před dalším pokusem.</strong> Pokud něco chybí, najdi ho v Drive History (Soubor → Historie verzí).</div>';
+    }
+}
+
+// ============================================================
+// CONTENT-BASED REALIGN — když je Sheet posunutý (header neodpovídá data positions)
+//
+// Případ: header říká "linkedinUrl" na sloupci P, ale data v P obsahují role hodnoty.
+// Příčina: bug v sheetsUpdateRow (range A1:lastcol1 s kratším headerRow přes data) +
+// předchozí buggy sheetsAppend (INSERT_ROWS na A1) mohly vytvořit stav, kdy header
+// row je o 1 sloupec kratší než data rows.
+//
+// Fix: ignorujeme co header říká, detekujeme co každý sloupec opravdu obsahuje
+// podle heuristik (LinkedIn URL pattern, IČO 8 cifer, email s @, atd.), namapujeme
+// na kanonické CONTACTS_HEADER pole, přepíšeme Sheet od základu.
+// ============================================================
+
+const STAVY = ['Nový', 'Ověřený', 'Osloven', 'Reaguje', 'Klient', 'Odmítnut'];
+const TYPY = ['Klient', 'Zprostředkovatel', 'Oboje'];
+const LINKEDIN_STAVY = ['Posláno', 'Přijato', 'Zpráva', 'Neposílat'];
+const KANALY = ['email', 'linkedin', 'telefon', 'osobně', 'doporučení', 'jiné'];
+
+// Silné heuristiky — jednoznačně rozpoznají pole z obsahu (nepotřebují header)
+const STRONG_DETECTORS = {
+    id:             s => /^c_[a-z0-9_]+$/i.test(s),
+    ico:            s => /^\d{8}$/.test(s),
+    linkedinUrl:    s => /^https?:\/\/.*linkedin\.com/i.test(s) || /^https?:\/\/(www\.)?google\.[a-z.]+\/search\?.*linkedin/i.test(s),
+    facebookUrl:    s => /^https?:\/\/.*(facebook\.com|fb\.com)/i.test(s),
+    email:          s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s),
+    typ:            s => TYPY.indexOf(s) !== -1,
+    priorita:       s => /^[123]$/.test(s),
+    stav:           s => STAVY.indexOf(s) !== -1,
+    linkedinStav:   s => LINKEDIN_STAVY.indexOf(s) !== -1,
+    osloven_kanal:  s => KANALY.indexOf(s.toLowerCase()) !== -1,
+    spolehlivost:   s => /(claude|openai|gemini)/i.test(s),
+    createdAt:      s => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s),
+    osloven_kdy:    s => /^\d{4}-\d{2}-\d{2}$/.test(s),
+    telefon:        s => /^\+?[\d][\d\s\-().\/]{8,}$/.test(s) && !/@/.test(s) && s.length < 25,
+    // Tagy = AI- prefix nebo seznam štítků oddělených čárkou; NEpřijímat jen "X, Y, Z" textový seznam
+    tagy:           s => /^(AI-(claude|openai|gemini)(,\s*AI-(claude|openai|gemini))*)$/i.test(s),
+    web:            s => /^https?:\/\//i.test(s) && !/linkedin\.com|facebook\.com/i.test(s) && !/google\.[a-z.]+\/search/i.test(s) && s.length < 200
+};
+
+// Slabé heuristiky — pro free-text pole (rozpoznávají jen pravděpodobně, ne s jistotou)
+const WEAK_DETECTORS = {
+    // Jméno + příjmení (volitelně 3. slovo); striktní pattern — žádné role keywordy v textu
+    kontaktniOsoba: s => /^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž'.\-]+(\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž'.\-]+){1,2}\.?$/.test(s)
+        && !/\b(Director|Manager|Partner|CEO|CFO|COO|CTO|Head|Chief|Founder|Owner|Member|Senior|Junior|Investment|Group|Capital|Partners|s\.r\.o\.|a\.s\.)\b/i.test(s),
+    // Firma — typický český business suffix nebo finanční/investiční slovo
+    firma: s => /\b(s\.\s?r\.\s?o\.|a\.\s?s\.|spol\.|SE)\b/i.test(s)
+        || /\b(Trust|Capital|Investments?|Partners?|Advisory|Asset Management|Holding|Group|Bank|Banka|Fund|Reality|Properties|Estate|Equity|Family Office)\b/i.test(s),
+    // Role — typicky začíná rolí, nebo obsahuje role keyword se separátorem
+    role: s => /^(Partner|Director|Managing|CEO|CFO|COO|CTO|Head|Chief|Vice|Senior|Junior|Lead|Member|Founder|Co-founder|Owner|Vedoucí|Insolvenční|Předseda|Investment|Group|Founding|Corporate|Samostatný|Ohlášený|Členské|Business)\b/i.test(s)
+        || /\b(Director|Manager|Partner|CEO|CFO|COO|CTO|Head of|Chief|Founder|Owner|VP|Vice President)\b/i.test(s),
+    // Sídlo — obsahuje typický adresní znak (PSČ, město, ulice marker)
+    sidlo: s => /\b(ulice|náměstí|třída|nám\.|Praha|Brno|Ostrava|Plzeň|Liberec|Olomouc|Hradec)\b/i.test(s)
+        || /\d{3}\s?\d{2}\s+[A-Z]/.test(s)
+        || /\bPSČ\b/i.test(s),
+    // Poznámka — typický cleanup marker, nebo víc vět (= víc teček) ve volném textu
+    poznamka: s => /LinkedIn cleanup|halucinace|Posláno|Přijato|—\s*[A-Z]/i.test(s) && s.length > 30
+        || (s.length > 120 && (s.match(/\./g) || []).length >= 2)
+};
+
+// Helper: kolik % vzorků splní detektor
+function ratio(samples, fn) {
+    if (samples.length === 0) return 0;
+    let n = 0;
+    for (const s of samples) if (fn(s)) n++;
+    return n / samples.length;
+}
+
+function detectColumnFields(dataRows, headerRow) {
+    const numCols = Math.max(headerRow.length, ...dataRows.map(r => (r || []).length));
+    const fields = new Array(numCols).fill(null);
+    const usedFields = new Set();
+
+    // Helper: vezme až N neprázdných vzorků ze sloupce c
+    function sampleCol(c, n = 12) {
+        const out = [];
+        for (let i = 0; i < dataRows.length && out.length < n; i++) {
+            const v = (dataRows[i] || [])[c];
+            const s = (v == null ? '' : String(v)).trim();
+            if (s) out.push(s);
+        }
+        return out;
+    }
+
+    // Cache vzorků
+    const colSamples = [];
+    for (let c = 0; c < numCols; c++) colSamples.push(sampleCol(c));
+
+    // Pass 1: silné heuristiky — ratio > 0.7 nutné aby přiřazení proběhlo
+    // Pořadí: nejjednoznačnější první (id, ico) abychom je nezískali na jiném sloupci
+    const strongOrder = ['id', 'ico', 'email', 'linkedinUrl', 'facebookUrl', 'linkedinStav',
+                         'typ', 'priorita', 'stav', 'osloven_kanal', 'spolehlivost',
+                         'osloven_kdy', 'telefon', 'tagy', 'web'];
+    for (const field of strongOrder) {
+        if (usedFields.has(field)) continue;
+        let bestCol = -1, bestRatio = 0;
+        for (let c = 0; c < numCols; c++) {
+            if (fields[c]) continue;
+            const r = ratio(colSamples[c], STRONG_DETECTORS[field]);
+            if (r > bestRatio && r >= 0.7) { bestRatio = r; bestCol = c; }
+        }
+        if (bestCol !== -1) {
+            fields[bestCol] = field;
+            usedFields.add(field);
+        }
+    }
+
+    // Pass 2: createdAt / updatedAt (oba ISO datumy) — přiřadí podle pořadí výskytu
+    if (!usedFields.has('createdAt') || !usedFields.has('updatedAt')) {
+        const dateCols = [];
+        for (let c = 0; c < numCols; c++) {
+            if (fields[c]) continue;
+            if (ratio(colSamples[c], STRONG_DETECTORS.createdAt) >= 0.7) dateCols.push(c);
+        }
+        if (dateCols.length >= 1 && !usedFields.has('createdAt')) {
+            fields[dateCols[0]] = 'createdAt';
+            usedFields.add('createdAt');
+        }
+        if (dateCols.length >= 2 && !usedFields.has('updatedAt')) {
+            fields[dateCols[1]] = 'updatedAt';
+            usedFields.add('updatedAt');
+        }
+    }
+
+    // Pass 3: slabé heuristiky pro free-text — pořadí podle striktnosti detektoru.
+    // kontaktniOsoba = strict regex jmen, role = startuje role keywordem, firma = legal suffix,
+    // sidlo = adresní znak (PSČ atd.), poznamka = cleanup marker NEBO víceřádek (poslední,
+    // nejvolnější, aby nesežrala role/firma).
+    const weakOrder = ['kontaktniOsoba', 'role', 'firma', 'sidlo', 'poznamka'];
+    for (const field of weakOrder) {
+        if (usedFields.has(field)) continue;
+        let bestCol = -1, bestRatio = 0;
+        for (let c = 0; c < numCols; c++) {
+            if (fields[c]) continue;
+            const r = ratio(colSamples[c], WEAK_DETECTORS[field]);
+            if (r > bestRatio && r >= 0.4) { bestRatio = r; bestCol = c; }
+        }
+        if (bestCol !== -1) {
+            fields[bestCol] = field;
+            usedFields.add(field);
+        }
+    }
+
+    // Pass 4: zbylé sloupce — header hint pokud sedí na nepoužité CONTACTS_HEADER pole
+    const headerHint = headerRow.map(h => (h || '').toString().trim());
+    for (let c = 0; c < numCols; c++) {
+        if (fields[c]) continue;
+        const hint = headerHint[c];
+        if (hint && CONTACTS_HEADER.indexOf(hint) !== -1 && !usedFields.has(hint)) {
+            fields[c] = hint;
+            usedFields.add(hint);
+        }
+    }
+
+    // Pass 5: poslední záchrana — chybějící CONTACTS_HEADER pole přiřaď zbylým sloupcům
+    // v kanonickém pořadí (tj. neassignované sloupce ZLEVA dostanou chybějící pole
+    // ze CONTACTS_HEADER, v původním pořadí)
+    const missingFields = CONTACTS_HEADER.filter(f => !usedFields.has(f));
+    for (let c = 0; c < numCols && missingFields.length > 0; c++) {
+        if (fields[c]) continue;
+        fields[c] = missingFields.shift();
+    }
+
+    return fields;
+}
+
+state.realignData = null;
+
+async function diagnoseAndRealignSheet() {
+    if (!state.spreadsheetId) {
+        toast('error', 'Sheet není připojený.');
+        return;
+    }
+    const resultEl = document.getElementById('realign-result');
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="font-size:13px;color:var(--text-mute);padding:8px;">Analyzuji obsah sloupců…</div>';
+
+    try {
+        const rows = await sheetsRead(SHEET_TABS.contacts);
+        if (!rows || rows.length < 2) {
+            resultEl.innerHTML = '<div class="info-note warning">Sheet je prázdný nebo nemá data — není co srovnávat.</div>';
+            return;
+        }
+
+        // Najít header row (řádek obsahující 'id' a aspoň 3 fields z CONTACTS_HEADER)
+        let headerRowIdx = -1;
+        for (let i = 0; i < Math.min(rows.length, 20); i++) {
+            const row = rows[i] || [];
+            const matchCount = row.filter(c => CONTACTS_HEADER.indexOf(c) !== -1).length;
+            if (matchCount >= 3 && row.indexOf('id') !== -1) {
+                headerRowIdx = i;
+                break;
+            }
+        }
+        if (headerRowIdx === -1) {
+            resultEl.innerHTML = '<div class="info-note danger">Header v Sheetu nenalezen (řádek s "id" + 3+ fieldy z CONTACTS_HEADER).</div>';
+            return;
+        }
+
+        const headerRow = rows[headerRowIdx];
+        const idIdx = headerRow.indexOf('id');
+        const dataRows = [];
+        for (let i = 0; i < rows.length; i++) {
+            if (i === headerRowIdx) continue;
+            const row = rows[i] || [];
+            const id = (row[idIdx] || '').toString().trim();
+            if (id && /^c_/.test(id)) dataRows.push(row);
+        }
+
+        if (dataRows.length === 0) {
+            resultEl.innerHTML = '<div class="info-note warning">Žádné datové řádky s ID — není co realignovat.</div>';
+            return;
+        }
+
+        // Heuristická detekce
+        const detected = detectColumnFields(dataRows, headerRow);
+        const numCols = detected.length;
+
+        // Postav porovnání header vs detekce
+        const mismatches = [];
+        const matches = [];
+        for (let c = 0; c < numCols; c++) {
+            const headerVal = (headerRow[c] || '').toString().trim();
+            const detectedVal = detected[c];
+            const sample = dataRows.slice(0, 3).map(r => (r[c] || '').toString().substring(0, 60)).filter(Boolean);
+            const entry = { col: c, headerVal: headerVal, detected: detectedVal, sample: sample };
+            if (headerVal !== detectedVal && detectedVal) {
+                mismatches.push(entry);
+            } else {
+                matches.push(entry);
+            }
+        }
+
+        // Postav canonical data podle detekce
+        const canonicalRows = dataRows.map(row => {
+            const obj = {};
+            CONTACTS_HEADER.forEach(f => obj[f] = '');
+            for (let c = 0; c < numCols; c++) {
+                const field = detected[c];
+                if (field && CONTACTS_HEADER.indexOf(field) !== -1) {
+                    obj[field] = (row[c] || '').toString();
+                }
+            }
+            return CONTACTS_HEADER.map(f => obj[f] || '');
+        });
+
+        state.realignData = { canonicalRows: canonicalRows, count: dataRows.length };
+
+        const previewTable =
+            '<table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:10px;">' +
+            '<thead><tr style="background:var(--surface-alt);">' +
+                '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-faint);">Sloupec</th>' +
+                '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-faint);">Header říká</th>' +
+                '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-faint);">Detekováno z obsahu</th>' +
+                '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-faint);">Příklad hodnot</th>' +
+            '</tr></thead><tbody>' +
+            mismatches.concat(matches).slice(0, 30).map(e => {
+                const isShift = e.headerVal !== e.detected && e.detected;
+                return '<tr style="' + (isShift ? 'background:var(--warning-tint);' : '') + '">' +
+                    '<td style="padding:5px 8px;font-family:var(--font-mono);">' + colLetter(e.col + 1) + '</td>' +
+                    '<td style="padding:5px 8px;font-family:var(--font-mono);">' + escapeHtml(e.headerVal || '—') + '</td>' +
+                    '<td style="padding:5px 8px;font-family:var(--font-mono);font-weight:' + (isShift ? '600' : '400') + ';">' + escapeHtml(e.detected || '—') + '</td>' +
+                    '<td style="padding:5px 8px;color:var(--text-mute);">' + escapeHtml((e.sample[0] || '').substring(0, 50)) + (e.sample[0] && e.sample[0].length > 50 ? '…' : '') + '</td>' +
+                '</tr>';
+            }).join('') +
+            '</tbody></table>';
+
+        const summary = mismatches.length === 0
+            ? '<div class="info-note success"><strong>Žádné posuny zjištěny.</strong> Header odpovídá obsahu sloupců. Realign není potřeba.</div>'
+            : '<div class="info-note warning"><strong>Detekováno ' + mismatches.length + ' posunutých sloupců.</strong> ' +
+              'Sheet se přepíše s kanonickým CONTACTS_HEADER (24 sloupců v původním pořadí). Data v ' + dataRows.length +
+              ' kontaktech zachovaná, jen přemapovaná na správné sloupce.<br><br>' +
+              '<strong>Drive History tě jistí</strong> — pokud něco bude blbě, vrátíš Sheet zpět (Soubor → Historie verzí).</div>';
+
+        resultEl.innerHTML = summary + previewTable +
+            (mismatches.length > 0
+                ? '<div style="margin-top:14px;display:flex;gap:10px;">' +
+                    '<button class="btn btn-primary" onclick="executeRealignByContent()">Přepsat Sheet kanonickým pořadím</button>' +
+                    '<button class="btn btn-ghost" onclick="document.getElementById(\'realign-result\').style.display=\'none\';state.realignData=null;">Zrušit</button>' +
+                  '</div>'
+                : '');
+    } catch (err) {
+        console.error('diagnoseAndRealignSheet error:', err);
+        resultEl.innerHTML = '<div class="info-note danger"><strong>Chyba při analýze:</strong> ' + escapeHtml(err.message || String(err)) + '</div>';
+    }
+}
+
+async function executeRealignByContent() {
+    if (!state.realignData) {
+        toast('error', 'Realign data nejsou připravena.');
+        return;
+    }
+    const { canonicalRows, count } = state.realignData;
+    const resultEl = document.getElementById('realign-result');
+    resultEl.innerHTML = '<div style="font-size:13px;color:var(--text-mute);padding:8px;">Přepisuji Sheet kanonickým pořadím — necas Sheet ani aplikaci…</div>';
+
+    try {
+        // 1. Clear A2:ZZ (vše krom row 1)
+        await sheetsClearAll(SHEET_TABS.contacts);
+
+        // 2. Write kanonický header na row 1 (24 cols, A:X)
+        await sheetsUpdateRow(SHEET_TABS.contacts, 1, CONTACTS_HEADER);
+
+        // 3. Append canonical data
+        if (canonicalRows.length > 0) {
+            await sheetsAppend(SHEET_TABS.contacts, canonicalRows);
+        }
+
+        await logActivity('', 'realign-content', 'Content-based realign: ' + count + ' kontaktů přemapováno na kanonický CONTACTS_HEADER');
+
+        resultEl.innerHTML = '<div class="info-note success"><strong>Hotovo.</strong> Sheet má teď kanonický header (24 sloupců A–X) a ' + count + ' kontaktů ve správných pozicích. Aplikace se obnoví…</div>';
+        toast('success', 'Realign hotový. ' + count + ' kontaktů.');
+
+        state.realignData = null;
+        await syncFromSheet();
+    } catch (err) {
+        console.error('executeRealignByContent error:', err);
+        resultEl.innerHTML = '<div class="info-note danger"><strong>Chyba uprostřed realigna:</strong> ' + escapeHtml(err.message || String(err)) +
+            '<br><br>Sheet může být v polovičním stavu. <strong>Otevři Sheet a obnov z Drive History.</strong></div>';
     }
 }
 
