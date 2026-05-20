@@ -722,8 +722,14 @@ function buildLoanDocUserContent(templateName, dataDescription, previousReplacem
 // - Před výstupem CELÉ znovu zreviduje (smlouva půjde rovnou klientovi)
 function buildLoanDocManualUserContent(templateName, dataDescription, templateText) {
     return 'Mám historickou šablonu úvěrové smlouvy ProfiLend (' + (templateName || 'smlouva') + ') z minulého dealu. Potřebuju ji upravit pro nového klienta podle dat níže. Šablona JE PŘEDVYPLNĚNÁ konkrétními údaji z minulé smlouvy (jména, IČO, sídla, částky, datumy, čísla LV, čísla řízení katastru, jména bank apod.).\n\n' +
-        '⚠ TENTO DOKUMENT PŮJDE ROVNOU KLIENTOVI — musí být precizní, profesionální a dávat smysl jako celek.\n\n' +
-        '=== TVŮJ POSTUP ===\n' +
+        '⚠ TENTO DOKUMENT PŮJDE ROVNOU KLIENTOVI — musí být precizní, profesionální a dávat smysl jako celek. Zároveň MUSÍ vypadat vizuálně IDENTICKY jako originální šablona (formátování zachovat 1:1).\n\n' +
+        '=== JAK PRACOVAT S TOUTO ÚLOHOU ===\n' +
+        '1. K této konverzaci jsem připojil ORIGINÁLNÍ .docx šablonu jako file attachment. Pracuj s NÍ — ne s plain text extraktem dole.\n' +
+        '2. Plain text extrakt dole slouží jen jako tvoje navigace v obsahu (najdeš v něm rychle co kde je, ale chybí mu formátování).\n' +
+        '3. Skutečné úpravy dělej v .docx přes Code Interpreter / Python (python-docx, openpyxl-docx apod.).\n' +
+        '4. Po úpravách udělej finální revizi (viz checklist níže).\n' +
+        '5. Vrať mi upravený .docx jako NOVÝ file attachment ke stažení.\n\n' +
+        '=== TVŮJ POSTUP ÚPRAV ===\n' +
         '1. PŘEČTI CELOU šablonu (smlouvu) a pochop strukturu, strany, zajištění, přílohy, kontext.\n' +
         '2. NAHRAĎ konkrétní údaje z minulého dealu novými hodnotami z DATA níže (jméno klienta, IČO, sídlo, částka, úrok, splatnost, datumy, čísla LV, kontakty, podpisové údaje).\n' +
         '3. SMAŽ irrelevantní pasáže pro nový deal:\n' +
@@ -735,18 +741,41 @@ function buildLoanDocManualUserContent(templateName, dataDescription, templateTe
         '4. PŘEFORMULUJ klauzule, které neodpovídají novému dealu (např. čerpání ve tranších vs jednorázové, poplatek z čerpané částky vs paušál).\n' +
         '5. AKTUALIZUJ křížové odkazy — pokud smažeš Přílohu 1C, smaž i odkazy "viz Příloha 1C" v hlavním textu.\n' +
         '6. KONZISTENCE — stejná hodnota se obvykle opakuje na mnoha místech (jméno klienta 20×, částka 5×). Zachyť VŠECHNY výskyty napříč dokumentem.\n\n' +
+        '=== ZACHOVÁNÍ FORMÁTOVÁNÍ (KRITICKÉ — DOKUMENT JDE KLIENTOVI) ===\n' +
+        'POVINNĚ zachovaj VEŠKERÉ vizuální formátování originální šablony. Když měníš obsah uvnitř formátovaného úseku, formátování PŘEPÍŠEŠ s novým obsahem — nevyhazuj ho.\n\n' +
+        'KONKRÉTNĚ to znamená:\n' +
+        '- TUČNÉ ZVÝRAZNĚNÍ (bold) — pokud je v šabloně tučně "Úvěrovaný:" před hodnotou, v upravené verzi MUSÍ zůstat tučně\n' +
+        '- KURZIVA (italic) — poznámky pod čarou, právní termíny, definice — zachovaj italic\n' +
+        '- PODTRŽENÍ (underline) — klíčové definice, podpisové linky\n' +
+        '- ODSAZENÍ (indentation) — levé / pravé odsazení odstavců, číslovaných seznamů, vnořených klauzulí ((a), (b), (c) atd.)\n' +
+        '- ČÍSLOVÁNÍ ČLÁNKŮ — automatické číslování (1., 1.1, 1.1.1, a), b)…). Pokud smažeš článek 4.3, NECHEJ číslování PŘEPOČÍTAT (nestane se 4.2, 4.4, 4.5 — bude 4.2, 4.3, 4.4) NEBO zachovej původní čísla a explicitně vynech smazaný (preferovaná varianta pro stabilitu cross-references)\n' +
+        '- NADPISY (headings) — Heading 1/2/3 styly s odpovídajícím formátováním (velikost, barva, mezery)\n' +
+        '- ZAROVNÁNÍ (alignment) — left / center / right / justify, podle toho jak je v šabloně\n' +
+        '- TABULKY — buňky, ohraničení, šířky sloupců, zarovnání obsahu, pozadí buněk, slučování buněk\n' +
+        '- FONTY — typ písma (typicky Aptos / Calibri / Times New Roman), velikost, barva\n' +
+        '- ŘÁDKOVÁNÍ a MEZERY mezi odstavci\n' +
+        '- PAGE BREAKS — pokud má šablona zalomení stránky (např. před Přílohou 1), zachovaj\n' +
+        '- PODPISOVÉ BLOKY — formát podpisového pole (řádky, popisky pod, sloupcové uspořádání Věřitel / Dlužník)\n' +
+        '- ZÁHLAVÍ a ZÁPATÍ — loga, čísla stránek, datumové stamps\n' +
+        '- ODRÁŽKY a SEZNAMY — bullet vs číslo, styl odrážky\n' +
+        '- HYPERLINKY — emaily (mailto:), webové odkazy\n\n' +
+        'PRAKTICKÝ PŘÍKLAD ZACHOVÁNÍ FORMÁTOVÁNÍ:\n' +
+        'Pokud v šabloně je: **Úvěrovaný:** _AGRI PARTNERS Nezamyslice s.r.o._ (tučné "Úvěrovaný:", kurziva jméno klienta)\n' +
+        'V upravené verzi MUSÍ být: **Úvěrovaný:** _Louve Group s.r.o._ (stále tučné "Úvěrovaný:", stále kurziva jméno)\n\n' +
+        'NIKDY nevyhazuj formátování jen proto, že upravuješ obsah. NIKDY nevracej obyčejný plain text. NIKDY nezjednodušuj strukturu.\n\n' +
         '=== FINÁLNÍ REVIZE (POVINNÁ PŘED VÝSTUPEM) ===\n' +
-        'Než mi vrátíš upravený dokument, projdi ho ZNOVU jako právník dělající due diligence:\n' +
+        'Než mi vrátíš upravený .docx, projdi ho ZNOVU jako právník dělající due diligence:\n' +
         '- Dává smysl jako celek pro NOVÝ deal? Nezůstaly tam logické rozpory?\n' +
         '- Odkazují všechny "viz článek X" / "dle Přílohy Y" na existující články/přílohy?\n' +
         '- Vyskytuje se kdekoli v dokumentu staré jméno klienta / staré IČO / staré LV / staré číslo řízení?\n' +
         '- Pokud jsi smazala přílohu, zmizely i všechny její reference z hlavního textu?\n' +
         '- Sedí čerpání a poplatky popsané v textu s parametry z DATA?\n' +
-        '- Pokud jsi smazala klauzuli o ručiteli/vinkulaci, není někde jinde v textu reference na ručitele/vinkulaci?\n\n' +
-        '=== ZACHOVÁNÍ FORMÁTOVÁNÍ ===\n' +
-        'POVINNĚ ZACHOVEJ vizuální formátování šablony — styly, headings, číslování článků, odsazení, fonty, tabulky, podpisové bloky. Výsledný DOCX musí vypadat IDENTICKY se šablonou (jen s upraveným obsahem). NEVRACEJ obyčejný text — vrať upravený .docx (file attachment).\n\n' +
+        '- Pokud jsi smazala klauzuli o ručiteli/vinkulaci, není někde jinde v textu reference na ručitele/vinkulaci?\n' +
+        '- FORMÁTOVÁNÍ: nechybí někde tučné/kurzíva/podtržení, které originál měl? Sedí číslování článků? Tabulky vypadají stejně? Otevři výsledný .docx mentálně a porovnej se šablonou — vypadá vizuálně IDENTICKY?\n\n' +
+        '=== VÝSTUP ===\n' +
+        'Vrať upravený .docx jako file attachment ke stažení. NEVRACEJ obyčejný text v chatu — pokud bys vrátila jen text, ztratím formátování a smlouva nebude prezentovatelná klientovi.\n\n' +
         dataDescription + '\n\n' +
-        '=== ŠABLONA (PLAIN TEXT EXTRAKT — originál mám v .docx file uploadu) ===\n\n' +
+        '=== ŠABLONA (PLAIN TEXT EXTRAKT — slouží jen jako navigace; skutečnou šablonu mám v .docx file uploadu) ===\n\n' +
         (templateText || '').substring(0, 50000);
 }
 
