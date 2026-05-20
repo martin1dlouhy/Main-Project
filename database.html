@@ -5658,33 +5658,70 @@ async function diagnoseAndRealignSheet() {
             return;
         }
 
-        // Najít header row (řádek obsahující 'id' a aspoň 3 fields z CONTACTS_HEADER)
-        let headerRowIdx = -1;
+        // Najít header row — řádek s ALESPOŇ 3 CONTACTS_HEADER fieldy. NEpoužíváme
+        // "obsahuje 'id'" jako požadavek, protože header může mít 'id' POZICI, kam
+        // ale data ve skutečnosti nevedou (kvůli shift). Stačí ho najít jako
+        // řádek nejvíc podobný CONTACTS_HEADER.
+        let headerRowIdx = -1, bestMatchCount = 0;
         for (let i = 0; i < Math.min(rows.length, 20); i++) {
             const row = rows[i] || [];
-            const matchCount = row.filter(c => CONTACTS_HEADER.indexOf(c) !== -1).length;
-            if (matchCount >= 3 && row.indexOf('id') !== -1) {
+            const matchCount = row.filter(c => CONTACTS_HEADER.indexOf((c || '').toString().trim()) !== -1).length;
+            if (matchCount >= 3 && matchCount > bestMatchCount) {
                 headerRowIdx = i;
-                break;
+                bestMatchCount = matchCount;
             }
         }
         if (headerRowIdx === -1) {
-            resultEl.innerHTML = '<div class="info-note danger">Header v Sheetu nenalezen (řádek s "id" + 3+ fieldy z CONTACTS_HEADER).</div>';
+            resultEl.innerHTML = '<div class="info-note danger">Header v Sheetu nenalezen (žádný řádek s 3+ fieldy z CONTACTS_HEADER).</div>';
             return;
         }
 
         const headerRow = rows[headerRowIdx];
-        const idIdx = headerRow.indexOf('id');
+
+        // KLÍČOVÉ: ID sloupec hledáme PODLE OBSAHU, ne podle header pozice. Pokud
+        // jsou data posunutá oproti hlavičce, header.indexOf('id') vrátí jinou
+        // pozici, než kde data ID skutečně leží. Scan: najdi sloupec, kde nejvíc
+        // řádků má "c_" prefix.
+        const maxCols = Math.max(headerRow.length, ...rows.map(r => (r || []).length));
+        let idColIdx = -1, bestIdMatches = 0;
+        for (let c = 0; c < maxCols; c++) {
+            let matches = 0;
+            for (let i = 0; i < rows.length; i++) {
+                if (i === headerRowIdx) continue;
+                const v = (rows[i] || [])[c];
+                const s = (v == null ? '' : String(v)).trim();
+                if (/^c_[a-z0-9_]+$/i.test(s)) matches++;
+            }
+            if (matches > bestIdMatches) {
+                bestIdMatches = matches;
+                idColIdx = c;
+            }
+        }
+
         const dataRows = [];
-        for (let i = 0; i < rows.length; i++) {
-            if (i === headerRowIdx) continue;
-            const row = rows[i] || [];
-            const id = (row[idIdx] || '').toString().trim();
-            if (id && /^c_/.test(id)) dataRows.push(row);
+        if (idColIdx === -1 || bestIdMatches === 0) {
+            // Žádný sloupec nemá c_ IDs — zkusíme druhou strategii:
+            // vezmeme všechny řádky, které nejsou header a mají aspoň 5 neprázdných hodnot
+            for (let i = 0; i < rows.length; i++) {
+                if (i === headerRowIdx) continue;
+                const row = rows[i] || [];
+                const nonEmpty = row.filter(v => (v != null && String(v).trim() !== '')).length;
+                if (nonEmpty >= 5) dataRows.push(row);
+            }
+        } else {
+            // ID sloupec nalezen — sbíráme jen řádky s validním c_ ID
+            for (let i = 0; i < rows.length; i++) {
+                if (i === headerRowIdx) continue;
+                const row = rows[i] || [];
+                const id = (row[idColIdx] || '').toString().trim();
+                if (id && /^c_/.test(id)) dataRows.push(row);
+            }
         }
 
         if (dataRows.length === 0) {
-            resultEl.innerHTML = '<div class="info-note warning">Žádné datové řádky s ID — není co realignovat.</div>';
+            resultEl.innerHTML = '<div class="info-note warning">Žádné datové řádky nenalezeny — Sheet asi opravdu nemá data, nebo má jiný formát ID. ' +
+                'Header je na řádku ' + (headerRowIdx + 1) + ', má ' + headerRow.length + ' sloupců. ' +
+                'Celkem řádků v Sheetu: ' + rows.length + '.</div>';
             return;
         }
 
