@@ -2081,7 +2081,15 @@
                     </div>
                     <button class="btn btn-secondary" onclick="diagnoseAndRealignSheet()" style="border-color:var(--warning);color:var(--warning);">Diagnostikovat a srovnat</button>
                 </div>
+                <div class="settings-row" style="margin-top:10px;border-top:1px solid var(--line-faint);padding-top:14px;">
+                    <div>
+                        <div class="settings-row-label">Zobrazit raw obsah Sheetu (debug)</div>
+                        <div class="settings-row-meta">Vypíše header + první 3 datové řádky tak, jak je Sheets API vrací. Pošli Claudemu screenshot pokud realign selhává.</div>
+                    </div>
+                    <button class="btn btn-ghost" onclick="dumpRawSheet()">Vypsat raw obsah</button>
+                </div>
                 <div id="realign-result" style="margin-top:14px;display:none;"></div>
+                <div id="raw-dump-result" style="margin-top:14px;display:none;"></div>
             </div>
 
             <div class="settings-panel">
@@ -2665,6 +2673,11 @@ const state = {
         segments: [],
         activity: []
     },
+    // Pokud syncFromSheet detekuje, že header pozice neodpovídají obsahu dat
+    // (např. linkedinUrl header říká P, ale URL data jsou v Q), uloží detail sem
+    // a všechny user-initiated writes na contacts (AI search, manual add, import)
+    // se zablokují přes refuseIfMisaligned() — aby se chyba šířila dál.
+    alignmentIssue: null,
     contacts: [],
     segments: [],           // loaded from Sheet (or seeded on first run)
     sources: [],
@@ -3057,20 +3070,35 @@ async function checkSheetsResponse(res, op) {
 
 async function sheetsAppend(tabName, rows) {
     if (!rows || rows.length === 0) return;
-    // KRITICKÉ: range = ENTIRE SHEET (bez !A1). Pokud bychom použili 'tabName!A1'
-    // (single cell) + INSERT_ROWS, Sheets API to interpretuje jako "insert at A1"
-    // a shift-uje existující data dolů (= nové řádky se objeví NAHOŘE, header se
-    // posune dolů). Range bez explicit cell = Sheets vyhledá table extent v celém
-    // sheetu a appendne na řádek za poslední vyplněný.
-    const range = encodeURIComponent(tabName);
-    const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
-        '/values/' + range + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
-    const res = await gfetch(url, {
-        method: 'POST',
+    // KRITICKÝ DESIGN: nepoužíváme Sheets API ':append' endpoint, protože jeho "table
+    // extent detection" je nedeterministická — Sheets sám hádá, kde tabulka začíná/končí,
+    // a podle toho rozhodne, kam přidat nové řádky. Když uhodne špatně (např. když některé
+    // sloupce mají trailing prázdné buňky), data se zapíší do shifted pozic = bug který
+    // jsme honili týdny.
+    //
+    // Místo toho: explicit 2-step. (1) přečteme aktuální počet řádků v listu (sloupec A
+    // jako ukazatel), (2) zapíšeme nové řádky via PUT na vypočítaný range A{n}:lastCol{m}.
+    // Žádná auto-detekce. Žádný shift. Cena: jedna extra API call. Stojí to za to.
+    const colARange = encodeURIComponent(tabName + '!A:A');
+    const url1 = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values/' + colARange;
+    const res1 = await gfetch(url1);
+    await checkSheetsResponse(res1, 'sheetsAppend.count(' + tabName + ')');
+    const data1 = await res1.json();
+    const currentRowCount = (data1.values || []).length; // 1-based: počet vyplněných řádků v A
+
+    const startRow = currentRowCount + 1;
+    const endRow = startRow + rows.length - 1;
+    const maxCols = Math.max.apply(null, rows.map(function (r) { return (r || []).length; }));
+    const lastCol = colLetter(maxCols);
+    const writeRange = encodeURIComponent(tabName + '!A' + startRow + ':' + lastCol + endRow);
+    const url2 = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
+        '/values/' + writeRange + '?valueInputOption=RAW';
+    const res2 = await gfetch(url2, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ values: rows })
     });
-    await checkSheetsResponse(res, 'sheetsAppend(' + tabName + ')');
+    await checkSheetsResponse(res2, 'sheetsAppend.write(' + tabName + ' @ row ' + startRow + ')');
 }
 
 async function sheetsRead(tabName) {
@@ -3178,6 +3206,20 @@ async function syncFromSheet() {
         state.headerOrders.segments = (segmentRows[0] || SEGMENTS_HEADER).slice();
         state.headerOrders.sources = (sourceRows[0] || SOURCES_HEADER).slice();
         state.headerOrders.activity = (activityRows[0] || ACTIVITY_HEADER).slice();
+
+        // SELF-HEALING: ověř, že header pozice odpovídají obsahu dat. Pokud ne (např.
+        // historická migrace posunula data, ale header zůstal v původním pořadí), upozorni
+        // uživatele AHNED, ne až po hodině přidávání kontaktů. Test: kde header říká
+        // "linkedinUrl", měly by tam být LinkedIn / Google search URLs. Pokud ne, alarm.
+        const alignmentIssue = detectAlignmentDrift(state.headerOrders.contacts, contactRows.slice(1, 11));
+        if (alignmentIssue) {
+            console.warn('Sheet alignment drift detected:', alignmentIssue);
+            toast('error', '⚠ POSUNUTÉ SLOUPCE: header říká "' + alignmentIssue.field + '" na sloupci ' + colLetter(alignmentIssue.headerCol + 1) +
+                  ', ale data v tom sloupci to nejsou. Nastavení → "Diagnostikovat a srovnat" před přidáváním kontaktů.');
+            state.alignmentIssue = alignmentIssue;
+        } else {
+            state.alignmentIssue = null;
+        }
 
         // Map data podle ACTUAL header z Sheetu (tolerantní k přesunu sloupců).
         state.contacts = rowsToObjects(contactRows, CONTACTS_HEADER, state.headerOrders.contacts);
@@ -3304,6 +3346,76 @@ function contactToRow(c) {
         ? state.headerOrders.contacts
         : CONTACTS_HEADER;
     return objectToRow(c, header);
+}
+
+// ============================================================
+// ALIGNMENT DRIFT DETECTION — porovná header pozice s obsahem dat.
+// Pokud header říká "linkedinUrl" na sloupci P, ale data v P obsahují role text,
+// vrátí info o posunu. NULL = OK, žádný drift.
+//
+// Princip: vezme 3 ANKER pole, která lze jednoznačně poznat z obsahu:
+//   - linkedinUrl (regex linkedin.com nebo google.com/search)
+//   - ico (8 cifer)
+//   - id (c_ prefix)
+// Pro každé pole najde POSITION v headeru i POSITION v datech. Pokud se liší
+// pro 2+ anchor fields, hlásí drift na prvním nesouladu.
+// ============================================================
+function detectAlignmentDrift(headerOrder, sampleRows) {
+    if (!headerOrder || headerOrder.length === 0) return null;
+    if (!sampleRows || sampleRows.length === 0) return null;
+
+    const anchors = [
+        { field: 'id',          test: s => /^c_[a-z0-9_]+$/i.test(s) },
+        { field: 'ico',         test: s => /^\d{8}$/.test(s) },
+        { field: 'linkedinUrl', test: s => /^https?:\/\/.*linkedin\.com/i.test(s) || /^https?:\/\/(www\.)?google\.[a-z.]+\/search\?.*linkedin/i.test(s) },
+        { field: 'email',       test: s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) }
+    ];
+
+    for (const a of anchors) {
+        const headerCol = headerOrder.indexOf(a.field);
+        if (headerCol === -1) continue; // pole v headeru chybí — separate issue
+
+        // Najdi sloupec, kde data nejvíc odpovídají testu
+        const maxCols = Math.max.apply(null, sampleRows.map(r => (r || []).length));
+        let bestCol = -1, bestMatches = 0;
+        for (let c = 0; c < maxCols; c++) {
+            let matches = 0;
+            for (const row of sampleRows) {
+                const v = ((row || [])[c] || '').toString().trim();
+                if (v && a.test(v)) matches++;
+            }
+            if (matches > bestMatches) { bestMatches = matches; bestCol = c; }
+        }
+
+        // Need alespoň 3 matches v sample, aby se to dalo brát vážně
+        if (bestMatches < 3) continue;
+
+        if (bestCol !== headerCol) {
+            return {
+                field: a.field,
+                headerCol: headerCol,
+                dataCol: bestCol,
+                offset: bestCol - headerCol,
+                evidence: bestMatches + ' řádků v sample s ' + a.field + ' obsahem'
+            };
+        }
+    }
+
+    return null; // žádný drift detekován
+}
+
+// Guard: pokud je detekovaný drift, odmítni jakýkoli zápis do contacts.
+// Zápis při driftu = nové řádky se zapíšou správně, ale starý drift zůstane,
+// = ještě větší zmatek. Lepší to zablokovat dokud se Sheet nesrovná.
+function refuseIfMisaligned(actionName) {
+    if (!state.alignmentIssue) return false;
+    const a = state.alignmentIssue;
+    toast('error',
+        '⚠ Sheet má posunuté sloupce (header říká "' + a.field + '" na ' + colLetter(a.headerCol + 1) +
+        ', data jsou na ' + colLetter(a.dataCol + 1) + '). ' + actionName +
+        ' by data ještě víc rozhodilo. Nastavení → "Diagnostikovat a srovnat" PŘED zápisem.'
+    );
+    return true;
 }
 
 // ============================================================
@@ -3448,6 +3560,7 @@ async function saveContact() {
         }
     } else {
         // CREATE
+        if (refuseIfMisaligned('Přidání kontaktu')) return;
         const newContact = Object.assign({
             id: generateId(),
             createdAt: now,
@@ -4005,6 +4118,8 @@ async function doImport() {
         toast('warning', 'Žádný řádek neměl vyplněnou firmu ani jméno.');
         return;
     }
+
+    if (refuseIfMisaligned('CSV import')) return;
 
     try {
         toast('info', 'Importuji ' + newContacts.length + ' kontaktů…');
@@ -4726,6 +4841,8 @@ async function applyContacts() {
         osloven_kdy: '', osloven_kanal: '',
         spolehlivost: (s._sources || []).join('+')
     }));
+
+    if (refuseIfMisaligned('Přidání AI kontaktů')) return;
 
     try {
         toast('info', 'Přidávám ' + newContacts.length + ' kontaktů…');
@@ -5830,6 +5947,74 @@ async function executeRealignByContent() {
         console.error('executeRealignByContent error:', err);
         resultEl.innerHTML = '<div class="info-note danger"><strong>Chyba uprostřed realigna:</strong> ' + escapeHtml(err.message || String(err)) +
             '<br><br>Sheet může být v polovičním stavu. <strong>Otevři Sheet a obnov z Drive History.</strong></div>';
+    }
+}
+
+// Debug: vypíše raw obsah Sheetu pro inspekci. Pomáhá diagnostikovat případy,
+// kdy realigner nenajde data nebo špatně detekuje sloupce — Martin pošle screenshot.
+async function dumpRawSheet() {
+    const el = document.getElementById('raw-dump-result');
+    el.style.display = 'block';
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-mute);padding:8px;">Čtu raw obsah Sheetu…</div>';
+
+    try {
+        const rows = await sheetsRead(SHEET_TABS.contacts);
+        const totalRows = rows.length;
+        const headerRow = rows[0] || [];
+        const sample = rows.slice(1, 4); // first 3 data rows
+
+        // Spočítat per-row length
+        const lengths = rows.slice(0, 10).map(r => (r || []).length);
+        const maxLen = Math.max.apply(null, rows.map(r => (r || []).length));
+
+        function cellHtml(v, maxChars) {
+            const s = (v == null ? '' : String(v)).trim();
+            if (!s) return '<em style="color:var(--text-faint);">∅</em>';
+            const truncated = s.substring(0, maxChars || 50) + (s.length > (maxChars || 50) ? '…' : '');
+            return escapeHtml(truncated);
+        }
+
+        let html = '<div class="info-note"><strong>Raw obsah listu Contacts:</strong><br>' +
+            '• Celkem řádků: ' + totalRows + '<br>' +
+            '• Header (row 1) má ' + headerRow.length + ' sloupců<br>' +
+            '• Max sloupců přes všechny řádky: ' + maxLen + '<br>' +
+            '• Lengths prvních 10 řádků: ' + lengths.join(', ') + '</div>';
+
+        html += '<div style="overflow-x:auto;margin-top:14px;">' +
+                '<table style="width:max-content;border-collapse:collapse;font-size:11px;font-family:var(--font-mono);">';
+
+        // Header row of TABLE = column letters
+        html += '<thead><tr style="background:var(--surface-alt);">' +
+                '<th style="padding:4px 8px;border-bottom:1px solid var(--line-faint);text-align:left;">Row</th>';
+        for (let c = 0; c < maxLen; c++) {
+            html += '<th style="padding:4px 8px;border-bottom:1px solid var(--line-faint);text-align:left;min-width:60px;">' + colLetter(c + 1) + '</th>';
+        }
+        html += '</tr></thead><tbody>';
+
+        // Row 1 = Sheet header
+        html += '<tr style="background:var(--warning-tint);">' +
+                '<td style="padding:4px 8px;border-bottom:1px solid var(--line-faint);font-weight:600;">1 (header)</td>';
+        for (let c = 0; c < maxLen; c++) {
+            html += '<td style="padding:4px 8px;border-bottom:1px solid var(--line-faint);">' + cellHtml(headerRow[c], 20) + '</td>';
+        }
+        html += '</tr>';
+
+        // First 3 data rows
+        sample.forEach((row, i) => {
+            html += '<tr>' +
+                    '<td style="padding:4px 8px;border-bottom:1px solid var(--line-faint);font-weight:600;">' + (i + 2) + '</td>';
+            for (let c = 0; c < maxLen; c++) {
+                html += '<td style="padding:4px 8px;border-bottom:1px solid var(--line-faint);">' + cellHtml((row || [])[c], 30) + '</td>';
+            }
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+
+        el.innerHTML = html;
+    } catch (err) {
+        console.error('dumpRawSheet error:', err);
+        el.innerHTML = '<div class="info-note danger"><strong>Chyba čtení:</strong> ' + escapeHtml(err.message || String(err)) + '</div>';
     }
 }
 
