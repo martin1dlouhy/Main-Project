@@ -2580,6 +2580,15 @@ const state = {
     tokenExpiry: 0,
     spreadsheetId: null,
     sheetTabIds: {},        // { Contacts: 0, Sources: 1234, ... }
+    // Aktuální pořadí sloupců v Sheetu per list (z hlavičkového řádku).
+    // Aplikace mapuje data podle těchto polí (ne podle indexu v CONTACTS_HEADER),
+    // takže Martin může v Sheetu sloupce přesouvat / přidávat vlastní / mít custom order.
+    headerOrders: {
+        contacts: [],
+        sources: [],
+        segments: [],
+        activity: []
+    },
     contacts: [],
     segments: [],           // loaded from Sheet (or seeded on first run)
     sources: [],
@@ -2933,20 +2942,30 @@ const SEGMENTS_HEADER = ['nazev', 'typ', 'priorita', 'useCase', 'pocetZdroju'];
 const ACTIVITY_HEADER = ['when', 'kontaktId', 'what', 'detail'];
 
 async function seedNewSpreadsheet() {
-    // Write headers
+    // Write headers v default order (nový Sheet → použijeme aplikační konstanty)
     await sheetsAppend(SHEET_TABS.contacts, [CONTACTS_HEADER]);
     await sheetsAppend(SHEET_TABS.sources, [SOURCES_HEADER]);
     await sheetsAppend(SHEET_TABS.segments, [SEGMENTS_HEADER]);
     await sheetsAppend(SHEET_TABS.activity, [ACTIVITY_HEADER]);
 
-    // Seed segments + sources from embedded markdown
-    const segRows = SEGMENTS_SEED.map(s => [s.nazev, s.typ, s.priorita, s.useCase, s.zdroje.length]);
+    // Pre-set headerOrders pro nově založený Sheet (= default)
+    state.headerOrders.contacts = CONTACTS_HEADER.slice();
+    state.headerOrders.sources = SOURCES_HEADER.slice();
+    state.headerOrders.segments = SEGMENTS_HEADER.slice();
+    state.headerOrders.activity = ACTIVITY_HEADER.slice();
+
+    // Seed segments + sources from embedded markdown — pomocí objectToRow
+    const segRows = SEGMENTS_SEED.map(s => objectToRow({
+        nazev: s.nazev, typ: s.typ, priorita: s.priorita, useCase: s.useCase, pocetZdroju: s.zdroje.length
+    }, SEGMENTS_HEADER));
     await sheetsAppend(SHEET_TABS.segments, segRows);
 
     const srcRows = [];
     SEGMENTS_SEED.forEach(s => {
         s.zdroje.forEach((z, idx) => {
-            srcRows.push([s.nazev, idx + 1, z.nazev, z.url, z.poznamka]);
+            srcRows.push(objectToRow({
+                segment: s.nazev, idx: idx + 1, nazev: z.nazev, url: z.url, poznamka: z.poznamka
+            }, SOURCES_HEADER));
         });
     });
     if (srcRows.length > 0) await sheetsAppend(SHEET_TABS.sources, srcRows);
@@ -3068,17 +3087,25 @@ async function syncFromSheet() {
             sheetsRead(SHEET_TABS.activity)
         ]);
 
-        // Migration: pokud header Sheet contacts neobsahuje všechny aktuální sloupce
-        // (např. nový linkedinStav přidaný v pozdější verzi), doplnit ho.
+        // Migration: pokud header Sheet contacts neobsahuje všechny aktuální pole
+        // (např. nový linkedinStav přidaný v pozdější verzi), append na konec
+        // (zachová existing order — Martin si může uspořádat sloupce jak chce).
         await migrateContactsHeader(contactRows);
 
-        state.contacts = rowsToObjects(contactRows, CONTACTS_HEADER);
+        // Detekuj aktuální pořadí sloupců (po migraci) — používané dále při čtení i zápisu.
+        state.headerOrders.contacts = (contactRows[0] || CONTACTS_HEADER).slice();
+        state.headerOrders.segments = (segmentRows[0] || SEGMENTS_HEADER).slice();
+        state.headerOrders.sources = (sourceRows[0] || SOURCES_HEADER).slice();
+        state.headerOrders.activity = (activityRows[0] || ACTIVITY_HEADER).slice();
+
+        // Map data podle ACTUAL header z Sheetu (tolerantní k přesunu sloupců).
+        state.contacts = rowsToObjects(contactRows, CONTACTS_HEADER, state.headerOrders.contacts);
         // Re-index rowIndex (2-based, +1 for header)
         state.contacts.forEach((c, i) => { c._rowIndex = i + 2; });
 
-        state.segments = rowsToObjects(segmentRows, SEGMENTS_HEADER);
-        state.sources = rowsToObjects(sourceRows, SOURCES_HEADER);
-        state.activity = rowsToObjects(activityRows, ACTIVITY_HEADER);
+        state.segments = rowsToObjects(segmentRows, SEGMENTS_HEADER, state.headerOrders.segments);
+        state.sources = rowsToObjects(sourceRows, SOURCES_HEADER, state.headerOrders.sources);
+        state.activity = rowsToObjects(activityRows, ACTIVITY_HEADER, state.headerOrders.activity);
 
         state.lastSync = new Date();
         document.getElementById('settings-sync-meta').textContent =
@@ -3091,9 +3118,10 @@ async function syncFromSheet() {
     }
 }
 
-// Generic migration helper — porovná header existujícího sheetu s očekávaným headerem a doplní rozdíl.
-// Vrací { tab, action: 'no-change'|'migrated'|'created'|'error', oldCount, newCount, error? }.
-// Existing data rows zůstávají, nové sloupce mají prázdné cell (rowsToObjects fallback = '').
+// Generic migration helper — porovná Sheet header s expectedHeader. Pokud Sheet chybí
+// některá pole z expectedHeader, APPENDNE je na konec (zachová existing order + případné
+// vlastní sloupce Martina). NIKDY nepřepisuje existing pořadí.
+// Vrací { tab, action, oldCount, newCount, addedFields?, extraFields?, customOrder? }.
 async function migrateSheetHeader(tabName, expectedHeader, opts) {
     opts = opts || {};
     try {
@@ -3104,21 +3132,41 @@ async function migrateSheetHeader(tabName, expectedHeader, opts) {
             rows = await sheetsRead(tabName);
         }
         if (!rows || rows.length === 0) {
-            // Prázdný sheet — jen zapíšeme header
+            // Prázdný sheet — zapíšeme default header
             await sheetsAppend(tabName, [expectedHeader]);
             return { tab: tabName, action: 'created', oldCount: 0, newCount: expectedHeader.length };
         }
-        const headerRow = rows[0] || [];
-        let needsUpdate = false;
-        for (let i = 0; i < expectedHeader.length; i++) {
-            if (headerRow[i] !== expectedHeader[i]) { needsUpdate = true; break; }
+        const actualHeader = (rows[0] || []).slice();
+        const missingFields = expectedHeader.filter(f => actualHeader.indexOf(f) === -1);
+        const extraFields = actualHeader.filter(h => h && expectedHeader.indexOf(h) === -1);
+        // Custom order = stejné fields, ale jiné pořadí než default
+        const customOrder = missingFields.length === 0 && extraFields.length === 0
+            && !actualHeader.every((h, i) => h === expectedHeader[i]);
+
+        if (missingFields.length === 0) {
+            return {
+                tab: tabName,
+                action: 'no-change',
+                oldCount: actualHeader.length,
+                newCount: actualHeader.length,
+                extraFields: extraFields.length > 0 ? extraFields : undefined,
+                customOrder: customOrder || undefined
+            };
         }
-        if (!needsUpdate) {
-            return { tab: tabName, action: 'no-change', oldCount: headerRow.length, newCount: headerRow.length };
-        }
-        await sheetsUpdateRow(tabName, 1, expectedHeader);
-        if (opts.cachedRows) opts.cachedRows[0] = expectedHeader.slice();
-        return { tab: tabName, action: 'migrated', oldCount: headerRow.length, newCount: expectedHeader.length };
+
+        // Append missing fields na konec — zachová existing order + vlastní sloupce
+        const newHeader = actualHeader.concat(missingFields);
+        await sheetsUpdateRow(tabName, 1, newHeader);
+        if (opts.cachedRows) opts.cachedRows[0] = newHeader.slice();
+        return {
+            tab: tabName,
+            action: 'migrated',
+            oldCount: actualHeader.length,
+            newCount: newHeader.length,
+            addedFields: missingFields,
+            extraFields: extraFields.length > 0 ? extraFields : undefined,
+            customOrder: customOrder || undefined
+        };
     } catch (err) {
         return { tab: tabName, action: 'error', error: (err && err.message) || String(err) };
     }
@@ -3134,20 +3182,47 @@ async function migrateContactsHeader(contactRows) {
     }
 }
 
-function rowsToObjects(rows, header) {
+// rowsToObjects: mapuje 2D Sheet data na pole objektů s klíči z expectedHeader.
+// Klíčové: používá actualHeader (= skutečné pořadí sloupců v Sheetu) k najití správné
+// pozice každého pole. Pokud Martin přesune sloupec, mapování stále funguje. Pokud
+// pole v Sheetu chybí (např. před migrací), vrátí prázdný string.
+function rowsToObjects(rows, expectedHeader, actualHeader) {
     if (!rows || rows.length < 1) return [];
-    const headerRow = rows[0];
+    const usedHeader = (actualHeader && actualHeader.length > 0) ? actualHeader : (rows[0] || expectedHeader);
+    const indexMap = {};
+    expectedHeader.forEach(field => {
+        indexMap[field] = usedHeader.indexOf(field);
+    });
     return rows.slice(1).map(row => {
         const obj = {};
-        header.forEach((key, i) => {
-            obj[key] = row[i] !== undefined ? row[i] : '';
+        expectedHeader.forEach(field => {
+            const i = indexMap[field];
+            obj[field] = (i >= 0 && row[i] !== undefined) ? row[i] : '';
         });
         return obj;
     });
 }
 
+// Generic: object → array v pořadí actualHeader (tj. ve stejném pořadí jako Sheet).
+// Pokud Sheet má sloupec, který objekt nemá, vrátí prázdný string.
+// Pokud actualHeader obsahuje vlastní sloupce Martina (mimo aplikační schema),
+// pošleme prázdný string, ale Sheets API zachová existing hodnotu? NE - update přepíše.
+// Proto by Martin neměl mít vlastní sloupce uvnitř aplikačního rozsahu. Pro vlastní
+// metadata použij sloupce ZA aplikačními (na konci) — tam aplikace neupdate-uje
+// (Sheet má víc sloupců než actualHeader si pamatuje).
+function objectToRow(obj, actualHeader) {
+    return actualHeader.map(field => {
+        const v = obj[field];
+        return (v !== undefined && v !== null) ? String(v) : '';
+    });
+}
+
+// Wrapper pro contacts — používá aktuální Sheet header z state.
 function contactToRow(c) {
-    return CONTACTS_HEADER.map(k => c[k] !== undefined && c[k] !== null ? String(c[k]) : '');
+    const header = (state.headerOrders.contacts && state.headerOrders.contacts.length > 0)
+        ? state.headerOrders.contacts
+        : CONTACTS_HEADER;
+    return objectToRow(c, header);
 }
 
 // ============================================================
@@ -3155,13 +3230,12 @@ function contactToRow(c) {
 // ============================================================
 async function logActivity(kontaktId, what, detail) {
     try {
-        await sheetsAppend(SHEET_TABS.activity, [[
-            new Date().toISOString(),
-            kontaktId || '',
-            what,
-            detail || ''
-        ]]);
-        state.activity.unshift({ when: new Date().toISOString(), kontaktId, what, detail });
+        const now = new Date().toISOString();
+        const obj = { when: now, kontaktId: kontaktId || '', what: what, detail: detail || '' };
+        const activityHeader = (state.headerOrders.activity && state.headerOrders.activity.length > 0)
+            ? state.headerOrders.activity : ACTIVITY_HEADER;
+        await sheetsAppend(SHEET_TABS.activity, [objectToRow(obj, activityHeader)]);
+        state.activity.unshift(obj);
     } catch (err) {
         console.warn('Activity log failed:', err);
     }
@@ -4579,13 +4653,23 @@ async function applySources() {
         return n > max ? n : max;
     }, 0);
 
+    // Použít aktuální Sheet header order (Martin si může přesouvat sloupce)
+    const sourcesHeader = (state.headerOrders.sources && state.headerOrders.sources.length > 0)
+        ? state.headerOrders.sources : SOURCES_HEADER;
+
     const newRows = toAdd.map(s => {
         nextIdx++;
         const poznamka = (s.poznamka || '') +
             (s.typZdroje ? ' [typ: ' + s.typZdroje + ']' : '') +
             (s.kvalita ? ' [kvalita: ' + s.kvalita + ']' : '') +
             ' [AI ' + (s._sources || []).join('+') + ']';
-        return [segmentNazev, nextIdx, s.nazev || '', s.url || '', poznamka.trim()];
+        return objectToRow({
+            segment: segmentNazev,
+            idx: nextIdx,
+            nazev: s.nazev || '',
+            url: s.url || '',
+            poznamka: poznamka.trim()
+        }, sourcesHeader);
     });
 
     try {
@@ -5202,22 +5286,35 @@ async function migrateStructureManually() {
     meta.textContent = 'Spuštěno ' + formatDateTime(new Date().toISOString());
     container.innerHTML = reports.map(r => {
         let icon, color, detail;
+        const extras = [];
         if (r.action === 'error') {
             icon = '✗'; color = 'var(--danger)';
             detail = 'Chyba: ' + (r.error || 'neznámá');
         } else if (r.action === 'migrated') {
             icon = '✓'; color = 'var(--success)';
-            detail = 'Migrováno ' + r.oldCount + ' → ' + r.newCount + ' sloupců (přidán chybějící header)';
+            detail = 'Doplněno ' + (r.addedFields || []).length + ' chybějících sloupců na konec: ' +
+                     (r.addedFields || []).join(', ') +
+                     ' (existující pořadí zachováno, ' + r.oldCount + ' → ' + r.newCount + ' sloupců)';
         } else if (r.action === 'created') {
             icon = '✓'; color = 'var(--success)';
             detail = 'Vytvořen header (' + r.newCount + ' sloupců)';
         } else {
             icon = '○'; color = 'var(--text-mute)';
-            detail = 'Header je v pořádku (' + r.newCount + ' sloupců, žádná změna)';
+            detail = 'Vše OK — všechna očekávaná pole v Sheetu jsou (' + r.newCount + ' sloupců).';
         }
+        if (r.customOrder) {
+            extras.push('Custom pořadí — sloupce v Sheetu nejsou v defaultním pořadí (aplikace to umí, mapuje podle názvu).');
+        }
+        if (r.extraFields && r.extraFields.length > 0) {
+            extras.push('Vlastní sloupce navíc (aplikace je ignoruje, můžeš si je používat): ' + r.extraFields.join(', '));
+        }
+        const extrasHtml = extras.length > 0
+            ? '<div style="color:var(--amber-warm);margin-top:4px;font-size:11.5px;">ⓘ ' + extras.map(escapeHtml).join('<br>ⓘ ') + '</div>'
+            : '';
         return '<div style="padding:10px 14px;margin-bottom:6px;background:var(--bg-input);border-left:3px solid ' + color + ';border-radius:6px;font-size:12.5px;">' +
             '<div style="color:var(--text);font-weight:500;">' + icon + ' List „' + escapeHtml(r.tab) + '"</div>' +
             '<div style="color:var(--text-mute);margin-top:4px;">' + escapeHtml(detail) + '</div>' +
+            extrasHtml +
         '</div>';
     }).join('');
 
