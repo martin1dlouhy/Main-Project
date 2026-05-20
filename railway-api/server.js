@@ -707,6 +707,45 @@ function buildLoanDocUserContent(templateName, dataDescription, previousReplacem
         (templateText || '').substring(0, 50000);
 }
 
+// Speciální varianta promptu pro MANUÁLNÍ COPY-PASTE do web AI (ChatGPT.com /
+// Claude.ai s file uploadem). Web AI má Code Interpreter / Python sandbox, umí
+// pracovat s celým DOCX a vrátit upravený soubor — takže instrukce jsou jiné než
+// pro naše API volání (které vrací jen JSON s find/replace páry).
+//
+// Klíčové rozdíly oproti API promptu:
+// - Vrátit UPRAVENÝ .docx (file attachment), ne JSON
+// - ZACHOVAT formátování (styly, headings, číslování, fonty, tabulky)
+// - Před výstupem CELÉ znovu zreviduje (smlouva půjde rovnou klientovi)
+function buildLoanDocManualUserContent(templateName, dataDescription, templateText) {
+    return 'Mám historickou šablonu úvěrové smlouvy ProfiLend (' + (templateName || 'smlouva') + ') z minulého dealu. Potřebuju ji upravit pro nového klienta podle dat níže. Šablona JE PŘEDVYPLNĚNÁ konkrétními údaji z minulé smlouvy (jména, IČO, sídla, částky, datumy, čísla LV, čísla řízení katastru, jména bank apod.).\n\n' +
+        '⚠ TENTO DOKUMENT PŮJDE ROVNOU KLIENTOVI — musí být precizní, profesionální a dávat smysl jako celek.\n\n' +
+        '=== TVŮJ POSTUP ===\n' +
+        '1. PŘEČTI CELOU šablonu (smlouvu) a pochop strukturu, strany, zajištění, přílohy, kontext.\n' +
+        '2. NAHRAĎ konkrétní údaje z minulého dealu novými hodnotami z DATA níže (jméno klienta, IČO, sídlo, částka, úrok, splatnost, datumy, čísla LV, kontakty, podpisové údaje).\n' +
+        '3. SMAŽ irrelevantní pasáže pro nový deal:\n' +
+        '   - Přílohy o nemovitostech, které nový klient v collateralItems NEMÁ\n' +
+        '   - Klauzule o ručiteli / vinkulaci / starém zástavním právu, pokud DATA odpovídající údaj nemá\n' +
+        '   - Čísla řízení katastru (V-XXXX/YYYY-ZZZ), pokud DATA neuvádí nové\n' +
+        '   - Staré zástavní banky (Raiffeisenbank, KB, ČSOB apod.), pokud DATA nemá existingPledge\n' +
+        '   - Historické datumy úvěrových komisí, verze šablony, schvalovací podpisy\n' +
+        '4. PŘEFORMULUJ klauzule, které neodpovídají novému dealu (např. čerpání ve tranších vs jednorázové, poplatek z čerpané částky vs paušál).\n' +
+        '5. AKTUALIZUJ křížové odkazy — pokud smažeš Přílohu 1C, smaž i odkazy "viz Příloha 1C" v hlavním textu.\n' +
+        '6. KONZISTENCE — stejná hodnota se obvykle opakuje na mnoha místech (jméno klienta 20×, částka 5×). Zachyť VŠECHNY výskyty napříč dokumentem.\n\n' +
+        '=== FINÁLNÍ REVIZE (POVINNÁ PŘED VÝSTUPEM) ===\n' +
+        'Než mi vrátíš upravený dokument, projdi ho ZNOVU jako právník dělající due diligence:\n' +
+        '- Dává smysl jako celek pro NOVÝ deal? Nezůstaly tam logické rozpory?\n' +
+        '- Odkazují všechny "viz článek X" / "dle Přílohy Y" na existující články/přílohy?\n' +
+        '- Vyskytuje se kdekoli v dokumentu staré jméno klienta / staré IČO / staré LV / staré číslo řízení?\n' +
+        '- Pokud jsi smazala přílohu, zmizely i všechny její reference z hlavního textu?\n' +
+        '- Sedí čerpání a poplatky popsané v textu s parametry z DATA?\n' +
+        '- Pokud jsi smazala klauzuli o ručiteli/vinkulaci, není někde jinde v textu reference na ručitele/vinkulaci?\n\n' +
+        '=== ZACHOVÁNÍ FORMÁTOVÁNÍ ===\n' +
+        'POVINNĚ ZACHOVEJ vizuální formátování šablony — styly, headings, číslování článků, odsazení, fonty, tabulky, podpisové bloky. Výsledný DOCX musí vypadat IDENTICKY se šablonou (jen s upraveným obsahem). NEVRACEJ obyčejný text — vrať upravený .docx (file attachment).\n\n' +
+        dataDescription + '\n\n' +
+        '=== ŠABLONA (PLAIN TEXT EXTRAKT — originál mám v .docx file uploadu) ===\n\n' +
+        (templateText || '').substring(0, 50000);
+}
+
 // =============================================
 // POST /api/generate-loan-doc/preview — vrátí sestavený prompt BEZ volání AI.
 // Žádná API náklady. Frontend "Náhled promptu" má tímto identický prompt
@@ -723,12 +762,17 @@ app.post('/api/generate-loan-doc/preview', function (req, res) {
     var systemPrompt = buildLoanDocSystemPrompt(templateName, passNumber);
     var dataDescription = buildLoanDocDataDescription(formData);
     var userContent = buildLoanDocUserContent(templateName, dataDescription, previousReplacements, templateText);
+    // Speciální variant pro manuální copy-paste do web AI (ChatGPT.com / Claude.ai)
+    // — vyžaduje upraveno DOCX jako file attachment, zachování formátování,
+    // finální revizi před výstupem (smlouva jde rovnou klientovi).
+    var manualUserContent = buildLoanDocManualUserContent(templateName, dataDescription, templateText);
 
     return res.status(200).json({
         success: true,
         systemPrompt: systemPrompt,
         dataDescription: dataDescription,
         userContent: userContent,
+        manualUserContent: manualUserContent,
         pass: passNumber,
         templateTextWasTruncated: (templateText || '').length > 50000,
         templateTextOriginalLength: (templateText || '').length

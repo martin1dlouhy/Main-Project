@@ -2141,11 +2141,20 @@
 
             <div class="prompt-section">
                 <div class="prompt-section-head">
-                    <strong>4. Kompletní user message</strong>
+                    <strong>4. Kompletní user message (pro naše API)</strong>
                     <span class="prompt-section-meta">Sloučené části 2 + 3 — to, co skutečně letí jako "user" role do API. (System instrukce z bodu 1 jde jako "system" role.)</span>
                     <button type="button" class="btn-mini" onclick="copyPromptSection('promptPreviewFull')">Kopírovat vše</button>
                 </div>
                 <textarea id="promptPreviewFull" class="prompt-preview-text prompt-preview-text-long" readonly></textarea>
+            </div>
+
+            <div class="prompt-section">
+                <div class="prompt-section-head">
+                    <strong>5. Pro manuální copy do web AI (ChatGPT.com / Claude.ai)</strong>
+                    <span class="prompt-section-meta">Speciální varianta pro web AI s file upload — instrukce vyžadují vrátit upravený .docx (file attachment, ne text), zachovat formátování šablony a před výstupem celé zrevidovat. Použij když chceš obejít naše API a nechat AI pracovat přímo s DOCX přes Code Interpreter.</span>
+                    <button type="button" class="btn-mini" onclick="copyPromptSection('promptPreviewManual')">Kopírovat</button>
+                </div>
+                <textarea id="promptPreviewManual" class="prompt-preview-text prompt-preview-text-long" readonly></textarea>
             </div>
 
             <div class="modal-actions">
@@ -3915,6 +3924,7 @@
             var dataEl = document.getElementById('promptPreviewData');
             var tplEl = document.getElementById('promptPreviewTemplate');
             var fullEl = document.getElementById('promptPreviewFull');
+            var manualEl = document.getElementById('promptPreviewManual');
             var tplInfo = document.getElementById('promptPreviewTemplateInfo');
 
             updateSelectedDocs();
@@ -3925,6 +3935,7 @@
             dataEl.value = 'Načítám…';
             tplEl.value = 'Načítám obsah šablony…';
             fullEl.value = 'Načítám…';
+            if (manualEl) manualEl.value = 'Načítám…';
             modal.classList.add('visible');
 
             // Bez vybrané šablony — ukážeme prompt + data, šablona prázdná.
@@ -3934,7 +3945,7 @@
                     formData: formData,
                     templateText: '',
                     templateName: '(žádná šablona vybraná)'
-                }, sysEl, dataEl, tplEl, fullEl, formData, '(žádná šablona vybraná)', '');
+                }, sysEl, dataEl, tplEl, fullEl, manualEl, formData, '(žádná šablona vybraná)', '');
                 return;
             }
 
@@ -3961,7 +3972,7 @@
                             formData: formData,
                             templateText: plainText,
                             templateName: template.name
-                        }, sysEl, dataEl, tplEl, fullEl, formData, template.name, plainText);
+                        }, sysEl, dataEl, tplEl, fullEl, manualEl, formData, template.name, plainText);
                     });
                 }).catch(function(err) {
                     tplEl.value = '(chyba při čtení šablony: ' + err.message + ')';
@@ -3971,7 +3982,7 @@
 
         // Volá backend /api/generate-loan-doc/preview a vyplní textareas.
         // Při selhání použije lokální fallback (zachová stávající chování).
-        function fetchPromptPreviewFromServer(payload, sysEl, dataEl, tplEl, fullEl, formData, templateName, plainText) {
+        function fetchPromptPreviewFromServer(payload, sysEl, dataEl, tplEl, fullEl, manualEl, formData, templateName, plainText) {
             return fetch(LOAN_API_BASE + '/api/generate-loan-doc/preview', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -3984,6 +3995,7 @@
                 sysEl.value = data.systemPrompt || '';
                 dataEl.value = data.dataDescription || '';
                 fullEl.value = data.userContent || '';
+                if (manualEl) manualEl.value = data.manualUserContent || '(server tuto variantu zatím nevrací — počkej na Railway deploy)';
                 // tplEl už je vyplněn z extractu před voláním (plainText)
             }).catch(function(err) {
                 console.warn('[loan-doc] Server prompt preview selhal, používám lokální fallback:', err);
@@ -3994,6 +4006,16 @@
                     dataEl.value + '\n\n' +
                     '=== ŠABLONA SMLOUVY ===\n\n' +
                     (plainText || '').substring(0, 50000);
+                if (manualEl) {
+                    // Fallback manual prompt — kratší verze, klíčové instrukce zachované
+                    manualEl.value = 'Mám historickou šablonu úvěrové smlouvy ProfiLend (' + templateName + ') z minulého dealu. Potřebuju ji upravit pro nového klienta podle dat níže. Šablona JE PŘEDVYPLNĚNÁ konkrétními údaji z minulé smlouvy.\n\n' +
+                        '⚠ TENTO DOKUMENT PŮJDE ROVNOU KLIENTOVI — musí být precizní, profesionální a dávat smysl jako celek.\n\n' +
+                        'Postup: 1) Přečti celou šablonu. 2) Nahraď konkrétní údaje z minulého dealu novými hodnotami z DATA. 3) Smaž irrelevantní pasáže (přílohy o nemovitostech, které nový klient nemá; klauzule o starých LV / staré bance / staré řízení katastru). 4) Přeformuluj klauzule co neodpovídají novému dealu (čerpání, poplatky). 5) Aktualizuj křížové odkazy. 6) Před výstupem celé zrevidij — žádné historické zbytky, žádné odkazy na smazané přílohy, smlouva dává smysl jako celek.\n\n' +
+                        '⚠ ZACHOVEJ formátování šablony (styly, headings, číslování, fonty, tabulky). Vrať upravený .docx (file attachment, ne plain text).\n\n' +
+                        dataEl.value + '\n\n' +
+                        '=== ŠABLONA (PLAIN TEXT EXTRAKT — originál v file uploadu) ===\n\n' +
+                        (plainText || '').substring(0, 50000);
+                }
                 showToast('Náhled promptu: server nedostupný — používám lokální verzi (může být zastaralá)', 'info', 5000);
             });
         }
