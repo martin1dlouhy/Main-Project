@@ -2057,6 +2057,20 @@
             </div>
 
             <div class="settings-panel">
+                <h4>Opravit strukturu Sheetu (header na řádek 1)</h4>
+                <p class="panel-desc">Pokud se header v Sheetu posune ze řádku 1 dolů (např. nedávno objevený bug v <code>sheetsAppend</code>, který vkládal nové AI kontakty na začátek místo na konec), nebo když asistentka omylem přesune řádky — tento nástroj přepíše Sheet kompletně: header na řádek 1, všechny kontakty pod něj. Existující data se nezmění (jen pořadí v Sheetu), aplikace si je čte podle ID.</p>
+                <p class="panel-desc"><strong>Bezpečnost:</strong> akce přečte aktuální Sheet, najde header (kdekoliv je), data podle něho. Pak smaže obsah listu (kromě řádku 1) a napíše ho znovu od řádku 1 dolů. Pokud něco selže uprostřed, aktuální data v Sheetu mohou být dočasně nekompletní — proto je aplikace ti před spuštěním ukáže preview a vyžádá si potvrzení.</p>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Restrukturalizace listu Contacts</div>
+                        <div class="settings-row-meta">Najde header kdekoli v listu, přepíše Sheet od řádku 1.</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="restoreSheetStructure()" style="border-color:var(--warning);color:var(--warning);">Opravit strukturu</button>
+                </div>
+                <div id="restore-result" style="margin-top:14px;display:none;"></div>
+            </div>
+
+            <div class="settings-panel">
                 <h4>Vyčistit AI LinkedIn URLs (halucinace)</h4>
                 <p class="panel-desc">AI vyhledávač generuje profilové LinkedIn URLs (např. <code style="font-family:var(--font-mono);font-size:11.5px;color:var(--amber-warm);">linkedin.com/in/jan-novak</code>) ze jména osoby — tyto URLs často vedou na 404, protože LinkedIn slug obsahuje hash, který AI neumí uhodnout. Akce projde Tvé AI kontakty (mají tag <code>AI-claude/openai/gemini</code>), najde podezřelé URLs a nahradí je <strong>vyhledávacími URLs</strong> (klikneš → LinkedIn search s předvyplněným jménem+firmou → vybereš správný profil → uložíš zpět). Původní URL se zachová v poznámce.</p>
                 <div class="settings-row">
@@ -3028,10 +3042,12 @@ async function checkSheetsResponse(res, op) {
 
 async function sheetsAppend(tabName, rows) {
     if (!rows || rows.length === 0) return;
-    // Pro UPDATE/APPEND musíme range specifikovat jako A1:LASTCOL aby Sheets API
-    // nepřepisovala existující data jiných sloupců. Range "A1" by Sheets vzal jako
-    // single cell a multi-column values by buď silently ignored nebo failed.
-    const range = encodeURIComponent(tabName + '!A1');
+    // KRITICKÉ: range = ENTIRE SHEET (bez !A1). Pokud bychom použili 'tabName!A1'
+    // (single cell) + INSERT_ROWS, Sheets API to interpretuje jako "insert at A1"
+    // a shift-uje existující data dolů (= nové řádky se objeví NAHOŘE, header se
+    // posune dolů). Range bez explicit cell = Sheets vyhledá table extent v celém
+    // sheetu a appendne na řádek za poslední vyplněný.
+    const range = encodeURIComponent(tabName);
     const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
         '/values/' + range + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS';
     const res = await gfetch(url, {
@@ -5318,6 +5334,120 @@ function frontendDedupeDeep(arrays) {
         return ca - cb;
     });
     return out;
+}
+
+// ============================================================
+// RESTORE SHEET STRUCTURE — přepiše list Contacts od řádku 1
+// Použití když:
+//  - Header se posunul kvůli bugu v sheetsAppend (insertes at A1 instead of end)
+//  - Asistentka omylem přesunula řádky / vložila prázdné nahoru
+//  - Sheet má prázdné mezery mezi datovými řádky
+// Bezpečnost: read → confirm → clear → write. Pokud něco padne uprostřed,
+// data v Sheetu mohou být dočasně nekompletní — proto je preview + confirm.
+// ============================================================
+async function restoreSheetStructure() {
+    if (!state.spreadsheetId) {
+        toast('error', 'Sheet není připojený.');
+        return;
+    }
+
+    const resultEl = document.getElementById('restore-result');
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<div style="font-size:13px;color:var(--text-mute);padding:8px;">Analyzuji Sheet…</div>';
+
+    try {
+        // 1. Read raw Sheet
+        const rows = await sheetsRead(SHEET_TABS.contacts);
+        if (!rows || rows.length === 0) {
+            resultEl.innerHTML = '<div class="info-note warning">Sheet je prázdný — není co opravovat.</div>';
+            return;
+        }
+
+        // 2. Najít header row (řádek obsahující 'id' nebo aspoň 3 fields z CONTACTS_HEADER)
+        let headerRowIdx = -1;
+        for (let i = 0; i < Math.min(rows.length, 20); i++) {
+            const row = rows[i] || [];
+            const matchCount = row.filter(cell => CONTACTS_HEADER.indexOf(cell) !== -1).length;
+            if (matchCount >= 3 && row.indexOf('id') !== -1) {
+                headerRowIdx = i;
+                break;
+            }
+        }
+        if (headerRowIdx === -1) {
+            resultEl.innerHTML = '<div class="info-note danger">Nepodařilo se najít header v Sheetu (hledám řádek obsahující "id" a aspoň 3 další pole z CONTACTS_HEADER). Strukturu opravím jen pokud poznám header.</div>';
+            return;
+        }
+
+        const headerRow = rows[headerRowIdx];
+
+        // 3. Sebrat data — všechny řádky kromě header který obsahují platné id (= c_ prefix)
+        const dataRows = [];
+        const idIdx = headerRow.indexOf('id');
+        for (let i = 0; i < rows.length; i++) {
+            if (i === headerRowIdx) continue;
+            const row = rows[i] || [];
+            const id = (row[idIdx] || '').toString().trim();
+            if (id && /^c_/.test(id)) {
+                dataRows.push(row);
+            }
+        }
+
+        // 4. Preview
+        const preview = '<div class="info-note">' +
+            '<strong>Připraveno k opravě:</strong><br>' +
+            '• Header nalezen na řádku ' + (headerRowIdx + 1) + ' (přesune se na řádek 1)<br>' +
+            '• Datových řádků: ' + dataRows.length + '<br>' +
+            '• Header bude mít ' + headerRow.length + ' sloupců<br>' +
+            '• Sheet bude přepsán: řádek 1 = header, řádky 2 až ' + (dataRows.length + 1) + ' = data<br>' +
+            '<br>Chceš pokračovat?</strong>' +
+            '</div>' +
+            '<div style="margin-top:14px;display:flex;gap:10px;">' +
+                '<button class="btn btn-primary" onclick="executeRestoreSheetStructure()">Provést opravu</button>' +
+                '<button class="btn btn-ghost" onclick="document.getElementById(\'restore-result\').style.display=\'none\'">Zrušit</button>' +
+            '</div>';
+
+        // Uložit data pro execute
+        state.restoreSheetData = { headerRow: headerRow, dataRows: dataRows };
+        resultEl.innerHTML = preview;
+    } catch (err) {
+        console.error('restoreSheetStructure analyze error:', err);
+        resultEl.innerHTML = '<div class="info-note danger"><strong>Chyba při analýze Sheetu:</strong> ' + escapeHtml(err.message || String(err)) + '</div>';
+    }
+}
+
+async function executeRestoreSheetStructure() {
+    if (!state.restoreSheetData) {
+        toast('error', 'Restore data nejsou připravena.');
+        return;
+    }
+    const { headerRow, dataRows } = state.restoreSheetData;
+    const resultEl = document.getElementById('restore-result');
+    resultEl.innerHTML = '<div style="font-size:13px;color:var(--text-mute);padding:8px;">Přepisuji Sheet — nečas Sheet ani aplikaci…</div>';
+
+    try {
+        // 1. Clear entire list (kromě header který přepíšeme)
+        await sheetsClearAll(SHEET_TABS.contacts);
+
+        // 2. Write header on row 1
+        await sheetsUpdateRow(SHEET_TABS.contacts, 1, headerRow);
+
+        // 3. Append data rows
+        if (dataRows.length > 0) {
+            await sheetsAppend(SHEET_TABS.contacts, dataRows);
+        }
+
+        await logActivity('', 'restore-structure', 'Sheet Contacts restrukturalizován: header na řádek 1, ' + dataRows.length + ' kontaktů pod ním');
+
+        resultEl.innerHTML = '<div class="info-note success"><strong>Hotovo.</strong> Sheet má teď header na řádku 1 a ' + dataRows.length + ' kontaktů pod ním. Aplikace se obnoví…</div>';
+        toast('success', 'Sheet restrukturalizován. ' + dataRows.length + ' kontaktů.');
+
+        state.restoreSheetData = null;
+        await syncFromSheet();
+    } catch (err) {
+        console.error('executeRestoreSheetStructure error:', err);
+        resultEl.innerHTML = '<div class="info-note danger"><strong>Chyba uprostřed restrukturalizace:</strong> ' + escapeHtml(err.message || String(err)) +
+            '<br><br>Sheet může být v polovičním stavu. <strong>Otevři Sheet a zkontroluj data před dalším pokusem.</strong> Pokud něco chybí, najdi ho v Drive History (Soubor → Historie verzí).</div>';
+    }
 }
 
 // ============================================================
