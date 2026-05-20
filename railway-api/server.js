@@ -1911,9 +1911,7 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '      "email": "veřejný email | null",',
             '      "telefon": "veřejný tel | null",',
             '      "web": "https://… | null",',
-            (ctx.preferLinkedIn
-                ? '      "linkedinUrl": "https://linkedin.com/in/… (POVINNÉ pro tuto variantu — nesmí být null)",'
-                : '      "linkedinUrl": "https://linkedin.com/in/… | null",'),
+            '      "linkedinUrl": "BUĎ ověřená profilová URL https://linkedin.com/in/{slug} NEBO vyhledávací URL https://www.linkedin.com/search/results/people/?keywords=… NEBO null",',
             '      "sidlo": "adresa | null",',
             '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
             '    }',
