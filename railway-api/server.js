@@ -1686,6 +1686,7 @@ app.post('/api/database/find-contacts', async function (req, res) {
     var region = (body.region || 'celá ČR').toString().trim();
     var maxResults = Math.min(80, Math.max(5, parseInt(body.maxResults) || 20));
     var thorough = !!body.thorough; // hloubkový průzkum — vyšší max_uses + max_tokens + agresivnější prompt
+    var preferLinkedIn = !!body.preferLinkedIn; // jen mode=contacts — AI cílí jen na osoby s veřejným LinkedIn profilem
     var targetContact = body.targetContact || null; // pro mode=deep
 
     // Validace mode-specific inputů
@@ -1707,7 +1708,10 @@ app.post('/api/database/find-contacts', async function (req, res) {
         region: region,
         maxResults: maxResults,
         targetContact: targetContact,
-        thorough: thorough
+        thorough: thorough,
+        preferLinkedIn: preferLinkedIn,
+        existingContactsSummary: body.existingContactsSummary || [],
+        existingSourceUrls: existingSourceUrls
     });
 
     console.log('[find-contacts] mode=' + mode + ' segment="' + segmentNazev + '" max=' + maxResults + ' thorough=' + thorough + ' START');
@@ -1891,6 +1895,9 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '- Cílíme na decision-makery: Partner, Managing Partner, Director, CEO, Owner, Head of, Senior',
             '- Vyhni se juniorům, asistentům, info@/contact@ adresám',
             '- Email/telefon/LinkedIn = jen pokud je v reálu veřejně dostupné. Jinak null.',
+            (ctx.preferLinkedIn
+                ? '- PRIORITA LINKEDIN: Vrať POUZE kontakty s veřejně dohledatelným LinkedIn profilem. Pokud kontakt LinkedIn nemá nebo ho nedohledáš, raději ho vynech a najdi jiného. LinkedIn URL je v této variantě POVINNÉ pole (nesmí být null).'
+                : ''),
             thoroughInstr,
             '',
             (ctx.manual ? 'STRUKTURA JSON ODPOVĚDI (jak ji obalit viz pokyn na konci):' : 'FORMÁT ODPOVĚDI: vrať POUZE platný JSON, bez markdown obalu.'),
@@ -1904,7 +1911,9 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '      "email": "veřejný email | null",',
             '      "telefon": "veřejný tel | null",',
             '      "web": "https://… | null",',
-            '      "linkedinUrl": "https://linkedin.com/in/… | null",',
+            (ctx.preferLinkedIn
+                ? '      "linkedinUrl": "https://linkedin.com/in/… (POVINNÉ pro tuto variantu — nesmí být null)",'
+                : '      "linkedinUrl": "https://linkedin.com/in/… | null",'),
             '      "sidlo": "adresa | null",',
             '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
             '    }',

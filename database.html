@@ -1880,6 +1880,16 @@
                     Vyšší max_uses web search (25 vs. 8) + vyšší max_tokens (16k vs. 8k) + agresivnější prompt. ~3–4× delší čas (2–4 min) a ~3–4× vyšší cena u API. V manuálním módu zdarma, ale v chatu Claude/ChatGPT může trvat 5–15 min.
                 </div>
 
+                <!-- Preferovat kontakty s LinkedIn profilem (jen contacts mode) -->
+                <label class="vyhl-thorough" id="vyhl-linkedin-pref-wrap">
+                    <input type="checkbox" id="vyhl-linkedin-pref">
+                    <span class="thorough-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                    <span>Preferovat kontakty s LinkedIn profilem</span>
+                </label>
+                <div class="vyhl-thorough-meta" id="vyhl-linkedin-pref-meta">
+                    AI cílí přednostně na osoby s veřejně dohledatelným LinkedIn profilem (chceš jim posílat pozvánky/zprávy). Kontakty bez LinkedIn URL vyřadí. Užitečné, když plánuješ LinkedIn outreach campaign.
+                </div>
+
                 <!-- Auto / Manual toggle -->
                 <div class="vyhl-source-toggle">
                     <button class="active" data-source="auto" onclick="setVyhlSource('auto')">Auto (API)</button>
@@ -4108,6 +4118,13 @@ function setVyhlMode(mode) {
     if (thoroughWrap) thoroughWrap.style.display = showThorough ? 'flex' : 'none';
     if (thoroughMeta) thoroughMeta.style.display = showThorough ? 'block' : 'none';
 
+    // LinkedIn preference checkbox: jen contacts mode (sources jsou weby, deep je 1 osoba)
+    const linkedinPrefWrap = document.getElementById('vyhl-linkedin-pref-wrap');
+    const linkedinPrefMeta = document.getElementById('vyhl-linkedin-pref-meta');
+    const showLinkedinPref = mode === 'contacts';
+    if (linkedinPrefWrap) linkedinPrefWrap.style.display = showLinkedinPref ? 'flex' : 'none';
+    if (linkedinPrefMeta) linkedinPrefMeta.style.display = showLinkedinPref ? 'block' : 'none';
+
     // Skryj předchozí výsledky a status (jiný mode = jiná data)
     document.getElementById('vyhl-results-wrap').style.display = 'none';
     document.getElementById('vyhl-status').style.display = 'none';
@@ -4193,6 +4210,7 @@ function buildAIPayload() {
         const segmentContacts = state.contacts
             .filter(c => c.segment === segmentNazev && (c.firma || c.kontaktniOsoba))
             .map(c => ({ firma: c.firma || '', kontaktniOsoba: c.kontaktniOsoba || '' }));
+        const preferLinkedIn = document.getElementById('vyhl-linkedin-pref').checked;
         return {
             payload: {
                 mode: 'contacts',
@@ -4203,9 +4221,12 @@ function buildAIPayload() {
                 existingContactsSummary: segmentContacts,              // pro prompt (jen tento segment)
                 region: document.getElementById('vyhl-region').value.trim() || 'celá ČR',
                 maxResults: parseInt(document.getElementById('vyhl-max').value) || 20,
-                thorough: thorough
+                thorough: thorough,
+                preferLinkedIn: preferLinkedIn
             },
-            label: 'kontakty pro „' + segmentNazev + '"' + (thorough ? ' (hloubkový)' : '')
+            label: 'kontakty pro „' + segmentNazev + '"' +
+                   (thorough ? ' (hloubkový)' : '') +
+                   (preferLinkedIn ? ' (jen s LinkedIn)' : '')
         };
     } else if (mode === 'sources') {
         const segmentNazev = document.getElementById('vyhl-segment-sources').value;
@@ -4746,6 +4767,9 @@ function buildPromptFE(mode, ctx) {
             '- Cílíme na decision-makery: Partner, Managing Partner, Director, CEO, Owner, Head of, Senior',
             '- Vyhni se juniorům, asistentům, info@/contact@ adresám',
             '- Email/telefon/LinkedIn = jen pokud je v reálu veřejně dostupné. Jinak null.',
+            (ctx.preferLinkedIn
+                ? '- PRIORITA LINKEDIN: Vrať POUZE kontakty s veřejně dohledatelným LinkedIn profilem. Pokud kontakt LinkedIn nemá nebo ho nedohledáš, raději ho vynech a najdi jiného. LinkedIn URL je v této variantě POVINNÉ pole (nesmí být null).'
+                : ''),
             thoroughInstr,
             '',
             (ctx.manual ? 'STRUKTURA JSON ODPOVĚDI (jak ji obalit viz pokyn na konci):' : 'FORMÁT ODPOVĚDI: vrať POUZE platný JSON, bez markdown obalu.'),
@@ -4759,7 +4783,9 @@ function buildPromptFE(mode, ctx) {
             '      "email": "veřejný email | null",',
             '      "telefon": "veřejný tel | null",',
             '      "web": "https://… | null",',
-            '      "linkedinUrl": "https://linkedin.com/in/… | null",',
+            (ctx.preferLinkedIn
+                ? '      "linkedinUrl": "https://linkedin.com/in/… (POVINNÉ pro tuto variantu — nesmí být null)",'
+                : '      "linkedinUrl": "https://linkedin.com/in/… | null",'),
             '      "sidlo": "adresa | null",',
             '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
             '    }',
