@@ -2163,6 +2163,7 @@
             </div>
 
             <div class="modal-actions">
+                <button class="btn btn-generate btn-small" onclick="savePromptCaseToOverview()" title="Uloží formulářová data + vybrané šablony do Přehledu — i pro manuální workflow přes web AI (case je dostupný napříč PC při Drive sync)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Uložit do Přehledu</button>
                 <button class="btn btn-outline btn-small" onclick="closeModal('promptPreviewModal')">Zavřít</button>
             </div>
         </div>
@@ -4966,6 +4967,42 @@
             saveToDb('documents', data, function(id) {
                 if (id) {
                     showToast('Sada dokumentů uložena', 'success');
+                }
+            });
+        }
+
+        // Uloží case z modálu Náhledu promptu — pro manuální workflow (Martin
+        // paste do ChatGPT.com / Claude.ai, generuje .docx mimo naši aplikaci,
+        // ale potřebuje historii klienta v Přehledu). Atribut manualGenerated=true
+        // umožňuje v budoucnu odlišit od API generace.
+        function savePromptCaseToOverview() {
+            updateSelectedDocs();
+            var formData = collectFormData();
+            if (!formData.uvereovany || !formData.uvereovany.trim()) {
+                showToast('Vyplň alespoň jméno dlužníka — bez něj se case neuloží', 'error', 5000);
+                return;
+            }
+            var data = {
+                formData: formData,
+                templates: selectedTemplates,
+                generatedAt: new Date().toISOString(),
+                manualGenerated: true
+            };
+            saveToDb('documents', data, function(id) {
+                if (id) {
+                    showToast('Case uložen do Přehledu (manuální workflow). Otevřeš znovu z Přehledu pro editaci.', 'success', 5000);
+                    // Drive sync — stejné chování jako saveDocumentSet wrap v init.
+                    // Bez toho by manuální case existoval jen lokálně (nepřenese se
+                    // na druhý PC při Drive sync).
+                    if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
+                        getAllFromDB('documents', function(docs) {
+                            if (!docs) return;
+                            GDriveSync.saveFile('documents.json', JSON.stringify(docs, null, 2), 'application/json')
+                                .catch(function(e) { console.warn('GDrive sync failed:', e); });
+                        });
+                    }
+                } else {
+                    showToast('Uložení selhalo — zkus znovu', 'error', 5000);
                 }
             });
         }
