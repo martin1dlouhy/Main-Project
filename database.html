@@ -2166,7 +2166,8 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">LinkedIn URL</label>
-                    <input type="url" class="form-input" id="f-linkedinUrl" placeholder="https://linkedin.com/in/...">
+                    <input type="url" class="form-input" id="f-linkedinUrl" placeholder="https://linkedin.com/in/..." oninput="updateLinkedInBadge()">
+                    <div id="f-linkedinUrl-badge" style="margin-top:6px;font-size:11px;"></div>
                 </div>
             </div>
 
@@ -3277,6 +3278,15 @@ function resetForm() {
      'f-osloven_kdy','f-osloven_kanal'].forEach(id => {
         document.getElementById(id).value = '';
     });
+    updateLinkedInBadge();
+}
+
+function updateLinkedInBadge() {
+    const url = document.getElementById('f-linkedinUrl').value;
+    const kind = classifyLinkedInUrl(url);
+    const badgeEl = document.getElementById('f-linkedinUrl-badge');
+    if (!badgeEl) return;
+    badgeEl.innerHTML = linkedInBadgeHTML(kind);
 }
 
 function populateForm(c) {
@@ -3293,6 +3303,7 @@ function populateForm(c) {
     document.getElementById('f-telefon').value = c.telefon || '';
     document.getElementById('f-web').value = c.web || '';
     document.getElementById('f-linkedinUrl').value = c.linkedinUrl || '';
+    updateLinkedInBadge();
     document.getElementById('f-facebookUrl').value = c.facebookUrl || '';
     document.getElementById('f-tagy').value = c.tagy || '';
     document.getElementById('f-zdrojUrl').value = c.zdrojUrl || '';
@@ -4468,7 +4479,14 @@ function renderContactSuggestions() {
         const meta = [];
         if (c.email) meta.push('<span class="vyhl-meta-item">✉ ' + escapeHtml(c.email) + '</span>');
         if (c.telefon) meta.push('<span class="vyhl-meta-item">☎ ' + escapeHtml(c.telefon) + '</span>');
-        if (c.linkedinUrl) meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(c.linkedinUrl) + '" target="_blank" rel="noopener">LinkedIn ↗</a></span>');
+        if (c.linkedinUrl) {
+            const lkKind = classifyLinkedInUrl(c.linkedinUrl);
+            const label = lkKind === 'search' ? 'LinkedIn (vyhledat ↗)' :
+                          lkKind === 'company' ? 'LinkedIn firma ↗' :
+                          lkKind === 'profile' ? 'LinkedIn ↗' :
+                          'LinkedIn ↗';
+            meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(c.linkedinUrl) + '" target="_blank" rel="noopener">' + label + '</a> ' + linkedInBadgeHTML(lkKind) + '</span>');
+        }
         if (c.web) meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(c.web) + '" target="_blank" rel="noopener">Web ↗</a></span>');
         if (c.sidlo) meta.push('<span class="vyhl-meta-item">📍 ' + escapeHtml(c.sidlo) + '</span>');
         if (c.ico) meta.push('<span class="vyhl-meta-item">IČO: ' + escapeHtml(c.ico) + '</span>');
@@ -4850,9 +4868,18 @@ function buildPromptFE(mode, ctx) {
             '- KAŽDÝ kontakt MUSÍ být ověřitelný v reálu — žádné halucinace',
             '- Cílíme na decision-makery: Partner, Managing Partner, Director, CEO, Owner, Head of, Senior',
             '- Vyhni se juniorům, asistentům, info@/contact@ adresám',
-            '- Email/telefon/LinkedIn = jen pokud je v reálu veřejně dostupné. Jinak null.',
+            '- Email/telefon = jen pokud je v reálu veřejně dostupné. Jinak null.',
+            '',
+            'PRAVIDLA PRO LINKEDIN URL (důležité — AI obvykle halucinuje):',
+            '- Profilová URL formátu https://linkedin.com/in/{slug} vraceť POUZE pokud jsi OPRAVDU ověřil přes web search, že daný profil existuje (otevři ho, vidíš jméno na stránce).',
+            '- NIKDY negeneruj URL podle jména automaticky (např. /in/jan-novak nebo /in/jan-novak-ceo). LinkedIn slug obsahuje obvykle náhodný hash (např. /in/jan-novak-a8b2c4f) a Tvůj odhad bude z 90 % halucinace = 404.',
+            '- Pokud nemůžeš ověřit konkrétní profilovou URL, vrať fallback **vyhledávací URL** ve formátu:',
+            '  https://www.linkedin.com/search/results/people/?keywords=Jméno%20Příjmení%20Firma',
+            '  (URL-encoded jméno+příjmení+firma jako keywords, oddělené %20 pro mezery).',
+            '  Uživatel pak v LinkedIn UI uvidí seznam kandidátů a vybere správného.',
+            '- Pokud nemáš ani jméno (jen firmu), vrať null — search URL pro samotnou firmu je málo užitečný.',
             (ctx.preferLinkedIn
-                ? '- PRIORITA LINKEDIN: Vrať POUZE kontakty s veřejně dohledatelným LinkedIn profilem. Pokud kontakt LinkedIn nemá nebo ho nedohledáš, raději ho vynech a najdi jiného. LinkedIn URL je v této variantě POVINNÉ pole (nesmí být null).'
+                ? '\n- PRIORITA LINKEDIN: Pro tuto variantu vraceť POUZE kontakty, kde umíš dodat OVĚŘENOU profilovou URL (/in/{slug}). Search URL je akceptovatelná, ale ideálně ji označ tím, že vyhledávací parametry odpovídají hledanému kontaktu. Kontakty, kde ani search URL nemá smysl (chybí jméno), zcela vyřaď.'
                 : ''),
             thoroughInstr,
             '',
@@ -4867,9 +4894,7 @@ function buildPromptFE(mode, ctx) {
             '      "email": "veřejný email | null",',
             '      "telefon": "veřejný tel | null",',
             '      "web": "https://… | null",',
-            (ctx.preferLinkedIn
-                ? '      "linkedinUrl": "https://linkedin.com/in/… (POVINNÉ pro tuto variantu — nesmí být null)",'
-                : '      "linkedinUrl": "https://linkedin.com/in/… | null",'),
+            '      "linkedinUrl": "BUĎ ověřená profilová URL https://linkedin.com/in/{slug} NEBO vyhledávací URL https://www.linkedin.com/search/results/people/?keywords=… NEBO null",',
             '      "sidlo": "adresa | null",',
             '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
             '    }',
@@ -5452,6 +5477,39 @@ function slug(s) {
         .replace(/[ř]/g, 'r').replace(/[š]/g, 's').replace(/[ť]/g, 't').replace(/[ž]/g, 'z')
         .replace(/[^a-z0-9]/g, '');
 }
+// ============================================================
+// LinkedIn URL klasifikace — profil vs. vyhledávací URL vs. neplatné
+// (AI obvykle halucinuje profilové URLs ze jména; viz prompt instrukce)
+// ============================================================
+function classifyLinkedInUrl(url) {
+    if (!url || typeof url !== 'string') return 'none';
+    const u = url.trim().toLowerCase();
+    if (!u) return 'none';
+    // Profilová URL: linkedin.com/in/{slug}
+    if (/^https?:\/\/([\w-]+\.)*linkedin\.com\/in\/[^\s?#]+/i.test(u)) return 'profile';
+    // Search URL: linkedin.com/search/results/...
+    if (/^https?:\/\/([\w-]+\.)*linkedin\.com\/search\//i.test(u)) return 'search';
+    // Company page: linkedin.com/company/{slug} — užitečné ale ne osobní profil
+    if (/^https?:\/\/([\w-]+\.)*linkedin\.com\/company\/[^\s?#]+/i.test(u)) return 'company';
+    // Něco jiného (např. zkrácený link, nevalid URL)
+    if (/linkedin\.com/i.test(u)) return 'other';
+    return 'invalid';
+}
+
+function linkedInBadgeHTML(kind) {
+    const badges = {
+        'profile':  { txt: '✓ Profilová URL',         color: 'var(--success)',   bg: 'var(--success-tint)' },
+        'search':   { txt: '⚠ Vyhledávací URL — ověř ručně',  color: 'var(--warning)', bg: 'var(--warning-tint)' },
+        'company':  { txt: 'ⓘ Stránka firmy (ne osobní profil)', color: 'var(--info)',    bg: 'var(--info-tint)' },
+        'other':    { txt: '⚠ LinkedIn URL nestandardního formátu', color: 'var(--warning)', bg: 'var(--warning-tint)' },
+        'invalid':  { txt: '✗ Není LinkedIn URL',     color: 'var(--danger)',    bg: 'var(--danger-tint)' },
+        'none':     { txt: '',                        color: '',                  bg: '' }
+    };
+    const b = badges[kind] || badges.none;
+    if (!b.txt) return '';
+    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;font-size:10.5px;font-weight:500;border-radius:99px;color:' + b.color + ';background:' + b.bg + ';">' + b.txt + '</span>';
+}
+
 function formatDateTime(iso) {
     if (!iso) return '—';
     try {
