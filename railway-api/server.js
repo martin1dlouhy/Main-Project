@@ -638,7 +638,11 @@ function buildLoanDocDataDescription(formData) {
     d += '\n=== POPLATKY ===\n';
     if (formData.originationFee) {
         var currency = formData.currency || 'CZK';
-        if (formData.originationFeeType === 'percent') {
+        // Frontend HTML option má value="%" (a legacy hodnoty "percent" mohly
+        // přijít ze starších IDB záznamů). Akceptujeme obojí pro backwards-compat.
+        var feeType = String(formData.originationFeeType || '').toLowerCase();
+        var isPercent = feeType === 'percent' || feeType === '%' || feeType === 'pct';
+        if (isPercent) {
             // Spočítáme absolutní částku, pokud máme amount — AI tak dostane
             // hodnotu, kterou rovnou dosadí do smlouvy. Jinak by AI musela
             // počítat sama a často by udělala chybu.

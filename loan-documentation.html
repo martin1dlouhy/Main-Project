@@ -1065,6 +1065,11 @@
         .modal-wide {
             max-width: 880px !important;
             width: 90vw;
+            /* Bez max-height + overflow-y modal přesahuje viewport a wheel events
+               propagují na body za ním (Martin scrolloval stránku místo modalu).
+               90vh limit + auto scroll = modal má vlastní scrollbar uvnitř. */
+            max-height: 90vh;
+            overflow-y: auto;
         }
         .prompt-preview-intro {
             font-size: 0.875rem;
@@ -3807,7 +3812,10 @@
             d += '\n=== POPLATKY ===\n';
             if (formData.originationFee) {
                 var currency = formData.currency || 'CZK';
-                if (formData.originationFeeType === 'percent') {
+                // Mirror server.js: HTML má value="%" (i legacy "percent" z IDB).
+                var feeTypeRaw = String(formData.originationFeeType || '').toLowerCase();
+                var isPercent = feeTypeRaw === 'percent' || feeTypeRaw === '%' || feeTypeRaw === 'pct';
+                if (isPercent) {
                     var amountNum = parseCzNumberLocal(formData.amount);
                     var feeNum = parseCzNumberLocal(formData.originationFee);
                     if (amountNum > 0 && !isNaN(feeNum)) {
