@@ -2093,8 +2093,8 @@
             </div>
 
             <div class="settings-panel">
-                <h4>Vyčistit AI LinkedIn URLs (halucinace + neúčinná vyhledávání)</h4>
-                <p class="panel-desc">AI obvykle vrátí buď halucinovanou profilovou URL (<code style="font-family:var(--font-mono);font-size:11.5px;color:var(--amber-warm);">linkedin.com/in/jan-novak</code> = 404), nebo LinkedIn vlastní vyhledávací URL (<code style="font-family:var(--font-mono);font-size:11.5px;color:var(--amber-warm);">linkedin.com/search/results/people/?keywords=…</code> — bez přihlášení vrací prázdno). Akce najde Tvé AI kontakty s těmito URLs a přepíše je na <strong>Google site:linkedin.com/in search</strong> — Google index obsahuje všechny veřejné LinkedIn profily, klikneš první výsledek a otevře se Ti reálná /in/ URL, kterou si můžeš zkopírovat zpět. Původní URL se zachová v poznámce.</p>
+                <h4>Vyčistit AI LinkedIn URLs (halucinace + stale URLs po driftu)</h4>
+                <p class="panel-desc">Tři typy URLs, které tahle akce regeneruje: <strong>(1)</strong> halucinovaná profilová URL (<code style="font-family:var(--font-mono);font-size:11px;color:var(--amber-warm);">linkedin.com/in/jan-novak</code> = AI uhodlo slug, nefunguje); <strong>(2)</strong> LinkedIn vlastní vyhledávací URL (<code style="font-family:var(--font-mono);font-size:11px;color:var(--amber-warm);">linkedin.com/search/results/people/?keywords=…</code> bez přihlášení vrací prázdno); <strong>(3)</strong> staré Google search URLs, které mají v query segment text místo firmy (přežitek z doby kdy byl Sheet posunutý). Akce všechny přepíše na <strong>Google site:linkedin.com/in search</strong> s aktuálním jménem + firmou (pokud firma je reálná, ne segment). Klikneš první výsledek = reálný profil. Původní URL se zachová v poznámce.</p>
                 <div class="settings-row">
                     <div>
                         <div class="settings-row-label">Vyčistit AI LinkedIn URLs</div>
@@ -3364,11 +3364,16 @@ function detectAlignmentDrift(headerOrder, sampleRows) {
     if (!headerOrder || headerOrder.length === 0) return null;
     if (!sampleRows || sampleRows.length === 0) return null;
 
+    // Anchors: pole s detektorem dost silným, aby jeho pozici v datech šla najít spolehlivě.
+    // Sem patří STRONG_DETECTORS hodnoty plus 'firma' (WEAK_DETECTOR, ale stačí).
+    // Smysl driftu: pokud field X má v datech jinou pozici než v headeru, je to drift.
     const anchors = [
-        { field: 'id',          test: s => /^c_[a-z0-9_]+$/i.test(s) },
-        { field: 'ico',         test: s => /^\d{8}$/.test(s) },
-        { field: 'linkedinUrl', test: s => /^https?:\/\/.*linkedin\.com/i.test(s) || /^https?:\/\/(www\.)?google\.[a-z.]+\/search\?.*linkedin/i.test(s) },
-        { field: 'email',       test: s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) }
+        { field: 'id',          test: STRONG_DETECTORS.id },
+        { field: 'ico',         test: STRONG_DETECTORS.ico },
+        { field: 'linkedinUrl', test: STRONG_DETECTORS.linkedinUrl },
+        { field: 'email',       test: STRONG_DETECTORS.email },
+        { field: 'segment',     test: STRONG_DETECTORS.segment },
+        { field: 'firma',       test: WEAK_DETECTORS.firma }
     ];
 
     for (const a of anchors) {
@@ -6044,11 +6049,14 @@ function startCleanupLinkedInUrls() {
     //   - profilové URL (AI obvykle halucinuje slug + hash = 404)
     //   - LinkedIn /search/ URLs (bez přihlášení vrací prázdno, AND-match problém)
     //   - "other" LinkedIn URL nestandardního formátu
+    //   - Google search URLs, které obsahují segment text (= drift, špatně postavené dřív)
     //   - musí mít AI tag a prázdný linkedinStav (Martin URL nepotvrdil ručně)
     const candidates = state.contacts.filter(c => {
         if (!c.linkedinUrl) return false;
         const kind = classifyLinkedInUrl(c.linkedinUrl);
-        if (kind !== 'profile' && kind !== 'search' && kind !== 'other') return false;
+        const isCandidateKind = kind === 'profile' || kind === 'search' || kind === 'other';
+        const isStaleGoogleSearch = kind === 'google-search' && hasStaleSegmentInUrl(c.linkedinUrl);
+        if (!isCandidateKind && !isStaleGoogleSearch) return false;
         const isAI = (c.tagy && /AI-/i.test(c.tagy)) ||
                      (c.spolehlivost && /(claude|openai|gemini)/i.test(c.spolehlivost));
         if (!isAI) return false;
@@ -6145,6 +6153,7 @@ async function executeCleanupLinkedInUrls() {
             const oldKind = classifyLinkedInUrl(oldUrl);
             const oldReason = oldKind === 'profile' ? 'možná halucinace, často 404'
                              : oldKind === 'search'  ? 'LinkedIn vyhledávání bez přihlášení vrací prázdno'
+                             : oldKind === 'google-search' ? 'stará Google URL měla v query segment text (z dřívějšího data driftu)'
                              : 'nestandardní formát';
             const note = '\n\n— LinkedIn cleanup ' + dateStr + ' —\n' +
                          'Původní AI návrh (' + oldReason + '): ' + oldUrl +
@@ -6409,9 +6418,16 @@ function classifyLinkedInUrl(url) {
 // s operátorem `site:linkedin.com/in` — Google index obsahuje všechny profily a první
 // výsledek je téměř vždy správný profil. Tohle Martin/asistentka klikne a otevře se
 // jim reálný LinkedIn URL, který si můžou zkopírovat zpět do kontaktu.
+//
+// DEFENZIVNĚ: firma se přidá do search query JEN pokud vypadá jako reálná firma —
+// krátké, bez lomítek, bez známých segment markerů. Pokud je tam segment text (např.
+// "Ex-bankéři corporate / RE / private banking") kvůli posunutí dat, vynecháme ho,
+// aby URL byla použitelná i při data driftu.
 function buildLinkedInSearchUrl(kontaktniOsoba, firma) {
     const name = (kontaktniOsoba || '').trim();
-    const company = (firma || '').trim();
+    const rawCompany = (firma || '').trim();
+    const company = looksLikeRealFirma(rawCompany) ? rawCompany : '';
+
     if (name) {
         const parts = ['site:linkedin.com/in', '"' + name + '"'];
         if (company) parts.push('"' + company + '"');
@@ -6422,6 +6438,46 @@ function buildLinkedInSearchUrl(kontaktniOsoba, firma) {
         return 'https://www.google.com/search?q=' + encodeURIComponent('site:linkedin.com/company "' + company + '"');
     }
     return '';
+}
+
+// Heuristika: vypadá hodnota jako reálné jméno firmy, NE jako segment / poznámka / nesmysl?
+// Používá se pro filtrování firma value před zakomponováním do LinkedIn search query.
+function looksLikeRealFirma(s) {
+    if (!s) return false;
+    const v = s.trim();
+    if (v.length === 0 || v.length > 60) return false; // moc dlouhé = pravděpodobně segment/popis
+    if (/\//.test(v)) return false; // lomítka = segment marker ("A / B / C")
+    if (/^Ex-|^Investiční |^M&A |^Konzultanti|^Insolvenční |^Realitní /i.test(v)) return false; // typické začátky segmentů
+    // State.segments check — pokud hodnota přesně sedí na známý segment, je to segment
+    if (Array.isArray(state.segments) && state.segments.length > 0) {
+        const match = state.segments.some(function (seg) {
+            return (seg.nazev || '').trim().toLowerCase() === v.toLowerCase();
+        });
+        if (match) return false;
+    }
+    return true;
+}
+
+// Detekce "stale" Google search URLs, které obsahují segment text v query (= byly
+// vygenerované dřív, když data byla driftnutá, a firma byla ve skutečnosti segment).
+// Vrací true = URL je špatně postavená a stojí ji regenerovat.
+function hasStaleSegmentInUrl(url) {
+    if (!url) return false;
+    try {
+        const decoded = decodeURIComponent(url);
+        // Lomítka v keywords mezi uvozovkami = segment marker
+        if (/"[^"]*\/[^"]*\/[^"]*"/.test(decoded)) return true;
+        // Známé segment začátky
+        if (/"(Ex-|Investiční |M&A |Konzultanti|Insolvenční |Realitní )/i.test(decoded)) return true;
+        // Match na state.segments nazev v uvozovkách
+        if (Array.isArray(state.segments) && state.segments.length > 0) {
+            for (const seg of state.segments) {
+                const nazev = (seg.nazev || '').trim();
+                if (nazev && decoded.indexOf('"' + nazev + '"') !== -1) return true;
+            }
+        }
+    } catch (e) { /* malformed URL — leave as-is */ }
+    return false;
 }
 
 function linkedInBadgeHTML(kind) {
