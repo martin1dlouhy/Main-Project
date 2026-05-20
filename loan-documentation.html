@@ -4124,7 +4124,11 @@
                         plainText = originalXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
                     }
 
-                    // Zavolej backend preview endpoint pro plný prompt (single source of truth)
+                    // Zavolej backend preview endpoint pro plný prompt (single source of truth).
+                    // POZOR: pro manuální workflow používáme MANUAL variant (data.manualUserContent),
+                    // NE API variant (data.userContent). Manual variant neobsahuje plain text
+                    // šablony — uživatel ji uploaduje jako .docx file attachment. To dramaticky
+                    // zkracuje prompt (50 KB → 5 KB) a AI dostane instrukci pracovat s attachmentem.
                     var promptText;
                     try {
                         var resp = await fetch(LOAN_API_BASE + '/api/generate-loan-doc/preview', {
@@ -4138,18 +4142,21 @@
                         });
                         var data = await resp.json();
                         if (!data || !data.success) throw new Error('Preview endpoint vrátil neplatnou odpověď');
-                        // Sloučí system + user role do jedné kopírovatelné zprávy.
-                        promptText = '=== SYSTEM INSTRUKCE (zkopíruj jako první zprávu nebo nastav jako system prompt) ===\n\n' +
+                        // Manuální variant: má instrukce pro python-docx + .docx attachment workflow
+                        // bez plain text duplicity (šablona je v .zip vedle ve formátu .docx).
+                        promptText = '=== INSTRUKCE PRO AI (zkopíruj jako první zprávu) ===\n\n' +
                             data.systemPrompt + '\n\n' +
-                            '=== USER MESSAGE (zkopíruj jako druhou zprávu s připojenou DOCX šablonou) ===\n\n' +
-                            data.userContent;
+                            '=== ÚKOL + DATA (zkopíruj jako druhou zprávu — plus připoj .docx šablonu z tohoto .zip) ===\n\n' +
+                            (data.manualUserContent || data.userContent);
                     } catch (err) {
-                        // Fallback: lokální build (může být drift, ale lepší než nic)
+                        // Fallback: lokální build krátké manuální varianty (bez plain textu šablony).
                         var sysLocal = buildSystemPromptPreview(template.name);
                         var dataLocal = buildDataDescriptionPreview(formData);
-                        var userLocal = 'Vyplň následující šablonu smlouvy (' + template.name + ') poskytnutými daty.\n\n' +
-                            dataLocal + '\n\n=== ŠABLONA SMLOUVY ===\n\n' + plainText.substring(0, 50000);
-                        promptText = '=== SYSTEM INSTRUKCE ===\n\n' + sysLocal + '\n\n=== USER MESSAGE ===\n\n' + userLocal;
+                        var manualLocal = 'ÚKOL: Mám historickou šablonu úvěrové smlouvy ProfiLend (' + template.name + ') připojenou jako .docx FILE ATTACHMENT v této konverzaci. Otevři ji přes python-docx, pracuj přímo s tím .docx. NEČEKEJ na text v chatu, je v attachmentu.\n\n' +
+                            '⚠ TŘI PRAVIDLA: 1) FORMÁTOVÁNÍ 100% ZACHOVAT (modifikuj run.text uvnitř existujících runs, NIKDY doc.add_paragraph). 2) Dokument jde rovnou klientovi. 3) Vrať .docx jako file attachment.\n\n' +
+                            'POSTUP: A) nahradit údaje z DATA; B) smazat irrelevantní (přílohy LV co klient nemá, čísla řízení V-XXXX, staré banky, klauzule ručitele/vinkulace); C) přeformulovat klauzule (čerpání, poplatky); D) update křížové odkazy.\n\n' +
+                            dataLocal;
+                        promptText = '=== INSTRUKCE PRO AI ===\n\n' + sysLocal + '\n\n=== ÚKOL + DATA ===\n\n' + manualLocal;
                         console.warn('Preview endpoint selhal, použil jsem lokální fallback:', err);
                     }
 
