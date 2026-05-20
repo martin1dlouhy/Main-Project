@@ -5628,7 +5628,11 @@ const STRONG_DETECTORS = {
     telefon:        s => /^\+?[\d][\d\s\-().\/]{8,}$/.test(s) && !/@/.test(s) && s.length < 25,
     // Tagy = AI- prefix nebo seznam štítků oddělených čárkou; NEpřijímat jen "X, Y, Z" textový seznam
     tagy:           s => /^(AI-(claude|openai|gemini)(,\s*AI-(claude|openai|gemini))*)$/i.test(s),
-    web:            s => /^https?:\/\//i.test(s) && !/linkedin\.com|facebook\.com/i.test(s) && !/google\.[a-z.]+\/search/i.test(s) && s.length < 200
+    web:            s => /^https?:\/\//i.test(s) && !/linkedin\.com|facebook\.com/i.test(s) && !/google\.[a-z.]+\/search/i.test(s) && s.length < 200,
+    // Segment — match na známá jména segmentů z Martinova plánu rozvoje sítě (state.segments).
+    // Velmi silný signál: pokud value je přesně shoda se segment.nazev, je to 100% segment.
+    segment:        s => Array.isArray(state.segments) && state.segments.length > 0
+        && state.segments.some(function (seg) { return (seg.nazev || '').trim() === s; })
 };
 
 // Slabé heuristiky — pro free-text pole (rozpoznávají jen pravděpodobně, ne s jistotou)
@@ -5636,9 +5640,18 @@ const WEAK_DETECTORS = {
     // Jméno + příjmení (volitelně 3. slovo); striktní pattern — žádné role keywordy v textu
     kontaktniOsoba: s => /^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž'.\-]+(\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž'.\-]+){1,2}\.?$/.test(s)
         && !/\b(Director|Manager|Partner|CEO|CFO|COO|CTO|Head|Chief|Founder|Owner|Member|Senior|Junior|Investment|Group|Capital|Partners|s\.r\.o\.|a\.s\.)\b/i.test(s),
-    // Firma — typický český business suffix nebo finanční/investiční slovo
-    firma: s => /\b(s\.\s?r\.\s?o\.|a\.\s?s\.|spol\.|SE)\b/i.test(s)
-        || /\b(Trust|Capital|Investments?|Partners?|Advisory|Asset Management|Holding|Group|Bank|Banka|Fund|Reality|Properties|Estate|Equity|Family Office)\b/i.test(s),
+    // Firma — český legal suffix (a.s., s.r.o., spol., k.s., v.o.s., SE) NEBO business keyword.
+    // POZOR: nepoužíváme `\b` na konci legal suffixu, protože `\b` selže za tečkou
+    // (tečka = non-word, end-of-string = non-word, žádný přechod). Místo toho lookahead/anchor.
+    firma: s => {
+        if (/(^|[\s,])a\s?\.\s?s\.?(\s|,|$)/i.test(s)) return true;
+        if (/(^|[\s,])s\s?\.\s?r\s?\.\s?o\.?(\s|,|$)/i.test(s)) return true;
+        if (/(^|[\s,])spol\.?\s+s\s?\.?\s?r\.?\s?o\.?/i.test(s)) return true;
+        if (/(^|[\s,])(k\s?\.\s?s\.?|v\s?\.\s?o\s?\.\s?s\.?)(\s|,|$)/i.test(s)) return true;
+        if (/\bSE\b/.test(s)) return true; // Societas Europaea
+        // Business keywords (typicky v názvech firem, NE v segmentech ani rolích)
+        return /\b(Trust|Capital|Investments?|Partners?|Advisory|Asset Management|Holding|Group|Bank|Banka|Fund|Reality|Properties|Estate|Equity|Family Office|Finance|Corporate Finance|Management|Consulting|Ventures|Real Estate|Wealth)\b/i.test(s);
+    },
     // Role — typicky začíná rolí, nebo obsahuje role keyword se separátorem
     role: s => /^(Partner|Director|Managing|CEO|CFO|COO|CTO|Head|Chief|Vice|Senior|Junior|Lead|Member|Founder|Co-founder|Owner|Vedoucí|Insolvenční|Předseda|Investment|Group|Founding|Corporate|Samostatný|Ohlášený|Členské|Business)\b/i.test(s)
         || /\b(Director|Manager|Partner|CEO|CFO|COO|CTO|Head of|Chief|Founder|Owner|VP|Vice President)\b/i.test(s),
@@ -5680,10 +5693,12 @@ function detectColumnFields(dataRows, headerRow) {
     for (let c = 0; c < numCols; c++) colSamples.push(sampleCol(c));
 
     // Pass 1: silné heuristiky — ratio > 0.7 nutné aby přiřazení proběhlo
-    // Pořadí: nejjednoznačnější první (id, ico) abychom je nezískali na jiném sloupci
+    // Pořadí: nejjednoznačnější první (id, ico) abychom je nezískali na jiném sloupci.
+    // 'segment' přidán — match proti state.segments (přesná shoda na nazev) je silný signál
+    // který chytí situace, kdy header pozice neodpovídá obsahu (např. firma v segment sloupci).
     const strongOrder = ['id', 'ico', 'email', 'linkedinUrl', 'facebookUrl', 'linkedinStav',
                          'typ', 'priorita', 'stav', 'osloven_kanal', 'spolehlivost',
-                         'osloven_kdy', 'telefon', 'tagy', 'web'];
+                         'osloven_kdy', 'telefon', 'tagy', 'web', 'segment'];
     for (const field of strongOrder) {
         if (usedFields.has(field)) continue;
         let bestCol = -1, bestRatio = 0;
@@ -5745,14 +5760,14 @@ function detectColumnFields(dataRows, headerRow) {
         }
     }
 
-    // Pass 5: poslední záchrana — chybějící CONTACTS_HEADER pole přiřaď zbylým sloupcům
-    // v kanonickém pořadí (tj. neassignované sloupce ZLEVA dostanou chybějící pole
-    // ze CONTACTS_HEADER, v původním pořadí)
-    const missingFields = CONTACTS_HEADER.filter(f => !usedFields.has(f));
-    for (let c = 0; c < numCols && missingFields.length > 0; c++) {
-        if (fields[c]) continue;
-        fields[c] = missingFields.shift();
-    }
+    // Pass 5: nechej zbylé sloupce NULL.
+    //
+    // KRITICKÉ: dřív jsme tu agresivně vyplňovali zbylé sloupce chybějícími fields
+    // (např. 'segment' = první volný sloupec). Tohle ale způsobí, že DATA z toho
+    // neassignovaného sloupce skončí v 'segment' canonical pozici — i když to data
+    // segmentem vůbec nejsou. Lepší ponechat NULL (= empty canonical output) než
+    // vytvořit nový shift. Pokud Pass 1 (strong) ani Pass 4 (header hint) nedokázaly
+    // mapování najít, je to legitimně chybějící field — zachováme empty.
 
     return fields;
 }
