@@ -741,28 +741,110 @@ function buildLoanDocManualUserContent(templateName, dataDescription, templateTe
         '4. PŘEFORMULUJ klauzule, které neodpovídají novému dealu (např. čerpání ve tranších vs jednorázové, poplatek z čerpané částky vs paušál).\n' +
         '5. AKTUALIZUJ křížové odkazy — pokud smažeš Přílohu 1C, smaž i odkazy "viz Příloha 1C" v hlavním textu.\n' +
         '6. KONZISTENCE — stejná hodnota se obvykle opakuje na mnoha místech (jméno klienta 20×, částka 5×). Zachyť VŠECHNY výskyty napříč dokumentem.\n\n' +
-        '=== ZACHOVÁNÍ FORMÁTOVÁNÍ (KRITICKÉ — DOKUMENT JDE KLIENTOVI) ===\n' +
-        'POVINNĚ zachovaj VEŠKERÉ vizuální formátování originální šablony. Když měníš obsah uvnitř formátovaného úseku, formátování PŘEPÍŠEŠ s novým obsahem — nevyhazuj ho.\n\n' +
-        'KONKRÉTNĚ to znamená:\n' +
-        '- TUČNÉ ZVÝRAZNĚNÍ (bold) — pokud je v šabloně tučně "Úvěrovaný:" před hodnotou, v upravené verzi MUSÍ zůstat tučně\n' +
-        '- KURZIVA (italic) — poznámky pod čarou, právní termíny, definice — zachovaj italic\n' +
-        '- PODTRŽENÍ (underline) — klíčové definice, podpisové linky\n' +
-        '- ODSAZENÍ (indentation) — levé / pravé odsazení odstavců, číslovaných seznamů, vnořených klauzulí ((a), (b), (c) atd.)\n' +
-        '- ČÍSLOVÁNÍ ČLÁNKŮ — automatické číslování (1., 1.1, 1.1.1, a), b)…). Pokud smažeš článek 4.3, NECHEJ číslování PŘEPOČÍTAT (nestane se 4.2, 4.4, 4.5 — bude 4.2, 4.3, 4.4) NEBO zachovej původní čísla a explicitně vynech smazaný (preferovaná varianta pro stabilitu cross-references)\n' +
-        '- NADPISY (headings) — Heading 1/2/3 styly s odpovídajícím formátováním (velikost, barva, mezery)\n' +
-        '- ZAROVNÁNÍ (alignment) — left / center / right / justify, podle toho jak je v šabloně\n' +
-        '- TABULKY — buňky, ohraničení, šířky sloupců, zarovnání obsahu, pozadí buněk, slučování buněk\n' +
-        '- FONTY — typ písma (typicky Aptos / Calibri / Times New Roman), velikost, barva\n' +
-        '- ŘÁDKOVÁNÍ a MEZERY mezi odstavci\n' +
-        '- PAGE BREAKS — pokud má šablona zalomení stránky (např. před Přílohou 1), zachovaj\n' +
-        '- PODPISOVÉ BLOKY — formát podpisového pole (řádky, popisky pod, sloupcové uspořádání Věřitel / Dlužník)\n' +
-        '- ZÁHLAVÍ a ZÁPATÍ — loga, čísla stránek, datumové stamps\n' +
-        '- ODRÁŽKY a SEZNAMY — bullet vs číslo, styl odrážky\n' +
-        '- HYPERLINKY — emaily (mailto:), webové odkazy\n\n' +
-        'PRAKTICKÝ PŘÍKLAD ZACHOVÁNÍ FORMÁTOVÁNÍ:\n' +
-        'Pokud v šabloně je: **Úvěrovaný:** _AGRI PARTNERS Nezamyslice s.r.o._ (tučné "Úvěrovaný:", kurziva jméno klienta)\n' +
-        'V upravené verzi MUSÍ být: **Úvěrovaný:** _Louve Group s.r.o._ (stále tučné "Úvěrovaný:", stále kurziva jméno)\n\n' +
+        '=== ZACHOVÁNÍ FORMÁTOVÁNÍ — 100% IDENTICKÉ SE ŠABLONOU ===\n' +
+        '⚠ ABSOLUTNĚ NEAKCEPTOVATELNÉ: vrátit dokument, kde uživatel musí ručně sjednocovat formátování ve Wordu. To se v minulosti stalo a uživatel ztratil hodiny práce.\n' +
+        'Výsledný .docx musí být vizuálně k NEROZEZNÁNÍ od šablony (jen s upraveným obsahem). Pokud si nejsi 100% jistá nějakým formátováním, RADĚJI na něj NESAHAJ.\n\n' +
+        '=== TECHNICKÝ POSTUP V CODE INTERPRETER (python-docx) ===\n' +
+        'Klíč k zachování formátování: NEVYTVÁŘEJ nové paragraph/run elementy — MODIFIKUJ existující. python-docx přiřazuje formátování per-run, takže nahrazení textu uvnitř runu zachová bold/italic/font/size/color automaticky.\n\n' +
+        '✅ SPRÁVNĚ — modifikuj text uvnitř existujícího runu:\n' +
+        '```python\n' +
+        'from docx import Document\n' +
+        'doc = Document("template.docx")\n' +
+        '\n' +
+        '# Sběr všech runs napříč dokumentem (paragraphs, tables, headers, footers)\n' +
+        'def iter_all_runs(doc):\n' +
+        '    for p in doc.paragraphs:\n' +
+        '        yield from p.runs\n' +
+        '    for t in doc.tables:\n' +
+        '        for row in t.rows:\n' +
+        '            for cell in row.cells:\n' +
+        '                for p in cell.paragraphs:\n' +
+        '                    yield from p.runs\n' +
+        '    for section in doc.sections:\n' +
+        '        for p in section.header.paragraphs:\n' +
+        '            yield from p.runs\n' +
+        '        for p in section.footer.paragraphs:\n' +
+        '            yield from p.runs\n' +
+        '\n' +
+        '# Replace text uvnitř runu — zachovává bold, italic, font, size, color\n' +
+        'for run in iter_all_runs(doc):\n' +
+        '    if "AGRI PARTNERS" in run.text:\n' +
+        '        run.text = run.text.replace("AGRI PARTNERS", "Louve Group")\n' +
+        '```\n\n' +
+        '❌ ŠPATNĚ — vytvoření nového paragraph/run ZTRATÍ formátování:\n' +
+        '- doc.add_paragraph("text")           # ZTRATÍ styling, font, alignment\n' +
+        '- doc.add_heading("Nadpis", level=1)  # ztratí custom heading formatting\n' +
+        '- paragraph.clear() + add_run()       # ztratí původní run formátování\n\n' +
+        '=== SMAZÁNÍ CELÝCH BLOKŮ (přílohy, klauzule, články) ===\n' +
+        'Pro smazání celého paragraph (článku/přílohy) — odstranění z XML stromu:\n' +
+        '```python\n' +
+        'p = paragraph_to_delete\n' +
+        'p._element.getparent().remove(p._element)\n' +
+        '# NE: paragraph.clear() — ten jen vyprázdní text, prázdný odstavec zůstane\n' +
+        '```\n\n' +
+        'Pro smazání celé Přílohy 1C (od heading "PŘÍLOHA 1C" po heading "PŘÍLOHA 1D"):\n' +
+        '```python\n' +
+        'in_section = False\n' +
+        'to_delete = []\n' +
+        'for p in doc.paragraphs:\n' +
+        '    if "PŘÍLOHA 1C" in p.text:\n' +
+        '        in_section = True\n' +
+        '    if "PŘÍLOHA 1D" in p.text and in_section:\n' +
+        '        break\n' +
+        '    if in_section:\n' +
+        '        to_delete.append(p)\n' +
+        'for p in to_delete:\n' +
+        '    p._element.getparent().remove(p._element)\n' +
+        '```\n\n' +
+        '=== VKLÁDÁNÍ NOVÝCH BLOKŮ ===\n' +
+        'Pokud potřebuješ přidat novou Přílohu (např. LV 4587 pro nový deal), CLONE existující přílohu a jen modifikuj text:\n' +
+        '```python\n' +
+        'from copy import deepcopy\n' +
+        '# Najdi šablonový paragraph (typicky předchozí přílohu)\n' +
+        'template_para = appendix_1B_paragraph._element\n' +
+        '# Clone (zachová všechen styling, runs, formátování)\n' +
+        'new_para = deepcopy(template_para)\n' +
+        '# Vlož za originál\n' +
+        'template_para.addnext(new_para)\n' +
+        '# Pak modifikuj text uvnitř klonu přes runs (zachová formátování)\n' +
+        '```\n\n' +
+        '=== CO MUSÍ ZŮSTAT IDENTICKÉ ===\n' +
+        '- BOLD / ITALIC / UNDERLINE (run.bold, run.italic, run.underline)\n' +
+        '- FONT (run.font.name, run.font.size, run.font.color.rgb)\n' +
+        '- ZAROVNÁNÍ paragraph (paragraph.paragraph_format.alignment)\n' +
+        '- ODSAZENÍ (paragraph.paragraph_format.left_indent, right_indent, first_line_indent)\n' +
+        '- MEZERY (paragraph.paragraph_format.space_before, space_after, line_spacing)\n' +
+        '- STYL paragraph (paragraph.style — např. "Heading 1", "Normal", "List Number")\n' +
+        '- ČÍSLOVÁNÍ článků (paragraph.style obsahuje numPr — nezasahuj, Word přečísluje automaticky po smazání)\n' +
+        '- TABULKY: šířky sloupců, ohraničení, slučování, pozadí buněk, zarovnání obsahu\n' +
+        '- HYPERLINKY: emaily (mailto:), webové odkazy — uprav target ale zachovaj run.style\n' +
+        '- ZÁHLAVÍ a ZÁPATÍ: loga ProfiLend, čísla stránek\n' +
+        '- PAGE BREAKS: <w:br w:type="page"/> elementy\n\n' +
+        'PRAKTICKÝ PŘÍKLAD:\n' +
+        'Šablona má run s text="AGRI PARTNERS", bold=True, font.name="Aptos", font.size=Pt(11).\n' +
+        'Po run.text = run.text.replace("AGRI PARTNERS", "Louve Group"):\n' +
+        '  → text="Louve Group", bold=True (zachováno), font.name="Aptos" (zachováno), font.size=Pt(11) (zachováno) ✅\n\n' +
         'NIKDY nevyhazuj formátování jen proto, že upravuješ obsah. NIKDY nevracej obyčejný plain text. NIKDY nezjednodušuj strukturu.\n\n' +
+        '=== POVINNÁ PROGRAMOVÁ VERIFIKACE FORMÁTOVÁNÍ ===\n' +
+        'Po dokončení úprav, PŘED vrácením file attachmentu, SPUSŤ verifikační skript:\n' +
+        '```python\n' +
+        'orig = Document("template.docx")\n' +
+        'edited = Document("output.docx")\n' +
+        '\n' +
+        '# Porovnaj styly napříč dokumentem\n' +
+        'def collect_styles(doc):\n' +
+        '    styles = []\n' +
+        '    for run in iter_all_runs(doc):\n' +
+        '        styles.append({\n' +
+        '            "bold": run.bold, "italic": run.italic, "underline": run.underline,\n' +
+        '            "font_name": run.font.name, "font_size": run.font.size,\n' +
+        '        })\n' +
+        '    return styles\n' +
+        '\n' +
+        '# Pokud edited má méně runů než orig (a smazala jsi sekce), check style coverage zbývajících\n' +
+        '# Pokud na stejné pozici je rozdíl bold/italic/font → OPRAV před vrácením\n' +
+        '```\n' +
+        'POKUD najdeš odchylku, OPRAV ji. NEVYDÁVEJ dokument, dokud formátování není 100% shodné s odpovídajícími runs v šabloně.\n\n' +
         '=== FINÁLNÍ REVIZE (POVINNÁ PŘED VÝSTUPEM) ===\n' +
         'Než mi vrátíš upravený .docx, projdi ho ZNOVU jako právník dělající due diligence:\n' +
         '- Dává smysl jako celek pro NOVÝ deal? Nezůstaly tam logické rozpory?\n' +
