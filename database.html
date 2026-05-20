@@ -2071,8 +2071,8 @@
             </div>
 
             <div class="settings-panel">
-                <h4>Vyčistit AI LinkedIn URLs (halucinace)</h4>
-                <p class="panel-desc">AI vyhledávač generuje profilové LinkedIn URLs (např. <code style="font-family:var(--font-mono);font-size:11.5px;color:var(--amber-warm);">linkedin.com/in/jan-novak</code>) ze jména osoby — tyto URLs často vedou na 404, protože LinkedIn slug obsahuje hash, který AI neumí uhodnout. Akce projde Tvé AI kontakty (mají tag <code>AI-claude/openai/gemini</code>), najde podezřelé URLs a nahradí je <strong>vyhledávacími URLs</strong> (klikneš → LinkedIn search s předvyplněným jménem+firmou → vybereš správný profil → uložíš zpět). Původní URL se zachová v poznámce.</p>
+                <h4>Vyčistit AI LinkedIn URLs (halucinace + neúčinná vyhledávání)</h4>
+                <p class="panel-desc">AI obvykle vrátí buď halucinovanou profilovou URL (<code style="font-family:var(--font-mono);font-size:11.5px;color:var(--amber-warm);">linkedin.com/in/jan-novak</code> = 404), nebo LinkedIn vlastní vyhledávací URL (<code style="font-family:var(--font-mono);font-size:11.5px;color:var(--amber-warm);">linkedin.com/search/results/people/?keywords=…</code> — bez přihlášení vrací prázdno). Akce najde Tvé AI kontakty s těmito URLs a přepíše je na <strong>Google site:linkedin.com/in search</strong> — Google index obsahuje všechny veřejné LinkedIn profily, klikneš první výsledek a otevře se Ti reálná /in/ URL, kterou si můžeš zkopírovat zpět. Původní URL se zachová v poznámce.</p>
                 <div class="settings-row">
                     <div>
                         <div class="settings-row-label">Vyčistit AI LinkedIn URLs</div>
@@ -2278,7 +2278,8 @@
             <div class="info-note warning" style="margin-bottom: 16px;">
                 <strong>Co se stane:</strong>
                 <ul style="margin-top: 8px; padding-left: 18px; color: var(--text-soft);">
-                    <li>Profilová URL bude přepsána na search URL (předvyplněné jméno + firma)</li>
+                    <li>Stará URL (halucinovaná /in/ nebo LinkedIn /search/) bude přepsána na <strong>Google site:linkedin.com/in search</strong> s jménem a firmou v keywords</li>
+                    <li>Klikneš v kontaktu na 🔍 odkaz → Google najde profil → otevřeš první výsledek = reálná LinkedIn URL</li>
                     <li>Původní URL se uloží do poznámky kontaktu (pro případ ověření)</li>
                     <li>Vybíráš checkboxy — co odškrtneš, zůstane beze změny</li>
                 </ul>
@@ -4543,10 +4544,11 @@ function renderContactSuggestions() {
         if (c.telefon) meta.push('<span class="vyhl-meta-item">☎ ' + escapeHtml(c.telefon) + '</span>');
         if (c.linkedinUrl) {
             const lkKind = classifyLinkedInUrl(c.linkedinUrl);
-            const label = lkKind === 'search' ? 'LinkedIn (vyhledat ↗)' :
-                          lkKind === 'company' ? 'LinkedIn firma ↗' :
-                          lkKind === 'profile' ? 'LinkedIn ↗' :
-                          'LinkedIn ↗';
+            const label = lkKind === 'google-search' ? '🔍 Najít LinkedIn ↗' :
+                          lkKind === 'search'        ? 'LinkedIn (vyhledat ↗)' :
+                          lkKind === 'company'       ? 'LinkedIn firma ↗' :
+                          lkKind === 'profile'       ? 'LinkedIn ↗' :
+                                                       'LinkedIn ↗';
             meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(c.linkedinUrl) + '" target="_blank" rel="noopener">' + label + '</a> ' + linkedInBadgeHTML(lkKind) + '</span>');
         }
         if (c.web) meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(c.web) + '" target="_blank" rel="noopener">Web ↗</a></span>');
@@ -4812,8 +4814,14 @@ async function applyDeepFindings() {
         const val = f.hodnota || '';
         if (!val) return;
         if (!contact.linkedinUrl && /linkedin/i.test(klic + ' ' + val)) {
-            const m = val.match(/https?:\/\/[^\s]*linkedin\.com\/[^\s]+/i);
-            if (m) contact.linkedinUrl = m[0];
+            // Pořadí matchů: 1) přímá linkedin.com URL  2) Google search s site:linkedin
+            const direct = val.match(/https?:\/\/[^\s]*linkedin\.com\/[^\s]+/i);
+            if (direct) {
+                contact.linkedinUrl = direct[0];
+            } else {
+                const google = val.match(/https?:\/\/(www\.)?google\.[a-z.]+\/search\?[^\s]*(linkedin\.com|site(%3A|:)linkedin)[^\s]*/i);
+                if (google) contact.linkedinUrl = google[0];
+            }
         }
         if (!contact.email && /email|e-mail/i.test(klic) && /@/.test(val)) {
             const m = val.match(/[^\s<>]+@[^\s<>]+/);
@@ -4935,12 +4943,12 @@ function buildPromptFE(mode, ctx) {
             'PRAVIDLA PRO LINKEDIN URL (důležité — AI obvykle halucinuje):',
             '- Profilová URL formátu https://linkedin.com/in/{slug} vraceť POUZE pokud jsi OPRAVDU ověřil přes web search, že daný profil existuje (otevři ho, vidíš jméno na stránce).',
             '- NIKDY negeneruj URL podle jména automaticky (např. /in/jan-novak nebo /in/jan-novak-ceo). LinkedIn slug obsahuje obvykle náhodný hash (např. /in/jan-novak-a8b2c4f) a Tvůj odhad bude z 90 % halucinace = 404.',
-            '- Pokud nemůžeš ověřit konkrétní profilovou URL, vrať fallback **vyhledávací URL** ve formátu:',
-            '  https://www.linkedin.com/search/results/people/?keywords=Jméno%20Příjmení',
-            '  (URL-encoded JEN JMÉNO+PŘÍJMENÍ — NIKDY tam nepřidávej firmu! LinkedIn search dělá AND-match přes všechna slova a pokud profil neobsahuje firmu doslova, vrátí "Nebyly nalezeny výsledky". Firmu uživatel uvidí v search výsledcích jako kontext pod každým profilem.)',
-            '- Pokud nemáš ani jméno (jen firmu), vrať null — search URL pro samotnou firmu je málo užitečný.',
+            '- Pokud nemůžeš ověřit konkrétní profilovou URL, vrať **Google site:linkedin.com/in search URL** v tomto formátu:',
+            '  https://www.google.com/search?q=site%3Alinkedin.com%2Fin+%22Jméno+Příjmení%22+%22Firma%22',
+            '  (URL-encoded `site:linkedin.com/in "Jméno Příjmení" "Firma"`. Google index obsahuje všechny veřejné LinkedIn profily a první výsledek je téměř vždy správný profil — uživatel klikne a otevře se mu reálná /in/ URL. NEPOUŽÍVEJ LinkedIn vlastní /search/ — bez přihlášení vrací prázdno.)',
+            '- Pokud nemáš ani jméno (jen firmu), vrať Google search pro company stránku: https://www.google.com/search?q=site%3Alinkedin.com%2Fcompany+%22Firma%22',
             (ctx.preferLinkedIn
-                ? '\n- PRIORITA LINKEDIN: Pro tuto variantu vraceť POUZE kontakty, kde umíš dodat OVĚŘENOU profilovou URL (/in/{slug}). Search URL je akceptovatelná, ale ideálně ji označ tím, že vyhledávací parametry odpovídají hledanému kontaktu. Kontakty, kde ani search URL nemá smysl (chybí jméno), zcela vyřaď.'
+                ? '\n- PRIORITA LINKEDIN: Pro tuto variantu vraceť POUZE kontakty, kde umíš dodat OVĚŘENOU profilovou URL (/in/{slug}). Google search URL je akceptovatelná jako fallback, ale ideální je ověřená profilová. Kontakty, kde nemáš ani jméno (chybí keywords pro Google search), zcela vyřaď.'
                 : ''),
             thoroughInstr,
             '',
@@ -4955,7 +4963,7 @@ function buildPromptFE(mode, ctx) {
             '      "email": "veřejný email | null",',
             '      "telefon": "veřejný tel | null",',
             '      "web": "https://… | null",',
-            '      "linkedinUrl": "BUĎ ověřená profilová URL https://linkedin.com/in/{slug} NEBO vyhledávací URL https://www.linkedin.com/search/results/people/?keywords=… NEBO null",',
+            '      "linkedinUrl": "BUĎ ověřená profilová URL https://linkedin.com/in/{slug} NEBO Google search URL https://www.google.com/search?q=site%3Alinkedin.com%2Fin+\\"Jméno\\"+\\"Firma\\" NEBO null",',
             '      "sidlo": "adresa | null",',
             '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
             '    }',
@@ -5457,10 +5465,15 @@ state.cleanupCandidates = [];
 state.cleanupSelected = new Set();
 
 function startCleanupLinkedInUrls() {
-    // Najít kandidáty: profilová URL + AI tag + linkedinStav prázdný
+    // Najít kandidáty pro přepis na Google search URL:
+    //   - profilové URL (AI obvykle halucinuje slug + hash = 404)
+    //   - LinkedIn /search/ URLs (bez přihlášení vrací prázdno, AND-match problém)
+    //   - "other" LinkedIn URL nestandardního formátu
+    //   - musí mít AI tag a prázdný linkedinStav (Martin URL nepotvrdil ručně)
     const candidates = state.contacts.filter(c => {
         if (!c.linkedinUrl) return false;
-        if (classifyLinkedInUrl(c.linkedinUrl) !== 'profile') return false;
+        const kind = classifyLinkedInUrl(c.linkedinUrl);
+        if (kind !== 'profile' && kind !== 'search' && kind !== 'other') return false;
         const isAI = (c.tagy && /AI-/i.test(c.tagy)) ||
                      (c.spolehlivost && /(claude|openai|gemini)/i.test(c.spolehlivost));
         if (!isAI) return false;
@@ -5554,9 +5567,13 @@ async function executeCleanupLinkedInUrls() {
         try {
             const newUrl = buildLinkedInSearchUrl(c.kontaktniOsoba, c.firma);
             const oldUrl = c.linkedinUrl;
+            const oldKind = classifyLinkedInUrl(oldUrl);
+            const oldReason = oldKind === 'profile' ? 'možná halucinace, často 404'
+                             : oldKind === 'search'  ? 'LinkedIn vyhledávání bez přihlášení vrací prázdno'
+                             : 'nestandardní formát';
             const note = '\n\n— LinkedIn cleanup ' + dateStr + ' —\n' +
-                         'Původní AI návrh (možná halucinace, často 404): ' + oldUrl +
-                         (newUrl ? '\nNahrazeno vyhledávací URL — klikni a vyber správný profil.' : '\nNelze vytvořit search URL (chybí jméno i firma).');
+                         'Původní AI návrh (' + oldReason + '): ' + oldUrl +
+                         (newUrl ? '\nNahrazeno Google site:linkedin.com search — klikni první výsledek = reálný profil.' : '\nNelze vytvořit search URL (chybí jméno i firma).');
             c.poznamka = (c.poznamka || '').trim() + note;
             c.linkedinUrl = newUrl;
             c.updatedAt = now;
@@ -5570,13 +5587,13 @@ async function executeCleanupLinkedInUrls() {
 
     try {
         await logActivity('', 'cleanup-linkedin',
-            'Bulk přepis ' + updated + ' AI LinkedIn URLs na search URLs' +
+            'Bulk přepis ' + updated + ' AI LinkedIn URLs na Google site:linkedin search' +
             (failed > 0 ? ' (' + failed + ' selhalo)' : ''));
     } catch (e) { /* non-fatal */ }
 
     closeCleanupModal();
     if (failed === 0) {
-        toast('success', 'Přepsáno ' + updated + ' LinkedIn URLs. Klikni na kontakt → LinkedIn → vyber správný profil → ulož.');
+        toast('success', 'Přepsáno ' + updated + ' LinkedIn URLs. Otevři kontakt → klikni 🔍 → Google najde profil → klikni první výsledek.');
     } else {
         toast('warning', 'Přepsáno ' + updated + ', selhalo ' + failed + '. Viz console.');
     }
@@ -5788,14 +5805,22 @@ function slug(s) {
 // ============================================================
 // LinkedIn URL klasifikace — profil vs. vyhledávací URL vs. neplatné
 // (AI obvykle halucinuje profilové URLs ze jména; viz prompt instrukce)
+//
+// STRATEGIE: pokud AI nemá ověřenou /in/{slug} URL, NEpoužíváme LinkedIn vlastní
+// /search/ (vrací prázdno bez přihlášení + dělá AND-match na klíčová slova).
+// Místo toho používáme **Google site:linkedin.com/in search** — Google má všechny
+// profily v indexu a klik na první výsledek otevře reálný LinkedIn profil.
+// To je standardní fallback profesionálních sourcing nástrojů.
 // ============================================================
 function classifyLinkedInUrl(url) {
     if (!url || typeof url !== 'string') return 'none';
     const u = url.trim().toLowerCase();
     if (!u) return 'none';
+    // Google site:linkedin.com/in search URL — náš preferovaný fallback
+    if (/^https?:\/\/(www\.)?google\.[a-z.]+\/search\?.*(linkedin\.com|site(%3a|:)linkedin)/i.test(u)) return 'google-search';
     // Profilová URL: linkedin.com/in/{slug}
     if (/^https?:\/\/([\w-]+\.)*linkedin\.com\/in\/[^\s?#]+/i.test(u)) return 'profile';
-    // Search URL: linkedin.com/search/results/...
+    // LinkedIn vlastní search URL (legacy nebo manuálně vložené)
     if (/^https?:\/\/([\w-]+\.)*linkedin\.com\/search\//i.test(u)) return 'search';
     // Company page: linkedin.com/company/{slug} — užitečné ale ne osobní profil
     if (/^https?:\/\/([\w-]+\.)*linkedin\.com\/company\/[^\s?#]+/i.test(u)) return 'company';
@@ -5804,31 +5829,35 @@ function classifyLinkedInUrl(url) {
     return 'invalid';
 }
 
-// LinkedIn search URL builder.
-// DŮLEŽITÉ: keywords obsahuje JEN JMÉNO osoby (ne firmu) — LinkedIn search dělá AND-match
-// přes všechna slova v keywords a často nic nenajde, pokud profil neobsahuje firmu doslova.
-// Firmu uživatel uvidí v search výsledcích jako kontext (pod každým profilem je aktuální firma).
+// Builder vyhledávací URL pro LinkedIn profil.
+// Místo LinkedIn /search/ (vrací prázdno bez přihlášení) generujeme **Google search**
+// s operátorem `site:linkedin.com/in` — Google index obsahuje všechny profily a první
+// výsledek je téměř vždy správný profil. Tohle Martin/asistentka klikne a otevře se
+// jim reálný LinkedIn URL, který si můžou zkopírovat zpět do kontaktu.
 function buildLinkedInSearchUrl(kontaktniOsoba, firma) {
     const name = (kontaktniOsoba || '').trim();
-    if (name) {
-        return 'https://www.linkedin.com/search/results/people/?keywords=' + encodeURIComponent(name);
-    }
-    // Fallback: pokud nemáme jméno osoby, vyhledat companies
     const company = (firma || '').trim();
+    if (name) {
+        const parts = ['site:linkedin.com/in', '"' + name + '"'];
+        if (company) parts.push('"' + company + '"');
+        return 'https://www.google.com/search?q=' + encodeURIComponent(parts.join(' '));
+    }
+    // Fallback: bez jména hledáme firemní stránku
     if (company) {
-        return 'https://www.linkedin.com/search/results/companies/?keywords=' + encodeURIComponent(company);
+        return 'https://www.google.com/search?q=' + encodeURIComponent('site:linkedin.com/company "' + company + '"');
     }
     return '';
 }
 
 function linkedInBadgeHTML(kind) {
     const badges = {
-        'profile':  { txt: '✓ Profilová URL',         color: 'var(--success)',   bg: 'var(--success-tint)' },
-        'search':   { txt: '⚠ Vyhledávací URL — ověř ručně',  color: 'var(--warning)', bg: 'var(--warning-tint)' },
-        'company':  { txt: 'ⓘ Stránka firmy (ne osobní profil)', color: 'var(--info)',    bg: 'var(--info-tint)' },
-        'other':    { txt: '⚠ LinkedIn URL nestandardního formátu', color: 'var(--warning)', bg: 'var(--warning-tint)' },
-        'invalid':  { txt: '✗ Není LinkedIn URL',     color: 'var(--danger)',    bg: 'var(--danger-tint)' },
-        'none':     { txt: '',                        color: '',                  bg: '' }
+        'profile':       { txt: '✓ Profilová URL',                            color: 'var(--success)', bg: 'var(--success-tint)' },
+        'google-search': { txt: '🔍 Hledat profil přes Google',               color: 'var(--info)',    bg: 'var(--info-tint)' },
+        'search':        { txt: '⚠ LinkedIn vyhledávání (často prázdné)',     color: 'var(--warning)', bg: 'var(--warning-tint)' },
+        'company':       { txt: 'ⓘ Stránka firmy (ne osobní profil)',         color: 'var(--info)',    bg: 'var(--info-tint)' },
+        'other':         { txt: '⚠ LinkedIn URL nestandardního formátu',      color: 'var(--warning)', bg: 'var(--warning-tint)' },
+        'invalid':       { txt: '✗ Není LinkedIn URL',                        color: 'var(--danger)',  bg: 'var(--danger-tint)' },
+        'none':          { txt: '',                                            color: '',                bg: '' }
     };
     const b = badges[kind] || badges.none;
     if (!b.txt) return '';
