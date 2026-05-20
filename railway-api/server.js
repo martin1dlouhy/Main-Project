@@ -585,6 +585,12 @@ function buildLoanDocSystemPrompt(templateName, passNumber) {
         '  ],\n' +
         '  "notes": "Nahradila jsem klienta + datum. Smazala přílohu LV 303 (nový deal má jen LV 4587). Doporučuji ověřit článek 5.3."\n' +
         '}\n\n' +
+        '=== JAK SE TVÉ REPLACEMENTS APLIKUJÍ NA FORMÁTOVÁNÍ ===\n' +
+        'Frontend tvé "find" → "replace" páry aplikuje na text obsah uvnitř <w:t> elementů Word XML. Formátování (bold, italic, font Aptos/Calibri/TNR, size, color) zůstane ZACHOVÁNO AUTOMATICKY, ZA TĚCHTO PODMÍNEK:\n' +
+        '- "find" je PŘESNÝ doslovný text z šablony (zachycen v jednom Word run-u). Pokud Word text rozlomil přes víc runů (např. tučné jméno klienta), find musí být přesně to co je v jednom runu.\n' +
+        '- "replace" je čistý text BEZ XML tagů (žádné <b>, <br/>, <w:r>), BEZ line breaks (\\n nahraď za " ; " nebo prázdné), BEZ neoddělených entit (& musí být "a" nebo "&amp;").\n' +
+        '- Pokud potřebuješ přidat nový text s vlastním formátováním (např. tučně), NEMŮŽEŠ — frontend modifikuje pouze existující <w:t> obsah. Pro strukturální změny použij uživatel manuální workflow (ChatGPT.com web s file upload).\n' +
+        '- Pokud "replace" obsahuje znak & < > — frontend ho escape-uje automaticky (Black & Decker → Black &amp; Decker), ale jen u plain textu.\n\n' +
         '=== PRAVIDLA REPLACEMENT PÁRŮ ===\n' +
         '- "find" MUSÍ být PŘESNÝ řetězec, který je doslova v šabloně. Zkopíruj přesně z textu šablony včetně mezer, diakritiky, formátování. Pokud "find" nesedí přesně, frontend nahrazení neaplikuje (tichý fail) — proto kopíruj doslova.\n' +
         '- POKUD V DATA NĚJAKÝ ÚDAJ CHYBÍ (např. prázdné contactPhone) — nechej v šabloně původní hodnotu, NENAHRAZUJ.\n' +
@@ -721,37 +727,18 @@ function buildLoanDocUserContent(templateName, dataDescription, previousReplacem
 // - ZACHOVAT formátování (styly, headings, číslování, fonty, tabulky)
 // - Před výstupem CELÉ znovu zreviduje (smlouva půjde rovnou klientovi)
 function buildLoanDocManualUserContent(templateName, dataDescription, templateText) {
-    return 'Mám historickou šablonu úvěrové smlouvy ProfiLend (' + (templateName || 'smlouva') + ') z minulého dealu. Potřebuju ji upravit pro nového klienta podle dat níže. Šablona JE PŘEDVYPLNĚNÁ konkrétními údaji z minulé smlouvy (jména, IČO, sídla, částky, datumy, čísla LV, čísla řízení katastru, jména bank apod.).\n\n' +
-        '⚠ TENTO DOKUMENT PŮJDE ROVNOU KLIENTOVI — musí být precizní, profesionální a dávat smysl jako celek. Zároveň MUSÍ vypadat vizuálně IDENTICKY jako originální šablona (formátování zachovat 1:1).\n\n' +
-        '=== JAK PRACOVAT S TOUTO ÚLOHOU ===\n' +
-        '1. K této konverzaci jsem připojil ORIGINÁLNÍ .docx šablonu jako file attachment. Pracuj s NÍ — ne s plain text extraktem dole.\n' +
-        '2. Plain text extrakt dole slouží jen jako tvoje navigace v obsahu (najdeš v něm rychle co kde je, ale chybí mu formátování).\n' +
-        '3. Skutečné úpravy dělej v .docx přes Code Interpreter / Python (python-docx, openpyxl-docx apod.).\n' +
-        '4. Po úpravách udělej finální revizi (viz checklist níže).\n' +
-        '5. Vrať mi upravený .docx jako NOVÝ file attachment ke stažení.\n\n' +
-        '=== TVŮJ POSTUP ÚPRAV ===\n' +
-        '1. PŘEČTI CELOU šablonu (smlouvu) a pochop strukturu, strany, zajištění, přílohy, kontext.\n' +
-        '2. NAHRAĎ konkrétní údaje z minulého dealu novými hodnotami z DATA níže (jméno klienta, IČO, sídlo, částka, úrok, splatnost, datumy, čísla LV, kontakty, podpisové údaje).\n' +
-        '3. SMAŽ irrelevantní pasáže pro nový deal:\n' +
-        '   - Přílohy o nemovitostech, které nový klient v collateralItems NEMÁ\n' +
-        '   - Klauzule o ručiteli / vinkulaci / starém zástavním právu, pokud DATA odpovídající údaj nemá\n' +
-        '   - Čísla řízení katastru (V-XXXX/YYYY-ZZZ), pokud DATA neuvádí nové\n' +
-        '   - Staré zástavní banky (Raiffeisenbank, KB, ČSOB apod.), pokud DATA nemá existingPledge\n' +
-        '   - Historické datumy úvěrových komisí, verze šablony, schvalovací podpisy\n' +
-        '4. PŘEFORMULUJ klauzule, které neodpovídají novému dealu (např. čerpání ve tranších vs jednorázové, poplatek z čerpané částky vs paušál).\n' +
-        '5. AKTUALIZUJ křížové odkazy — pokud smažeš Přílohu 1C, smaž i odkazy "viz Příloha 1C" v hlavním textu.\n' +
-        '6. KONZISTENCE — stejná hodnota se obvykle opakuje na mnoha místech (jméno klienta 20×, částka 5×). Zachyť VŠECHNY výskyty napříč dokumentem.\n\n' +
-        '=== ZACHOVÁNÍ FORMÁTOVÁNÍ — 100% IDENTICKÉ SE ŠABLONOU ===\n' +
-        '⚠ ABSOLUTNĚ NEAKCEPTOVATELNÉ: vrátit dokument, kde uživatel musí ručně sjednocovat formátování ve Wordu. To se v minulosti stalo a uživatel ztratil hodiny práce.\n' +
-        'Výsledný .docx musí být vizuálně k NEROZEZNÁNÍ od šablony (jen s upraveným obsahem). Pokud si nejsi 100% jistá nějakým formátováním, RADĚJI na něj NESAHAJ.\n\n' +
-        '=== TECHNICKÝ POSTUP V CODE INTERPRETER (python-docx) ===\n' +
-        'Klíč k zachování formátování: NEVYTVÁŘEJ nové paragraph/run elementy — MODIFIKUJ existující. python-docx přiřazuje formátování per-run, takže nahrazení textu uvnitř runu zachová bold/italic/font/size/color automaticky.\n\n' +
-        '✅ SPRÁVNĚ — modifikuj text uvnitř existujícího runu:\n' +
+    return 'ÚKOL: Mám historickou šablonu úvěrové smlouvy ProfiLend (' + (templateName || 'smlouva') + ') připojenou jako .docx attachment. Šablona je předvyplněná údaji z minulého dealu (jména, IČO, LV, čísla řízení, banky atd.). Uprav ji pro nového klienta dle DAT NÍŽE.\n\n' +
+        '⚠ TŘI ABSOLUTNÍ PRAVIDLA (DODRŽ VŠECHNA):\n\n' +
+        '1. FORMÁTOVÁNÍ ZACHOVAT 100%. Minule jsi vrátila dokument se změněnými fonty (Aptos→Calibri default) a uživatel musel hodiny ručně opravovat ve Wordu. To NESMÍ stát znovu. Pokud si nejsi 100% jistá nějakým formátováním, NESAHAJ na něj.\n\n' +
+        '2. DOKUMENT JDE ROVNOU KLIENTOVI. Žádné historické zbytky, žádné odkazy na smazané přílohy, smlouva musí dávat smysl jako celek.\n\n' +
+        '3. VRAŤ .docx JAKO FILE ATTACHMENT, ne plain text v chatu.\n\n' +
+        '=== JAK ZACHOVAT FORMÁTOVÁNÍ (KRITICKÁ ČÁST — ČTI POZORNĚ) ===\n\n' +
+        'Pracuj přes Code Interpreter s python-docx. Klíč: NEVYTVÁŘEJ nové paragraph/run elementy — MODIFIKUJ existující. python-docx ukládá formátování per-run, takže nahrazení .text uvnitř runu zachová bold/italic/font/size automaticky.\n\n' +
+        '✅ SPRÁVNĚ (zachová font Aptos + bold + italic):\n' +
         '```python\n' +
         'from docx import Document\n' +
-        'doc = Document("template.docx")\n' +
+        'doc = Document(uploaded_path)\n' +
         '\n' +
-        '# Sběr všech runs napříč dokumentem (paragraphs, tables, headers, footers)\n' +
         'def iter_all_runs(doc):\n' +
         '    for p in doc.paragraphs:\n' +
         '        yield from p.runs\n' +
@@ -760,104 +747,54 @@ function buildLoanDocManualUserContent(templateName, dataDescription, templateTe
         '            for cell in row.cells:\n' +
         '                for p in cell.paragraphs:\n' +
         '                    yield from p.runs\n' +
-        '    for section in doc.sections:\n' +
-        '        for p in section.header.paragraphs:\n' +
-        '            yield from p.runs\n' +
-        '        for p in section.footer.paragraphs:\n' +
-        '            yield from p.runs\n' +
         '\n' +
-        '# Replace text uvnitř runu — zachovává bold, italic, font, size, color\n' +
+        '# Změna hodnoty UVNITŘ runu — formátování zachováno\n' +
         'for run in iter_all_runs(doc):\n' +
-        '    if "AGRI PARTNERS" in run.text:\n' +
-        '        run.text = run.text.replace("AGRI PARTNERS", "Louve Group")\n' +
-        '```\n\n' +
-        '❌ ŠPATNĚ — vytvoření nového paragraph/run ZTRATÍ formátování:\n' +
-        '- doc.add_paragraph("text")           # ZTRATÍ styling, font, alignment\n' +
-        '- doc.add_heading("Nadpis", level=1)  # ztratí custom heading formatting\n' +
-        '- paragraph.clear() + add_run()       # ztratí původní run formátování\n\n' +
-        '=== SMAZÁNÍ CELÝCH BLOKŮ (přílohy, klauzule, články) ===\n' +
-        'Pro smazání celého paragraph (článku/přílohy) — odstranění z XML stromu:\n' +
-        '```python\n' +
-        'p = paragraph_to_delete\n' +
+        '    run.text = run.text.replace("AGRI PARTNERS", "Louve Group")\n' +
+        '\n' +
+        '# Smazání celé přílohy/odstavce\n' +
         'p._element.getparent().remove(p._element)\n' +
-        '# NE: paragraph.clear() — ten jen vyprázdní text, prázdný odstavec zůstane\n' +
-        '```\n\n' +
-        'Pro smazání celé Přílohy 1C (od heading "PŘÍLOHA 1C" po heading "PŘÍLOHA 1D"):\n' +
-        '```python\n' +
-        'in_section = False\n' +
-        'to_delete = []\n' +
-        'for p in doc.paragraphs:\n' +
-        '    if "PŘÍLOHA 1C" in p.text:\n' +
-        '        in_section = True\n' +
-        '    if "PŘÍLOHA 1D" in p.text and in_section:\n' +
-        '        break\n' +
-        '    if in_section:\n' +
-        '        to_delete.append(p)\n' +
-        'for p in to_delete:\n' +
-        '    p._element.getparent().remove(p._element)\n' +
-        '```\n\n' +
-        '=== VKLÁDÁNÍ NOVÝCH BLOKŮ ===\n' +
-        'Pokud potřebuješ přidat novou Přílohu (např. LV 4587 pro nový deal), CLONE existující přílohu a jen modifikuj text:\n' +
-        '```python\n' +
+        '\n' +
+        '# Vložení nové přílohy (clone existující — zachová styling)\n' +
         'from copy import deepcopy\n' +
-        '# Najdi šablonový paragraph (typicky předchozí přílohu)\n' +
-        'template_para = appendix_1B_paragraph._element\n' +
-        '# Clone (zachová všechen styling, runs, formátování)\n' +
-        'new_para = deepcopy(template_para)\n' +
-        '# Vlož za originál\n' +
-        'template_para.addnext(new_para)\n' +
-        '# Pak modifikuj text uvnitř klonu přes runs (zachová formátování)\n' +
+        'new_para = deepcopy(template_para._element)\n' +
+        'template_para._element.addnext(new_para)\n' +
         '```\n\n' +
-        '=== CO MUSÍ ZŮSTAT IDENTICKÉ ===\n' +
-        '- BOLD / ITALIC / UNDERLINE (run.bold, run.italic, run.underline)\n' +
-        '- FONT (run.font.name, run.font.size, run.font.color.rgb)\n' +
-        '- ZAROVNÁNÍ paragraph (paragraph.paragraph_format.alignment)\n' +
-        '- ODSAZENÍ (paragraph.paragraph_format.left_indent, right_indent, first_line_indent)\n' +
-        '- MEZERY (paragraph.paragraph_format.space_before, space_after, line_spacing)\n' +
-        '- STYL paragraph (paragraph.style — např. "Heading 1", "Normal", "List Number")\n' +
-        '- ČÍSLOVÁNÍ článků (paragraph.style obsahuje numPr — nezasahuj, Word přečísluje automaticky po smazání)\n' +
-        '- TABULKY: šířky sloupců, ohraničení, slučování, pozadí buněk, zarovnání obsahu\n' +
-        '- HYPERLINKY: emaily (mailto:), webové odkazy — uprav target ale zachovaj run.style\n' +
-        '- ZÁHLAVÍ a ZÁPATÍ: loga ProfiLend, čísla stránek\n' +
-        '- PAGE BREAKS: <w:br w:type="page"/> elementy\n\n' +
-        'PRAKTICKÝ PŘÍKLAD:\n' +
-        'Šablona má run s text="AGRI PARTNERS", bold=True, font.name="Aptos", font.size=Pt(11).\n' +
-        'Po run.text = run.text.replace("AGRI PARTNERS", "Louve Group"):\n' +
-        '  → text="Louve Group", bold=True (zachováno), font.name="Aptos" (zachováno), font.size=Pt(11) (zachováno) ✅\n\n' +
-        'NIKDY nevyhazuj formátování jen proto, že upravuješ obsah. NIKDY nevracej obyčejný plain text. NIKDY nezjednodušuj strukturu.\n\n' +
-        '=== POVINNÁ PROGRAMOVÁ VERIFIKACE FORMÁTOVÁNÍ ===\n' +
-        'Po dokončení úprav, PŘED vrácením file attachmentu, SPUSŤ verifikační skript:\n' +
+        '❌ NIKDY (ztratí Aptos font, bold, alignment — způsobí review markup ve Wordu):\n' +
+        '- doc.add_paragraph("text")\n' +
+        '- doc.add_heading("Nadpis", level=1)\n' +
+        '- paragraph.clear() + add_run("text")\n' +
+        '- Jakýkoli způsob co vytvoří nový paragraph/run\n\n' +
+        '=== CO ZMĚNIT ===\n' +
+        'A) NAHRADIT konkrétní údaje z DATA (jméno klienta, IČO, sídlo, částka, úrok, splatnost, datumy, LV, kontakty, podpis).\n' +
+        'B) SMAZAT irrelevantní pasáže:\n' +
+        '   - Přílohy o nemovitostech, které nový klient v collateralItems NEMÁ\n' +
+        '   - Čísla řízení katastru (V-XXXX/YYYY-ZZZ), pokud DATA neuvádí nové\n' +
+        '   - Staré zástavní banky (Raiffeisenbank apod.), pokud DATA nemá existingPledge\n' +
+        '   - Klauzule o ručiteli / vinkulaci, pokud DATA odpovídající údaj nemá\n' +
+        '   - Historické datumy úvěrových komisí, verze šablony\n' +
+        'C) PŘEFORMULOVAT klauzule co neodpovídají dealu (čerpání tranšemi vs jednorázové; poplatek z čerpané částky vs paušál — řiď se hodnotou v DATA "Poplatek za sjednání").\n' +
+        'D) UPDATE křížové odkazy (po smazání Přílohy 1C smaž i "viz Příloha 1C" v hlavním textu).\n\n' +
+        '=== CO NESAHAT ===\n' +
+        '- Obecné právní formulace bez čísel/jmen ("Smluvní strany se dohodly...", definice pojmů velkými písmeny jako "Den konečné splatnosti")\n' +
+        '- Formátování okolního textu (font, bold, italic, alignment)\n' +
+        '- Strukturu článků (číslování 1., 1.1, 1.1.1 — Word přečísluje sám)\n\n' +
+        '=== POVINNÁ VERIFIKACE PŘED VRÁCENÍM ===\n' +
+        'Po úpravách spusť Python kontrolu:\n' +
         '```python\n' +
-        'orig = Document("template.docx")\n' +
-        'edited = Document("output.docx")\n' +
-        '\n' +
-        '# Porovnaj styly napříč dokumentem\n' +
-        'def collect_styles(doc):\n' +
-        '    styles = []\n' +
-        '    for run in iter_all_runs(doc):\n' +
-        '        styles.append({\n' +
-        '            "bold": run.bold, "italic": run.italic, "underline": run.underline,\n' +
-        '            "font_name": run.font.name, "font_size": run.font.size,\n' +
-        '        })\n' +
-        '    return styles\n' +
-        '\n' +
-        '# Pokud edited má méně runů než orig (a smazala jsi sekce), check style coverage zbývajících\n' +
-        '# Pokud na stejné pozici je rozdíl bold/italic/font → OPRAV před vrácením\n' +
-        '```\n' +
-        'POKUD najdeš odchylku, OPRAV ji. NEVYDÁVEJ dokument, dokud formátování není 100% shodné s odpovídajícími runs v šabloně.\n\n' +
-        '=== FINÁLNÍ REVIZE (POVINNÁ PŘED VÝSTUPEM) ===\n' +
-        'Než mi vrátíš upravený .docx, projdi ho ZNOVU jako právník dělající due diligence:\n' +
-        '- Dává smysl jako celek pro NOVÝ deal? Nezůstaly tam logické rozpory?\n' +
-        '- Odkazují všechny "viz článek X" / "dle Přílohy Y" na existující články/přílohy?\n' +
-        '- Vyskytuje se kdekoli v dokumentu staré jméno klienta / staré IČO / staré LV / staré číslo řízení?\n' +
-        '- Pokud jsi smazala přílohu, zmizely i všechny její reference z hlavního textu?\n' +
-        '- Sedí čerpání a poplatky popsané v textu s parametry z DATA?\n' +
-        '- Pokud jsi smazala klauzuli o ručiteli/vinkulaci, není někde jinde v textu reference na ručitele/vinkulaci?\n' +
-        '- FORMÁTOVÁNÍ: nechybí někde tučné/kurzíva/podtržení, které originál měl? Sedí číslování článků? Tabulky vypadají stejně? Otevři výsledný .docx mentálně a porovnej se šablonou — vypadá vizuálně IDENTICKY?\n\n' +
-        '=== VÝSTUP ===\n' +
-        'Vrať upravený .docx jako file attachment ke stažení. NEVRACEJ obyčejný text v chatu — pokud bys vrátila jen text, ztratím formátování a smlouva nebude prezentovatelná klientovi.\n\n' +
+        'orig = Document(uploaded_path)\n' +
+        'edited = Document(output_path)\n' +
+        '# Sebrej font.name + bold + italic + size pro každý run\n' +
+        '# Pokud edited obsahuje runy s font.name != "Aptos" (nebo cokoli co má orig), OPRAV\n' +
+        'for run in iter_all_runs(edited):\n' +
+        '    if run.font.name and run.font.name != "Aptos":\n' +
+        '        # uprav font na Aptos (nebo cokoli okolní text má)\n' +
+        '        pass\n' +
+        '```\n\n' +
+        'Plus právní due-diligence kontrola: žádné staré jméno klienta / IČO / LV / číslo řízení nikde v textu, odkazy "viz článek X" / "dle Přílohy Y" sedí na existující sekce, čerpání + poplatky odpovídají DATA.\n\n' +
+        'POKUD najdeš jakoukoli odchylku formátování nebo logický problém, OPRAV PŘED vrácením. Lepší další 30 sekund práce než hodina mého ručního formátování.\n\n' +
         dataDescription + '\n\n' +
-        '=== ŠABLONA (PLAIN TEXT EXTRAKT — slouží jen jako navigace; skutečnou šablonu mám v .docx file uploadu) ===\n\n' +
+        '=== ŠABLONA (plain text — jen pro navigaci; originál v .docx uploadu) ===\n\n' +
         (templateText || '').substring(0, 50000);
 }
 
