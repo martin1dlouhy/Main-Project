@@ -726,8 +726,13 @@ function buildLoanDocUserContent(templateName, dataDescription, previousReplacem
 // - Vrátit UPRAVENÝ .docx (file attachment), ne JSON
 // - ZACHOVAT formátování (styly, headings, číslování, fonty, tabulky)
 // - Před výstupem CELÉ znovu zreviduje (smlouva půjde rovnou klientovi)
+// templateText parameter zachován pro API compatibility, ale v manuálním
+// promptu ho NEPOUŽÍVÁME — ChatGPT.com / Claude.ai dostane šablonu jako
+// .docx file attachment v konverzaci (file upload), který je úplnější
+// (formátování, struktura, tabulky) než plain text extrakt. Plain text
+// duplikoval obsah a zbytečně nafukoval prompt o 30-50 KB.
 function buildLoanDocManualUserContent(templateName, dataDescription, templateText) {
-    return 'ÚKOL: Mám historickou šablonu úvěrové smlouvy ProfiLend (' + (templateName || 'smlouva') + ') připojenou jako .docx attachment. Šablona je předvyplněná údaji z minulého dealu (jména, IČO, LV, čísla řízení, banky atd.). Uprav ji pro nového klienta dle DAT NÍŽE.\n\n' +
+    return 'ÚKOL: Mám historickou šablonu úvěrové smlouvy ProfiLend (' + (templateName || 'smlouva') + ') připojenou jako .docx FILE ATTACHMENT v této konverzaci. Otevři ho přes python-docx (Document(uploaded_file_path)) a pracuj přímo s tím .docx — formátování, struktura, runy. NEČEKEJ na to že ti šablonu pošlu jako text v chatu, je v attachmentu. Šablona je předvyplněná údaji z minulého dealu (jména, IČO, LV, čísla řízení, banky atd.). Uprav ji pro nového klienta dle DAT NÍŽE.\n\n' +
         '⚠ TŘI ABSOLUTNÍ PRAVIDLA (DODRŽ VŠECHNA):\n\n' +
         '1. FORMÁTOVÁNÍ ZACHOVAT 100%. Minule jsi vrátila dokument se změněnými fonty (Aptos→Calibri default) a uživatel musel hodiny ručně opravovat ve Wordu. To NESMÍ stát znovu. Pokud si nejsi 100% jistá nějakým formátováním, NESAHAJ na něj.\n\n' +
         '2. DOKUMENT JDE ROVNOU KLIENTOVI. Žádné historické zbytky, žádné odkazy na smazané přílohy, smlouva musí dávat smysl jako celek.\n\n' +
@@ -793,9 +798,7 @@ function buildLoanDocManualUserContent(templateName, dataDescription, templateTe
         '```\n\n' +
         'Plus právní due-diligence kontrola: žádné staré jméno klienta / IČO / LV / číslo řízení nikde v textu, odkazy "viz článek X" / "dle Přílohy Y" sedí na existující sekce, čerpání + poplatky odpovídají DATA.\n\n' +
         'POKUD najdeš jakoukoli odchylku formátování nebo logický problém, OPRAV PŘED vrácením. Lepší další 30 sekund práce než hodina mého ručního formátování.\n\n' +
-        dataDescription + '\n\n' +
-        '=== ŠABLONA (plain text — jen pro navigaci; originál v .docx uploadu) ===\n\n' +
-        (templateText || '').substring(0, 50000);
+        dataDescription;
 }
 
 // =============================================

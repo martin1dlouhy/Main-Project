@@ -4016,7 +4016,10 @@
                     (plainText || '').substring(0, 50000);
                 if (manualEl) {
                     // Fallback manual prompt — krátká verze (server endpoint nedostupný).
-                    manualEl.value = 'ÚKOL: Mám historickou šablonu úvěrové smlouvy ProfiLend (' + templateName + ') připojenou jako .docx attachment. Předvyplněná údaji z minulého dealu. Uprav ji pro nového klienta dle DAT NÍŽE.\n\n' +
+                    // Plain text šablony zde NENÍ — ChatGPT.com/Claude.ai dostane šablonu
+                    // jako .docx file attachment v konverzaci (Martin upload), který je
+                    // úplnější než plain text extrakt.
+                    manualEl.value = 'ÚKOL: Mám historickou šablonu úvěrové smlouvy ProfiLend (' + templateName + ') připojenou jako .docx FILE ATTACHMENT v této konverzaci. Otevři ji přes python-docx (Document(uploaded_file_path)) a pracuj přímo s tím .docx. NEČEKEJ na to že ti šablonu pošlu jako text v chatu, je v attachmentu. Předvyplněná údaji z minulého dealu. Uprav pro nového klienta dle DAT NÍŽE.\n\n' +
                         '⚠ TŘI ABSOLUTNÍ PRAVIDLA:\n' +
                         '1. FORMÁTOVÁNÍ 100% ZACHOVAT (minule jsi rozbila fonty Aptos→Calibri, uživatel hodiny opravoval — to NESMÍ se opakovat).\n' +
                         '2. DOKUMENT JDE ROVNOU KLIENTOVI (žádné historické zbytky, smysluplný jako celek).\n' +
@@ -4030,9 +4033,7 @@
                         'CO ZMĚNIT: A) nahradit údaje z DATA (klient, IČO, sídlo, částka, úrok, splatnost, LV, ...); B) smazat irrelevantní (přílohy LV co klient nemá; čísla řízení V-XXXX/YYYY; staré banky pokud neexistingPledge; klauzule ručitele/vinkulace pokud nejsou v DATA); C) přeformulovat klauzule co neodpovídají dealu (čerpání tranšemi vs jednorázové, poplatek 1% z čerpané vs paušál); D) aktualizovat křížové odkazy (smazaná Příloha 1C → smaž i "viz Příloha 1C").\n\n' +
                         'CO NESAHAT: obecné právní formulace bez čísel/jmen, formátování okolního textu, číslování (Word přečísluje).\n\n' +
                         'VERIFIKACE před vrácením: porovnaj run-by-run font.name + bold + italic mezi orig a edited. Pokud najdeš run kde font.name != "Aptos" (nebo cokoli co měl originál), OPRAV. Plus check že žádné staré jméno/IČO/LV/číslo řízení nezůstalo nikde v textu.\n\n' +
-                        dataEl.value + '\n\n' +
-                        '=== ŠABLONA (plain text — jen pro navigaci; originál v .docx uploadu) ===\n\n' +
-                        (plainText || '').substring(0, 50000);
+                        dataEl.value;
                 }
                 showToast('Náhled promptu: server nedostupný — používám lokální verzi (může být zastaralá)', 'info', 5000);
             });
