@@ -4920,9 +4920,8 @@ function buildPromptFE(mode, ctx) {
             '- Profilová URL formátu https://linkedin.com/in/{slug} vraceť POUZE pokud jsi OPRAVDU ověřil přes web search, že daný profil existuje (otevři ho, vidíš jméno na stránce).',
             '- NIKDY negeneruj URL podle jména automaticky (např. /in/jan-novak nebo /in/jan-novak-ceo). LinkedIn slug obsahuje obvykle náhodný hash (např. /in/jan-novak-a8b2c4f) a Tvůj odhad bude z 90 % halucinace = 404.',
             '- Pokud nemůžeš ověřit konkrétní profilovou URL, vrať fallback **vyhledávací URL** ve formátu:',
-            '  https://www.linkedin.com/search/results/people/?keywords=Jméno%20Příjmení%20Firma',
-            '  (URL-encoded jméno+příjmení+firma jako keywords, oddělené %20 pro mezery).',
-            '  Uživatel pak v LinkedIn UI uvidí seznam kandidátů a vybere správného.',
+            '  https://www.linkedin.com/search/results/people/?keywords=Jméno%20Příjmení',
+            '  (URL-encoded JEN JMÉNO+PŘÍJMENÍ — NIKDY tam nepřidávej firmu! LinkedIn search dělá AND-match přes všechna slova a pokud profil neobsahuje firmu doslova, vrátí "Nebyly nalezeny výsledky". Firmu uživatel uvidí v search výsledcích jako kontext pod každým profilem.)',
             '- Pokud nemáš ani jméno (jen firmu), vrať null — search URL pro samotnou firmu je málo užitečný.',
             (ctx.preferLinkedIn
                 ? '\n- PRIORITA LINKEDIN: Pro tuto variantu vraceť POUZE kontakty, kde umíš dodat OVĚŘENOU profilovou URL (/in/{slug}). Search URL je akceptovatelná, ale ideálně ji označ tím, že vyhledávací parametry odpovídají hledanému kontaktu. Kontakty, kde ani search URL nemá smysl (chybí jméno), zcela vyřaď.'
@@ -5675,11 +5674,21 @@ function classifyLinkedInUrl(url) {
     return 'invalid';
 }
 
+// LinkedIn search URL builder.
+// DŮLEŽITÉ: keywords obsahuje JEN JMÉNO osoby (ne firmu) — LinkedIn search dělá AND-match
+// přes všechna slova v keywords a často nic nenajde, pokud profil neobsahuje firmu doslova.
+// Firmu uživatel uvidí v search výsledcích jako kontext (pod každým profilem je aktuální firma).
 function buildLinkedInSearchUrl(kontaktniOsoba, firma) {
-    const parts = [kontaktniOsoba, firma].filter(s => s && s.trim());
-    if (parts.length === 0) return '';
-    const keywords = parts.join(' ').trim();
-    return 'https://www.linkedin.com/search/results/people/?keywords=' + encodeURIComponent(keywords);
+    const name = (kontaktniOsoba || '').trim();
+    if (name) {
+        return 'https://www.linkedin.com/search/results/people/?keywords=' + encodeURIComponent(name);
+    }
+    // Fallback: pokud nemáme jméno osoby, vyhledat companies
+    const company = (firma || '').trim();
+    if (company) {
+        return 'https://www.linkedin.com/search/results/companies/?keywords=' + encodeURIComponent(company);
+    }
+    return '';
 }
 
 function linkedInBadgeHTML(kind) {

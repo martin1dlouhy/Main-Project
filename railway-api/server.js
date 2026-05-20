@@ -1971,9 +1971,17 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             '- KAŽDÝ kontakt MUSÍ být ověřitelný v reálu — žádné halucinace',
             '- Cílíme na decision-makery: Partner, Managing Partner, Director, CEO, Owner, Head of, Senior',
             '- Vyhni se juniorům, asistentům, info@/contact@ adresám',
-            '- Email/telefon/LinkedIn = jen pokud je v reálu veřejně dostupné. Jinak null.',
+            '- Email/telefon = jen pokud je v reálu veřejně dostupné. Jinak null.',
+            '',
+            'PRAVIDLA PRO LINKEDIN URL (důležité — AI obvykle halucinuje):',
+            '- Profilová URL formátu https://linkedin.com/in/{slug} vraceť POUZE pokud jsi OPRAVDU ověřil přes web search, že daný profil existuje (otevři ho, vidíš jméno na stránce).',
+            '- NIKDY negeneruj URL podle jména automaticky (např. /in/jan-novak nebo /in/jan-novak-ceo). LinkedIn slug obsahuje obvykle náhodný hash (např. /in/jan-novak-a8b2c4f) a Tvůj odhad bude z 90 % halucinace = 404.',
+            '- Pokud nemůžeš ověřit konkrétní profilovou URL, vrať fallback **vyhledávací URL** ve formátu:',
+            '  https://www.linkedin.com/search/results/people/?keywords=Jméno%20Příjmení',
+            '  (URL-encoded JEN JMÉNO+PŘÍJMENÍ — NIKDY tam nepřidávej firmu! LinkedIn search dělá AND-match přes všechna slova a pokud profil neobsahuje firmu doslova, vrátí "Nebyly nalezeny výsledky". Firmu uživatel uvidí v search výsledcích jako kontext pod každým profilem.)',
+            '- Pokud nemáš ani jméno (jen firmu), vrať null — search URL pro samotnou firmu je málo užitečný.',
             (ctx.preferLinkedIn
-                ? '- PRIORITA LINKEDIN: Vrať POUZE kontakty s veřejně dohledatelným LinkedIn profilem. Pokud kontakt LinkedIn nemá nebo ho nedohledáš, raději ho vynech a najdi jiného. LinkedIn URL je v této variantě POVINNÉ pole (nesmí být null).'
+                ? '\n- PRIORITA LINKEDIN: Pro tuto variantu vraceť POUZE kontakty, kde umíš dodat OVĚŘENOU profilovou URL (/in/{slug}). Search URL je akceptovatelná, ale ideálně ji označ tím, že vyhledávací parametry odpovídají hledanému kontaktu. Kontakty, kde ani search URL nemá smysl (chybí jméno), zcela vyřaď.'
                 : ''),
             thoroughInstr,
             '',
