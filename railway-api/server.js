@@ -1711,6 +1711,7 @@ app.post('/api/database/find-contacts', async function (req, res) {
         thorough: thorough,
         preferLinkedIn: preferLinkedIn,
         existingContactsSummary: body.existingContactsSummary || [],
+        existingContactsOther: body.existingContactsOther || [],
         existingSourceUrls: existingSourceUrls
     });
 
@@ -1867,16 +1868,29 @@ function buildAIDiscoveryPrompt(mode, ctx) {
             return line;
         }).join('\n');
 
-        // Existing kontakty v tomto segmentu — ať AI nehledá to, co už máme.
+        // Existing kontakty — DVĚ sekce: aktuální segment (priorita) + jiné segmenty (cross-dedup)
         var existing = (ctx.existingContactsSummary || []).filter(function (c) { return c && (c.firma || c.kontaktniOsoba); });
         var existingCap = 80;
-        var existingText = existing.length > 0
-            ? '\n\nKONTAKTY KTERÉ UŽ MÁM V DATABÁZI PRO TENTO SEGMENT (NEHLEDEJ tyto, najdi DALŠÍ):\n' +
+        var sameSegText = existing.length > 0
+            ? '\n\nKONTAKTY KTERÉ UŽ MÁM V TOMTO SEGMENTU (NEHLEDEJ tyto, najdi DALŠÍ):\n' +
               existing.slice(0, existingCap).map(function (c) {
-                return '- ' + (c.firma || '?') + (c.kontaktniOsoba ? ' (' + c.kontaktniOsoba + ')' : '');
+                return '- ' + (c.firma || '?') + (c.kontaktniOsoba ? ' (' + c.kontaktniOsoba + ')' : '') +
+                       (c.ico ? ' [IČO ' + c.ico + ']' : '');
               }).join('\n') +
-              (existing.length > existingCap ? '\n... a dalších ' + (existing.length - existingCap) + ' kontaktů (z prostorových důvodů zde nezahrnuto).' : '')
+              (existing.length > existingCap ? '\n... a dalších ' + (existing.length - existingCap) + ' (z prostorových důvodů ne všechny vypsané).' : '')
             : '';
+        var others = (ctx.existingContactsOther || []).filter(function (c) { return c && (c.firma || c.kontaktniOsoba); });
+        var othersCap = 100;
+        var otherSegText = others.length > 0
+            ? '\n\nKONTAKTY V JINÝCH SEGMENTECH (cross-dedup — pokud bys našel stejnou osobu/firmu, NEsuggestuj ji jako nový kontakt):\n' +
+              others.slice(0, othersCap).map(function (c) {
+                return '- ' + (c.firma || '?') + (c.kontaktniOsoba ? ' (' + c.kontaktniOsoba + ')' : '') +
+                       (c.ico ? ' [IČO ' + c.ico + ']' : '') +
+                       (c.segment ? ' — segment: ' + c.segment : '');
+              }).join('\n') +
+              (others.length > othersCap ? '\n... a dalších ' + (others.length - othersCap) + ' (z prostorových důvodů ne všechny vypsané).' : '')
+            : '';
+        var existingText = sameSegText + otherSegText;
 
         return [
             header, '',

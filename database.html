@@ -2106,13 +2106,16 @@
 
             <div class="settings-panel">
                 <h4>Kontrola databáze</h4>
-                <p class="panel-desc">Najde duplicity (stejné IČO, email, nebo jméno+firma) a chybějící povinná pole. Sloučení duplicit zatím manuálně — aplikace na ně upozorní.</p>
+                <p class="panel-desc">Najde duplicity (stejné IČO, email, LinkedIn, nebo jméno+firma) a chybějící povinná pole. <strong>Zkontrolovat</strong> jen zobrazí výpis pro manuální revizi. <strong>Auto-smazat duplicity</strong> automaticky najde skupiny duplicit, zachová nejstarší (originál podle createdAt), zbytek smaže. Drive History tě jistí.</p>
                 <div class="settings-row">
                     <div>
                         <div class="settings-row-label">Poslední kontrola</div>
                         <div class="settings-row-meta" id="check-meta">Nespouštěno</div>
                     </div>
-                    <button class="btn btn-primary" onclick="checkDatabase()">Zkontrolovat</button>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-secondary" onclick="checkDatabase()">Zkontrolovat</button>
+                        <button class="btn btn-primary" onclick="autoCleanupDuplicates()" style="border-color:var(--danger);color:var(--danger);">Auto-smazat duplicity</button>
+                    </div>
                 </div>
                 <div id="check-results" style="margin-top:14px;display:none;"></div>
             </div>
@@ -3154,6 +3157,31 @@ async function sheetsClearRow(tabName, rowIndex) {
             }]
         })
     });
+}
+
+// Bulk delete více řádků v jednom batchUpdate volání. Sheets API zpracovává requesty
+// sekvenčně — pokud bychom mazali od nejmenšího indexu nahoru, každé smazání by posunulo
+// následující řádky o 1 dolů a indexy by ztratily platnost. Proto sort DESC.
+async function sheetsDeleteRows(tabName, rowIndices) {
+    if (!rowIndices || rowIndices.length === 0) return;
+    const tabId = state.sheetTabIds[tabName];
+    if (tabId === undefined) throw new Error('Tab ID nenalezen pro ' + tabName);
+    // Sort descending — od konce listu k začátku, aby indexy zůstaly platné během sekvenčního zpracování
+    const sorted = rowIndices.slice().sort(function (a, b) { return b - a; });
+    const requests = sorted.map(function (rowIndex) {
+        return {
+            deleteDimension: {
+                range: { sheetId: tabId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex }
+            }
+        };
+    });
+    const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + ':batchUpdate';
+    const res = await gfetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: requests })
+    });
+    await checkSheetsResponse(res, 'sheetsDeleteRows(' + tabName + ', n=' + rowIndices.length + ')');
 }
 
 async function sheetsClearAll(tabName) {
@@ -4241,6 +4269,207 @@ function checkDatabase() {
 }
 
 // ============================================================
+// AUTO DUPLICATE CLEANUP — najde duplicity (IČO / email / LinkedIn / jméno+firma),
+// zachová "originál" (nejstarší dle createdAt; fallback nejnižší _rowIndex), smaže ostatní.
+// Funguje přes union-find: dva kontakty patří do stejné skupiny, pokud mají SHODNÝ
+// libovolný klíč. Tím se chytí i řetězové duplicity (A↔B přes IČO, B↔C přes email).
+// ============================================================
+state.dupeCleanupData = null;
+
+function analyzeDuplicates() {
+    // Union-find struktury pro skupinování
+    const parent = new Map();
+    function find(x) {
+        if (!parent.has(x)) parent.set(x, x);
+        if (parent.get(x) !== x) parent.set(x, find(parent.get(x)));
+        return parent.get(x);
+    }
+    function union(a, b) {
+        const ra = find(a), rb = find(b);
+        if (ra !== rb) parent.set(ra, rb);
+    }
+
+    // Pro každý klíč postav skupiny: všechny kontakty se stejným klíčem patří k sobě
+    const norm = function (s) { return (s || '').toString().normalize('NFC').trim().toLowerCase(); };
+    const groups = { ico: {}, email: {}, linkedin: {}, namefirma: {} };
+    state.contacts.forEach(function (c) {
+        if (c.ico && /^\d{8}$/.test(c.ico)) {
+            (groups.ico[c.ico] = groups.ico[c.ico] || []).push(c.id);
+        }
+        if (c.email) {
+            const e = norm(c.email);
+            if (e && /@/.test(e)) (groups.email[e] = groups.email[e] || []).push(c.id);
+        }
+        if (c.linkedinUrl) {
+            const l = norm(c.linkedinUrl).replace(/\/$/, '');
+            // Skip Google search URLs — ty se liší jen query stringem, vznikla by false-positive
+            if (l && !/google\.[a-z.]+\/search/i.test(l)) {
+                (groups.linkedin[l] = groups.linkedin[l] || []).push(c.id);
+            }
+        }
+        if (c.kontaktniOsoba && c.firma) {
+            const k = norm(c.kontaktniOsoba) + '|' + norm(c.firma);
+            (groups.namefirma[k] = groups.namefirma[k] || []).push(c.id);
+        }
+    });
+
+    // Spoj všechny kontakty se sdíleným klíčem
+    function processGroup(g) {
+        Object.values(g).forEach(function (ids) {
+            for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
+        });
+    }
+    processGroup(groups.ico);
+    processGroup(groups.email);
+    processGroup(groups.linkedin);
+    processGroup(groups.namefirma);
+
+    // Komponenty
+    const components = {};
+    state.contacts.forEach(function (c) {
+        if (!parent.has(c.id)) return;
+        const root = find(c.id);
+        (components[root] = components[root] || []).push(c.id);
+    });
+    return Object.values(components).filter(function (ids) { return ids.length > 1; });
+}
+
+function pickKeeper(ids) {
+    // Vybere "originál" podle priorit:
+    //   1) Aktivní LinkedIn workflow (linkedinStav set = asistentka už s ním pracuje)
+    //   2) Víc vyplněných polí (= bohatší informace, manuálně dopilovaný)
+    //   3) Nejstarší createdAt (= byl tu první)
+    //   4) Nejnižší _rowIndex (= byl tu první v Sheetu, fallback)
+    const arr = ids.map(function (id) { return state.contacts.find(function (c) { return c.id === id; }); }).filter(Boolean);
+    arr.sort(function (a, b) {
+        // 1) Workflow active?
+        const aw = !!((a.linkedinStav || '').trim()) || !!((a.osloven_kdy || '').trim());
+        const bw = !!((b.linkedinStav || '').trim()) || !!((b.osloven_kdy || '').trim());
+        if (aw !== bw) return aw ? -1 : 1;
+        // 2) Počet vyplněných polí
+        const fields = ['firma', 'kontaktniOsoba', 'email', 'telefon', 'linkedinUrl', 'role', 'sidlo', 'web', 'ico'];
+        const af = fields.filter(function (f) { return (a[f] || '').toString().trim(); }).length;
+        const bf = fields.filter(function (f) { return (b[f] || '').toString().trim(); }).length;
+        if (af !== bf) return bf - af; // víc polí první
+        // 3) Starší createdAt
+        const ta = new Date(a.createdAt || '9999-12-31').getTime();
+        const tb = new Date(b.createdAt || '9999-12-31').getTime();
+        if (ta !== tb) return ta - tb;
+        // 4) Nižší _rowIndex
+        return (a._rowIndex || 99999) - (b._rowIndex || 99999);
+    });
+    return arr[0];
+}
+
+function autoCleanupDuplicates() {
+    const container = document.getElementById('check-results');
+    container.style.display = 'block';
+
+    const components = analyzeDuplicates();
+    if (components.length === 0) {
+        container.innerHTML = '<div class="info-note success"><strong>Žádné duplicity nenalezeny.</strong> Databáze je čistá.</div>';
+        toast('info', 'Žádné duplicity v databázi.');
+        return;
+    }
+
+    // Pro každou skupinu vyber keeper, ostatní označ k smazání
+    const groupsToDelete = [];
+    let totalDelete = 0;
+    components.forEach(function (component) {
+        const keeper = pickKeeper(component);
+        if (!keeper) return;
+        const dupes = component
+            .map(function (id) { return state.contacts.find(function (c) { return c.id === id; }); })
+            .filter(function (c) { return c && c.id !== keeper.id; });
+        if (dupes.length === 0) return;
+        groupsToDelete.push({ keeper: keeper, dupes: dupes });
+        totalDelete += dupes.length;
+    });
+
+    state.dupeCleanupData = groupsToDelete;
+
+    // Preview
+    let html = '<div class="info-note warning"><strong>Nalezeno ' + components.length + ' skupin duplicit (' + totalDelete + ' kontaktů ke smazání).</strong> ' +
+        'V každé skupině zachovám OPRAVDU PRVNÍ (nejstarší createdAt), ostatní smažu. ' +
+        'Drive History tě jistí — pokud něco bude blbě, vrátíš Sheet zpět.</div>';
+
+    html += '<div style="margin-top:14px;max-height:340px;overflow-y:auto;border:1px solid var(--line-faint);border-radius:6px;">';
+    groupsToDelete.forEach(function (g, idx) {
+        html += '<div style="padding:10px 12px;border-bottom:1px solid var(--line-faint);font-size:12.5px;">' +
+            '<div style="color:var(--text-mute);font-size:11px;margin-bottom:6px;">Skupina #' + (idx + 1) + '</div>' +
+            '<div style="display:flex;align-items:flex-start;gap:8px;color:var(--success);">' +
+                '<span style="font-weight:600;flex-shrink:0;">✓ ZACHOVÁM:</span>' +
+                '<span>' + escapeHtml(g.keeper.kontaktniOsoba || g.keeper.firma || '(bez jména)') +
+                (g.keeper.firma && g.keeper.kontaktniOsoba ? ' — ' + escapeHtml(g.keeper.firma) : '') +
+                ' <span style="color:var(--text-faint);font-size:11px;">(' + (g.keeper.createdAt ? formatDateTime(g.keeper.createdAt) : 'bez data') + ', row ' + (g.keeper._rowIndex || '?') + ')</span></span>' +
+            '</div>';
+        g.dupes.forEach(function (d) {
+            html += '<div style="display:flex;align-items:flex-start;gap:8px;color:var(--danger);margin-top:4px;">' +
+                '<span style="font-weight:600;flex-shrink:0;">✗ SMAŽU:</span>' +
+                '<span>' + escapeHtml(d.kontaktniOsoba || d.firma || '(bez jména)') +
+                (d.firma && d.kontaktniOsoba ? ' — ' + escapeHtml(d.firma) : '') +
+                ' <span style="color:var(--text-faint);font-size:11px;">(' + (d.createdAt ? formatDateTime(d.createdAt) : 'bez data') + ', row ' + (d._rowIndex || '?') + ')</span></span>' +
+            '</div>';
+        });
+        html += '</div>';
+    });
+    html += '</div>';
+
+    html += '<div style="margin-top:14px;display:flex;gap:10px;">' +
+        '<button class="btn btn-primary" onclick="executeDuplicateCleanup()" style="background:var(--danger);">Smazat ' + totalDelete + ' duplicit</button>' +
+        '<button class="btn btn-ghost" onclick="cancelDuplicateCleanup()">Zrušit</button>' +
+    '</div>';
+
+    container.innerHTML = html;
+}
+
+function cancelDuplicateCleanup() {
+    state.dupeCleanupData = null;
+    document.getElementById('check-results').innerHTML = '<div class="info-note">Auto-cleanup zrušen.</div>';
+}
+
+async function executeDuplicateCleanup() {
+    if (!state.dupeCleanupData || state.dupeCleanupData.length === 0) {
+        toast('error', 'Žádná data k cleanupu.');
+        return;
+    }
+
+    const container = document.getElementById('check-results');
+    container.innerHTML = '<div style="font-size:13px;color:var(--text-mute);padding:8px;">Mažu duplicity z Sheetu…</div>';
+
+    try {
+        // Sebrat rowIndexes všech k smazání
+        const rowIndexes = [];
+        let totalDeleted = 0;
+        state.dupeCleanupData.forEach(function (g) {
+            g.dupes.forEach(function (d) {
+                if (d._rowIndex && d._rowIndex >= 2) {
+                    rowIndexes.push(d._rowIndex);
+                    totalDeleted++;
+                }
+            });
+        });
+
+        if (rowIndexes.length === 0) {
+            container.innerHTML = '<div class="info-note warning">Nic ke smazání (chybí row indexy).</div>';
+            return;
+        }
+
+        await sheetsDeleteRows(SHEET_TABS.contacts, rowIndexes);
+        await logActivity('', 'dupe-cleanup', 'Auto-cleanup: smazáno ' + totalDeleted + ' duplicit, zachováno ' + state.dupeCleanupData.length + ' originálů');
+
+        state.dupeCleanupData = null;
+        container.innerHTML = '<div class="info-note success"><strong>Hotovo.</strong> Smazáno ' + totalDeleted + ' duplicit. Aplikace se obnoví…</div>';
+        toast('success', 'Smazáno ' + totalDeleted + ' duplicit.');
+        await syncFromSheet();
+    } catch (err) {
+        console.error('executeDuplicateCleanup error:', err);
+        container.innerHTML = '<div class="info-note danger"><strong>Chyba při mazání:</strong> ' + escapeHtml(err.message || String(err)) +
+            '<br><br>Sheet může být v polovičním stavu. <strong>Otevři Drive History a obnov verzi před cleanup.</strong></div>';
+    }
+}
+
+// ============================================================
 // SEARCHABLE SINGLE-SELECT WIDGET
 // Generic widget pro select s search inputem v menu.
 // Náhrada za nav.js dropdown widget tam, kde má smysl search.
@@ -4490,11 +4719,28 @@ function buildAIPayload() {
         if (sources.length === 0) {
             return { error: 'Segment nemá zdroje. Nejdřív spusť „Objevit zdroje" nebo doplň ručně v Sheetu.' };
         }
-        // Existing kontakty pro tento segment — pro PROMPT (AI ví, co nehledat).
-        // Cap 80 kvůli velikosti promptu; nad to backend přidá "...a dalších N".
+        // Existing kontakty pro PROMPT (AI ví, co nehledat). Filtr je odolný proti
+        // whitespace/case/Unicode-normalization rozdílům, protože segment string může
+        // přijít z různých zdrojů (Sheet, dropdown, AI response).
+        const normalizeSeg = function (s) {
+            return (s || '').toString().normalize('NFC').trim().toLowerCase();
+        };
+        const segKey = normalizeSeg(segmentNazev);
+        // 1) Kontakty v tomto segmentu — priorita, ať AI ví, co je v hubu
         const segmentContacts = state.contacts
-            .filter(c => c.segment === segmentNazev && (c.firma || c.kontaktniOsoba))
-            .map(c => ({ firma: c.firma || '', kontaktniOsoba: c.kontaktniOsoba || '' }));
+            .filter(c => (c.firma || c.kontaktniOsoba) && normalizeSeg(c.segment) === segKey)
+            .map(c => ({ firma: c.firma || '', kontaktniOsoba: c.kontaktniOsoba || '', ico: c.ico || '' }));
+        // 2) Kontakty v JINÝCH segmentech — cross-dedup kontext (AI ne-suggestuje
+        // duplicit přes segmenty). Cap 150 ať prompt nebobtná.
+        const otherSegmentContacts = state.contacts
+            .filter(c => (c.firma || c.kontaktniOsoba) && normalizeSeg(c.segment) !== segKey)
+            .slice(0, 150)
+            .map(c => ({
+                firma: c.firma || '',
+                kontaktniOsoba: c.kontaktniOsoba || '',
+                ico: c.ico || '',
+                segment: c.segment || ''
+            }));
         const preferLinkedIn = document.getElementById('vyhl-linkedin-pref').checked;
         return {
             payload: {
@@ -4504,6 +4750,7 @@ function buildAIPayload() {
                 sources: sources.map(s => ({ nazev: s.nazev, url: s.url, poznamka: s.poznamka })),
                 existingContactsKeys: getExistingContactKeys(),       // pro post-AI dedupe (univerzální napříč všemi segmenty)
                 existingContactsSummary: segmentContacts,              // pro prompt (jen tento segment)
+                existingContactsOther: otherSegmentContacts,           // pro prompt — jiné segmenty (cross-dedup)
                 region: document.getElementById('vyhl-region').value.trim() || 'celá ČR',
                 maxResults: parseInt(document.getElementById('vyhl-max').value) || 20,
                 thorough: thorough,
@@ -5050,16 +5297,32 @@ function buildPromptFE(mode, ctx) {
             return line;
         }).join('\n');
 
-        // Existing kontakty v tomto segmentu — ať AI nehledá to, co už máme.
+        // Existing kontakty pro PROMPT — DVĚ sekce:
+        // 1) Kontakty v tomto segmentu (priorita — AI je nesmí znova suggestnout)
+        // 2) Kontakty v jiných segmentech (cross-dedup — pokud AI najde Pavla z Investown,
+        //    nechceme ho přidat znova jen proto, že je v jiném segmentu)
         const existing = (ctx.existingContactsSummary || []).filter(c => c.firma || c.kontaktniOsoba);
         const existingCap = 80;
-        const existingText = existing.length > 0
-            ? '\n\nKONTAKTY KTERÉ UŽ MÁM V DATABÁZI PRO TENTO SEGMENT (NEHLEDEJ tyto, najdi DALŠÍ):\n' +
+        const sameSegText = existing.length > 0
+            ? '\n\nKONTAKTY KTERÉ UŽ MÁM V TOMTO SEGMENTU (NEHLEDEJ tyto, najdi DALŠÍ):\n' +
               existing.slice(0, existingCap).map(c =>
-                '- ' + (c.firma || '?') + (c.kontaktniOsoba ? ' (' + c.kontaktniOsoba + ')' : '')
+                '- ' + (c.firma || '?') + (c.kontaktniOsoba ? ' (' + c.kontaktniOsoba + ')' : '') +
+                (c.ico ? ' [IČO ' + c.ico + ']' : '')
               ).join('\n') +
-              (existing.length > existingCap ? '\n... a dalších ' + (existing.length - existingCap) + ' kontaktů (z prostorových důvodů zde nezahrnuto).' : '')
+              (existing.length > existingCap ? '\n... a dalších ' + (existing.length - existingCap) + ' (z prostorových důvodů ne všechny vypsané).' : '')
             : '';
+        const others = (ctx.existingContactsOther || []).filter(c => c.firma || c.kontaktniOsoba);
+        const othersCap = 100;
+        const otherSegText = others.length > 0
+            ? '\n\nKONTAKTY V JINÝCH SEGMENTECH (cross-dedup — pokud bys našel stejnou osobu/firmu, NEsuggestuj ji jako nový kontakt):\n' +
+              others.slice(0, othersCap).map(c =>
+                '- ' + (c.firma || '?') + (c.kontaktniOsoba ? ' (' + c.kontaktniOsoba + ')' : '') +
+                (c.ico ? ' [IČO ' + c.ico + ']' : '') +
+                (c.segment ? ' — segment: ' + c.segment : '')
+              ).join('\n') +
+              (others.length > othersCap ? '\n... a dalších ' + (others.length - othersCap) + ' (z prostorových důvodů ne všechny vypsané).' : '')
+            : '';
+        const existingText = sameSegText + otherSegText;
 
         return [
             header, '',
