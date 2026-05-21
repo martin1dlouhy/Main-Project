@@ -2106,7 +2106,7 @@
 
             <div class="settings-panel">
                 <h4>Kontrola databáze</h4>
-                <p class="panel-desc">Najde duplicity (stejné IČO, email, LinkedIn, nebo jméno+firma) a chybějící povinná pole. <strong>Zkontrolovat</strong> jen zobrazí výpis pro manuální revizi. <strong>Auto-smazat duplicity</strong> automaticky najde skupiny duplicit, zachová nejstarší (originál podle createdAt), zbytek smaže. Drive History tě jistí.</p>
+                <p class="panel-desc">Identifikuje duplicity podle <strong>osobních</strong> klíčů — email, LinkedIn profil, nebo jméno+firma/IČO. Stejné IČO samo o sobě NENÍ dup (= jen stejná firma, kde může pracovat víc lidí — Alan/Vít/Filip v jedné firmě jsou 3 různé kontakty). <strong>Zkontrolovat</strong> jen zobrazí výpis pro manuální revizi. <strong>Auto-smazat duplicity</strong> automaticky najde skupiny duplicit, zachová nejstarší (originál podle createdAt + workflow-active), zbytek smaže. Drive History tě jistí.</p>
                 <div class="settings-row">
                     <div>
                         <div class="settings-row-label">Poslední kontrola</div>
@@ -4204,30 +4204,40 @@ function csvEscape(v) {
 // ============================================================
 function checkDatabase() {
     const issues = { duplicates: [], missing: [] };
-    const seen = { ico: {}, email: {}, namefirma: {}, linkedin: {} };
+    // POZN: Identifikujeme stejnou OSOBU, ne stejnou FIRMU. Same IČO/firma sám o sobě = jen
+    // stejná firma (multiple zaměstnanci = různé kontakty, ne dup). Klíče = email, LinkedIn /in/,
+    // jméno+firma, jméno+IČO.
+    const seen = { email: {}, linkedin: {}, namefirma: {}, nameico: {} };
+    const norm = function (s) { return (s || '').toString().normalize('NFC').trim().toLowerCase(); };
 
     state.contacts.forEach(c => {
         // Missing required
         if (!c.firma && !c.kontaktniOsoba) issues.missing.push({ id: c.id, why: 'Chybí firma i jméno' });
-        // Duplicate detection
-        if (c.ico && c.ico.length === 8) {
-            if (seen.ico[c.ico]) issues.duplicates.push({ id: c.id, dupOf: seen.ico[c.ico], why: 'IČO ' + c.ico });
-            else seen.ico[c.ico] = c.id;
-        }
+        // Duplicate detection — POUZE osobní identifikátory
         if (c.email) {
-            const e = c.email.toLowerCase();
-            if (seen.email[e]) issues.duplicates.push({ id: c.id, dupOf: seen.email[e], why: 'Email ' + e });
-            else seen.email[e] = c.id;
+            const e = norm(c.email);
+            if (e && /@/.test(e)) {
+                if (seen.email[e]) issues.duplicates.push({ id: c.id, dupOf: seen.email[e], why: 'Email ' + e });
+                else seen.email[e] = c.id;
+            }
         }
         if (c.linkedinUrl) {
-            const l = c.linkedinUrl.toLowerCase().replace(/\/$/, '');
-            if (seen.linkedin[l]) issues.duplicates.push({ id: c.id, dupOf: seen.linkedin[l], why: 'LinkedIn URL' });
-            else seen.linkedin[l] = c.id;
+            const l = norm(c.linkedinUrl).replace(/\/$/, '');
+            // POUZE skutečný profil /in/, ne Google search ani LinkedIn /search/
+            if (l && /linkedin\.com\/in\//i.test(l)) {
+                if (seen.linkedin[l]) issues.duplicates.push({ id: c.id, dupOf: seen.linkedin[l], why: 'LinkedIn profil' });
+                else seen.linkedin[l] = c.id;
+            }
         }
         if (c.kontaktniOsoba && c.firma) {
-            const k = (c.kontaktniOsoba + '|' + c.firma).toLowerCase();
+            const k = norm(c.kontaktniOsoba) + '|firma:' + norm(c.firma);
             if (seen.namefirma[k]) issues.duplicates.push({ id: c.id, dupOf: seen.namefirma[k], why: 'Jméno + firma' });
             else seen.namefirma[k] = c.id;
+        }
+        if (c.kontaktniOsoba && c.ico && /^\d{8}$/.test(c.ico)) {
+            const k = norm(c.kontaktniOsoba) + '|ico:' + c.ico;
+            if (seen.nameico[k]) issues.duplicates.push({ id: c.id, dupOf: seen.nameico[k], why: 'Jméno + IČO ' + c.ico });
+            else seen.nameico[k] = c.id;
         }
     });
 
@@ -4289,27 +4299,33 @@ function analyzeDuplicates() {
         if (ra !== rb) parent.set(ra, rb);
     }
 
-    // Pro každý klíč postav skupiny: všechny kontakty se stejným klíčem patří k sobě
+    // KLÍČOVÉ: Identifikujeme stejnou OSOBU, ne stejnou FIRMU. Same IČO/firma sám o sobě =
+    // jen stejná firma (kde může pracovat víc lidí), ne dup. Same email/LinkedIn = osoba.
+    // Same jméno+firma nebo jméno+IČO = osoba ve firmě. Standalone IČO/firma NEPOUŽÍVAT.
     const norm = function (s) { return (s || '').toString().normalize('NFC').trim().toLowerCase(); };
-    const groups = { ico: {}, email: {}, linkedin: {}, namefirma: {} };
+    const groups = { email: {}, linkedin: {}, nameFirma: {}, nameIco: {} };
     state.contacts.forEach(function (c) {
-        if (c.ico && /^\d{8}$/.test(c.ico)) {
-            (groups.ico[c.ico] = groups.ico[c.ico] || []).push(c.id);
-        }
+        // Email = osobní identifikátor
         if (c.email) {
             const e = norm(c.email);
             if (e && /@/.test(e)) (groups.email[e] = groups.email[e] || []).push(c.id);
         }
+        // LinkedIn POUZE skutečné profilové URLs (/in/slug) — ne Google search, ne LinkedIn /search/
         if (c.linkedinUrl) {
             const l = norm(c.linkedinUrl).replace(/\/$/, '');
-            // Skip Google search URLs — ty se liší jen query stringem, vznikla by false-positive
-            if (l && !/google\.[a-z.]+\/search/i.test(l)) {
+            if (l && /linkedin\.com\/in\//i.test(l)) {
                 (groups.linkedin[l] = groups.linkedin[l] || []).push(c.id);
             }
         }
+        // Jméno + firma = osoba ve firmě
         if (c.kontaktniOsoba && c.firma) {
-            const k = norm(c.kontaktniOsoba) + '|' + norm(c.firma);
-            (groups.namefirma[k] = groups.namefirma[k] || []).push(c.id);
+            const k = norm(c.kontaktniOsoba) + '|firma:' + norm(c.firma);
+            (groups.nameFirma[k] = groups.nameFirma[k] || []).push(c.id);
+        }
+        // Jméno + IČO = osoba ve firmě (handles firma spelling variants: "BONDSTER" vs "Bondster")
+        if (c.kontaktniOsoba && c.ico && /^\d{8}$/.test(c.ico)) {
+            const k = norm(c.kontaktniOsoba) + '|ico:' + c.ico;
+            (groups.nameIco[k] = groups.nameIco[k] || []).push(c.id);
         }
     });
 
@@ -4319,10 +4335,10 @@ function analyzeDuplicates() {
             for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
         });
     }
-    processGroup(groups.ico);
     processGroup(groups.email);
     processGroup(groups.linkedin);
-    processGroup(groups.namefirma);
+    processGroup(groups.nameFirma);
+    processGroup(groups.nameIco);
 
     // Komponenty
     const components = {};
