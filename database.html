@@ -3337,6 +3337,11 @@ async function migrateContactsHeader(contactRows) {
 // Klíčové: používá actualHeader (= skutečné pořadí sloupců v Sheetu) k najití správné
 // pozice každého pole. Pokud Martin přesune sloupec, mapování stále funguje. Pokud
 // pole v Sheetu chybí (např. před migrací), vrátí prázdný string.
+//
+// _rawRow: KAŽDÝ obj si zapamatuje původní raw řádek (kopii). Slouží k zachování
+// custom sloupců (které Martin/asistentka přidali manuálně, mimo CONTACTS_HEADER schema)
+// při příštím zápisu. Bez tohoto by objectToRow napsal '' do custom sloupců a smazal
+// asistenčina data.
 function rowsToObjects(rows, expectedHeader, actualHeader) {
     if (!rows || rows.length < 1) return [];
     const usedHeader = (actualHeader && actualHeader.length > 0) ? actualHeader : (rows[0] || expectedHeader);
@@ -3350,30 +3355,43 @@ function rowsToObjects(rows, expectedHeader, actualHeader) {
             const i = indexMap[field];
             obj[field] = (i >= 0 && row[i] !== undefined) ? row[i] : '';
         });
+        // Zachovat raw řádek pro custom sloupce
+        obj._rawRow = (row || []).slice();
         return obj;
     });
 }
 
-// Generic: object → array v pořadí actualHeader (tj. ve stejném pořadí jako Sheet).
-// Pokud Sheet má sloupec, který objekt nemá, vrátí prázdný string.
-// Pokud actualHeader obsahuje vlastní sloupce Martina (mimo aplikační schema),
-// pošleme prázdný string, ale Sheets API zachová existing hodnotu? NE - update přepíše.
-// Proto by Martin neměl mít vlastní sloupce uvnitř aplikačního rozsahu. Pro vlastní
-// metadata použij sloupce ZA aplikačními (na konci) — tam aplikace neupdate-uje
-// (Sheet má víc sloupců než actualHeader si pamatuje).
-function objectToRow(obj, actualHeader) {
-    return actualHeader.map(field => {
-        const v = obj[field];
-        return (v !== undefined && v !== null) ? String(v) : '';
+// Generic: object → array v pořadí actualHeader.
+// PRO ZNÁMÁ POLE (expectedHeader nebo CONTACTS_HEADER) bere hodnotu z obj.
+// PRO CUSTOM SLOUPCE (Martin/asistentka přidali ručně) bere hodnotu z obj._rawRow,
+// takže manuálně doplněná data zůstávají zachována i po app update.
+//
+// Pokud chceš donutit aplikaci ZAPSAT něco do custom sloupce (= přepsat asistenčina data),
+// musíš pole nejdřív přidat do CONTACTS_HEADER a do contact form / serializace.
+function objectToRow(obj, actualHeader, expectedHeader) {
+    expectedHeader = expectedHeader || actualHeader; // fallback: bez expectedHeader bere všechno z obj
+    return actualHeader.map(function (field, i) {
+        // Pokud field je v expectedHeader (= aplikace o něm ví), použij hodnotu z obj
+        if (expectedHeader.indexOf(field) !== -1) {
+            const v = obj[field];
+            return (v !== undefined && v !== null) ? String(v) : '';
+        }
+        // Custom sloupec — zachovej původní raw hodnotu (= asistenčina data)
+        if (obj._rawRow && obj._rawRow[i] !== undefined && obj._rawRow[i] !== null) {
+            return String(obj._rawRow[i]);
+        }
+        return '';
     });
 }
 
-// Wrapper pro contacts — používá aktuální Sheet header z state.
+// Wrapper pro contacts — používá aktuální Sheet header z state + CONTACTS_HEADER jako
+// "expectedHeader", aby objectToRow věděl, které sloupce jsou aplikační (přepiš) a které
+// custom (zachovej raw).
 function contactToRow(c) {
     const header = (state.headerOrders.contacts && state.headerOrders.contacts.length > 0)
         ? state.headerOrders.contacts
         : CONTACTS_HEADER;
-    return objectToRow(c, header);
+    return objectToRow(c, header, CONTACTS_HEADER);
 }
 
 // ============================================================
@@ -3460,7 +3478,7 @@ async function logActivity(kontaktId, what, detail) {
         const obj = { when: now, kontaktId: kontaktId || '', what: what, detail: detail || '' };
         const activityHeader = (state.headerOrders.activity && state.headerOrders.activity.length > 0)
             ? state.headerOrders.activity : ACTIVITY_HEADER;
-        await sheetsAppend(SHEET_TABS.activity, [objectToRow(obj, activityHeader)]);
+        await sheetsAppend(SHEET_TABS.activity, [objectToRow(obj, activityHeader, ACTIVITY_HEADER)]);
         state.activity.unshift(obj);
     } catch (err) {
         console.warn('Activity log failed:', err);
@@ -5153,7 +5171,7 @@ async function applySources() {
             nazev: s.nazev || '',
             url: s.url || '',
             poznamka: poznamka.trim()
-        }, sourcesHeader);
+        }, sourcesHeader, SOURCES_HEADER);
     });
 
     try {
