@@ -887,6 +887,40 @@
             cursor: pointer;
         }
 
+        /* ─── COLLATERAL LIST (5 LV řádků s checkboxem) ─── */
+        .collateral-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .collateral-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .collateral-row .checkbox-item.collateral-toggle {
+            padding: 12px 4px;        /* vertikálně srovnat s první řádkou textarea */
+            flex-shrink: 0;
+            background: transparent;
+        }
+        .collateral-row .checkbox-item.collateral-toggle:hover {
+            background: transparent;
+        }
+        .collateral-row .form-textarea {
+            flex: 1;
+            min-height: 52px;
+            resize: vertical;
+        }
+        .collateral-row.disabled .form-textarea {
+            opacity: 0.45;
+        }
+        .collateral-hint {
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
         /* ─── BUTTONS ─── */
         .btn {
             display: inline-flex;
@@ -1837,15 +1871,46 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                             Zajištění
                         </div>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Hodnota zajištění</label>
-                                <input type="text" id="collateralValue" class="form-input" placeholder="2 000 000" oninput="formatAmount(this)">
+                        <div class="form-group form-group-single">
+                            <label class="form-label">Položky zajištění (max 5 LV)</label>
+                            <div class="collateral-list" id="collateralList">
+                                <div class="collateral-row" data-idx="0">
+                                    <label class="checkbox-item collateral-toggle" title="Zahrnout LV 1 do generovaného dokumentu">
+                                        <input type="checkbox" id="collateralActive0" data-idx="0" checked onchange="updateCollateralRowState(0)">
+                                        <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                    </label>
+                                    <textarea id="collateralItem0" class="form-textarea" rows="2" placeholder="LV 1 — např. LV 4494, kú Mariánské Lázně, pozemky p.č. 142/43, stavba č.p. 424"></textarea>
+                                </div>
+                                <div class="collateral-row" data-idx="1">
+                                    <label class="checkbox-item collateral-toggle" title="Zahrnout LV 2 do generovaného dokumentu">
+                                        <input type="checkbox" id="collateralActive1" data-idx="1" checked onchange="updateCollateralRowState(1)">
+                                        <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                    </label>
+                                    <textarea id="collateralItem1" class="form-textarea" rows="2" placeholder="LV 2 (volitelně)"></textarea>
+                                </div>
+                                <div class="collateral-row" data-idx="2">
+                                    <label class="checkbox-item collateral-toggle" title="Zahrnout LV 3 do generovaného dokumentu">
+                                        <input type="checkbox" id="collateralActive2" data-idx="2" checked onchange="updateCollateralRowState(2)">
+                                        <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                    </label>
+                                    <textarea id="collateralItem2" class="form-textarea" rows="2" placeholder="LV 3 (volitelně)"></textarea>
+                                </div>
+                                <div class="collateral-row" data-idx="3">
+                                    <label class="checkbox-item collateral-toggle" title="Zahrnout LV 4 do generovaného dokumentu">
+                                        <input type="checkbox" id="collateralActive3" data-idx="3" checked onchange="updateCollateralRowState(3)">
+                                        <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                    </label>
+                                    <textarea id="collateralItem3" class="form-textarea" rows="2" placeholder="LV 4 (volitelně)"></textarea>
+                                </div>
+                                <div class="collateral-row" data-idx="4">
+                                    <label class="checkbox-item collateral-toggle" title="Zahrnout LV 5 do generovaného dokumentu">
+                                        <input type="checkbox" id="collateralActive4" data-idx="4" checked onchange="updateCollateralRowState(4)">
+                                        <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                    </label>
+                                    <textarea id="collateralItem4" class="form-textarea" rows="2" placeholder="LV 5 (volitelně)"></textarea>
+                                </div>
                             </div>
-                            <div class="form-group form-group-single">
-                                <label class="form-label">Položky zajištění</label>
-                                <textarea id="collateralItems" class="form-textarea" placeholder="Seznam zajišťovacích prostředků (z LV analýzy)"></textarea>
-                            </div>
+                            <p class="collateral-hint">Zaškrtnuté LV budou zahrnuty v generované dokumentaci. Pro zástavní smlouvu k jediné nemovitosti odškrtni ostatní — AI dostane informaci, kolik LV bylo z celkové zástavy vybráno pro tuto konkrétní smlouvu.</p>
                         </div>
                     </div>
 
@@ -3832,8 +3897,37 @@
             if (formData.otherCosts) d += 'Ostatní náklady: ' + formData.otherCosts + '\n';
 
             d += '\n=== ZAJIŠTĚNÍ ===\n';
-            if (formData.collateralValue) d += 'Hodnota zajištění: ' + formData.collateralValue + '\n';
-            if (formData.collateralItems) d += 'Položky zajištění:\n' + formData.collateralItems + '\n';
+            // Collateral: nový formát = pole 5 stringů + pole 5 booleanů (active).
+            // Legacy formát = string s newlines (rozpadneme na pole, vše aktivní).
+            // Do dokumentu jde POUZE zaškrtnutý seznam — AI musí vědět, kolik LV bylo
+            // celkem vyplněno vs. zahrnuto (např. zástavní smlouva ke 2 z 3 LV).
+            (function () {
+                var rawItems = formData.collateralItems;
+                var rawActive = formData.collateralActive;
+                var itemsArr = [];
+                var activeArr = [];
+                if (Array.isArray(rawItems)) {
+                    itemsArr = rawItems.map(function (s) { return (s || '').trim(); });
+                    activeArr = Array.isArray(rawActive) ? rawActive : [];
+                } else if (typeof rawItems === 'string' && rawItems.trim()) {
+                    itemsArr = rawItems.split('\n').map(function (s) { return s.trim(); });
+                    activeArr = []; // legacy: vše true
+                }
+                var totalFilled = itemsArr.filter(function (s) { return s; }).length;
+                var includedLines = [];
+                for (var i = 0; i < itemsArr.length; i++) {
+                    var isActive = activeArr.length === 0 ? true : (activeArr[i] !== false);
+                    if (isActive && itemsArr[i]) includedLines.push(itemsArr[i]);
+                }
+                if (includedLines.length === 0) return;
+                var header = (totalFilled > includedLines.length)
+                    ? 'Položky zajištění (' + includedLines.length + ' z ' + totalFilled + ' LV — zbývající LV jsou součástí jiných smluv dealu, do TÉTO smlouvy je nezahrnuj):'
+                    : 'Položky zajištění:';
+                d += header + '\n';
+                for (var j = 0; j < includedLines.length; j++) {
+                    d += (j + 1) + '. ' + includedLines[j] + '\n';
+                }
+            })();
 
             d += '\n=== DODATEČNÉ ÚDAJE ===\n';
             if (formData.representativeName) d += 'Jednatel/zástupce dlužníka: ' + formData.representativeName + ', funkce: ' + (formData.representativeRole || '') + '\n';
@@ -4230,20 +4324,16 @@
         }
 
         // Adaptér: termsheet schema → loan-doc populateForm() fields.
-        // Hlavní mismatch: termsheet 'borrower' = loan-doc 'uvereovany';
-        // termsheet 'collateralItems' je pole, loan-doc textarea = string oddělený \n.
+        // Hlavní mismatch: termsheet 'borrower' = loan-doc 'uvereovany'.
+        // collateralItems prochází jak je — populateForm() umí pole i legacy string a sám
+        // distribuuje do 5 polí. Pole 'collateralValue' v loan-doc bylo odstraněno.
         function populateFormFromTermSheet(ts) {
-            var collateralStr = '';
-            if (Array.isArray(ts.collateralItems)) collateralStr = ts.collateralItems.join('\n');
-            else if (typeof ts.collateralItems === 'string') collateralStr = ts.collateralItems;
-
             var adapted = Object.assign({}, ts, {
-                uvereovany: ts.borrower || ts.borrowerName || '',
-                collateralItems: collateralStr
+                uvereovany: ts.borrower || ts.borrowerName || ''
             });
             populateForm(adapted);
 
-            ['amount', 'otherCosts', 'collateralValue', 'appraisalValue'].forEach(function(fid) {
+            ['amount', 'otherCosts', 'appraisalValue'].forEach(function(fid) {
                 var el = document.getElementById(fid);
                 if (el && el.value && typeof formatAmount === 'function') formatAmount(el);
             });
@@ -4273,10 +4363,38 @@
             var otherEl = document.getElementById('otherCosts');
             otherEl.value = data.otherCosts || '';
             if (otherEl.value) formatAmount(otherEl);
-            var collEl = document.getElementById('collateralValue');
-            collEl.value = data.collateralValue || '';
-            if (collEl.value) formatAmount(collEl);
-            document.getElementById('collateralItems').value = data.collateralItems || '';
+            // Collateral: nový formát = pole 5 stringů + pole 5 booleanů.
+            // Legacy formát = string s newlines → split, vše aktivní.
+            // Pole 'collateralValue' bylo odstraněno — pokud existuje ve starých datech, ignoruje se.
+            (function () {
+                var rawItems = data.collateralItems;
+                var rawActive = data.collateralActive;
+                var itemsArr = [];
+                if (Array.isArray(rawItems)) {
+                    itemsArr = rawItems.slice();
+                } else if (typeof rawItems === 'string' && rawItems.trim()) {
+                    itemsArr = rawItems.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+                }
+                if (itemsArr.length > 5) {
+                    var dropped = itemsArr.slice(5);
+                    itemsArr = itemsArr.slice(0, 5);
+                    if (typeof showToast === 'function') {
+                        showToast('Max 5 LV — přebytek (' + dropped.length + ') byl oříznut. Uprav ručně, pokud potřebuješ jiné LV.', 'error');
+                    }
+                }
+                var activeArr = Array.isArray(rawActive) ? rawActive : [];
+                for (var i = 0; i < 5; i++) {
+                    var inp = document.getElementById('collateralItem' + i);
+                    var chk = document.getElementById('collateralActive' + i);
+                    if (inp) inp.value = itemsArr[i] || '';
+                    if (chk) {
+                        // Default: chybí explicitní activeArr → vše true.
+                        // Explicitní false (uložený state) → odškrtnuté.
+                        chk.checked = (activeArr.length === 0) ? true : (activeArr[i] !== false);
+                    }
+                    if (typeof updateCollateralRowState === 'function') updateCollateralRowState(i);
+                }
+            })();
             document.getElementById('representativeName').value = data.representativeName || '';
             document.getElementById('representativeRole').value = data.representativeRole || '';
             document.getElementById('contactName').value = data.contactName || '';
@@ -4311,6 +4429,15 @@
             }
         }
 
+        // Vizuální disabled state pro collateral řádek — sníží opacity textarea,
+        // když je LV odškrtnuté. Volá se z onchange checkboxu i z populateForm().
+        function updateCollateralRowState(idx) {
+            var row = document.querySelector('.collateral-row[data-idx="' + idx + '"]');
+            var chk = document.getElementById('collateralActive' + idx);
+            if (!row || !chk) return;
+            row.classList.toggle('disabled', !chk.checked);
+        }
+
         function collectFormData() {
             return {
                 uvereovany: document.getElementById('uvereovany').value,
@@ -4331,8 +4458,22 @@
                 originationFee: document.getElementById('originationFee').value,
                 originationFeeType: document.getElementById('originationFeeType').value,
                 otherCosts: document.getElementById('otherCosts').value,
-                collateralValue: document.getElementById('collateralValue').value,
-                collateralItems: document.getElementById('collateralItems').value,
+                collateralItems: (function () {
+                    var arr = [];
+                    for (var i = 0; i < 5; i++) {
+                        var el = document.getElementById('collateralItem' + i);
+                        arr.push(el ? el.value : '');
+                    }
+                    return arr;
+                })(),
+                collateralActive: (function () {
+                    var arr = [];
+                    for (var i = 0; i < 5; i++) {
+                        var el = document.getElementById('collateralActive' + i);
+                        arr.push(el ? el.checked : true);
+                    }
+                    return arr;
+                })(),
                 representativeName: document.getElementById('representativeName').value,
                 representativeRole: document.getElementById('representativeRole').value,
                 contactName: document.getElementById('contactName').value,
@@ -4792,7 +4933,6 @@
                 { key: 'maturity', label: 'Doba splatnosti' },
                 { key: 'maturityDate', label: 'Datum splatnosti' },
                 { key: 'drawdownDate', label: 'Datum čerpání' },
-                { key: 'collateralValue', label: 'Hodnota zajištění' },
                 { key: 'collateralItems', label: 'Položky zajištění' },
                 { key: 'representativeName', label: 'Jednatel/zástupce' },
                 { key: 'borrowerAccount', label: 'Účet dlužníka' },
