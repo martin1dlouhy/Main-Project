@@ -921,6 +921,25 @@
             line-height: 1.5;
         }
 
+        /* ─── PLEDGOR (Zástavce — sekce 6) ─── */
+        .pledgor-toggles {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 16px;
+        }
+        .pledgor-fields.disabled .form-input {
+            opacity: 0.45;
+            pointer-events: none;
+            background: var(--bg-surface);
+        }
+        .pledgor-hint {
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
         /* ─── BUTTONS ─── */
         .btn {
             display: inline-flex;
@@ -1914,7 +1933,58 @@
                         </div>
                     </div>
 
-                    <!-- Section 6: Dodatečné údaje -->
+                    <!-- Section 6: Zástavce -->
+                    <div class="section">
+                        <div class="section-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                            Zástavce
+                        </div>
+                        <div class="pledgor-toggles">
+                            <label class="checkbox-item" title="Zástavce a dlužník jsou stejný subjekt — v zástavní smlouvě se použijí identické údaje jako u dlužníka">
+                                <input type="checkbox" id="pledgorSameAsBorrower" onchange="onPledgorSameAsBorrowerChange()">
+                                <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <span class="checkbox-label">Zástavce je stejný jako dlužník</span>
+                            </label>
+                            <label class="checkbox-item" title="Zástavce je vlastník nemovitosti z LV — AI ho doplní z přiloženého výpisu KN v chatu (manuální workflow)">
+                                <input type="checkbox" id="pledgorFromLV" onchange="onPledgorFromLVChange()">
+                                <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <span class="checkbox-label">Zástavce je vlastník z LV (AI doplní z přiloženého výpisu KN)</span>
+                            </label>
+                        </div>
+                        <div class="form-grid pledgor-fields" id="pledgorFields">
+                            <div class="form-group">
+                                <label class="form-label">Název / Jméno zástavce</label>
+                                <input type="text" id="pledgorName" class="form-input" placeholder="Jméno fyzické osoby nebo název firmy">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">IČO / Rodné číslo</label>
+                                <input type="text" id="pledgorIco" class="form-input" placeholder="12345678 nebo RČ">
+                            </div>
+                            <div class="form-group form-group-single">
+                                <label class="form-label">Spisová značka (pokud právnická osoba)</label>
+                                <input type="text" id="pledgorSpisovaZnacka" class="form-input" placeholder="C 123456 vedená u Městského soudu v Praze">
+                            </div>
+                            <div class="form-group form-group-single">
+                                <label class="form-label">Bydliště / Sídlo</label>
+                                <input type="text" id="pledgorAddress" class="form-input" placeholder="Ulice a číslo, PSČ, město">
+                            </div>
+                            <div class="form-group form-group-single">
+                                <label class="form-label">Doručovací adresa (pokud jiná než bydliště)</label>
+                                <input type="text" id="pledgorDeliveryAddress" class="form-input" placeholder="Ulice a číslo, PSČ, město — volitelné">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Jednatel / Zástupce (pokud PO)</label>
+                                <input type="text" id="pledgorRepresentativeName" class="form-input" placeholder="Jméno">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Funkce</label>
+                                <input type="text" id="pledgorRepresentativeRole" class="form-input" placeholder="Jednatel">
+                            </div>
+                        </div>
+                        <p class="pledgor-hint">Pokud zaškrtneš „Zástavce je vlastník z LV", pole zde nech prázdná — AI si údaje vezme z přiloženého výpisu KN v manuálním chatu. Pro plně automatický API workflow vyplň ručně.</p>
+                    </div>
+
+                    <!-- Section 7: Dodatečné údaje -->
                     <div class="section">
                         <div class="section-title">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -3929,10 +3999,35 @@
                 }
             })();
 
+            // Zástavce — mirror server-side buildLoanDocDataDescription logiky.
+            // Sekce se vynechá, pokud žádný pledgor checkbox není zaškrtnutý a všechna pole prázdná.
+            var hasPledgorFields = formData.pledgorName || formData.pledgorIco ||
+                formData.pledgorAddress || formData.pledgorDeliveryAddress ||
+                formData.pledgorRepresentativeName || formData.pledgorSpisovaZnacka;
+            if (formData.pledgorSameAsBorrower || formData.pledgorFromLV || hasPledgorFields) {
+                d += '\n=== ZÁSTAVCE ===\n';
+                if (formData.pledgorSameAsBorrower) {
+                    d += 'Zástavce = Dlužník (viz sekce DLUŽNÍK výše). Stejný subjekt vystupuje v zástavní smlouvě jako zástavce i v úvěrové smlouvě jako dlužník — POUŽÍVEJ stejné údaje (název, IČO, sídlo, jednatel, doručovací adresa) pro obě role.\n';
+                } else if (formData.pledgorFromLV) {
+                    d += 'Zástavce = vlastník nemovitosti uvedený v přiloženém výpisu z Katastru nemovitostí (LV). Martin přiložil LV jako další .pdf/obrázek v této konverzaci. VYTÁHNI ze sekce "Vlastníci" v LV: jméno/název, IČO/RČ, bydliště/sídlo, případně doručovací adresu (pokud LV uvádí jinou než bydliště). NEPOUŽÍVEJ údaje dlužníka — zástavce je jiná osoba (typicky příbuzný klienta zastavující své nemovitosti za úvěr klienta).\n';
+                } else {
+                    if (formData.pledgorName) d += 'Název / Jméno: ' + formData.pledgorName + '\n';
+                    if (formData.pledgorIco) d += 'IČO / RČ: ' + formData.pledgorIco + '\n';
+                    if (formData.pledgorSpisovaZnacka) d += 'Spisová značka: ' + formData.pledgorSpisovaZnacka + '\n';
+                    if (formData.pledgorAddress) d += 'Bydliště / Sídlo: ' + formData.pledgorAddress + '\n';
+                    if (formData.pledgorDeliveryAddress) d += 'Doručovací adresa: ' + formData.pledgorDeliveryAddress + '\n';
+                    if (formData.pledgorRepresentativeName) {
+                        d += 'Jednatel / Zástupce: ' + formData.pledgorRepresentativeName;
+                        if (formData.pledgorRepresentativeRole) d += ', funkce: ' + formData.pledgorRepresentativeRole;
+                        d += '\n';
+                    }
+                }
+            }
+
             d += '\n=== DODATEČNÉ ÚDAJE ===\n';
             if (formData.representativeName) d += 'Jednatel/zástupce dlužníka: ' + formData.representativeName + ', funkce: ' + (formData.representativeRole || '') + '\n';
             if (formData.contactName) d += 'Kontaktní osoba: ' + formData.contactName + ', tel: ' + (formData.contactPhone || '') + ', e-mail: ' + (formData.contactEmail || '') + '\n';
-            if (formData.deliveryAddress) d += 'Adresa pro doručování: ' + formData.deliveryAddress + '\n';
+            if (formData.deliveryAddress) d += 'Adresa pro doručování dlužníka: ' + formData.deliveryAddress + '\n';
             if (formData.borrowerAccount) d += 'Účet dlužníka: ' + formData.borrowerAccount + ' u ' + (formData.borrowerBank || '') + '\n';
             if (formData.lenderAccount) d += 'Účet věřitele: ' + formData.lenderAccount + ' u ' + (formData.lenderBank || '') + '\n';
             if (formData.appraisalRef) d += 'Odhad: ' + formData.appraisalRef + '\n';
@@ -4238,8 +4333,11 @@
                         if (!data || !data.success) throw new Error('Preview endpoint vrátil neplatnou odpověď');
                         // Manuální variant: má instrukce pro python-docx + .docx attachment workflow
                         // bez plain text duplicity (šablona je v .zip vedle ve formátu .docx).
+                        // Manuální workflow — použij manualSystemPrompt (čistě .docx instrukce, žádný JSON).
+                        // Fallback na systemPrompt jen pokud server starší build ještě nevrací manualSystemPrompt.
+                        var sysPrompt = data.manualSystemPrompt || data.systemPrompt;
                         promptText = '=== INSTRUKCE PRO AI (zkopíruj jako první zprávu) ===\n\n' +
-                            data.systemPrompt + '\n\n' +
+                            sysPrompt + '\n\n' +
                             '=== ÚKOL + DATA (zkopíruj jako druhou zprávu — plus připoj .docx šablonu z tohoto .zip) ===\n\n' +
                             (data.manualUserContent || data.userContent);
                     } catch (err) {
@@ -4395,6 +4493,21 @@
                     if (typeof updateCollateralRowState === 'function') updateCollateralRowState(i);
                 }
             })();
+
+            // Pledgor (zástavce): nová sekce, backward compat = chybí v starších dealech.
+            // Nejdřív naplníme pole, pak applyPledgorDisabledState() obnoví disabled stav
+            // podle checkboxů (pokud byl uložen "= dlužník" / "= z LV", pole zšednou).
+            document.getElementById('pledgorSameAsBorrower').checked = !!data.pledgorSameAsBorrower;
+            document.getElementById('pledgorFromLV').checked = !!data.pledgorFromLV;
+            document.getElementById('pledgorName').value = data.pledgorName || '';
+            document.getElementById('pledgorIco').value = data.pledgorIco || '';
+            document.getElementById('pledgorSpisovaZnacka').value = data.pledgorSpisovaZnacka || '';
+            document.getElementById('pledgorAddress').value = data.pledgorAddress || '';
+            document.getElementById('pledgorDeliveryAddress').value = data.pledgorDeliveryAddress || '';
+            document.getElementById('pledgorRepresentativeName').value = data.pledgorRepresentativeName || '';
+            document.getElementById('pledgorRepresentativeRole').value = data.pledgorRepresentativeRole || '';
+            if (typeof applyPledgorDisabledState === 'function') applyPledgorDisabledState();
+
             document.getElementById('representativeName').value = data.representativeName || '';
             document.getElementById('representativeRole').value = data.representativeRole || '';
             document.getElementById('contactName').value = data.contactName || '';
@@ -4438,6 +4551,71 @@
             row.classList.toggle('disabled', !chk.checked);
         }
 
+        // ===== PLEDGOR (Zástavce) — mutually exclusive checkbox handlers =====
+        // Stav 1: žádný checkbox → uživatel vyplňuje ručně, pole aktivní
+        // Stav 2: pledgorSameAsBorrower → pole se vyplní z dlužníka, disable (Martin nesmí měnit)
+        // Stav 3: pledgorFromLV → pole se vyprázdní + disable (AI doplní z přiloženého LV)
+
+        var PLEDGOR_INPUT_IDS = [
+            'pledgorName', 'pledgorIco', 'pledgorSpisovaZnacka',
+            'pledgorAddress', 'pledgorDeliveryAddress',
+            'pledgorRepresentativeName', 'pledgorRepresentativeRole'
+        ];
+
+        // Vrátí pledgor pole vyplněná z dlužníka (uvereovany/ico/sidlo/...).
+        // sidlo dlužníka → pledgorAddress (PO mají sídlo, FO bydliště — pro stejný subjekt OK).
+        // deliveryAddress dlužníka → pledgorDeliveryAddress (může být stejná, ale taky jiná).
+        function copyBorrowerToPledgor() {
+            document.getElementById('pledgorName').value = document.getElementById('uvereovany').value || '';
+            document.getElementById('pledgorIco').value = document.getElementById('ico').value || '';
+            document.getElementById('pledgorSpisovaZnacka').value = document.getElementById('spisovaZnacka').value || '';
+            document.getElementById('pledgorAddress').value = document.getElementById('sidlo').value || '';
+            document.getElementById('pledgorDeliveryAddress').value = document.getElementById('deliveryAddress').value || '';
+            document.getElementById('pledgorRepresentativeName').value = document.getElementById('representativeName').value || '';
+            document.getElementById('pledgorRepresentativeRole').value = document.getElementById('representativeRole').value || '';
+        }
+
+        function clearPledgorFields() {
+            PLEDGOR_INPUT_IDS.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        }
+
+        // Aplikuje visual + functional disabled stav na pledgor pole podle aktuálních checkboxů.
+        // Volá se po každé změně checkboxu i z populateForm() po načtení dealu.
+        function applyPledgorDisabledState() {
+            var sameAsBorrower = document.getElementById('pledgorSameAsBorrower').checked;
+            var fromLV = document.getElementById('pledgorFromLV').checked;
+            var disabled = sameAsBorrower || fromLV;
+            var fields = document.getElementById('pledgorFields');
+            if (fields) fields.classList.toggle('disabled', disabled);
+            PLEDGOR_INPUT_IDS.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.disabled = disabled;
+            });
+        }
+
+        function onPledgorSameAsBorrowerChange() {
+            var chk = document.getElementById('pledgorSameAsBorrower');
+            if (chk.checked) {
+                // Mutual exclusivity — odškrtni druhý checkbox.
+                document.getElementById('pledgorFromLV').checked = false;
+                copyBorrowerToPledgor();
+            }
+            applyPledgorDisabledState();
+        }
+
+        function onPledgorFromLVChange() {
+            var chk = document.getElementById('pledgorFromLV');
+            if (chk.checked) {
+                document.getElementById('pledgorSameAsBorrower').checked = false;
+                // Pole vyprázdníme — AI je doplní z přiloženého LV, předvyplnění by mátlo.
+                clearPledgorFields();
+            }
+            applyPledgorDisabledState();
+        }
+
         function collectFormData() {
             return {
                 uvereovany: document.getElementById('uvereovany').value,
@@ -4474,6 +4652,15 @@
                     }
                     return arr;
                 })(),
+                pledgorSameAsBorrower: document.getElementById('pledgorSameAsBorrower').checked,
+                pledgorFromLV: document.getElementById('pledgorFromLV').checked,
+                pledgorName: document.getElementById('pledgorName').value,
+                pledgorIco: document.getElementById('pledgorIco').value,
+                pledgorSpisovaZnacka: document.getElementById('pledgorSpisovaZnacka').value,
+                pledgorAddress: document.getElementById('pledgorAddress').value,
+                pledgorDeliveryAddress: document.getElementById('pledgorDeliveryAddress').value,
+                pledgorRepresentativeName: document.getElementById('pledgorRepresentativeName').value,
+                pledgorRepresentativeRole: document.getElementById('pledgorRepresentativeRole').value,
                 representativeName: document.getElementById('representativeName').value,
                 representativeRole: document.getElementById('representativeRole').value,
                 contactName: document.getElementById('contactName').value,
@@ -4934,6 +5121,9 @@
                 { key: 'maturityDate', label: 'Datum splatnosti' },
                 { key: 'drawdownDate', label: 'Datum čerpání' },
                 { key: 'collateralItems', label: 'Položky zajištění' },
+                { key: 'pledgorName', label: 'Zástavce — jméno' },
+                { key: 'pledgorIco', label: 'Zástavce — IČO/RČ' },
+                { key: 'pledgorAddress', label: 'Zástavce — bydliště/sídlo' },
                 { key: 'representativeName', label: 'Jednatel/zástupce' },
                 { key: 'borrowerAccount', label: 'Účet dlužníka' },
                 { key: 'borrowerBank', label: 'Banka dlužníka' },
