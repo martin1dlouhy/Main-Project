@@ -598,7 +598,7 @@ function buildLoanDocSystemPrompt(templateName, passNumber) {
         '- Data ve formátu DD.MM.YYYY ("27.04.2029").\n' +
         '- Procenta s desetinnou čárkou + " % p.a." ("9,5 % p.a.").\n' +
         '- IČO bez mezer (8 číslic).\n' +
-        '- LV čísla a kolaterály z formData.collateralItems (multi-line text, každý řádek = jedna nemovitost).\n' +
+        '- LV čísla a kolaterály z formData.collateralItems (numbered list "1. LV X...", "2. LV Y..." v sekci "=== ZAJIŠTĚNÍ ==="). POZOR: pokud header sekce obsahuje "(N z M LV — zbývající LV jsou součástí jiných smluv dealu, do TÉTO smlouvy je nezahrnuj)", znamená to že klient ručí celkem M LV, ale TATO smlouva (např. zástavní smlouva k 1 nemovitosti) zahrnuje pouze N. Do dokumentu vyplň ZA TĚCH N uvedených LV, o ostatních LV NEPIŠ (ani jako "a další LV...").\n' +
         '- Pokud najdeš více výskytů stejného řetězce v šabloně (např. jméno klienta se opakuje 10×), stačí JEDEN replacement pár — frontend ho aplikuje na všechny výskyty.\n\n' +
         '=== MINIMÁLNÍ OČEKÁVANÝ POČET REPLACEMENTS ===\n' +
         'Pro typickou úvěrovou smlouvu se očekává 10-30 replacements (změny hodnot + případné smazání irrelevantních příloh). Pokud vracíš méně než 5 replacements, něco je špatně — v "notes" vysvětli proč.';
@@ -667,8 +667,41 @@ function buildLoanDocDataDescription(formData) {
     if (formData.otherCosts) d += 'Ostatní náklady: ' + formData.otherCosts + '\n';
 
     d += '\n=== ZAJIŠTĚNÍ ===\n';
-    if (formData.collateralValue) d += 'Hodnota zajištění: ' + formData.collateralValue + '\n';
-    if (formData.collateralItems) d += 'Položky zajištění:\n' + formData.collateralItems + '\n';
+    // Collateral: nový formát = pole 5 stringů + pole 5 booleanů (active).
+    // Legacy formát = string s newlines (rozpadneme na pole, vše aktivní).
+    // Pole collateralValue bylo odstraněno na frontendu; pokud přijde ze starých
+    // IndexedDB dat, ignorujeme. Do user contentu (API i manual) jde POUZE
+    // zaškrtnutý seznam — AI musí vědět, kolik LV bylo celkem vyplněno vs. zahrnuto
+    // (např. zástavní smlouva ke 2 z 3 LV).
+    // MUSÍ zrcadlit identickou logiku v loan-documentation.html — frontend náhled
+    // a server-side reality jinak rozjedou.
+    (function () {
+        var rawItems = formData.collateralItems;
+        var rawActive = formData.collateralActive;
+        var itemsArr = [];
+        var activeArr = [];
+        if (Array.isArray(rawItems)) {
+            itemsArr = rawItems.map(function (s) { return (s || '').trim(); });
+            activeArr = Array.isArray(rawActive) ? rawActive : [];
+        } else if (typeof rawItems === 'string' && rawItems.trim()) {
+            itemsArr = rawItems.split('\n').map(function (s) { return s.trim(); });
+            activeArr = []; // legacy: vše true
+        }
+        var totalFilled = itemsArr.filter(function (s) { return s; }).length;
+        var includedLines = [];
+        for (var i = 0; i < itemsArr.length; i++) {
+            var isActive = activeArr.length === 0 ? true : (activeArr[i] !== false);
+            if (isActive && itemsArr[i]) includedLines.push(itemsArr[i]);
+        }
+        if (includedLines.length === 0) return;
+        var header = (totalFilled > includedLines.length)
+            ? 'Položky zajištění (' + includedLines.length + ' z ' + totalFilled + ' LV — zbývající LV jsou součástí jiných smluv dealu, do TÉTO smlouvy je nezahrnuj):'
+            : 'Položky zajištění:';
+        d += header + '\n';
+        for (var j = 0; j < includedLines.length; j++) {
+            d += (j + 1) + '. ' + includedLines[j] + '\n';
+        }
+    })();
 
     d += '\n=== DODATEČNÉ ÚDAJE ===\n';
     if (formData.representativeName) d += 'Jednatel/zástupce dlužníka: ' + formData.representativeName + ', funkce: ' + (formData.representativeRole || '') + '\n';
