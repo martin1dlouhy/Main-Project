@@ -4243,12 +4243,6 @@
             });
             populateForm(adapted);
 
-            if (typeof window.syncCustomDropdown === 'function') {
-                ['currency', 'drawdownType', 'interestPayment', 'maturityUnit', 'originationFeeType'].forEach(function(selId) {
-                    window.syncCustomDropdown(selId);
-                });
-            }
-
             ['amount', 'otherCosts', 'collateralValue', 'appraisalValue'].forEach(function(fid) {
                 var el = document.getElementById(fid);
                 if (el && el.value && typeof formatAmount === 'function') formatAmount(el);
@@ -4307,6 +4301,14 @@
             document.getElementById('signDate').value = data.signDate || '';
             document.getElementById('signPlace').value = data.signPlace || '';
             document.getElementById('notes').value = data.notes || '';
+
+            // Sync custom dropdown widgety — bez tohoto se <select>.value projeví,
+            // ale viditelný label custom dropdownu zůstane na předchozí (nebo defaultní) hodnotě.
+            // Týká se loadDocumentSet() i populateFormFromTermSheet() — sdílený call site.
+            if (typeof window.syncCustomDropdown === 'function') {
+                ['currency', 'drawdownType', 'interestPayment', 'maturityUnit', 'originationFeeType']
+                    .forEach(function(selId) { window.syncCustomDropdown(selId); });
+            }
         }
 
         function collectFormData() {
