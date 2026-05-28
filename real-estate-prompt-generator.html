@@ -2018,7 +2018,7 @@
 <div class="app-head">
   <div class="app-head-left">
     <div class="eyebrow">Osobní · AI valuace</div>
-    <h1 class="app-title">R-E Prompt <em>Generator</em></h1>
+    <h1 class="app-title" onclick="startNewValuation()" style="cursor:pointer" title="Klikni pro novou valuaci">R-E Prompt <em>Generator</em></h1>
     <p class="app-sub">Profesionální AI valuace nemovitostí pro zástavní financování. 6-krokový wizard, bankovní metodika, identifikace red flags.</p>
   </div>
 </div>
@@ -3162,6 +3162,11 @@
                 }
             }
 
+            // RD: počet podlaží potřeba pro AI odhad užitné plochy z LV zastavěné
+            if (propertyType === 'house' && !formData.podlazi) {
+                missingFields.push('Počet podlaží (AI z něj dopočítá užitnou plochu z LV zastavěné)');
+            }
+
             if (missingFields.length > 0) {
                 showValidationModal(missingFields);
                 return;
@@ -3485,6 +3490,24 @@
                         prompt += `- **Sklepy**: ${formData.sklep} m² - započítej pouze 20-30%\n`;
                     }
                     prompt += `\nBanky **neakceptují** plnou výměru balkónů a sklepů.\n\n`;
+
+                    // RD-specific: AI odhad užitné plochy z LV zastavěné (typický LV case)
+                    if (propertyType === 'house') {
+                        prompt += `### ODHAD UŽITNÉ PLOCHY Z ZASTAVĚNÉ (typický LV case — pouze RD)\n`;
+                        prompt += `**KONTEXT**: V LV (List vlastnictví / katastrální výpis) je obvykle uvedena pouze **zastavěná plocha** (footprint budovy, jedno podlaží včetně zdí), ne podlahová/užitná plocha.\n`;
+                        if (formData.podlazi) {
+                            prompt += `User uvedl počet podlaží: **${formData.podlazi}**\n\n`;
+                        } else {
+                            prompt += `User neuvedl počet podlaží — pokud máš pouze zastavěnou plochu, tento údaj si dopočítej nebo odhadni z dostupných zdrojů (fotografie, půdorys, popis).\n\n`;
+                        }
+                        prompt += `**ÚKOL**: Pokud user ve formuláři uvedl užitnou plochu, použij ji přímo. Pokud máš pouze zastavěnou plochu z LV a počet podlaží, **odhadni užitnou (podlahovou) plochu podle veřejné metodiky odhadu** (IVS/EVS, ČSN, česká bankovní praxe). Zohledni:\n`;
+                        prompt += `- Koeficient zdí podle stáří a typu konstrukce (cihla, panel, dřevostavba)\n`;
+                        prompt += `- Schodiště u 2+ NP (typicky -6 až -10 m² na patro)\n`;
+                        prompt += `- Obyvatelnost podkroví — započítej jen pokud má dostatečnou světlou výšku, izolaci a okna\n`;
+                        prompt += `- Obyvatelnost suterénu — technické místnosti se nezapočítávají\n\n`;
+                        prompt += `**Uveď výpočet krok po kroku a metodiku, kterou jsi použil.**\n`;
+                        prompt += `PROTOŽE jde o odhad (ne přesné měření z půdorysu), aplikuj dodatečnou opatrnostní srážku **5 %** na finální tržní hodnotu.\n\n`;
+                    }
 
                     if (formData.najemne) {
                         prompt += `### 3. VÝNOSOVÁ METODA (Sekundární)\n`;
@@ -5181,6 +5204,18 @@
             event.target.value = '';
         }
 
+        // Wrapper s confirm dialogem — volá se z app-title click a tlačítek "Nová valuace"
+        // pokud chceme dialog. resetGenerator() je samotný reset bez ptaní.
+        function startNewValuation() {
+            if (propertyType || Object.keys(formData).length > 0) {
+                if (!confirm('Začít novou valuaci? Aktuální rozpracovaný stav bude smazán (pokud jste ho neuložili tlačítkem "Uložit ocenění").')) {
+                    return;
+                }
+            }
+            resetGenerator();
+            showToast('Nová valuace — všechna pole vyčištěna');
+        }
+
         function resetGenerator() {
             currentStep = 1;
             propertyType = '';
@@ -5208,6 +5243,23 @@
             filterPropertyType = '';
             const floatingBar = document.getElementById('compareFloatingBar');
             if (floatingBar) floatingBar.classList.add('hidden');
+            // Bullet-proof čištění zbytků v step 6 (manual fallback inputs, status indikátory)
+            // a výsledných panelech (promptText, propertySummary) — aby nezůstaly artefakty
+            // z předchozí valuace, když user začíná nový case.
+            document.querySelectorAll('#step6 input').forEach(i => {
+                if (i.type === 'number' || i.type === 'text') i.value = '';
+            });
+            document.querySelectorAll('#step6 .parse-status').forEach(s => {
+                s.className = 'parse-status waiting';
+                s.textContent = 'Čeká na vložení výstupu...';
+            });
+            document.querySelectorAll('#step6 .manual-fallback').forEach(el => {
+                el.style.display = 'none';
+            });
+            const promptTextEl = document.getElementById('promptText');
+            if (promptTextEl) promptTextEl.textContent = '';
+            const propertySummaryEl = document.getElementById('propertySummary');
+            if (propertySummaryEl) propertySummaryEl.innerHTML = '';
             updateStepIndicator();
             showSection(1);
             localStorage.removeItem('prompt-gen-state');
