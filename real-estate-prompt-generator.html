@@ -843,6 +843,12 @@
             font-weight: 600;
         }
 
+        .valuation-value-badge.pending {
+            background: transparent;
+            border: 1px dashed var(--accent);
+            opacity: 0.8;
+        }
+
         .valuation-item-buttons {
             display: flex;
             flex-direction: column;
@@ -4351,13 +4357,7 @@
                 showToast('Nejprve vyberte typ nemovitosti');
                 return;
             }
-            // Check if there's any data to save
-            const sources = ['chatgpt', 'claude', 'gemini'];
-            const hasData = sources.some(s => aiParsedData[s]);
-            if (!hasData) {
-                showToast('Nejprve vložte alespoň jeden AI výstup');
-                return;
-            }
+            // Ukládání bez AI výstupu povoleno — case lze parkovat a doplnit AI později
 
             const dialog = document.getElementById('saveValuationDialog');
             const input = document.getElementById('valuationNameInput');
@@ -4516,6 +4516,7 @@
                             <div class="valuation-item-values">
                                 ${item.avgTrzni ? `<span class="valuation-value-badge">Tržní: ${fmt(item.avgTrzni)}</span>` : ''}
                                 ${item.avgZastavni ? `<span class="valuation-value-badge">Zástavní: ${fmt(item.avgZastavni)}</span>` : ''}
+                                ${!item.avgTrzni && !item.avgZastavni ? `<span class="valuation-value-badge pending">⌛ Čeká na AI</span>` : ''}
                             </div>
                             <!-- C3: Notes display -->
                             ${item.notes ? `<div class="valuation-notes">${esc(item.notes)}</div>` : ''}
