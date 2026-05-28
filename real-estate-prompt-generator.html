@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="design-system/tokens.css">
     <link rel="stylesheet" href="design-system/app-shell.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
     <style>
         /* R-E Prompt Generator - app-specific styles */
         body {
@@ -2465,6 +2466,14 @@
                     </svg>
                     Tisk (PDF)
                 </button>
+                <button class="btn btn-primary" onclick="exportComparisonAsImage()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px;">
+                        <rect x="2" y="3" width="12" height="10" stroke-width="1.5"/>
+                        <circle cx="6" cy="7" r="1.5" stroke-width="1.5"/>
+                        <path d="M14 11l-3-3-4 4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Stáhnout obrázek
+                </button>
             </div>
 
             <div class="buttons" style="margin-top: 20px;">
@@ -4371,6 +4380,109 @@
 
         function printComparison() {
             window.print();
+        }
+
+        // Helper: stripuje diakritiku + lowercase + kebab-case pro filename části
+        function sanitizeFilenamePart(s) {
+            if (!s) return '';
+            return s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '');
+        }
+
+        // Export srovnávací tabulky + AI shrnutí jako PNG (současný theme, scale 2 pro retina kvalitu)
+        async function exportComparisonAsImage() {
+            if (typeof html2canvas === 'undefined') {
+                showToast('Knihovna pro export se ještě načítá, zkuste znovu za chvíli');
+                return;
+            }
+            var hasAnyData = ['chatgpt', 'claude', 'gemini'].some(function(s){ return aiParsedData && aiParsedData[s]; });
+            if (!hasAnyData) {
+                showToast('Nejprve vložte alespoň jeden AI výstup');
+                return;
+            }
+
+            showToast('Generuji obrázek...');
+
+            var step6 = document.getElementById('step6');
+            var config = propertyConfigs[propertyType];
+            var typeNameDisplay = (config && config.name) || propertyType || '';
+            var address = formData.adresa || '';
+
+            // Selectivně skryjeme prvky, které nepatří do exportu
+            var selectorsToHide = [
+                ':scope > h2',                // "Srovnání AI valuací"
+                ':scope > p',                 // instrukční text
+                '#propertySummary',
+                '.ai-comparison-grid',
+                '#valuationChartSection',
+                '.btn-group',
+                '.buttons'
+            ];
+            var restoreList = [];
+            selectorsToHide.forEach(function(sel){
+                step6.querySelectorAll(sel).forEach(function(el){
+                    restoreList.push({ el: el, display: el.style.display });
+                    el.style.display = 'none';
+                });
+            });
+
+            // Dočasná export hlavička
+            var today = new Date().toLocaleDateString('cs-CZ');
+            var header = document.createElement('div');
+            header.id = '__exportHeader';
+            header.style.cssText = 'margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid var(--border-color,#e2e8f0);';
+            header.innerHTML =
+                '<div style="font-size:11px;color:var(--text-secondary);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:8px;font-weight:500;">R-E Prompt Generator · Investment Tools</div>' +
+                '<h2 style="font-family:Fraunces,Georgia,serif;font-weight:300;font-size:28px;margin:0 0 8px 0;letter-spacing:-0.02em;color:var(--text-primary);">Ocenění nemovitosti</h2>' +
+                '<div style="font-size:14px;color:var(--text-secondary);">' +
+                    '<strong style="color:var(--text-primary);">' + typeNameDisplay + '</strong>' +
+                    (address ? ' · ' + address : '') + ' · ' + today +
+                '</div>';
+            step6.insertBefore(header, step6.firstChild);
+
+            try {
+                await new Promise(function(r){ requestAnimationFrame(r); });
+                var bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
+                var canvas = await html2canvas(step6, {
+                    scale: 2,
+                    backgroundColor: bg,
+                    logging: false,
+                    useCORS: true
+                });
+
+                canvas.toBlob(function(blob){
+                    if (!blob) {
+                        showToast('Nepodařilo se vygenerovat obrázek');
+                        return;
+                    }
+                    var date = new Date().toISOString().slice(0, 10);
+                    var typeSlug = sanitizeFilenamePart(typeNameDisplay);
+                    var addressSlug = sanitizeFilenamePart(address);
+                    var parts = ['re-oceneni'];
+                    if (typeSlug) parts.push(typeSlug);
+                    if (addressSlug) parts.push(addressSlug);
+                    var filename = date + '_' + parts.join('_') + '.png';
+
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    showToast('Obrázek stažen: ' + filename);
+                }, 'image/png');
+            } catch (err) {
+                console.error('Image export failed:', err);
+                showToast('Chyba při generování obrázku');
+            } finally {
+                if (header.parentNode) header.remove();
+                restoreList.forEach(function(item){ item.el.style.display = item.display; });
+            }
         }
 
         // ===== SAVED VALUATIONS =====
