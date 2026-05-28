@@ -4410,15 +4410,20 @@
             var typeNameDisplay = (config && config.name) || propertyType || '';
             var address = formData.adresa || '';
 
-            // Selectivně skryjeme prvky, které nepatří do exportu
+            // Selectivně skryjeme prvky, které nepatří do exportu.
+            // Martin chce JEN: comparison table + finální shrnutí (.final-verdict).
+            // .final-verdict je uvnitř #aiSummaryGrid spolu s .ai-summary-card (3 karty),
+            // takže skryjem karty a nadpis sekce, ale ne celý wrapper.
             var selectorsToHide = [
-                ':scope > h2',                // "Srovnání AI valuací"
-                ':scope > p',                 // instrukční text
+                ':scope > h2',                  // "Srovnání AI valuací"
+                ':scope > p',                   // instrukční text
                 '#propertySummary',
                 '.ai-comparison-grid',
                 '#valuationChartSection',
                 '.btn-group',
-                '.buttons'
+                '.buttons',
+                '#aiSummarySection > h3',       // nadpis "Shrnutí AI analýz" (nepatří, když jsou karty pryč)
+                '.ai-summary-card'              // 3 duplicitní AI karty (data jsou už v comparison table)
             ];
             var restoreList = [];
             selectorsToHide.forEach(function(sel){
@@ -4427,6 +4432,12 @@
                     el.style.display = 'none';
                 });
             });
+
+            // Dočasně přepsat grid layout aby .final-verdict zabral plnou šířku
+            // (jinak zůstane v 1. sloupci 3-col gridu a vypadá jako uťaté).
+            var aiGrid = document.getElementById('aiSummaryGrid');
+            var originalGridCols = aiGrid ? aiGrid.style.gridTemplateColumns : null;
+            if (aiGrid) aiGrid.style.gridTemplateColumns = '1fr';
 
             // Dočasná export hlavička
             var today = new Date().toLocaleDateString('cs-CZ');
@@ -4482,6 +4493,7 @@
             } finally {
                 if (header.parentNode) header.remove();
                 restoreList.forEach(function(item){ item.el.style.display = item.display; });
+                if (aiGrid) aiGrid.style.gridTemplateColumns = originalGridCols || '';
             }
         }
 
