@@ -4504,14 +4504,51 @@
             var originalGridCols = aiGrid ? aiGrid.style.gridTemplateColumns : null;
             if (aiGrid) aiGrid.style.gridTemplateColumns = '1fr';
 
-            // Martin: chce v PNG jen 2 tabulky (srovnávací + finální shrnutí), bez headeru.
-            // Filename už nese název uloženého případu, takže kontext je v Downloads.
+            // Light theme override pouze pro export — labely v editorial dark mají 46% opacitu
+            // a v PNG renderu vychází nečitelně šedě na černém pozadí. Inverze base palette
+            // přes CSS variables scoped na #step6 — amber accent se zachovává (jen ztmavený
+            // pro lepší kontrast na bílém pozadí). Po snapshot se override-style odstraní.
+            var exportLightOverride = document.createElement('style');
+            exportLightOverride.id = '__exportLightOverride';
+            exportLightOverride.textContent =
+                '#step6 {' +
+                  'background: #ffffff !important;' +
+                  'color: #1a1207 !important;' +
+                  '--bg-deep: #ffffff;' +
+                  '--bg: #ffffff;' +
+                  '--bg-raised: #fafaf5;' +
+                  '--bg-elevated: #fafaf5;' +
+                  '--bg-surface: #fafaf5;' +
+                  '--bg-primary: #ffffff;' +
+                  '--bg-secondary: #fafaf5;' +
+                  '--bg-input: rgba(0,0,0,0.03);' +
+                  '--text: #1a1207;' +
+                  '--text-primary: #1a1207;' +
+                  '--text-soft: rgba(26,18,7,0.85);' +
+                  '--text-mute: rgba(26,18,7,0.62);' +
+                  '--text-secondary: rgba(26,18,7,0.62);' +
+                  '--text-faint: rgba(26,18,7,0.45);' +
+                  '--line: rgba(26,18,7,0.14);' +
+                  '--line-faint: rgba(26,18,7,0.08);' +
+                  '--line-strong: rgba(26,18,7,0.22);' +
+                  '--border-color: rgba(26,18,7,0.16);' +
+                  '--accent: #9a6f3a;' +
+                  '--amber: #9a6f3a;' +
+                  '--amber-warm: #9a6f3a;' +
+                  '--amber-deep: #6b4d27;' +
+                  '--amber-tint: rgba(154,111,58,0.10);' +
+                  '--amber-glow: rgba(154,111,58,0.20);' +
+                  '--accent-light: rgba(154,111,58,0.10);' +
+                  '--accent-hover: #9a6f3a;' +
+                '}' +
+                '#step6 *, #step6 *::before, #step6 *::after { box-shadow: none !important; }';
+            document.head.appendChild(exportLightOverride);
+
             try {
                 await new Promise(function(r){ requestAnimationFrame(r); });
-                var bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
                 var canvas = await html2canvas(step6, {
                     scale: 2,
-                    backgroundColor: bg,
+                    backgroundColor: '#ffffff',
                     logging: false,
                     useCORS: true
                 });
@@ -4563,6 +4600,7 @@
             } finally {
                 restoreList.forEach(function(item){ item.el.style.display = item.display; });
                 if (aiGrid) aiGrid.style.gridTemplateColumns = originalGridCols || '';
+                if (exportLightOverride.parentNode) exportLightOverride.remove();
             }
         }
 
