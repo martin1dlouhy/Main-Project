@@ -922,7 +922,44 @@
         .save-dialog .btn-group {
             display: flex;
             gap: 10px;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .save-dialog .btn-group-right {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
             justify-content: flex-end;
+        }
+
+        /* Banner zobrazený v kroku 6 (AI valuace), když user pracuje s načteným uloženým případem.
+           Pomáhá orientaci — Martin vidí, který uložený záznam doplňuje a nepřepíše omylem jiný. */
+        .loaded-case-banner {
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            background: var(--accent-light);
+            border-left: 3px solid var(--accent);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .loaded-case-banner .loaded-case-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .loaded-case-banner .loaded-case-name {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .loaded-case-banner .loaded-case-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
         }
 
         /* Step 1 Collapsible Panels */
@@ -2508,8 +2545,10 @@
             <textarea id="valuationNotesInput" class="valuation-notes-edit" placeholder="Přidejte své poznámky k tomuto ocenění..."></textarea>
             <div class="btn-group" id="saveDialogButtons">
                 <button class="btn btn-secondary" onclick="closeSaveValuationDialog()">Zrušit</button>
-                <button class="btn btn-secondary" id="btnSaveAsNew" onclick="saveAsNew()" style="display:none;">Uložit jako nové</button>
-                <button class="btn btn-primary" id="btnConfirmSave" onclick="confirmSaveValuation()">Uložit</button>
+                <div class="btn-group-right">
+                    <button class="btn btn-secondary" id="btnSaveAsNew" onclick="saveAsNew()" style="display:none;">Uložit jako nové</button>
+                    <button class="btn btn-primary" id="btnConfirmSave" onclick="confirmSaveValuation()">Uložit</button>
+                </div>
             </div>
         </div>
     </div>
@@ -3944,6 +3983,22 @@
             const config = propertyConfigs[propertyType];
             if (!config) return;
             let html = '';
+            // Když user pracuje s načteným uloženým případem, ukaž jeho název + datum,
+            // ať se v krok 6 (AI valuace) vyzná a neaktualizuje špatný záznam.
+            if (editingId) {
+                try {
+                    const saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                    const item = saved.find(v => v.id === editingId);
+                    if (item) {
+                        const updated = item.updatedAt ? `, aktualizováno ${item.updatedAt}` : '';
+                        html += `<div class="loaded-case-banner">
+                            <span class="loaded-case-label">Pracujete s uloženým případem</span>
+                            <span class="loaded-case-name">${item.name}</span>
+                            <span class="loaded-case-meta">uloženo ${item.date}${updated}</span>
+                        </div>`;
+                    }
+                } catch (e) { /* ignore — fallback to no banner */ }
+            }
             html += `<div class="property-summary-item"><span class="summary-label">Typ</span><span class="summary-value">${config.name}</span></div>`;
             if (formData.adresa) html += `<div class="property-summary-item"><span class="summary-label">Adresa</span><span class="summary-value">${formData.adresa}</span></div>`;
             if (formData.uzitna_plocha) html += `<div class="property-summary-item"><span class="summary-label">Plocha</span><span class="summary-value">${formData.uzitna_plocha} m²</span></div>`;
@@ -4442,20 +4497,8 @@
             var originalGridCols = aiGrid ? aiGrid.style.gridTemplateColumns : null;
             if (aiGrid) aiGrid.style.gridTemplateColumns = '1fr';
 
-            // Dočasná export hlavička
-            var today = new Date().toLocaleDateString('cs-CZ');
-            var header = document.createElement('div');
-            header.id = '__exportHeader';
-            header.style.cssText = 'margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid var(--border-color,#e2e8f0);';
-            header.innerHTML =
-                '<div style="font-size:11px;color:var(--text-secondary);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:8px;font-weight:500;">R-E Prompt Generator · Investment Tools</div>' +
-                '<h2 style="font-family:Fraunces,Georgia,serif;font-weight:300;font-size:28px;margin:0 0 8px 0;letter-spacing:-0.02em;color:var(--text-primary);">Ocenění nemovitosti</h2>' +
-                '<div style="font-size:14px;color:var(--text-secondary);">' +
-                    '<strong style="color:var(--text-primary);">' + typeNameDisplay + '</strong>' +
-                    (address ? ' · ' + address : '') + ' · ' + today +
-                '</div>';
-            step6.insertBefore(header, step6.firstChild);
-
+            // Martin: chce v PNG jen 2 tabulky (srovnávací + finální shrnutí), bez headeru.
+            // Filename už nese název uloženého případu, takže kontext je v Downloads.
             try {
                 await new Promise(function(r){ requestAnimationFrame(r); });
                 var bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
@@ -4511,7 +4554,6 @@
                 console.error('Image export failed:', err);
                 showToast('Chyba při generování obrázku');
             } finally {
-                if (header.parentNode) header.remove();
                 restoreList.forEach(function(item){ item.el.style.display = item.display; });
                 if (aiGrid) aiGrid.style.gridTemplateColumns = originalGridCols || '';
             }
@@ -5024,6 +5066,10 @@
             const item = saved.find(v => v.id === id);
             if (!item) return;
 
+            // Pamatovat, který case byl načtený — musí být nastaveno PŘED showSection(6),
+            // aby populatePropertySummary mohlo vykreslit "Pracujete s uloženým případem" banner
+            editingId = id;
+
             // Restore property type
             propertyType = item.propertyType;
             document.querySelectorAll('.property-type-card').forEach(card => card.classList.remove('selected'));
@@ -5069,8 +5115,6 @@
 
             updateComparisonTable();
             saveState();
-            // Pamatovat, který case byl načtený — další 'Uložit ocenění' nabídne update (přepsat)
-            editingId = id;
             showToast('Ocenění „' + item.name + '" načteno');
         }
 
