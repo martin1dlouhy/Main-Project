@@ -1254,7 +1254,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Předčasné splacení</label>
-                            <input type="text" class="form-input" id="f-early-repayment" placeholder="např. Možné, 6 % poplatek">
+                            <input type="text" class="form-input" id="f-early-repayment" placeholder="např. Možné, 6 % poplatek" value="Ano, poplatek 6 % z jistiny">
                         </div>
                     </div>
                 </div>
@@ -1270,7 +1270,7 @@
                             <label class="form-label">Poplatek za sjednání</label>
                             <div class="form-row">
                                 <div class="form-group" style="flex:2;">
-                                    <input type="text" class="form-input" id="f-origination-fee" placeholder="např. 2">
+                                    <input type="text" class="form-input" id="f-origination-fee" placeholder="např. 2" oninput="formatFee(this);">
                                 </div>
                                 <div class="form-group" style="flex:1;">
                                     <select class="form-select" id="f-origination-fee-type">
@@ -1282,7 +1282,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Ostatní náklady a poplatky</label>
-                            <textarea class="form-textarea" id="f-other-costs" placeholder="např. Náklady na notářský zápis..." style="min-height:60px;"></textarea>
+                            <textarea class="form-textarea" id="f-other-costs" placeholder="např. Náklady na notářský zápis..." style="min-height:60px;">Náklady na NZ</textarea>
                         </div>
                     </div>
                 </div>
@@ -1415,6 +1415,11 @@
                             <label class="form-label">Datum platnosti Term Sheetu</label>
                             <input type="date" class="form-input" id="f-validity-date">
                         </div>
+                    </div>
+                    <div class="form-group" style="margin-top:1rem;">
+                        <label class="form-label">Poznámka (pro klienta)</label>
+                        <textarea class="form-textarea" id="f-client-note" placeholder="Volitelná poznámka pro klienta — bude součástí Term Sheetu..." style="min-height:80px;"></textarea>
+                        <p class="form-hint">Tato poznámka se zobrazí ve vygenerovaném Term Sheetu.</p>
                     </div>
                     <div class="form-group" style="margin-top:1rem;">
                         <label class="form-label">Interní poznámky</label>
@@ -1709,6 +1714,25 @@
         return parseInt(str.replace(/[^\d]/g, '')) || 0;
     }
 
+    // Format the origination-fee input: thousands-separated only when type === 'absolute'
+    // (e.g. 100000 -> "100 000"). For percent we leave the value as typed (e.g. "6", "2,5").
+    function formatFee(input) {
+        var typeEl = document.getElementById('f-origination-fee-type');
+        if (!typeEl || typeEl.value !== 'absolute') return;
+        var raw = input.value.replace(/[^\d]/g, '');
+        input.value = raw === '' ? '' : parseInt(raw).toLocaleString('cs-CZ');
+    }
+
+    // Default validity = today + 14 days, returned as local yyyy-mm-dd (no UTC shift).
+    function defaultValidityDate() {
+        var d = new Date();
+        d.setDate(d.getDate() + 14);
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+    }
+
     function calcLTV() {
         var amount = parseAmount(document.getElementById('f-amount').value);
         var collateral = parseAmount(document.getElementById('f-collateral-value').value);
@@ -1797,6 +1821,7 @@
             collateralItems: collateralItems,
             documentation: docs,
             validityDate: document.getElementById('f-validity-date').value,
+            clientNote: document.getElementById('f-client-note').value.trim(),
             notes: document.getElementById('f-notes').value.trim(),
             createdAt: currentEditId ? (termSheets.find(function(t) { return t.id === currentEditId; }) || {}).createdAt || new Date().toISOString() : new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -1828,6 +1853,7 @@
         document.getElementById('f-other-costs').value = data.otherCosts || '';
         document.getElementById('f-collateral-value').value = data.collateralValue || '';
         document.getElementById('f-validity-date').value = data.validityDate || '';
+        document.getElementById('f-client-note').value = data.clientNote || '';
         document.getElementById('f-notes').value = data.notes || '';
 
         // Collateral items
@@ -1895,12 +1921,13 @@
         document.getElementById('f-maturity-unit').value = 'let';
         document.getElementById('f-maturity-date').value = '';
         document.getElementById('f-maturity-date-hint').style.display = 'none';
-        document.getElementById('f-early-repayment').value = '';
+        document.getElementById('f-early-repayment').value = 'Ano, poplatek 6 % z jistiny';
         document.getElementById('f-origination-fee').value = '';
         document.getElementById('f-origination-fee-type').value = 'percent';
-        document.getElementById('f-other-costs').value = '';
+        document.getElementById('f-other-costs').value = 'Náklady na NZ';
         document.getElementById('f-collateral-value').value = '';
-        document.getElementById('f-validity-date').value = '';
+        document.getElementById('f-validity-date').value = defaultValidityDate();
+        document.getElementById('f-client-note').value = '';
         document.getElementById('f-notes').value = '';
         document.getElementById('collateral-list').innerHTML = '';
         addCollateralItem();
@@ -2168,6 +2195,9 @@
             xml += buildFieldXml('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
         }
 
+        // Poznámka pro klienta — součást Term Sheetu
+        if (data.clientNote) xml += buildFieldXml('Poznámka:', data.clientNote);
+
         // Upozornění — vždy na konci, ProfiLend barva #07B7ED
         xml += '<w:p><w:pPr><w:spacing w:before="400" w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
                '<w:r><w:t></w:t></w:r></w:p>';
@@ -2299,6 +2329,7 @@
                 var vd = new Date(data.validityDate);
                 addField('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
             }
+            if (data.clientNote) addField('Poznámka:', data.clientNote);
             children.push(new D.Paragraph({ children: [], spacing: { before: 300 } }));
             children.push(new D.Paragraph({
                 children: [
@@ -3120,6 +3151,21 @@
         if (!document.getElementById('f-drawdown-date').value) {
             document.getElementById('f-drawdown-date').value = today;
         }
+
+        // Default validity = today + 14 days (only if not already set / loaded sheet)
+        if (!document.getElementById('f-validity-date').value) {
+            document.getElementById('f-validity-date').value = defaultValidityDate();
+        }
+
+        // Re-format origination fee when switching between "% z částky" and "Absolutní"
+        document.getElementById('f-origination-fee-type').addEventListener('change', function() {
+            var feeInput = document.getElementById('f-origination-fee');
+            if (this.value === 'absolute') {
+                formatFee(feeInput);                       // 100000 -> "100 000"
+            } else {
+                feeInput.value = feeInput.value.replace(/\s/g, '');  // strip thousands spaces
+            }
+        });
 
         // Re-init dropdowns — idempotent, picks up any selects added after first paint
         initCustomDropdowns();
