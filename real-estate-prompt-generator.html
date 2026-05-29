@@ -4483,9 +4483,16 @@
                 '#aiSummarySection > h3',       // nadpis "Shrnutí AI analýz" (nepatří, když jsou karty pryč)
                 '.ai-summary-card'              // 3 duplicitní AI karty (data jsou už v comparison table)
             ];
+            // Každý element schovat JEN JEDNOU. Bez tohoto guardu prvek matchovaný více
+            // selektory (např. <div class="btn-group buttons">) byl push'nut do restoreList
+            // 2× — druhý push zachytil už 'none' stav a restore ho pak vracel na 'none'.
+            // Důsledek: tlačítka 'Uložit/Export/Tisk/Stáhnout' v kroku 6 zůstala trvale skrytá.
+            var hiddenEls = new Set();
             var restoreList = [];
             selectorsToHide.forEach(function(sel){
                 step6.querySelectorAll(sel).forEach(function(el){
+                    if (hiddenEls.has(el)) return;
+                    hiddenEls.add(el);
                     restoreList.push({ el: el, display: el.style.display });
                     el.style.display = 'none';
                 });
