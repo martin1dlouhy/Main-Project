@@ -4472,12 +4472,29 @@
                         return;
                     }
                     var date = new Date().toISOString().slice(0, 10);
-                    var typeSlug = sanitizeFilenamePart(typeNameDisplay);
-                    var addressSlug = sanitizeFilenamePart(address);
-                    var parts = ['re-oceneni'];
-                    if (typeSlug) parts.push(typeSlug);
-                    if (addressSlug) parts.push(addressSlug);
-                    var filename = date + '_' + parts.join('_') + '.png';
+                    var filename;
+                    // Pokud byl case uložen (editingId set + item v localStorage),
+                    // pojmenuj obrázek podle uživatelského názvu valuace —
+                    // ať Martin v Downloads pozná, co to je.
+                    var savedName = null;
+                    if (editingId) {
+                        try {
+                            var savedArr = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                            var item = savedArr.find(function(v){ return v.id === editingId; });
+                            if (item && item.name) savedName = item.name;
+                        } catch (e) { /* fallback níže */ }
+                    }
+                    if (savedName) {
+                        filename = date + '_' + sanitizeFilenamePart(savedName) + '.png';
+                    } else {
+                        // Fallback (případ ještě neuložen) — type + adresa
+                        var typeSlug = sanitizeFilenamePart(typeNameDisplay);
+                        var addressSlug = sanitizeFilenamePart(address);
+                        var parts = ['re-oceneni'];
+                        if (typeSlug) parts.push(typeSlug);
+                        if (addressSlug) parts.push(addressSlug);
+                        filename = date + '_' + parts.join('_') + '.png';
+                    }
 
                     var url = URL.createObjectURL(blob);
                     var a = document.createElement('a');
@@ -5392,16 +5409,11 @@
             event.target.value = '';
         }
 
-        // Wrapper s confirm dialogem — volá se z app-title click a tlačítek "Nová valuace"
-        // pokud chceme dialog. resetGenerator() je samotný reset bez ptaní.
+        // Volá se z app-title click — okamžitý reset bez confirm dialogu.
+        // Martin: "neudělám chybu" — UX preferuje rychlou cestu před safety prompt.
         function startNewValuation() {
-            if (propertyType || Object.keys(formData).length > 0) {
-                if (!confirm('Začít novou valuaci? Aktuální rozpracovaný stav bude smazán (pokud jste ho neuložili tlačítkem "Uložit ocenění").')) {
-                    return;
-                }
-            }
             resetGenerator();
-            showToast('Nová valuace — všechna pole vyčištěna');
+            showToast('Nová valuace');
         }
 
         function resetGenerator() {
