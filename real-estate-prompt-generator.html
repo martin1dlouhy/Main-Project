@@ -2500,14 +2500,16 @@
     <!-- Save Valuation Dialog -->
     <div class="save-dialog-overlay" id="saveValuationDialog">
         <div class="save-dialog">
-            <h3>Uložit ocenění</h3>
+            <h3 id="saveDialogTitle">Uložit ocenění</h3>
+            <p id="saveDialogHint" style="margin: -8px 0 14px; font-size: 13px; color: var(--text-secondary); display: none;"></p>
             <label for="valuationNameInput">Název ocenění</label>
             <input type="text" id="valuationNameInput" placeholder="např. Pozemek Brno-Řečkovice, 03/2026" autofocus>
             <label for="valuationNotesInput" style="margin-top: 16px;">Poznámky (volitelně)</label>
             <textarea id="valuationNotesInput" class="valuation-notes-edit" placeholder="Přidejte své poznámky k tomuto ocenění..."></textarea>
-            <div class="btn-group">
+            <div class="btn-group" id="saveDialogButtons">
                 <button class="btn btn-secondary" onclick="closeSaveValuationDialog()">Zrušit</button>
-                <button class="btn btn-primary" onclick="confirmSaveValuation()">Uložit</button>
+                <button class="btn btn-secondary" id="btnSaveAsNew" onclick="saveAsNew()" style="display:none;">Uložit jako nové</button>
+                <button class="btn btn-primary" id="btnConfirmSave" onclick="confirmSaveValuation()">Uložit</button>
             </div>
         </div>
     </div>
@@ -2543,6 +2545,7 @@
         let compareSelectedIds = new Set();
         let filterSearchText = '';
         let filterPropertyType = '';
+        let editingId = null; // ID načteného case (loadSavedValuation); null = fresh, nový case
         let safetyCoefficients = {
             apartment: 0.80,
             house: 0.70,
@@ -4507,17 +4510,47 @@
             // Ukládání bez AI výstupu povoleno — case lze parkovat a doplnit AI později
 
             const dialog = document.getElementById('saveValuationDialog');
-            const input = document.getElementById('valuationNameInput');
+            const nameInput = document.getElementById('valuationNameInput');
+            const notesInput = document.getElementById('valuationNotesInput');
+            const title = document.getElementById('saveDialogTitle');
+            const hint = document.getElementById('saveDialogHint');
+            const btnConfirm = document.getElementById('btnConfirmSave');
+            const btnSaveAsNew = document.getElementById('btnSaveAsNew');
 
-            // Auto-suggest name based on property info
-            const config = propertyConfigs[propertyType];
-            const typeName = config?.name || propertyType;
-            const address = formData.adresa || '';
-            const dateStr = new Date().toLocaleDateString('cs-CZ', { month: '2-digit', year: 'numeric' });
-            input.value = address ? `${typeName} — ${address}, ${dateStr}` : `${typeName}, ${dateStr}`;
+            // Edit mode? Najdeme případně načtený case podle editingId
+            let existing = null;
+            if (editingId) {
+                try {
+                    const saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                    existing = saved.find(v => v.id === editingId);
+                } catch (e) { /* ignore, fallback to create mode */ }
+            }
+
+            if (existing) {
+                // Update mode — prefill z existujícího + změnit tlačítka
+                title.textContent = 'Přepsat ocenění';
+                hint.textContent = 'Přepíšete původní záznam „' + existing.name + '" (' + existing.date + ').';
+                hint.style.display = '';
+                nameInput.value = existing.name;
+                notesInput.value = existing.notes || '';
+                btnConfirm.textContent = 'Přepsat';
+                btnSaveAsNew.style.display = '';
+            } else {
+                // Create mode — current behavior
+                title.textContent = 'Uložit ocenění';
+                hint.style.display = 'none';
+                const config = propertyConfigs[propertyType];
+                const typeName = config?.name || propertyType;
+                const address = formData.adresa || '';
+                const dateStr = new Date().toLocaleDateString('cs-CZ', { month: '2-digit', year: 'numeric' });
+                nameInput.value = address ? `${typeName} — ${address}, ${dateStr}` : `${typeName}, ${dateStr}`;
+                notesInput.value = '';
+                btnConfirm.textContent = 'Uložit';
+                btnSaveAsNew.style.display = 'none';
+            }
 
             dialog.classList.add('show');
-            setTimeout(() => input.select(), 100);
+            setTimeout(() => nameInput.select(), 100);
         }
 
         function closeSaveValuationDialog() {
@@ -4526,6 +4559,13 @@
             // Clear inputs
             document.getElementById('valuationNameInput').value = '';
             document.getElementById('valuationNotesInput').value = '';
+        }
+
+        // Helper: uživatel v save dialogu klikl 'Uložit jako nové' — vynucený create flow
+        // (vynuluje editingId, takže confirmSaveValuation vytvoří nový záznam místo update)
+        function saveAsNew() {
+            editingId = null;
+            confirmSaveValuation();
         }
 
         function confirmSaveValuation() {
@@ -4545,11 +4585,10 @@
             const avgTrzni = trzniValues.length > 0 ? trzniValues.reduce((a, b) => a + b, 0) / trzniValues.length : null;
             const avgZastavni = zastavniValues.length > 0 ? zastavniValues.reduce((a, b) => a + b, 0) / zastavniValues.length : null;
 
-            const valuation = {
-                id: Date.now(),
+            // Společná data — bez id/date (závisí na update vs create větvi)
+            const payload = {
                 name: name,
                 notes: notes || null,
-                date: new Date().toLocaleString('cs-CZ'),
                 propertyType: propertyType,
                 propertyTypeName: config?.name || propertyType,
                 loanPurpose: loanPurpose,
@@ -4567,11 +4606,37 @@
             };
 
             try {
-                const saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
-                saved.unshift(valuation);
-                if (saved.length > 50) saved.pop();
+                let saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                let isUpdate = false;
+
+                if (editingId) {
+                    const idx = saved.findIndex(v => v.id === editingId);
+                    if (idx !== -1) {
+                        // Update — zachovej původní id + date, přidej updatedAt
+                        saved[idx] = Object.assign({}, saved[idx], payload, {
+                            updatedAt: new Date().toLocaleString('cs-CZ')
+                        });
+                        isUpdate = true;
+                    }
+                }
+
+                if (!isUpdate) {
+                    // Create new
+                    const newValuation = Object.assign({}, payload, {
+                        id: Date.now(),
+                        date: new Date().toLocaleString('cs-CZ')
+                    });
+                    saved.unshift(newValuation);
+                    if (saved.length > 50) saved.pop();
+                    // Pamatovat nový id — další 'Uložit' (nezavře-li uživatel session) nabídne update
+                    editingId = newValuation.id;
+                }
+
                 localStorage.setItem('saved-valuations', JSON.stringify(saved));
                 autoBackup();
+
+                closeSaveValuationDialog();
+                showToast(isUpdate ? 'Ocenění aktualizováno' : 'Ocenění uloženo');
             } catch (e) {
                 if (e.name === 'QuotaExceededError') {
                     showToast('Úložiště je plné — smažte staré ocenění');
@@ -4581,9 +4646,6 @@
                 console.error('Save valuation error:', e);
                 return;
             }
-
-            closeSaveValuationDialog();
-            showToast('Ocenění uloženo');
         }
 
         function renderSavedValuationsPanel() {
@@ -4990,6 +5052,8 @@
 
             updateComparisonTable();
             saveState();
+            // Pamatovat, který case byl načtený — další 'Uložit ocenění' nabídne update (přepsat)
+            editingId = id;
             showToast('Ocenění „' + item.name + '" načteno');
         }
 
@@ -5348,6 +5412,7 @@
             formData = {};
             visitedSteps = [1];
             aiParsedData = { chatgpt: null, claude: null, gemini: null };
+            editingId = null; // fresh case → save dialog vyrobí nový záznam, ne update
             const step6Textareas = document.querySelectorAll('#step6 textarea');
             step6Textareas.forEach(ta => ta.value = '');
             document.getElementById('comparisonTableWrapper').style.display = 'none';
