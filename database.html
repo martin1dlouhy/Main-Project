@@ -5380,8 +5380,8 @@ function buildPromptFE(mode, ctx) {
             '- Profilová URL formátu https://linkedin.com/in/{slug} vraceť POUZE pokud jsi OPRAVDU ověřil přes web search, že daný profil existuje (otevři ho, vidíš jméno na stránce).',
             '- NIKDY negeneruj URL podle jména automaticky (např. /in/jan-novak nebo /in/jan-novak-ceo). LinkedIn slug obsahuje obvykle náhodný hash (např. /in/jan-novak-a8b2c4f) a Tvůj odhad bude z 90 % halucinace = 404.',
             '- Pokud nemůžeš ověřit konkrétní profilovou URL, vrať **Google site:linkedin.com/in search URL** v tomto formátu:',
-            '  https://www.google.com/search?q=site%3Alinkedin.com%2Fin+%22Jméno+Příjmení%22+Firma',
-            '  (URL-encoded `site:linkedin.com/in "Jméno Příjmení" Firma`. POZOR: firmu dej jako VOLNÉ klíčové slovo BEZ uvozovek a BEZ právní formy (napiš "ProfiLend", ne "ProfiLend s.r.o.") — firma v uvozovkách = přesná fráze, kterou Google na profilu nenajde → 0 výsledků = nefunkční odkaz. Jméno naopak v uvozovkách nech. Google index obsahuje všechny veřejné LinkedIn profily a první výsledek je téměř vždy správný profil — uživatel klikne a otevře se mu reálná /in/ URL. NEPOUŽÍVEJ LinkedIn vlastní /search/ — bez přihlášení vrací prázdno.)',
+            '  https://www.google.com/search?q=site%3Alinkedin.com%2Fin+Jméno+Příjmení+Značka',
+            '  (URL-encoded `site:linkedin.com/in Jméno Příjmení ZnačkaFirmy`. PRAVIDLA: (1) Jméno ANI firmu NEDÁVEJ do uvozovek — jen volná klíčová slova; uvozovky kolem celého jména v EU naráží na GDPR filtr Googlu (osobní profily se z přesné shody odstraní) → 0 výsledků. (2) Z firmy použij JEN jedno značkové slovo (napiš "ATALIAN", ne "ATALIAN CZ s.r.o."; "ProfiLend", ne "ProfiLend Group s.r.o.") — Google site: dělá AND přes všechna slova, takže každé slovo navíc, které není doslova na profilu, srazí výsledek klidně na nulu. Vynech právní formu, zemi (CZ/SK) i obecná slova (Skupina, Group, Holding). Google relevanci seřadí sám — správná osoba bývá první. NEPOUŽÍVEJ LinkedIn vlastní /search/ — bez přihlášení vrací prázdno.)',
             '- Pokud nemáš ani jméno (jen firmu), vrať Google search pro company stránku: https://www.google.com/search?q=site%3Alinkedin.com%2Fcompany+Firma',
             (ctx.preferLinkedIn
                 ? '\n- PRIORITA LINKEDIN: Pro tuto variantu vraceť POUZE kontakty, kde umíš dodat OVĚŘENOU profilovou URL (/in/{slug}). Google search URL je akceptovatelná jako fallback, ale ideální je ověřená profilová. Kontakty, kde nemáš ani jméno (chybí keywords pro Google search), zcela vyřaď.'
@@ -5399,7 +5399,7 @@ function buildPromptFE(mode, ctx) {
             '      "email": "veřejný email | null",',
             '      "telefon": "veřejný tel | null",',
             '      "web": "https://… | null",',
-            '      "linkedinUrl": "BUĎ ověřená profilová URL https://linkedin.com/in/{slug} NEBO Google search URL https://www.google.com/search?q=site%3Alinkedin.com%2Fin+\\"Jméno\\"+Firma (firma jako klíčové slovo BEZ uvozovek!) NEBO null",',
+            '      "linkedinUrl": "BUĎ ověřená profilová URL https://linkedin.com/in/{slug} NEBO Google search URL https://www.google.com/search?q=site%3Alinkedin.com%2Fin+Jméno+Příjmení+Značka (jméno + JEDNO značkové slovo firmy, vše BEZ uvozovek!) NEBO null",',
             '      "sidlo": "adresa | null",',
             '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
             '    }',
@@ -6740,21 +6740,23 @@ function classifyLinkedInUrl(url) {
 function buildLinkedInSearchUrl(kontaktniOsoba, firma) {
     const name = (kontaktniOsoba || '').trim();
     const rawCompany = (firma || '').trim();
-    // Firma jen pokud vypadá jako reálná firma; navíc ořež právní formu (s.r.o., a.s. …),
-    // protože na LinkedIn profilu je název obvykle uvedený bez ní.
-    const company = looksLikeRealFirma(rawCompany) ? stripFirmaLegalForm(rawCompany) : '';
+    // Z firmy bereme JEN jedno značkové slovo (ne celý název) — viz firmaBrandWord.
+    const brand = looksLikeRealFirma(rawCompany) ? firmaBrandWord(rawCompany) : '';
 
     if (name) {
-        // DŮLEŽITÉ: jméno v uvozovkách (přesná shoda osoby), ale firma jako VOLNÉ
-        // klíčové slovo BEZ uvozovek. Firma v uvozovkách = přesná fráze, kterou Google
-        // na profilu skoro nikdy nenajde (jiný tvar názvu) → 0 výsledků = nefunkční odkaz.
-        const parts = ['site:linkedin.com/in', '"' + name + '"'];
-        if (company) parts.push(company);
+        // DŮLEŽITÉ: jméno ANI firmu nedáváme do uvozovek — jen volná klíčová slova.
+        // Uvozovky = přesná fráze. U celého jména to v EU naráží na GDPR filtr Googlu
+        // (osobní LinkedIn profily se z přesné shody jména odstraňují) → 0 výsledků.
+        // Ověřeno: `..."João Paulo Pereira da Silva" ATALIAN` = nula; bez uvozovek
+        // + jen značka `... João Paulo Pereira da Silva ATALIAN` = 15 profilů, správný
+        // 1. (celé `ATALIAN CZ` = zase nula — proto jen jedno značkové slovo).
+        const parts = ['site:linkedin.com/in', name];
+        if (brand) parts.push(brand);
         return 'https://www.google.com/search?q=' + encodeURIComponent(parts.join(' '));
     }
-    // Fallback: bez jména hledáme firemní stránku (firma rovněž bez uvozovek)
-    if (company) {
-        return 'https://www.google.com/search?q=' + encodeURIComponent('site:linkedin.com/company ' + company);
+    // Fallback: bez jména hledáme firemní stránku (jen značkové slovo, bez uvozovek)
+    if (brand) {
+        return 'https://www.google.com/search?q=' + encodeURIComponent('site:linkedin.com/company ' + brand);
     }
     return '';
 }
@@ -6802,6 +6804,24 @@ function stripFirmaLegalForm(s) {
     // SE (Societas Europaea) jen pokud stojí samostatně na konci
     v = v.replace(/[,;]?\s*\bSE\.?\s*$/, '');
     return v.replace(/[,;\s]+$/, '').trim();
+}
+
+// Vrátí JEDNO značkové slovo firmy pro Google query (ne celý název).
+// DŮVOD: Google `site:` dělá AND přes všechna slova — každé slovo, které není
+// doslova na profilu (země "CZ", právní forma, "Skupina"…), srazí výsledek klidně
+// na nulu. "ATALIAN CZ s.r.o." → "ATALIAN", "Skupina ČEZ" → "ČEZ".
+// Přeskakuje obecná/zeměpisná slova; když zbydou jen ta, vezme první token.
+function firmaBrandWord(firma) {
+    const stripped = stripFirmaLegalForm(firma);
+    if (!stripped) return '';
+    const skip = /^(skupina|česká|český|české|čeští|group|holding|international|czech|cz|sk|cr|the)$/i;
+    const tokens = stripped.split(/[\s,]+/).filter(Boolean)
+        .map(t => t.replace(/^[^0-9A-Za-zÀ-ž&]+|[^0-9A-Za-zÀ-ž&]+$/g, ''))
+        .filter(Boolean);
+    for (const tok of tokens) {
+        if (!skip.test(tok)) return tok;
+    }
+    return tokens[0] || '';
 }
 
 // Detekce "stale" Google search URLs, které obsahují segment text v query (= byly
