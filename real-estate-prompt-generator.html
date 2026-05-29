@@ -4497,20 +4497,8 @@
             var originalGridCols = aiGrid ? aiGrid.style.gridTemplateColumns : null;
             if (aiGrid) aiGrid.style.gridTemplateColumns = '1fr';
 
-            // Dočasná export hlavička
-            var today = new Date().toLocaleDateString('cs-CZ');
-            var header = document.createElement('div');
-            header.id = '__exportHeader';
-            header.style.cssText = 'margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid var(--border-color,#e2e8f0);';
-            header.innerHTML =
-                '<div style="font-size:11px;color:var(--text-secondary);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:8px;font-weight:500;">R-E Prompt Generator · Investment Tools</div>' +
-                '<h2 style="font-family:Fraunces,Georgia,serif;font-weight:300;font-size:28px;margin:0 0 8px 0;letter-spacing:-0.02em;color:var(--text-primary);">Ocenění nemovitosti</h2>' +
-                '<div style="font-size:14px;color:var(--text-secondary);">' +
-                    '<strong style="color:var(--text-primary);">' + typeNameDisplay + '</strong>' +
-                    (address ? ' · ' + address : '') + ' · ' + today +
-                '</div>';
-            step6.insertBefore(header, step6.firstChild);
-
+            // Martin: chce v PNG jen 2 tabulky (srovnávací + finální shrnutí), bez headeru.
+            // Filename už nese název uloženého případu, takže kontext je v Downloads.
             try {
                 await new Promise(function(r){ requestAnimationFrame(r); });
                 var bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
@@ -4566,7 +4554,6 @@
                 console.error('Image export failed:', err);
                 showToast('Chyba při generování obrázku');
             } finally {
-                if (header.parentNode) header.remove();
                 restoreList.forEach(function(item){ item.el.style.display = item.display; });
                 if (aiGrid) aiGrid.style.gridTemplateColumns = originalGridCols || '';
             }
