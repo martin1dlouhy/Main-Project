@@ -5120,7 +5120,7 @@ async function applyContacts() {
         firma: s.firma || '', ico: s.ico || '', sidlo: s.sidlo || '',
         web: s.web || '', email: s.email || '', telefon: s.telefon || '',
         kontaktniOsoba: s.kontaktniOsoba || '', role: s.role || '',
-        linkedinUrl: s.linkedinUrl || '', facebookUrl: '',
+        linkedinUrl: resolveImportLinkedInUrl(s.linkedinUrl, s.kontaktniOsoba, s.firma), facebookUrl: '',
         zdrojUrl: s.zdrojUrl || '',
         tagy: 'AI-' + (s._sources || []).join('+'),
         poznamka: 'AI návrh z ' + new Date().toLocaleDateString('cs-CZ') + ' (' + (s._sources || []).join(' + ') + ')',
@@ -5380,9 +5380,9 @@ function buildPromptFE(mode, ctx) {
             '- Profilová URL formátu https://linkedin.com/in/{slug} vraceť POUZE pokud jsi OPRAVDU ověřil přes web search, že daný profil existuje (otevři ho, vidíš jméno na stránce).',
             '- NIKDY negeneruj URL podle jména automaticky (např. /in/jan-novak nebo /in/jan-novak-ceo). LinkedIn slug obsahuje obvykle náhodný hash (např. /in/jan-novak-a8b2c4f) a Tvůj odhad bude z 90 % halucinace = 404.',
             '- Pokud nemůžeš ověřit konkrétní profilovou URL, vrať **Google site:linkedin.com/in search URL** v tomto formátu:',
-            '  https://www.google.com/search?q=site%3Alinkedin.com%2Fin+%22Jméno+Příjmení%22+%22Firma%22',
-            '  (URL-encoded `site:linkedin.com/in "Jméno Příjmení" "Firma"`. Google index obsahuje všechny veřejné LinkedIn profily a první výsledek je téměř vždy správný profil — uživatel klikne a otevře se mu reálná /in/ URL. NEPOUŽÍVEJ LinkedIn vlastní /search/ — bez přihlášení vrací prázdno.)',
-            '- Pokud nemáš ani jméno (jen firmu), vrať Google search pro company stránku: https://www.google.com/search?q=site%3Alinkedin.com%2Fcompany+%22Firma%22',
+            '  https://www.google.com/search?q=site%3Alinkedin.com%2Fin+%22Jméno+Příjmení%22+Firma',
+            '  (URL-encoded `site:linkedin.com/in "Jméno Příjmení" Firma`. POZOR: firmu dej jako VOLNÉ klíčové slovo BEZ uvozovek a BEZ právní formy (napiš "ProfiLend", ne "ProfiLend s.r.o.") — firma v uvozovkách = přesná fráze, kterou Google na profilu nenajde → 0 výsledků = nefunkční odkaz. Jméno naopak v uvozovkách nech. Google index obsahuje všechny veřejné LinkedIn profily a první výsledek je téměř vždy správný profil — uživatel klikne a otevře se mu reálná /in/ URL. NEPOUŽÍVEJ LinkedIn vlastní /search/ — bez přihlášení vrací prázdno.)',
+            '- Pokud nemáš ani jméno (jen firmu), vrať Google search pro company stránku: https://www.google.com/search?q=site%3Alinkedin.com%2Fcompany+Firma',
             (ctx.preferLinkedIn
                 ? '\n- PRIORITA LINKEDIN: Pro tuto variantu vraceť POUZE kontakty, kde umíš dodat OVĚŘENOU profilovou URL (/in/{slug}). Google search URL je akceptovatelná jako fallback, ale ideální je ověřená profilová. Kontakty, kde nemáš ani jméno (chybí keywords pro Google search), zcela vyřaď.'
                 : ''),
@@ -5399,7 +5399,7 @@ function buildPromptFE(mode, ctx) {
             '      "email": "veřejný email | null",',
             '      "telefon": "veřejný tel | null",',
             '      "web": "https://… | null",',
-            '      "linkedinUrl": "BUĎ ověřená profilová URL https://linkedin.com/in/{slug} NEBO Google search URL https://www.google.com/search?q=site%3Alinkedin.com%2Fin+\\"Jméno\\"+\\"Firma\\" NEBO null",',
+            '      "linkedinUrl": "BUĎ ověřená profilová URL https://linkedin.com/in/{slug} NEBO Google search URL https://www.google.com/search?q=site%3Alinkedin.com%2Fin+\\"Jméno\\"+Firma (firma jako klíčové slovo BEZ uvozovek!) NEBO null",',
             '      "sidlo": "adresa | null",',
             '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
             '    }',
@@ -6740,18 +6740,37 @@ function classifyLinkedInUrl(url) {
 function buildLinkedInSearchUrl(kontaktniOsoba, firma) {
     const name = (kontaktniOsoba || '').trim();
     const rawCompany = (firma || '').trim();
-    const company = looksLikeRealFirma(rawCompany) ? rawCompany : '';
+    // Firma jen pokud vypadá jako reálná firma; navíc ořež právní formu (s.r.o., a.s. …),
+    // protože na LinkedIn profilu je název obvykle uvedený bez ní.
+    const company = looksLikeRealFirma(rawCompany) ? stripFirmaLegalForm(rawCompany) : '';
 
     if (name) {
+        // DŮLEŽITÉ: jméno v uvozovkách (přesná shoda osoby), ale firma jako VOLNÉ
+        // klíčové slovo BEZ uvozovek. Firma v uvozovkách = přesná fráze, kterou Google
+        // na profilu skoro nikdy nenajde (jiný tvar názvu) → 0 výsledků = nefunkční odkaz.
         const parts = ['site:linkedin.com/in', '"' + name + '"'];
-        if (company) parts.push('"' + company + '"');
+        if (company) parts.push(company);
         return 'https://www.google.com/search?q=' + encodeURIComponent(parts.join(' '));
     }
-    // Fallback: bez jména hledáme firemní stránku
+    // Fallback: bez jména hledáme firemní stránku (firma rovněž bez uvozovek)
     if (company) {
-        return 'https://www.google.com/search?q=' + encodeURIComponent('site:linkedin.com/company "' + company + '"');
+        return 'https://www.google.com/search?q=' + encodeURIComponent('site:linkedin.com/company ' + company);
     }
     return '';
+}
+
+// Pro AI import: zaručí funkční LinkedIn odkaz u NOVÝCH AI kontaktů.
+// Ověřenou profilovou URL (/in/) a firemní stránku (/company/) necháme být; cokoli
+// jiného (Google search, LinkedIn vlastní /search/, prázdné, nestandardní) deterministicky
+// přestavíme na funkční Google site:linkedin.com/in search z jména + firmy — nezávisle
+// na tom, jestli AI dodržela prompt.
+// POZNÁMKA: prochází tudy POUZE nově importované AI kontakty. Ručně vložené URL
+// (asistentka v Sheetu, ruční formulář) tudy NEjdou a zůstávají nedotčené.
+function resolveImportLinkedInUrl(aiUrl, kontaktniOsoba, firma) {
+    const kind = classifyLinkedInUrl(aiUrl);
+    if (kind === 'profile' || kind === 'company') return (aiUrl || '').trim();
+    const built = buildLinkedInSearchUrl(kontaktniOsoba, firma);
+    return built || (aiUrl || '').trim();
 }
 
 // Heuristika: vypadá hodnota jako reálné jméno firmy, NE jako segment / poznámka / nesmysl?
@@ -6770,6 +6789,19 @@ function looksLikeRealFirma(s) {
         if (match) return false;
     }
     return true;
+}
+
+// Ořez běžných českých/slovenských právních forem z KONCE názvu firmy.
+// Na LinkedIn profilu bývá firma napsaná bez právní formy ("ProfiLend", ne
+// "ProfiLend s.r.o."), takže ji do Google query nedáváme — jinak by přesná shoda selhala.
+function stripFirmaLegalForm(s) {
+    if (!s) return '';
+    let v = String(s).trim();
+    // Právní formy na konci názvu (s tečkami i bez, různé mezery)
+    v = v.replace(/[,;]?\s*\b(spol\.?\s*s\s*r\.?\s*o\.?|s\.?\s*r\.?\s*o\.?|a\.?\s*s\.?|k\.?\s*s\.?|v\.?\s*o\.?\s*s\.?|z\.?\s*s\.?|o\.?\s*p\.?\s*s\.?|akciová\s+společnost|společnost\s+s\s+ručením\s+omezeným|družstvo)\.?\s*$/i, '');
+    // SE (Societas Europaea) jen pokud stojí samostatně na konci
+    v = v.replace(/[,;]?\s*\bSE\.?\s*$/, '');
+    return v.replace(/[,;\s]+$/, '').trim();
 }
 
 // Detekce "stale" Google search URLs, které obsahují segment text v query (= byly

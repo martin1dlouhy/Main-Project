@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R-E Prompt Generator — Investment Tools</title>
+<link rel="stylesheet" href="app-shell.css">
+<style>
+  .wizard-grid{
+    display:grid;grid-template-columns:240px 1fr;gap:40px;align-items:start;
+  }
+  @media (max-width: 1000px){ .wizard-grid{grid-template-columns:1fr} }
+
+  /* Stepper rail */
+  .stepper{
+    position:sticky;top:calc(var(--header-h) + 32px);
+    padding:8px 0;
+  }
+  .step{
+    display:flex;align-items:flex-start;gap:14px;padding:10px 0;
+    color:var(--text-mute);cursor:pointer;
+    transition:color var(--dur) var(--ease);position:relative;
+  }
+  .step:not(:last-child)::before{
+    content:'';position:absolute;left:13px;top:36px;bottom:-6px;
+    width:1px;background:var(--line-faint);
+  }
+  .step-num{
+    width:26px;height:26px;border-radius:50%;flex-shrink:0;
+    border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-style:italic;font-size:12px;
+    color:var(--text-mute);background:var(--bg);
+    transition:all var(--dur) var(--ease);
+  }
+  .step.done .step-num{background:var(--amber);color:#1a1207;border-color:var(--amber);font-style:normal;font-weight:600}
+  .step.done .step-num::after{content:'✓';font-size:14px}
+  .step.done .step-num{font-size:0}
+  .step.active .step-num{border-color:var(--amber);color:var(--amber-warm);box-shadow:0 0 0 4px var(--amber-glow)}
+  .step.active{color:var(--text)}
+  .step:hover{color:var(--text-soft)}
+  .step-body{padding-top:3px}
+  .step-title{font-size:13.5px;font-weight:500;color:inherit}
+  .step-meta{font-size:11px;color:var(--text-faint);margin-top:2px;font-family:var(--font-display);font-style:italic}
+  .step.active .step-meta{color:var(--amber)}
+  .step.done::before{background:var(--line-amber)!important}
+
+  /* Wizard panel */
+  .wizard{background:var(--bg);border:1px solid var(--line-faint);border-radius:var(--r-lg);overflow:hidden}
+  .wizard-head{padding:28px 36px;border-bottom:1px solid var(--line-faint)}
+  .wizard-eyebrow{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--amber);font-weight:500;margin-bottom:6px}
+  .wizard-title{font-family:var(--font-display);font-weight:300;font-size:28px;letter-spacing:var(--tracking-display)}
+  .wizard-title em{font-style:italic;color:var(--amber-warm);font-weight:400}
+  .wizard-sub{margin-top:6px;font-size:13.5px;color:var(--text-mute);max-width:540px}
+
+  .wizard-body{padding:32px 36px}
+  .wizard-foot{
+    padding:18px 36px;border-top:1px solid var(--line-faint);
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+  }
+  .wizard-progress{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-mute)}
+  .wizard-progress-bar{width:140px;height:3px;background:var(--bg-input);border-radius:2px;overflow:hidden}
+  .wizard-progress-bar .fill{height:100%;background:var(--amber);width:33%;transition:width var(--dur-slow) var(--ease)}
+
+  /* Output card */
+  .output-card{
+    margin-top:32px;background:var(--bg-raised);border:1px solid var(--line-amber);
+    border-radius:var(--r-lg);overflow:hidden;
+  }
+  .output-head{
+    padding:18px 24px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--line-faint);
+  }
+  .output-title{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:400;font-size:15px}
+  .output-title em{font-style:italic;color:var(--amber-warm)}
+  .output-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--amber);background:var(--amber-tint);padding:3px 10px;border-radius:99px;font-weight:500}
+  .output-actions{display:flex;gap:8px}
+  .output-body{
+    padding:24px 28px;font-family:var(--font-mono);font-size:13px;
+    color:var(--text-soft);line-height:1.7;
+    background:var(--bg-deep);
+    white-space:pre-wrap;
+    max-height:400px;overflow-y:auto;
+  }
+  .output-body .key{color:var(--amber-warm);font-weight:500}
+  .output-body .val{color:var(--text)}
+  .output-body .comment{color:var(--text-faint);font-style:italic;font-family:var(--font-display)}
+</style>
+</head>
+<body>
+
+<nav class="nav" data-screen-label="Header">
+  <div class="nav-left"><a href="hero-preview.html" class="logo"><span class="logo-mark">IT</span><span class="logo-text">Investment Tools</span></a></div>
+  <div class="nav-menu nav-center">
+    <div class="nav-item"><a class="nav-link current">Osobní <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="debt-calculator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M16 5 v22"/><path d="M9 27 h14"/><path d="M6 11 h20"/><path d="M6 11 l-3 7 a3 3 0 0 0 6 0 z"/><path d="M26 11 l-3 7 a3 3 0 0 0 6 0 z"/></svg></span><div><div class="dd-title">Debt Calculator</div><div class="dd-meta">Dluhové financování</div></div></a>
+        <a class="dd-item" href="re-prompt-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 14 L14 6 L23 14 V25 H5 Z"/><path d="M11 25 V18 H17 V25"/></svg></span><div><div class="dd-title">R-E Prompt Generator</div><div class="dd-meta">AI valuace nemovitostí</div></div></a>
+        <a class="dd-item" href="sp500-calculator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M4 26 H28"/><path d="M4 22 L10 16 L14 19 L20 9 L26 13"/></svg></span><div><div class="dd-title">S&amp;P 500 Portfolio</div><div class="dd-meta">Rozklad indexu</div></div></a>
+      </div>
+    </div>
+    <div class="nav-item"><a class="nav-link">Pracovní <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></a>
+      <div class="dropdown"><a class="dd-item" href="portfolio-dashboard.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><path d="M16 6 A10 10 0 0 1 26 16"/><path d="M16 16 L26 16"/><path d="M16 16 L16 6"/></svg></span><div><div class="dd-title">Portfolio Dashboard</div><div class="dd-meta">Přehled portfolia</div></div></a></div>
+    </div>
+    <div class="nav-item"><a class="nav-link">ProfiLend <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="termsheet-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span><div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy</div></div></a>
+        <a class="dd-item" href="loan-documentation.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg></span><div><div class="dd-title">Úvěrová dokumentace</div><div class="dd-meta">AI generování</div></div></a>
+        <a class="dd-item" href="marketing-agent.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 7 H23 a2 2 0 0 1 2 2 V19 a2 2 0 0 1 -2 2 H13 L8 26 V21 H5 a2 2 0 0 1 -2 -2 V9 a2 2 0 0 1 2 -2 Z"/></svg></span><div><div class="dd-title">Marketing Agent</div><div class="dd-meta">Sociální obsah</div></div></a>
+      </div>
+    </div>
+  </div>
+  <div class="nav-right-slot"></div>
+</nav>
+
+<main class="app">
+
+  <div class="app-meta">
+    <nav class="crumbs">
+      <a href="hero-preview.html">Investment Tools</a><span class="sep">/</span>
+      <a>Osobní</a><span class="sep">/</span>
+      <span class="current">R-E Prompt Generator</span>
+    </nav>
+    <div class="app-tools">
+      <button class="btn-icon" title="Historie"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg></button>
+    </div>
+  </div>
+
+  <div class="app-head">
+    <div class="app-head-left">
+      <div class="eyebrow">OSOBNÍ · AI VALUACE</div>
+      <h1 class="app-title">R-E Prompt <em>Generator</em></h1>
+      <p class="app-sub">6 kroků k strukturovanému promptu pro AI-asistovanou valuaci nemovitosti. Výstup vložíte do ChatGPT, Claude nebo Gemini.</p>
+    </div>
+    <div class="app-actions">
+      <button class="btn btn-secondary"><svg viewBox="0 0 16 16"><path d="M2 8a6 6 0 1011-3.5"/><path d="M11 2v3h-3"/></svg>Začít znovu</button>
+    </div>
+  </div>
+
+  <div class="workspace-wide">
+    <div class="wizard-grid">
+
+      <!-- ============== STEPPER ============== -->
+      <aside class="stepper">
+        <div class="step done"><div class="step-num">1</div><div class="step-body"><div class="step-title">Lokalita</div><div class="step-meta">Praha 6, Bubeneč</div></div></div>
+        <div class="step done"><div class="step-num">2</div><div class="step-body"><div class="step-title">Typ nemovitosti</div><div class="step-meta">Byt 3+kk, 86 m²</div></div></div>
+        <div class="step active"><div class="step-num">3</div><div class="step-body"><div class="step-title">Stav &amp; vybavení</div><div class="step-meta">aktuální krok</div></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">Cena &amp; nabídka</div></div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">Kontext trhu</div></div></div>
+        <div class="step"><div class="step-num">6</div><div class="step-body"><div class="step-title">Zaměření AI</div></div></div>
+      </aside>
+
+      <!-- ============== WIZARD ============== -->
+      <section class="wizard">
+        <div class="wizard-head">
+          <div class="wizard-eyebrow">KROK 3 · 6</div>
+          <h2 class="wizard-title">Stav <em>&amp; vybavení</em></h2>
+          <p class="wizard-sub">Popište technický stav, dispozici a vybavení. Čím přesněji, tím relevantnější bude AI valuace.</p>
+        </div>
+
+        <div class="wizard-body">
+
+          <div class="field">
+            <label class="field-label">Stav nemovitosti</label>
+            <div class="dropdown-field" data-dropdown>
+              <button type="button" class="dropdown-trigger" aria-expanded="false">
+                <span class="dropdown-value">Po kompletní rekonstrukci (2024)</span>
+                <svg viewBox="0 0 12 8" class="dropdown-chevron"><path d="M1 1.5l5 5 5-5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+              </button>
+              <ul class="dropdown-menu">
+                <li class="dropdown-option">Novostavba</li>
+                <li class="dropdown-option selected">Po kompletní rekonstrukci (2024)</li>
+                <li class="dropdown-option">Po částečné rekonstrukci</li>
+                <li class="dropdown-option">Udržovaný</li>
+                <li class="dropdown-option">K rekonstrukci</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="field-row-3">
+            <div class="field">
+              <label class="field-label">Patro</label>
+              <input class="input" value="3. / 5">
+            </div>
+            <div class="field">
+              <label class="field-label">Výtah</label>
+              <input class="input" value="Ano">
+            </div>
+            <div class="field">
+              <label class="field-label">Balkon / lodžie</label>
+              <input class="input" value="Lodžie 6 m²">
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Vybavení (oddělit čárkami)</label>
+            <textarea class="input" rows="3">Kuchyňská linka na míru, designové dveře, dřevěné podlahy, podlahové vytápění v koupelně, klimatizace v ložnici, sklepní kóje 4 m²</textarea>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Energetický štítek &amp; specifika</label>
+            <textarea class="input" rows="2">Třída B, plynový kotel z 2024. Dům po revitalizaci fasády (2022), nová střecha (2023). Bezbariérový vstup.</textarea>
+          </div>
+
+        </div>
+
+        <div class="wizard-foot">
+          <button class="btn btn-ghost"><svg viewBox="0 0 16 16"><path d="M14 8H3M7 4l-4 4 4 4"/></svg>Zpět</button>
+          <div class="wizard-progress">
+            <span>3 / 6 kroků</span>
+            <div class="wizard-progress-bar"><div class="fill" style="width:50%"></div></div>
+          </div>
+          <button class="btn btn-primary">Další krok<svg viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4"/></svg></button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ============== OUTPUT PREVIEW ============== -->
+    <div class="output-card">
+      <div class="output-head">
+        <div class="output-title">
+          Živý <em>náhled promptu</em>
+          <span class="output-badge"><svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="3"/></svg>aktualizuje se</span>
+        </div>
+        <div class="output-actions">
+          <button class="btn btn-secondary" id="copy-btn"><svg viewBox="0 0 16 16"><rect x="4" y="4" width="9" height="9" rx="1"/><path d="M4 4V3a1 1 0 011-1h7a1 1 0 011 1v7a1 1 0 01-1 1h-1"/></svg>Kopírovat</button>
+          <button class="btn btn-primary"><svg viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>Otevřít v ChatGPT</button>
+        </div>
+      </div>
+      <pre class="output-body"><span class="comment"># Real Estate Valuation — strukturovaný prompt</span>
+<span class="comment"># vygenerováno: Investment Tools / R-E Prompt Generator</span>
+
+<span class="key">role:</span> <span class="val">Senior real estate analyst, Prague residential market</span>
+<span class="key">úkol:</span> <span class="val">Odhadnout tržní cenu nemovitosti, identifikovat 3 nejvýznamnější rizika a 2 příležitosti pro vyjednání</span>
+
+<span class="key">předmět:</span>
+  <span class="key">- typ:</span>            <span class="val">Byt 3+kk</span>
+  <span class="key">- plocha:</span>         <span class="val">86 m² (užitná) + lodžie 6 m²</span>
+  <span class="key">- lokalita:</span>       <span class="val">Praha 6, Bubeneč</span>
+  <span class="key">- ulice:</span>          <span class="val">— (zadejte v kroku 1)</span>
+
+<span class="key">stav:</span>
+  <span class="key">- celkový:</span>        <span class="val">Po kompletní rekonstrukci (2024)</span>
+  <span class="key">- patro:</span>          <span class="val">3. / 5</span>
+  <span class="key">- výtah:</span>          <span class="val">Ano</span>
+
+<span class="key">vybavení:</span>
+  <span class="val">Kuchyňská linka na míru, designové dveře, dřevěné podlahy,
+  podlahové vytápění v koupelně, klimatizace v ložnici,
+  sklepní kóje 4 m²</span>
+
+<span class="key">energetika:</span>
+  <span class="val">Třída B, plynový kotel z 2024. Dům po revitalizaci fasády (2022),
+  nová střecha (2023). Bezbariérový vstup.</span>
+
+<span class="comment"># další parametry se doplní v krocích 4–6 (cena, kontext trhu, zaměření)</span></pre>
+    </div>
+
+  </div>
+</main>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 16 16"><path d="M3 8l3 3 7-7"/></svg>
+  <span id="toast-msg">Prompt zkopírován</span>
+</div>
+
+<script>
+document.querySelectorAll('[data-dropdown]').forEach(dd => {
+  const trigger = dd.querySelector('.dropdown-trigger');
+  const value = dd.querySelector('.dropdown-value');
+  const options = dd.querySelectorAll('.dropdown-option');
+  trigger.addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = dd.classList.contains('open');
+    document.querySelectorAll('[data-dropdown].open').forEach(o => {
+      o.classList.remove('open');
+      o.querySelector('.dropdown-trigger').setAttribute('aria-expanded','false');
+    });
+    if(!wasOpen){ dd.classList.add('open'); trigger.setAttribute('aria-expanded','true'); }
+  });
+  options.forEach(opt => {
+    opt.addEventListener('click', () => {
+      options.forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      value.textContent = opt.textContent.trim();
+      dd.classList.remove('open');
+      trigger.setAttribute('aria-expanded','false');
+    });
+  });
+});
+document.addEventListener('click', () => {
+  document.querySelectorAll('[data-dropdown].open').forEach(o => {
+    o.classList.remove('open');
+    o.querySelector('.dropdown-trigger').setAttribute('aria-expanded','false');
+  });
+});
+function toast(msg){const t=document.getElementById('toast');document.getElementById('toast-msg').textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+document.getElementById('copy-btn').addEventListener('click',()=>toast('Prompt zkopírován do schránky'));
+</script>
+</body>
+</html>

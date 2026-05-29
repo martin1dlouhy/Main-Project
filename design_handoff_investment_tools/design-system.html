@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProfiLend — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="tokens.css">
+<style>
+
+/* ============ BASE ============ */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{
+  background:var(--bg-deep);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:var(--fs-body);
+  line-height:var(--lh-normal);
+  -webkit-font-smoothing:antialiased;
+}
+body{min-height:100vh}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+
+/* ============ DOC SHELL ============ */
+.doc-nav{
+  position:fixed;left:0;top:0;bottom:0;width:240px;
+  background:var(--bg);border-right:1px solid var(--line-faint);
+  padding:32px 24px;overflow-y:auto;
+  z-index:40;
+}
+.doc-nav-brand{
+  font-family:var(--font-display);font-size:18px;font-weight:400;
+  letter-spacing:var(--tracking-tight);margin-bottom:4px;
+  color:var(--text);
+}
+.doc-nav-tag{
+  font-family:var(--font-display);font-style:italic;font-weight:300;
+  font-size:12px;color:var(--amber);margin-bottom:32px;
+  letter-spacing:0.02em;
+}
+.doc-nav-section{
+  font-size:var(--fs-eyebrow);letter-spacing:var(--tracking-eyebrow);
+  text-transform:uppercase;color:var(--text-mute);
+  margin:24px 0 8px;font-weight:500;
+}
+.doc-nav a{
+  display:block;padding:6px 10px;margin-left:-10px;
+  font-size:13px;color:var(--text-soft);
+  border-radius:var(--r-sm);transition:all var(--dur) var(--ease);
+}
+.doc-nav a:hover{background:var(--bg-input);color:var(--text)}
+.doc-nav a.active{color:var(--amber-warm);background:var(--amber-tint)}
+
+.doc-main{
+  margin-left:240px;
+  padding:80px 64px 120px;
+  max-width:calc(var(--container) - 240px);
+}
+
+/* ============ DOC SECTIONS ============ */
+.doc-header{
+  border-bottom:1px solid var(--line);
+  padding-bottom:48px;margin-bottom:80px;
+  max-width:760px;
+}
+.doc-eyebrow{
+  font-size:var(--fs-eyebrow);letter-spacing:var(--tracking-eyebrow);
+  text-transform:uppercase;color:var(--amber);margin-bottom:20px;
+  font-weight:500;
+}
+.doc-title{
+  font-family:var(--font-display);font-weight:300;
+  font-size:var(--fs-display);line-height:var(--lh-tight);
+  letter-spacing:var(--tracking-display);margin-bottom:24px;
+}
+.doc-title em{font-style:italic;font-weight:400;color:var(--amber-warm)}
+.doc-lead{
+  font-size:18px;line-height:var(--lh-relaxed);color:var(--text-soft);
+  font-family:var(--font-display);font-weight:300;
+  max-width:640px;
+}
+
+.section{margin-bottom:96px;scroll-margin-top:24px}
+.section-head{margin-bottom:32px;border-top:1px solid var(--line-faint);padding-top:32px}
+.section-num{
+  font-family:var(--font-display);font-size:13px;font-style:italic;
+  color:var(--amber);margin-bottom:8px;font-weight:300;
+  letter-spacing:0.02em;
+}
+.section-title{
+  font-family:var(--font-display);font-weight:400;
+  font-size:var(--fs-h1);line-height:var(--lh-tight);
+  letter-spacing:var(--tracking-display);margin-bottom:14px;
+}
+.section-desc{
+  font-size:15px;color:var(--text-soft);max-width:620px;
+  line-height:var(--lh-relaxed);
+}
+
+.subsection{margin-top:48px}
+.subsection-title{
+  font-family:var(--font-display);font-weight:400;font-size:var(--fs-h3);
+  margin-bottom:8px;letter-spacing:var(--tracking-tight);
+}
+.subsection-desc{
+  font-size:13.5px;color:var(--text-mute);margin-bottom:20px;
+  max-width:560px;line-height:var(--lh-relaxed);
+}
+
+/* ============ SHARED ============ */
+.eyebrow{
+  font-size:var(--fs-eyebrow);letter-spacing:var(--tracking-eyebrow);
+  text-transform:uppercase;color:var(--text-mute);font-weight:500;
+}
+.mono{font-family:var(--font-mono);font-size:12px;color:var(--text-mute)}
+
+/* ============ COLOR SWATCHES ============ */
+.color-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:16px;
+}
+.swatch{
+  border:1px solid var(--line-faint);border-radius:var(--r-md);
+  overflow:hidden;
+  transition:border-color var(--dur) var(--ease);
+}
+.swatch:hover{border-color:var(--line-strong)}
+.swatch-color{height:88px;border-bottom:1px solid var(--line-faint)}
+.swatch-meta{padding:12px 14px}
+.swatch-name{font-size:12.5px;font-weight:500;color:var(--text);margin-bottom:2px}
+.swatch-hex{
+  font-family:var(--font-mono);font-size:11px;color:var(--text-mute);
+}
+.swatch-role{font-size:11px;color:var(--text-faint);margin-top:6px;line-height:1.4}
+
+/* ============ TYPE SPECIMENS ============ */
+.type-row{
+  display:grid;grid-template-columns:120px 1fr;gap:32px;
+  padding:20px 0;border-bottom:1px solid var(--line-faint);
+  align-items:baseline;
+}
+.type-meta{
+  font-size:11px;color:var(--text-mute);
+  font-family:var(--font-mono);line-height:1.5;
+}
+.type-meta .label{display:block;color:var(--text-faint);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.1em;font-size:9.5px}
+.type-sample{line-height:var(--lh-tight)}
+
+/* ============ SPACING DEMO ============ */
+.spacing-grid{display:flex;flex-direction:column;gap:8px}
+.spacing-row{
+  display:grid;grid-template-columns:80px 1fr 80px;align-items:center;gap:16px;
+  padding:6px 0;
+}
+.spacing-token{font-family:var(--font-mono);font-size:11px;color:var(--text-mute)}
+.spacing-bar{height:14px;background:var(--amber-tint);border:1px solid var(--line-amber);border-radius:2px}
+.spacing-px{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);text-align:right}
+
+/* ============ COMPONENT PREVIEW SHELL ============ */
+.preview{
+  background:var(--bg);border:1px solid var(--line-faint);
+  border-radius:var(--r-lg);padding:40px;
+  margin-bottom:16px;
+}
+.preview-row{
+  display:flex;flex-wrap:wrap;gap:16px;align-items:center;
+}
+.preview-stack{display:flex;flex-direction:column;gap:16px;align-items:flex-start}
+.preview-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:16px;
+}
+
+/* ============ BUTTONS ============ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 22px;font-size:13.5px;font-weight:500;
+  border-radius:var(--r-sm);border:1px solid transparent;
+  transition:all var(--dur) var(--ease);
+  font-family:inherit;
+  letter-spacing:0.005em;
+  white-space:nowrap;
+}
+.btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+.btn-primary{
+  background:var(--amber);color:#1a1207;
+  font-weight:600;
+}
+.btn-primary:hover{background:var(--amber-warm);box-shadow:0 4px 14px var(--amber-glow)}
+
+.btn-secondary{
+  background:transparent;color:var(--text);
+  border-color:var(--line-strong);
+}
+.btn-secondary:hover{border-color:var(--amber);color:var(--amber-warm)}
+
+.btn-ghost{
+  background:transparent;color:var(--text-soft);
+}
+.btn-ghost:hover{background:var(--bg-input);color:var(--text)}
+
+.btn-icon{
+  width:36px;height:36px;padding:0;
+  border:1px solid var(--line);border-radius:var(--r-sm);
+  color:var(--text-soft);
+}
+.btn-icon:hover{border-color:var(--line-strong);color:var(--text);background:var(--bg-input)}
+.btn-icon svg{width:16px;height:16px}
+
+.btn-sm{padding:7px 14px;font-size:12.5px}
+.btn-lg{padding:14px 28px;font-size:14.5px}
+
+.btn[disabled],.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+
+/* ============ INPUTS ============ */
+.field-label{
+  display:block;font-size:var(--fs-eyebrow);letter-spacing:var(--tracking-eyebrow);
+  text-transform:uppercase;color:var(--text-mute);font-weight:500;margin-bottom:8px;
+}
+.input{
+  width:100%;padding:12px 16px;
+  background:var(--bg-input);border:1px solid var(--line);
+  border-radius:var(--r-sm);
+  color:var(--text);font-size:14px;font-family:inherit;
+  transition:all var(--dur) var(--ease);
+}
+.input::placeholder{color:var(--text-faint)}
+.input:hover{background:var(--bg-input-hover);border-color:var(--line-strong)}
+.input:focus{
+  outline:none;background:var(--bg-input-hover);
+  border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-glow);
+}
+
+.input-with-icon{position:relative}
+.input-with-icon .input{padding-left:42px}
+.input-with-icon svg{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;color:var(--text-mute);
+  fill:none;stroke:currentColor;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+
+.select{
+  appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1l5 5 5-5' stroke='%23a89e8e' stroke-width='1.5' stroke-linecap='round'/></svg>");
+  background-repeat:no-repeat;background-position:right 14px center;
+  padding-right:40px;
+}
+
+.field-help{font-size:12px;color:var(--text-mute);margin-top:6px;line-height:1.5}
+
+.input-currency{
+  display:grid;grid-template-columns:1fr auto;gap:0;
+  border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--bg-input);
+  transition:all var(--dur) var(--ease);
+}
+.input-currency:focus-within{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-glow)}
+.input-currency input{
+  border:none;background:transparent;padding:12px 16px;
+  font-size:18px;font-family:var(--font-display);font-weight:400;
+  color:var(--text);outline:none;font-variant-numeric:tabular-nums;
+}
+.input-currency .currency-tag{
+  display:flex;align-items:center;padding:0 16px;
+  font-size:12px;font-weight:500;color:var(--text-mute);
+  border-left:1px solid var(--line);
+  letter-spacing:0.05em;
+}
+
+/* ============ CUSTOM DROPDOWN ============ */
+.dropdown-field{position:relative;width:100%}
+.dropdown-trigger{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;
+  background:var(--bg-input);border:1px solid var(--line);
+  border-radius:var(--r-sm);
+  color:var(--text);font-size:14px;font-family:inherit;
+  transition:all var(--dur) var(--ease);
+  text-align:left;cursor:pointer;
+}
+.dropdown-trigger:hover{background:var(--bg-input-hover);border-color:var(--line-strong)}
+.dropdown-trigger[aria-expanded="true"]{
+  background:var(--bg-input-hover);
+  border-color:var(--amber);
+  box-shadow:0 0 0 3px var(--amber-glow);
+}
+.dropdown-chevron{
+  width:11px;height:7px;color:var(--text-mute);
+  transition:transform var(--dur) var(--ease);flex-shrink:0;margin-left:12px;
+}
+.dropdown-trigger[aria-expanded="true"] .dropdown-chevron{transform:rotate(180deg);color:var(--amber-warm)}
+.dropdown-menu{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:var(--bg-elevated);
+  border:1px solid var(--line-strong);
+  border-radius:var(--r-sm);
+  padding:6px;list-style:none;
+  box-shadow:var(--shadow-lg);
+  opacity:0;pointer-events:none;
+  transform:translateY(-4px);
+  transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+  z-index:30;
+  max-height:280px;overflow-y:auto;
+}
+.dropdown-field.open .dropdown-menu{opacity:1;pointer-events:auto;transform:translateY(0)}
+.dropdown-option{
+  padding:10px 14px;font-size:13.5px;color:var(--text-soft);
+  border-radius:var(--r-xs);cursor:pointer;
+  transition:all var(--dur-fast) var(--ease);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.dropdown-option:hover{background:var(--amber-tint);color:var(--amber-warm)}
+.dropdown-option.selected{color:var(--amber-warm)}
+.dropdown-option.selected::after{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--amber);flex-shrink:0;
+}
+
+/* ============ TABS / SEGMENTED ============ */
+.segmented{
+  display:inline-flex;
+  background:var(--bg-input);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:3px;gap:2px;
+}
+.segmented button{
+  padding:6px 14px;font-size:12.5px;font-weight:500;
+  color:var(--text-mute);border-radius:4px;
+  transition:all var(--dur) var(--ease);
+}
+.segmented button:hover{color:var(--text-soft)}
+.segmented button.active{background:var(--bg-elevated);color:var(--amber-warm);box-shadow:var(--shadow-sm)}
+
+/* ============ BADGES ============ */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 10px;font-size:11px;font-weight:500;
+  border-radius:99px;letter-spacing:0.02em;
+  font-family:var(--font-body);
+}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.badge-live{color:var(--success);background:var(--success-tint)}
+.badge-dev{color:var(--warning);background:var(--warning-tint)}
+.badge-wip{color:var(--info);background:var(--info-tint)}
+.badge-locked{color:var(--text-mute);background:var(--bg-input)}
+.badge-locked::before{display:none}
+.badge-soon{color:var(--text-mute);background:var(--bg-input)}
+.badge-soon::before{display:none}
+
+/* ============ CARDS ============ */
+.card{
+  background:var(--bg-raised);border:1px solid var(--line-faint);
+  border-radius:var(--r-lg);padding:28px;
+  transition:all var(--dur) var(--ease);
+}
+.card:hover{border-color:var(--line);box-shadow:var(--shadow-md)}
+.card-link{cursor:pointer;display:block}
+.card-link:hover{border-color:var(--line-amber);box-shadow:var(--shadow-amber)}
+
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.card-icon{
+  width:40px;height:40px;color:var(--amber);
+  display:flex;align-items:center;justify-content:center;
+}
+.card-icon svg{width:32px;height:32px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+
+.card-title{
+  font-family:var(--font-display);font-weight:400;font-size:20px;
+  letter-spacing:var(--tracking-tight);margin-bottom:6px;
+}
+.card-desc{font-size:13.5px;color:var(--text-mute);line-height:var(--lh-relaxed)}
+
+/* Stat card */
+.stat-card{
+  background:var(--bg-raised);border:1px solid var(--line-faint);
+  border-radius:var(--r-lg);padding:24px;
+}
+.stat-label{
+  font-size:var(--fs-eyebrow);letter-spacing:var(--tracking-eyebrow);
+  text-transform:uppercase;color:var(--text-mute);margin-bottom:12px;
+}
+.stat-value{
+  font-family:var(--font-display);font-weight:300;font-size:36px;
+  line-height:1;letter-spacing:var(--tracking-display);
+  font-variant-numeric:tabular-nums;
+}
+.stat-value sup{font-size:0.5em;color:var(--text-soft);margin-left:2px;font-weight:400}
+.stat-meta{
+  display:flex;align-items:center;gap:8px;margin-top:14px;
+  font-size:12px;color:var(--text-mute);
+}
+.stat-delta{display:inline-flex;align-items:center;gap:4px}
+.stat-delta.up{color:var(--success)}
+.stat-delta.down{color:var(--danger)}
+
+/* ============ TABLES ============ */
+.table-wrap{
+  border:1px solid var(--line-faint);border-radius:var(--r-lg);
+  overflow:hidden;background:var(--bg-raised);
+}
+.table{
+  width:100%;border-collapse:collapse;
+  font-size:13.5px;
+}
+.table thead th{
+  text-align:left;padding:14px 20px;font-weight:500;
+  color:var(--text-mute);font-size:11px;letter-spacing:0.1em;
+  text-transform:uppercase;border-bottom:1px solid var(--line-faint);
+  background:var(--bg);
+}
+.table thead th.right{text-align:right}
+.table tbody td{
+  padding:16px 20px;border-bottom:1px solid var(--line-faint);
+  color:var(--text-soft);
+}
+.table tbody td.right{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-mono);font-size:13px;color:var(--text)}
+.table tbody tr:last-child td{border-bottom:none}
+.table tbody tr:hover{background:var(--bg-input)}
+
+/* ============ HEADER PREVIEW (1:1 z homepage) ============ */
+.header-preview{
+  position:relative;
+  background:linear-gradient(to bottom, #070910 0%, #0b0f17 100%);
+  border:1px solid var(--line-faint);border-radius:var(--r-lg);
+  padding:0;overflow:hidden;
+  min-height:180px;
+}
+.preview-nav-bar{
+  padding:22px 40px;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+}
+.preview-nav-bar .nav-left{justify-self:start}
+.preview-nav-bar .nav-center{justify-self:center}
+.preview-nav-bar .nav-right-slot{justify-self:end}
+.preview-nav-bar .logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text)}
+.preview-nav-bar .logo-mark{
+  width:34px;height:34px;border:1px solid #000;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:400;font-size:15px;letter-spacing:0.02em;
+  color:#fff;
+  background:rgba(11,15,23,0.4);
+}
+.preview-nav-bar .logo-text{font-family:var(--font-display);font-weight:400;font-size:17px;letter-spacing:-0.01em}
+.preview-nav-bar .nav-menu{display:flex;align-items:center;gap:6px}
+.preview-nav-bar .nav-link{
+  padding:8px 16px;color:var(--text-soft);font-size:13.5px;font-weight:500;
+  text-decoration:none;border-radius:6px;transition:color .25s ease;
+  display:flex;align-items:center;gap:6px;cursor:pointer;
+}
+.preview-nav-bar .nav-link:hover{color:var(--text)}
+.preview-nav-bar .nav-link svg{width:10px;height:10px;opacity:.6}
+
+/* ============ ICONS GRID ============ */
+.icons-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:8px;
+}
+.icon-tile{
+  aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--line-faint);border-radius:var(--r-md);
+  color:var(--amber-warm);transition:all var(--dur) var(--ease);
+  padding:16px 8px;
+}
+.icon-tile:hover{border-color:var(--line);background:var(--bg-input)}
+.icon-tile svg{width:32px;height:32px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;opacity:0.92}
+.icon-tile span{font-size:11px;color:var(--text-mute);text-align:center;line-height:1.3}
+
+/* ============ NOTE / CALLOUT ============ */
+.note{
+  border-left:2px solid var(--amber);
+  padding:14px 18px;background:var(--amber-tint);
+  border-radius:0 var(--r-sm) var(--r-sm) 0;
+  font-size:13px;color:var(--text-soft);line-height:var(--lh-relaxed);
+  margin-bottom:24px;
+}
+.note strong{color:var(--text);font-weight:600}
+
+/* ============ TOC HINT ============ */
+.scroll-spy a.active{color:var(--amber-warm)}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width:980px){
+  .doc-nav{display:none}
+  .doc-main{margin-left:0;padding:48px 32px 80px}
+}
+
+</style>
+</head>
+<body>
+
+<!-- ===================== DOC NAV ===================== -->
+<aside class="doc-nav">
+  <div class="doc-nav-brand">ProfiLend</div>
+  <div class="doc-nav-tag">Design System v1.0</div>
+
+  <div class="doc-nav-section">Foundation</div>
+  <a href="#brand">01 — Brand DNA</a>
+  <a href="#colors">02 — Barevná paleta</a>
+  <a href="#type">03 — Typografie</a>
+  <a href="#spacing">04 — Spacing &amp; mřížka</a>
+
+  <div class="doc-nav-section">Components</div>
+  <a href="#buttons">05 — Tlačítka</a>
+  <a href="#inputs">06 — Formuláře</a>
+  <a href="#cards">07 — Karty &amp; statistiky</a>
+  <a href="#tables">08 — Tabulky</a>
+  <a href="#badges">09 — Stavové štítky</a>
+
+  <div class="doc-nav-section">Patterns</div>
+  <a href="#header">10 — App header</a>
+  <a href="#icons">11 — Ikony</a>
+
+  <div class="doc-nav-section">Other</div>
+  <a href="hero-preview.html">↗ Homepage preview</a>
+</aside>
+
+<!-- ===================== DOC MAIN ===================== -->
+<main class="doc-main">
+
+  <header class="doc-header">
+    <div class="doc-eyebrow">Investment Tools — pro Martina Dlouhého, ProfiLend</div>
+    <h1 class="doc-title">Designový jazyk <em>napříč</em> celou platformou.</h1>
+    <p class="doc-lead">
+      Mapa vizuálního systému, který sjednotí všech osm aplikací do jediného profesionálního ekosystému.
+      Tmavé editorial pozadí, jantarový akcent, serifové displeje. Vše v jednom místě.
+    </p>
+  </header>
+
+  <div class="note">
+    <strong>Jak číst tento dokument.</strong>
+    Toto je živá designová mapa — žádný kód aplikací zde nemažeme ani neměníme. Až schválíš
+    zde uvedené komponenty a principy, postupně je zavedu do reálných aplikací (debt-calculator,
+    real-estate-prompt-generator, atd.). Klikni na cokoli v levém menu pro rychlou navigaci.
+  </div>
+
+  <!-- ============ 01 BRAND ============ -->
+  <section class="section" id="brand">
+    <div class="section-head">
+      <div class="section-num">01</div>
+      <h2 class="section-title">Brand DNA</h2>
+      <p class="section-desc">
+        Co tahle estetika je a proč. ProfiLend pracuje s investicemi v řádu miliard CZK pro klientelu
+        s vysokým majetkem. Vizuál musí říkat: <em>tichá kompetence, ne tech-startup hluk.</em>
+      </p>
+    </div>
+
+    <div class="preview-grid">
+      <div class="card">
+        <div class="card-header"><div class="eyebrow">Tón</div></div>
+        <h3 class="card-title">Editorial, ne marketingový</h3>
+        <p class="card-desc">Bližší článku ve <em>Financial Times</em> nebo <em>Mercury</em> dashboardu než SaaS landing pageu. Žádné gradienty, neonové barvy, glow efekty bez důvodu.</p>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="eyebrow">Hierarchie</div></div>
+        <h3 class="card-title">Klid v ticnu, akcenty s důvodem</h3>
+        <p class="card-desc">Tmavé pozadí drží oko, jantarová barva nese pouze klíčové informace — čísla, akce, status. Šedi jsou pracovní kůň.</p>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="eyebrow">Materiál</div></div>
+        <h3 class="card-title">Tisk, ne obrazovka</h3>
+        <p class="card-desc">Fraunces serif na nadpisech a velkých číslech. Inter pro UI a tělo textu. JetBrains Mono pro identifikátory a kódy. Žádné ikon-emoji.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 02 COLORS ============ -->
+  <section class="section" id="colors">
+    <div class="section-head">
+      <div class="section-num">02</div>
+      <h2 class="section-title">Barevná paleta</h2>
+      <p class="section-desc">
+        Jen jediný režim: hluboká tmavá s teplým podtónem. Jantarová barva je výjimka, ne pravidlo —
+        používá se pouze tam, kde má vést pozornost.
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3 class="subsection-title">Povrchy</h3>
+      <p class="subsection-desc">Vrstvená tmavá pozadí. Hloubku vytváří mírný posun jasu, ne stíny.</p>
+      <div class="color-grid">
+        <div class="swatch"><div class="swatch-color" style="background:#070910"></div><div class="swatch-meta"><div class="swatch-name">Bg Deep</div><div class="swatch-hex">#070910</div><div class="swatch-role">Tělo dokumentu</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#0b0f17"></div><div class="swatch-meta"><div class="swatch-name">Bg</div><div class="swatch-hex">#0b0f17</div><div class="swatch-role">Hlavní povrch</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#11161f"></div><div class="swatch-meta"><div class="swatch-name">Bg Raised</div><div class="swatch-hex">#11161f</div><div class="swatch-role">Karty, header</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#161c27"></div><div class="swatch-meta"><div class="swatch-name">Bg Elevated</div><div class="swatch-hex">#161c27</div><div class="swatch-role">Modaly, dropdowny</div></div></div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3 class="subsection-title">Text</h3>
+      <p class="subsection-desc">Teplé bílé kontrastují proti chladnému pozadí — přijemnější na čtení než čistá #FFFFFF.</p>
+      <div class="color-grid">
+        <div class="swatch"><div class="swatch-color" style="background:#f1ece1"></div><div class="swatch-meta"><div class="swatch-name">Text Primary</div><div class="swatch-hex">#f1ece1</div><div class="swatch-role">Nadpisy, čísla</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:rgba(241,236,225,0.72)"></div><div class="swatch-meta"><div class="swatch-name">Text Soft</div><div class="swatch-hex">f1ece1 / 72%</div><div class="swatch-role">Tělo textu</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:rgba(241,236,225,0.46)"></div><div class="swatch-meta"><div class="swatch-name">Text Mute</div><div class="swatch-hex">f1ece1 / 46%</div><div class="swatch-role">Popisky, eyebrow</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:rgba(241,236,225,0.30)"></div><div class="swatch-meta"><div class="swatch-name">Text Faint</div><div class="swatch-hex">f1ece1 / 30%</div><div class="swatch-role">Placeholdery</div></div></div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3 class="subsection-title">Akcent — Amber</h3>
+      <p class="subsection-desc">Jediný akcent celé platformy. CTA, focus stavy, klíčové údaje, statistiky.</p>
+      <div class="color-grid">
+        <div class="swatch"><div class="swatch-color" style="background:#e8b97c"></div><div class="swatch-meta"><div class="swatch-name">Amber</div><div class="swatch-hex">#e8b97c</div><div class="swatch-role">Hlavní akcent</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#f4c98a"></div><div class="swatch-meta"><div class="swatch-name">Amber Warm</div><div class="swatch-hex">#f4c98a</div><div class="swatch-role">Hover, světlejší</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#b8884c"></div><div class="swatch-meta"><div class="swatch-name">Amber Deep</div><div class="swatch-hex">#b8884c</div><div class="swatch-role">Active, stiny</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:rgba(232,185,124,0.18);border:1px solid rgba(232,185,124,0.35)"></div><div class="swatch-meta"><div class="swatch-name">Amber Glow</div><div class="swatch-hex">e8b97c / 18%</div><div class="swatch-role">Focus rings</div></div></div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3 class="subsection-title">Sémantické</h3>
+      <p class="subsection-desc">Stavy a notifikace. Vždy v tlumené variantě, nikdy ne syté.</p>
+      <div class="color-grid">
+        <div class="swatch"><div class="swatch-color" style="background:#7fd99a"></div><div class="swatch-meta"><div class="swatch-name">Success</div><div class="swatch-hex">#7fd99a</div><div class="swatch-role">Live, OK, růst</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#f0b056"></div><div class="swatch-meta"><div class="swatch-name">Warning</div><div class="swatch-hex">#f0b056</div><div class="swatch-role">Dev, pozor</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#e87c6e"></div><div class="swatch-meta"><div class="swatch-name">Danger</div><div class="swatch-hex">#e87c6e</div><div class="swatch-role">Chyba, pokles</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#8ab4d8"></div><div class="swatch-meta"><div class="swatch-name">Info</div><div class="swatch-hex">#8ab4d8</div><div class="swatch-role">WIP, info</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 TYPE ============ -->
+  <section class="section" id="type">
+    <div class="section-head">
+      <div class="section-num">03</div>
+      <h2 class="section-title">Typografie</h2>
+      <p class="section-desc">
+        Tři rodiny: <em>Fraunces</em> pro displeje a velká čísla, <em>Inter</em> pro UI a čtení,
+        <em>JetBrains Mono</em> pro identifikátory. Žádný systémový fallback by neměl prosvítat.
+      </p>
+    </div>
+
+    <div class="preview" style="padding:32px">
+      <div class="type-row">
+        <div class="type-meta"><span class="label">Display</span>Fraunces 300<br>56 / 60</div>
+        <div class="type-sample" style="font-family:var(--font-display);font-weight:300;font-size:56px;line-height:1.1;letter-spacing:-0.02em">Tichá kompetence.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="label">H1</span>Fraunces 400<br>40 / 44</div>
+        <div class="type-sample" style="font-family:var(--font-display);font-weight:400;font-size:40px;line-height:1.1;letter-spacing:-0.02em">Investment Tools</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="label">H2</span>Fraunces 400<br>28 / 34</div>
+        <div class="type-sample" style="font-family:var(--font-display);font-weight:400;font-size:28px;line-height:1.2;letter-spacing:-0.01em">Debt Financing Calculator</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="label">H3</span>Fraunces 400<br>20 / 28</div>
+        <div class="type-sample" style="font-family:var(--font-display);font-weight:400;font-size:20px;line-height:1.3">Splátkový kalendář</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="label">Lead</span>Fraunces 300 italic<br>18 / 30</div>
+        <div class="type-sample" style="font-family:var(--font-display);font-weight:300;font-style:italic;font-size:18px;line-height:1.65;color:var(--text-soft)">Nástroje pro správu kapitálu — od dluhového financování po valuaci nemovitostí.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="label">Body</span>Inter 400<br>15 / 23</div>
+        <div class="type-sample" style="font-family:var(--font-body);font-weight:400;font-size:15px;line-height:1.55">Tělo textu pro popisky, instrukce a delší obsah. Inter v 400 řezu drží příjemnou čitelnost při dlouhém čtení a ladí s editorial nadpisy.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="label">UI / Small</span>Inter 500<br>13.5 / 21</div>
+        <div class="type-sample" style="font-family:var(--font-body);font-weight:500;font-size:13.5px;line-height:1.55">Tlačítka, tabulky, formulářové kontroly</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="label">Eyebrow</span>Inter 500<br>11px / 0.18em</div>
+        <div class="type-sample eyebrow" style="font-size:11px">02 — Barevná paleta</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="label">Mono</span>JetBrains Mono 400<br>12 / 18</div>
+        <div class="type-sample" style="font-family:var(--font-mono);font-size:12px;color:var(--text-soft)">CZK 24 500 000.00 · LTV 67.3% · IRR 12.45%</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><span class="label">Tabular Number</span>Fraunces 300<br>36px</div>
+        <div class="type-sample" style="font-family:var(--font-display);font-weight:300;font-size:36px;line-height:1;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">CZK&nbsp;24 500 000<sup style="font-size:0.5em;color:var(--text-soft);font-weight:400">.00</sup></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 04 SPACING ============ -->
+  <section class="section" id="spacing">
+    <div class="section-head">
+      <div class="section-num">04</div>
+      <h2 class="section-title">Spacing &amp; mřížka</h2>
+      <p class="section-desc">Lineární škála po 4 px. Žádné magické hodnoty.</p>
+    </div>
+
+    <div class="preview" style="padding:32px">
+      <div class="spacing-grid">
+        <div class="spacing-row"><div class="spacing-token">--s-1</div><div class="spacing-bar" style="width:4px"></div><div class="spacing-px">4 px</div></div>
+        <div class="spacing-row"><div class="spacing-token">--s-2</div><div class="spacing-bar" style="width:8px"></div><div class="spacing-px">8 px</div></div>
+        <div class="spacing-row"><div class="spacing-token">--s-3</div><div class="spacing-bar" style="width:12px"></div><div class="spacing-px">12 px</div></div>
+        <div class="spacing-row"><div class="spacing-token">--s-4</div><div class="spacing-bar" style="width:16px"></div><div class="spacing-px">16 px</div></div>
+        <div class="spacing-row"><div class="spacing-token">--s-5</div><div class="spacing-bar" style="width:20px"></div><div class="spacing-px">20 px</div></div>
+        <div class="spacing-row"><div class="spacing-token">--s-6</div><div class="spacing-bar" style="width:24px"></div><div class="spacing-px">24 px</div></div>
+        <div class="spacing-row"><div class="spacing-token">--s-7</div><div class="spacing-bar" style="width:32px"></div><div class="spacing-px">32 px</div></div>
+        <div class="spacing-row"><div class="spacing-token">--s-8</div><div class="spacing-bar" style="width:40px"></div><div class="spacing-px">40 px</div></div>
+        <div class="spacing-row"><div class="spacing-token">--s-9</div><div class="spacing-bar" style="width:56px"></div><div class="spacing-px">56 px</div></div>
+        <div class="spacing-row"><div class="spacing-token">--s-10</div><div class="spacing-bar" style="width:80px"></div><div class="spacing-px">80 px</div></div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3 class="subsection-title">Radii</h3>
+      <p class="subsection-desc">Konzervativnější než ProfiLend předtím — víc papírové, méně app-store.</p>
+      <div class="preview-row" style="margin-top:16px">
+        <div style="width:60px;height:60px;background:var(--bg-raised);border:1px solid var(--line);border-radius:4px;display:flex;align-items:flex-end;justify-content:center;padding:6px;font-size:11px;color:var(--text-mute);font-family:var(--font-mono)">4</div>
+        <div style="width:60px;height:60px;background:var(--bg-raised);border:1px solid var(--line);border-radius:6px;display:flex;align-items:flex-end;justify-content:center;padding:6px;font-size:11px;color:var(--text-mute);font-family:var(--font-mono)">6</div>
+        <div style="width:60px;height:60px;background:var(--bg-raised);border:1px solid var(--line);border-radius:8px;display:flex;align-items:flex-end;justify-content:center;padding:6px;font-size:11px;color:var(--text-mute);font-family:var(--font-mono)">8</div>
+        <div style="width:60px;height:60px;background:var(--bg-raised);border:1px solid var(--line);border-radius:12px;display:flex;align-items:flex-end;justify-content:center;padding:6px;font-size:11px;color:var(--text-mute);font-family:var(--font-mono)">12</div>
+        <div style="width:60px;height:60px;background:var(--bg-raised);border:1px solid var(--line);border-radius:18px;display:flex;align-items:flex-end;justify-content:center;padding:6px;font-size:11px;color:var(--text-mute);font-family:var(--font-mono)">18</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 05 BUTTONS ============ -->
+  <section class="section" id="buttons">
+    <div class="section-head">
+      <div class="section-num">05</div>
+      <h2 class="section-title">Tlačítka</h2>
+      <p class="section-desc">Tři jasné role: <em>Primary</em> jednou na obrazovce. <em>Secondary</em> pro alternativy. <em>Ghost</em> pro destruktivní nebo low-stakes akce.</p>
+    </div>
+
+    <div class="preview">
+      <div class="preview-row">
+        <button class="btn btn-primary">Vygenerovat term sheet</button>
+        <button class="btn btn-secondary">Načíst LV</button>
+        <button class="btn btn-ghost">Zrušit</button>
+        <button class="btn btn-icon" title="Více"><svg viewBox="0 0 16 16"><circle cx="3" cy="8" r="1"/><circle cx="8" cy="8" r="1"/><circle cx="13" cy="8" r="1"/></svg></button>
+      </div>
+      <div class="preview-row" style="margin-top:20px">
+        <button class="btn btn-primary btn-sm">Uložit</button>
+        <button class="btn btn-primary">Uložit</button>
+        <button class="btn btn-primary btn-lg">Uložit a pokračovat</button>
+      </div>
+      <div class="preview-row" style="margin-top:20px">
+        <button class="btn btn-primary"><svg viewBox="0 0 16 16"><path d="M3 8l3 3 7-7"/></svg>Schválit</button>
+        <button class="btn btn-secondary"><svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>Přidat řádek</button>
+        <button class="btn btn-secondary"><svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h6"/></svg>Filtry</button>
+        <button class="btn btn-ghost">Stáhnout PDF<svg viewBox="0 0 16 16"><path d="M8 2v10M4 8l4 4 4-4M2 14h12"/></svg></button>
+      </div>
+      <div class="preview-row" style="margin-top:20px">
+        <button class="btn btn-primary" disabled>Vypnuté</button>
+        <button class="btn btn-secondary" disabled>Vypnuté</button>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Pravidlo „jeden primární“.</strong>
+      Na každé obrazovce má být maximálně jedno <em>btn-primary</em>. Pokud potřebuješ víc rovnocenných akcí,
+      použij Secondary a Ghost. Tohle je hlavní rozdíl proti dosavadnímu cyan systému, kde všechno bylo modré.
+    </div>
+  </section>
+
+  <!-- ============ 06 INPUTS ============ -->
+  <section class="section" id="inputs">
+    <div class="section-head">
+      <div class="section-num">06</div>
+      <h2 class="section-title">Formuláře</h2>
+      <p class="section-desc">Většina aplikací jsou kalkulačky a generátory — input je hlavní componentou. Optimalizováno pro číselné a měnové vstupy.</p>
+    </div>
+
+    <div class="preview">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:680px">
+        <div>
+          <label class="field-label">Klient</label>
+          <input class="input" placeholder="ABC Real Estate s.r.o.">
+          <div class="field-help">Název nebo IČO firmy</div>
+        </div>
+        <div>
+          <label class="field-label">IČO</label>
+          <input class="input" value="12345678">
+        </div>
+        <div>
+          <label class="field-label">Účel úvěru</label>
+          <div class="dropdown-field" data-dropdown>
+            <button type="button" class="dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="dropdown-value">Akvizice</span>
+              <svg viewBox="0 0 12 8" fill="none" class="dropdown-chevron"><path d="M1 1.5l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+            <ul class="dropdown-menu" role="listbox">
+              <li class="dropdown-option selected" role="option" aria-selected="true">Akvizice</li>
+              <li class="dropdown-option" role="option">Refinancování</li>
+              <li class="dropdown-option" role="option">Obecná valuace</li>
+              <li class="dropdown-option" role="option">Bridge financing</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <label class="field-label">Datum splatnosti</label>
+          <input class="input" type="date" value="2030-06-15">
+        </div>
+        <div style="grid-column:span 2">
+          <label class="field-label">Částka úvěru</label>
+          <div class="input-currency">
+            <input value="24 500 000">
+            <div class="currency-tag">CZK</div>
+          </div>
+          <div class="field-help">Použijí se aktuální měnové kurzy ČNB</div>
+        </div>
+        <div style="grid-column:span 2">
+          <label class="field-label">Vyhledat</label>
+          <div class="input-with-icon">
+            <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+            <input class="input" placeholder="Hledat nemovitost, term sheet, klienta…">
+          </div>
+        </div>
+        <div style="grid-column:span 2">
+          <label class="field-label">Poznámka</label>
+          <textarea class="input" rows="3" placeholder="Volitelný komentář k operaci…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3 class="subsection-title">Segmented control</h3>
+      <p class="subsection-desc">Pro přepínání měn, jednotek, taby v aplikacích.</p>
+      <div class="preview">
+        <div class="preview-row">
+          <div class="segmented">
+            <button class="active">CZK</button>
+            <button>EUR</button>
+            <button>USD</button>
+          </div>
+          <div class="segmented">
+            <button class="active">Měsíčně</button>
+            <button>Kvartálně</button>
+            <button>Ročně</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 07 CARDS ============ -->
+  <section class="section" id="cards">
+    <div class="section-head">
+      <div class="section-num">07</div>
+      <h2 class="section-title">Karty &amp; statistiky</h2>
+      <p class="section-desc">Bloky, které tvoří dashboard a seznamy. Jemný border místo stínu.</p>
+    </div>
+
+    <div class="subsection">
+      <h3 class="subsection-title">Stat kartičky</h3>
+      <p class="subsection-desc">KPI v dashboardech. Velké tabulární číslo, eyebrow, delta.</p>
+      <div class="preview">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+          <div class="stat-card">
+            <div class="stat-label">Hodnota portfolia</div>
+            <div class="stat-value">1 324 580 000<sup>CZK</sup></div>
+            <div class="stat-meta">
+              <span class="stat-delta up">↗ 4.2%</span>
+              <span>za posledních 30 dní</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Aktivní úvěry</div>
+            <div class="stat-value">17</div>
+            <div class="stat-meta">
+              <span class="stat-delta up">↗ 2</span>
+              <span>od minulého měsíce</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Průměrné LTV</div>
+            <div class="stat-value">62.4<sup>%</sup></div>
+            <div class="stat-meta">
+              <span class="stat-delta down">↘ 1.1%</span>
+              <span>nižší riziko</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">YTD výnos</div>
+            <div class="stat-value">9.6<sup>%</sup></div>
+            <div class="stat-meta">
+              <span class="stat-delta up">↗ vs. 8.4% benchmark</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <h3 class="subsection-title">Aplikační karty</h3>
+      <p class="subsection-desc">Přechod na aplikaci ze seznamu. Vázané ikoną.</p>
+      <div class="preview">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+          <a class="card card-link">
+            <div class="card-header">
+              <div class="card-icon"><svg viewBox="0 0 32 32"><path d="M16 5 v22"/><path d="M9 27 h14"/><path d="M6 11 h20"/><path d="M6 11 l-3 7 a3 3 0 0 0 6 0 z"/><path d="M26 11 l-3 7 a3 3 0 0 0 6 0 z"/></svg></div>
+              <span class="badge badge-live">Live</span>
+            </div>
+            <h3 class="card-title">Debt Calculator</h3>
+            <p class="card-desc">Kalkulačka dluhového financování s nemovitostní zástavou. IRR, splátkový kalendář, export do PDF a Excelu.</p>
+          </a>
+          <a class="card card-link">
+            <div class="card-header">
+              <div class="card-icon"><svg viewBox="0 0 32 32"><path d="M5 14 L14 6 L23 14 V25 H5 Z"/><path d="M11 25 V18 H17 V25"/><path d="M25 5 v4 M23 7 h4 M25 12 v2 M24 13 h2"/></svg></div>
+              <span class="badge badge-live">Live</span>
+            </div>
+            <h3 class="card-title">R-E Prompt Generator</h3>
+            <p class="card-desc">AI prompty pro valuaci nemovitostí podle bankovních standardů. 6-krokový wizard, 6 typů nemovitostí.</p>
+          </a>
+          <a class="card card-link">
+            <div class="card-header">
+              <div class="card-icon"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><path d="M16 6 A10 10 0 0 1 26 16"/><path d="M16 16 L26 16"/><path d="M16 16 L16 6"/><circle cx="16" cy="16" r="4"/></svg></div>
+              <span class="badge badge-wip">WIP</span>
+            </div>
+            <h3 class="card-title">Portfolio Dashboard</h3>
+            <p class="card-desc">Vizuální přehled celého investičního portfolia — alokace, výnosy, riziko, geografie.</p>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 08 TABLES ============ -->
+  <section class="section" id="tables">
+    <div class="section-head">
+      <div class="section-num">08</div>
+      <h2 class="section-title">Tabulky</h2>
+      <p class="section-desc">
+        Term sheety, splátkové kalendáře, S&amp;P 500 holdings — tabulky jsou v každé třetí aplikaci.
+        Tabulární čísla v mono fontu, řádky bez zebra-ringu, hover místo žebříku.
+      </p>
+    </div>
+
+    <div class="preview" style="padding:0;background:transparent;border:none">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Klient</th>
+              <th>Účel</th>
+              <th>Splatnost</th>
+              <th class="right">Částka</th>
+              <th class="right">LTV</th>
+              <th class="right">IRR</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong style="color:var(--text)">Forbes Resort s.r.o.</strong></td>
+              <td>Akvizice</td>
+              <td>15. 06. 2030</td>
+              <td class="right">24 500 000</td>
+              <td class="right">67.3%</td>
+              <td class="right">12.45%</td>
+              <td><span class="badge badge-live">Aktivní</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--text)">Wenceslas Holdings a.s.</strong></td>
+              <td>Refinancování</td>
+              <td>30. 09. 2028</td>
+              <td class="right">85 000 000</td>
+              <td class="right">58.2%</td>
+              <td class="right">9.80%</td>
+              <td><span class="badge badge-live">Aktivní</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--text)">Praha Develop Group s.r.o.</strong></td>
+              <td>Bridge financing</td>
+              <td>01. 04. 2027</td>
+              <td class="right">42 300 000</td>
+              <td class="right">71.0%</td>
+              <td class="right">14.20%</td>
+              <td><span class="badge badge-dev">V přípravě</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--text)">Brno Industrial s.r.o.</strong></td>
+              <td>Akvizice</td>
+              <td>20. 12. 2031</td>
+              <td class="right">156 800 000</td>
+              <td class="right">63.5%</td>
+              <td class="right">11.10%</td>
+              <td><span class="badge badge-live">Aktivní</span></td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--text)">Karlín Office Park</strong></td>
+              <td>Refinancování</td>
+              <td>15. 03. 2029</td>
+              <td class="right">98 200 000</td>
+              <td class="right">55.8%</td>
+              <td class="right">8.95%</td>
+              <td><span class="badge badge-locked">Splaceno</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 09 BADGES ============ -->
+  <section class="section" id="badges">
+    <div class="section-head">
+      <div class="section-num">09</div>
+      <h2 class="section-title">Stavové štítky</h2>
+      <p class="section-desc">Jediná nepalimsest sémantických barev. Vždy s tečkou (kromě "soon"/"locked").</p>
+    </div>
+
+    <div class="preview">
+      <div class="preview-row">
+        <span class="badge badge-live">Live</span>
+        <span class="badge badge-dev">Dev</span>
+        <span class="badge badge-wip">WIP</span>
+        <span class="badge badge-soon">Q3 2026</span>
+        <span class="badge badge-locked">Splaceno</span>
+        <span class="badge badge-locked">PIN protected</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 10 HEADER ============ -->
+  <section class="section" id="header">
+    <div class="section-head">
+      <div class="section-num">10</div>
+      <h2 class="section-title">App header</h2>
+      <p class="section-desc">
+        Jediná navigace pro všech 8 aplikací. Bez sidebaru — top nav s breadcrumby a nástroji vpravo
+        (currency switcher, PIN indicator, profil). Header je sticky.
+      </p>
+    </div>
+
+    <div class="header-preview">
+      <div class="preview-nav-bar">
+        <div class="nav-left">
+          <a class="logo">
+            <span class="logo-mark">IT</span>
+            <span class="logo-text">Investment Tools</span>
+          </a>
+        </div>
+        <div class="nav-menu nav-center">
+          <a class="nav-link">Osobní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+          <a class="nav-link">Pracovní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+          <a class="nav-link">ProfiLend <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+        </div>
+        <div class="nav-right-slot"></div>
+      </div>
+      <div style="padding:64px 40px;min-height:160px;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-style:italic;font-family:var(--font-display);font-size:14px">
+        — obsah aplikace —
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:24px">
+      <strong>Jeden header, všude.</strong> Toto je <em>přesně ten samý</em> header, který je na homepage — stejné logo IT, stejné Fraunces "Investment Tools", stejné dropdowny (Osobní / Pracovní / ProfiLend). Aplikace si potřebné nástroje (currency switcher, uložení, export) hostují sami v rámci své obrazovky, ne v globálním headeru.
+    </div>
+  </section>
+
+  <!-- ============ 11 ICONS ============ -->
+  <section class="section" id="icons">
+    <div class="section-head">
+      <div class="section-num">11</div>
+      <h2 class="section-title">Ikony</h2>
+      <p class="section-desc">
+        Line ikony, stroke 1.4, jantarová barva. 32×32 grid. Žádné fill ani gradienty.
+        Každá aplikace má jedinečnou ikonu, která se opakuje v headeru, kartě a breadcrumbs.
+      </p>
+    </div>
+
+    <div class="preview">
+      <div class="icons-grid">
+        <div class="icon-tile"><svg viewBox="0 0 32 32"><path d="M16 5 v22"/><path d="M9 27 h14"/><path d="M6 11 h20"/><path d="M6 11 l-3 7 a3 3 0 0 0 6 0 z"/><path d="M26 11 l-3 7 a3 3 0 0 0 6 0 z"/></svg><span>Debt Calculator</span></div>
+        <div class="icon-tile"><svg viewBox="0 0 32 32"><path d="M5 14 L14 6 L23 14 V25 H5 Z"/><path d="M11 25 V18 H17 V25"/><path d="M25 5 v4 M23 7 h4 M25 12 v2 M24 13 h2"/></svg><span>R-E Prompt</span></div>
+        <div class="icon-tile"><svg viewBox="0 0 32 32"><path d="M4 26 H28"/><path d="M4 22 L10 16 L14 19 L20 9 L26 13"/><circle cx="10" cy="16" r="1.2"/><circle cx="14" cy="19" r="1.2"/><circle cx="20" cy="9" r="1.2"/><circle cx="26" cy="13" r="1.2"/></svg><span>S&amp;P 500</span></div>
+        <div class="icon-tile"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><path d="M16 6 A10 10 0 0 1 26 16"/><path d="M16 16 L26 16"/><path d="M16 16 L16 6"/><circle cx="16" cy="16" r="4"/></svg><span>Portfolio</span></div>
+        <div class="icon-tile"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg><span>Term Sheet</span></div>
+        <div class="icon-tile"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M6 10 V30 H22"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg><span>Úvěrová dok.</span></div>
+        <div class="icon-tile"><svg viewBox="0 0 32 32"><path d="M5 7 H23 a2 2 0 0 1 2 2 V19 a2 2 0 0 1 -2 2 H13 L8 26 V21 H5 a2 2 0 0 1 -2 -2 V9 a2 2 0 0 1 2 -2 Z"/><path d="M27 5 v3 M25.5 6.5 h3 M27 11 v2 M26 12 h2"/></svg><span>Marketing</span></div>
+        <div class="icon-tile"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><path d="M16 9 v7 l5 3"/></svg><span>Generic</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Done note ===================== -->
+  <section class="section" style="border-top:1px solid var(--line);padding-top:48px;margin-top:0">
+    <h2 class="section-title" style="font-size:28px">Co dál?</h2>
+    <p class="section-desc" style="margin-bottom:24px">
+      Až schválíš tyto principy a komponenty, vyberu jednu konkrétní aplikaci a kompletně ji překreslím
+      v tomto jazyce — abys viděl, jak funguje v praxi. Doporučuji <strong style="color:var(--text)">Term Sheet Generátor</strong>
+      jako důkaz konceptu (formulář + tabulka + export = pokrývá 80 % problémů).
+    </p>
+    <div class="preview-row">
+      <a class="btn btn-primary" href="hero-preview.html">↗ Otevřít homepage preview</a>
+      <button class="btn btn-secondary">Pokračovat do aplikace</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// Custom dropdowns
+document.querySelectorAll('[data-dropdown]').forEach(dd => {
+  const trigger = dd.querySelector('.dropdown-trigger');
+  const value = dd.querySelector('.dropdown-value');
+  const options = dd.querySelectorAll('.dropdown-option');
+  trigger.addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = dd.classList.contains('open');
+    document.querySelectorAll('[data-dropdown].open').forEach(o => {
+      o.classList.remove('open');
+      o.querySelector('.dropdown-trigger').setAttribute('aria-expanded','false');
+    });
+    if(!wasOpen){
+      dd.classList.add('open');
+      trigger.setAttribute('aria-expanded','true');
+    }
+  });
+  options.forEach(opt => {
+    opt.addEventListener('click', () => {
+      options.forEach(o => { o.classList.remove('selected'); o.setAttribute('aria-selected','false'); });
+      opt.classList.add('selected');
+      opt.setAttribute('aria-selected','true');
+      value.textContent = opt.textContent.trim();
+      dd.classList.remove('open');
+      trigger.setAttribute('aria-expanded','false');
+    });
+  });
+});
+document.addEventListener('click', () => {
+  document.querySelectorAll('[data-dropdown].open').forEach(o => {
+    o.classList.remove('open');
+    o.querySelector('.dropdown-trigger').setAttribute('aria-expanded','false');
+  });
+});
+
+// Active link highlighting on scroll
+const links = document.querySelectorAll('.doc-nav a[href^="#"]');
+const sections = [...links].map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+const map = new Map(sections.map((s, i) => [s, links[i]]));
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting){
+      links.forEach(a => a.classList.remove('active'));
+      const a = map.get(entry.target);
+      if(a) a.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+
+sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Úvěrová dokumentace — Investment Tools</title>
+<link rel="stylesheet" href="app-shell.css">
+<style>
+  .doc-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:32px;align-items:start}
+  @media (max-width:1100px){ .doc-grid{grid-template-columns:1fr} }
+
+  .panel{background:var(--bg-raised);border:1px solid var(--line-faint);border-radius:var(--r-lg);overflow:hidden}
+  .panel-head{padding:22px 28px;border-bottom:1px solid var(--line-faint);display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .panel-title{font-family:var(--font-display);font-weight:400;font-size:17px;letter-spacing:var(--tracking-tight)}
+  .panel-title em{font-style:italic;color:var(--amber-warm)}
+  .panel-body{padding:24px 28px}
+
+  /* Template picker */
+  .templates{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:24px}
+  .template-card{
+    padding:16px;border:1px solid var(--line-faint);border-radius:var(--r-md);
+    cursor:pointer;background:var(--bg);
+    transition:all var(--dur) var(--ease);position:relative;
+  }
+  .template-card:hover{border-color:var(--line-amber);background:var(--bg-input)}
+  .template-card.active{border-color:var(--amber);background:var(--amber-tint)}
+  .template-card.active::after{
+    content:'';position:absolute;top:10px;right:10px;
+    width:14px;height:14px;border-radius:50%;
+    background:var(--amber);
+  }
+  .template-name{font-family:var(--font-display);font-size:14px;color:var(--text);margin-bottom:4px}
+  .template-meta{font-size:11px;color:var(--text-mute);font-family:var(--font-mono)}
+
+  /* Drive integration */
+  .drive-row{
+    display:flex;align-items:center;gap:14px;padding:14px 16px;
+    background:var(--bg-input);border:1px solid var(--line-faint);
+    border-radius:var(--r-md);margin-bottom:24px;
+  }
+  .drive-icon{
+    width:36px;height:36px;border-radius:8px;flex-shrink:0;
+    background:linear-gradient(135deg,#fbbc04 0%,#34a853 50%,#4285f4 100%);
+    display:flex;align-items:center;justify-content:center;color:#0a0e15;
+    font-family:var(--font-display);font-weight:600;font-size:14px;
+  }
+  .drive-info{flex:1;min-width:0}
+  .drive-info strong{display:block;font-size:13px;color:var(--text);font-family:var(--font-display);font-weight:400}
+  .drive-info small{font-size:11px;color:var(--text-mute);font-family:var(--font-mono)}
+
+  /* Field grid */
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .field-grid .full{grid-column:1/-1}
+
+  /* Preview document */
+  .doc-preview{
+    background:#f4eee2;color:#1a1207;
+    border-radius:var(--r-md);
+    padding:48px 56px;
+    font-family:'Fraunces',serif;
+    font-size:13px;line-height:1.65;
+    min-height:600px;
+    box-shadow:0 6px 32px rgba(0,0,0,0.32),inset 0 0 0 1px rgba(212,165,116,0.08);
+    position:relative;overflow:hidden;
+  }
+  .doc-preview::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:4px;
+    background:linear-gradient(90deg,var(--amber) 0%,var(--amber-warm) 100%);
+  }
+  .doc-h1{font-size:22px;font-weight:400;letter-spacing:-0.01em;margin-bottom:6px}
+  .doc-meta{font-size:11px;color:#7a6850;margin-bottom:32px;font-family:'JetBrains Mono',monospace;letter-spacing:0.04em}
+  .doc-h2{font-size:14px;font-weight:600;margin-top:24px;margin-bottom:10px;letter-spacing:0.04em;text-transform:uppercase;color:#3a2a14}
+  .doc-h2:first-of-type{margin-top:0}
+  .doc-p{margin-bottom:10px;color:#3a2a14}
+  .doc-p strong{color:#1a1207;font-weight:600}
+
+  /* AI changes highlight */
+  .doc-edit{background:rgba(232,185,90,0.32);padding:0 3px;border-radius:2px;position:relative;cursor:help}
+  .doc-edit::after{content:'AI';position:absolute;top:-8px;right:-2px;font-size:8px;background:var(--amber);color:#1a1207;padding:1px 4px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-weight:600}
+
+  /* Changes panel */
+  .changes-list{margin-top:0}
+  .change-item{
+    padding:12px 14px;border-bottom:1px solid var(--line-faint);
+    display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:flex-start;
+    font-size:12.5px;
+  }
+  .change-item:last-child{border-bottom:0}
+  .change-icon{
+    width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-family:var(--font-mono);font-weight:600;
+    background:var(--amber-tint);color:var(--amber-warm);
+  }
+  .change-icon.add{background:var(--success-tint);color:var(--success)}
+  .change-icon.flag{background:var(--danger-tint);color:var(--danger)}
+  .change-text{color:var(--text-soft);line-height:1.5}
+  .change-text small{display:block;color:var(--text-mute);font-size:11px;margin-top:2px}
+  .change-action{font-size:10px;color:var(--text-mute);font-family:var(--font-mono);text-transform:uppercase}
+
+  /* AI generate button strip */
+  .ai-strip{
+    display:flex;align-items:center;gap:14px;padding:16px 20px;
+    background:linear-gradient(135deg,rgba(232,185,90,0.08) 0%,rgba(212,165,116,0.05) 100%);
+    border:1px solid var(--line-amber);border-radius:var(--r-md);
+    margin-bottom:24px;
+  }
+  .ai-strip .icon-glow{
+    width:36px;height:36px;border-radius:50%;flex-shrink:0;
+    background:radial-gradient(circle at 30% 30%,var(--amber) 0%,transparent 70%);
+    display:flex;align-items:center;justify-content:center;color:#1a1207;
+  }
+  .ai-strip-text{flex:1;font-size:13px;color:var(--text-soft)}
+  .ai-strip-text strong{color:var(--text);font-family:var(--font-display);font-weight:400}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-left">
+    <a href="hero-preview.html" class="logo">
+      <span class="logo-mark">IT</span>
+      <span class="logo-text">Investment Tools</span>
+    </a>
+  </div>
+  <div class="nav-menu nav-center">
+    <div class="nav-item"><a class="nav-link">Osobní <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a></div>
+    <div class="nav-item"><a class="nav-link">Pracovní <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a></div>
+    <div class="nav-item"><a class="nav-link current">ProfiLend <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a></div>
+  </div>
+  <div class="nav-right-slot"></div>
+</nav>
+
+<main class="app">
+
+  <div class="app-meta">
+    <nav class="crumbs">
+      <a>ProfiLend</a><span class="sep">/</span><span class="current">Úvěrová dokumentace</span>
+    </nav>
+    <div class="app-tools">
+      <span class="updated-tag"><svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><circle cx="4.5" cy="4.5" r="3"/></svg>Drive: připojeno (martin@profilend.cz)</span>
+    </div>
+  </div>
+
+  <div class="app-head">
+    <div class="app-head-left">
+      <div class="eyebrow">PROFILEND · DOKUMENTACE</div>
+      <h1 class="app-title">Úvěrová <em>dokumentace</em></h1>
+      <p class="app-sub">Generování úvěrových a zástavních smluv ze šablon na Google Drive. AI doplní parametry, zvýrazní změny a navrhne kontrolní body.</p>
+    </div>
+    <div class="app-actions">
+      <button class="btn btn-secondary"><svg viewBox="0 0 16 16"><path d="M4 4h8v8H4zM4 8h8M8 4v8"/></svg>Náhled v Drive</button>
+      <button class="btn btn-primary"><svg viewBox="0 0 16 16"><path d="M3 8l3 3 7-7"/></svg>Schválit a uložit</button>
+    </div>
+  </div>
+
+  <div class="workspace-wide">
+
+    <!-- AI strip -->
+    <div class="ai-strip">
+      <div class="icon-glow">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v3M8 11v3M2 8h3M11 8h3M4.5 4.5l2 2M9.5 9.5l2 2M4.5 11.5l2-2M9.5 6.5l2-2"/></svg>
+      </div>
+      <div class="ai-strip-text">
+        <strong>Claude Sonnet 4.5</strong> · doplní parametry úvěru, vyznačí změny v dokumentu a označí ustanovení k revizi (úroková sazba, RPSN, předčasné splacení, sankce).
+      </div>
+      <button class="btn btn-ghost"><svg viewBox="0 0 16 16"><path d="M2 8a6 6 0 1011-3.5"/><path d="M11 2v3h-3"/></svg>Přegenerovat</button>
+    </div>
+
+    <div class="doc-grid">
+
+      <!-- ============ LEFT: FORM ============ -->
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">1 · Šablona &amp; <em>parametry</em></div>
+          <span style="font-size:11px;color:var(--text-mute);font-family:var(--font-mono)">krok 1/3</span>
+        </div>
+        <div class="panel-body">
+
+          <label class="field-label">Šablona dokumentu</label>
+          <div class="templates">
+            <div class="template-card active">
+              <div class="template-name">Úvěrová smlouva</div>
+              <div class="template-meta">v3.2 · 12 stran</div>
+            </div>
+            <div class="template-card">
+              <div class="template-name">Zástavní smlouva</div>
+              <div class="template-meta">v2.1 · 8 stran</div>
+            </div>
+            <div class="template-card">
+              <div class="template-name">Smlouva o smlouvě budoucí</div>
+              <div class="template-meta">v1.4 · 4 strany</div>
+            </div>
+            <div class="template-card">
+              <div class="template-name">Splátkový kalendář</div>
+              <div class="template-meta">v2.0 · 1 strana</div>
+            </div>
+          </div>
+
+          <div class="drive-row">
+            <div class="drive-icon">G</div>
+            <div class="drive-info">
+              <strong>Smlouvy / Šablony / Úvěrová smlouva v3.2.docx</strong>
+              <small>Naposledy upraveno: 12. dub 2026, 14:32 · martin@profilend.cz</small>
+            </div>
+            <button class="btn-icon" title="Otevřít v Drive"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h8v8M13 3L5 11M5 3v3M5 13h8"/></svg></button>
+          </div>
+
+          <h3 style="font-family:var(--font-display);font-size:14px;font-weight:400;margin-bottom:14px;color:var(--text-soft);letter-spacing:0.06em;text-transform:uppercase">Klient &amp; nemovitost</h3>
+
+          <div class="field-grid">
+            <div class="field full">
+              <label class="field-label">Klient (dlužník)</label>
+              <input class="input" value="Ing. Jakub Procházka">
+            </div>
+            <div class="field">
+              <label class="field-label">Rodné číslo</label>
+              <input class="input" value="841205/1234">
+            </div>
+            <div class="field">
+              <label class="field-label">Bydliště</label>
+              <input class="input" value="Praha 6, Bubenečská 14">
+            </div>
+            <div class="field full">
+              <label class="field-label">Předmět zástavy</label>
+              <input class="input" value="Byt 3+kk, Praha 6, Bubeneč, ulice Eliášova č.p. 24">
+            </div>
+            <div class="field">
+              <label class="field-label">LV / Katastr</label>
+              <input class="input" value="LV 1842, k.ú. Bubeneč">
+            </div>
+            <div class="field">
+              <label class="field-label">Odhadní cena</label>
+              <input class="input" value="14 800 000 CZK">
+            </div>
+          </div>
+
+          <h3 style="font-family:var(--font-display);font-size:14px;font-weight:400;margin:22px 0 14px;color:var(--text-soft);letter-spacing:0.06em;text-transform:uppercase">Parametry úvěru</h3>
+
+          <div class="field-grid">
+            <div class="field">
+              <label class="field-label">Výše úvěru</label>
+              <input class="input" value="9 600 000 CZK">
+            </div>
+            <div class="field">
+              <label class="field-label">LTV</label>
+              <input class="input" value="64,86 %" disabled>
+            </div>
+            <div class="field">
+              <label class="field-label">Úroková sazba</label>
+              <input class="input" value="6,40 % p.a.">
+            </div>
+            <div class="field">
+              <label class="field-label">RPSN</label>
+              <input class="input" value="6,72 %" disabled>
+            </div>
+            <div class="field">
+              <label class="field-label">Splatnost</label>
+              <input class="input" value="20 let">
+            </div>
+            <div class="field">
+              <label class="field-label">Měsíční splátka</label>
+              <input class="input" value="71 240 CZK" disabled>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============ RIGHT: PREVIEW ============ -->
+      <div>
+        <section class="panel" style="margin-bottom:18px">
+          <div class="panel-head">
+            <div class="panel-title">Živý <em>náhled smlouvy</em></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:11px;color:var(--amber-warm);font-family:var(--font-mono);display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber)"></span>auto-sync</span>
+            </div>
+          </div>
+          <div class="panel-body" style="padding:24px">
+            <div class="doc-preview">
+              <div class="doc-h1">Úvěrová smlouva č. <strong>2026/04/0184</strong></div>
+              <div class="doc-meta">PROFILEND a.s. · IČ 09183746 · uzavřená dne 25. dubna 2026</div>
+
+              <div class="doc-h2">I. Smluvní strany</div>
+              <div class="doc-p"><strong>Věřitel:</strong> ProfiLend a.s., se sídlem Praha 1, Národní 1009/3, IČ 09183746, zapsaná v OR vedeném Městským soudem v Praze, sp. zn. B 27418.</div>
+              <div class="doc-p"><strong>Dlužník:</strong> <span class="doc-edit">Ing. Jakub Procházka</span>, r.č. <span class="doc-edit">841205/1234</span>, trvale bytem <span class="doc-edit">Praha 6, Bubenečská 14</span>.</div>
+
+              <div class="doc-h2">II. Předmět smlouvy</div>
+              <div class="doc-p">Věřitel poskytuje dlužníkovi účelový úvěr ve výši <span class="doc-edit"><strong>9 600 000 Kč</strong></span> (slovy: devět miliónů šest set tisíc korun českých) za podmínek dle této smlouvy.</div>
+              <div class="doc-p">Účelem úvěru je pořízení nemovitosti specifikované v čl. III.</div>
+
+              <div class="doc-h2">III. Zajištění</div>
+              <div class="doc-p">Pohledávka věřitele z této smlouvy je zajištěna zástavním právem k nemovitosti: <span class="doc-edit">byt 3+kk, ulice Eliášova č.p. 24, k.ú. Bubeneč, LV 1842</span>, jejíž odhadní cena činí <span class="doc-edit"><strong>14 800 000 Kč</strong></span>.</div>
+
+              <div class="doc-h2">IV. Úroková sazba a splácení</div>
+              <div class="doc-p">Úvěr je úročen pevnou sazbou <span class="doc-edit"><strong>6,40 % p.a.</strong></span> po celou dobu trvání úvěru. RPSN činí <span class="doc-edit">6,72 %</span>.</div>
+              <div class="doc-p">Dlužník se zavazuje splácet úvěr v měsíčních anuitních splátkách ve výši <span class="doc-edit"><strong>71 240 Kč</strong></span> po dobu <span class="doc-edit">240 měsíců</span>.</div>
+
+              <div class="doc-h2">V. Předčasné splacení</div>
+              <div class="doc-p">Dlužník je oprávněn úvěr předčasně splatit kdykoliv v průběhu fixace, přičemž věřiteli náleží náhrada účelně vynaložených nákladů, nejvýše však 1 % z předčasně splacené částky.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">2 · Změny &amp; <em>kontrolní body</em></div>
+            <span style="font-size:11px;color:var(--text-mute);font-family:var(--font-mono)">14 položek</span>
+          </div>
+          <div class="changes-list">
+            <div class="change-item">
+              <div class="change-icon">→</div>
+              <div class="change-text">Doplněn klient: <strong style="color:var(--text)">Ing. Jakub Procházka</strong>, r.č. 841205/1234<small>čl. I, odst. 2 · automaticky z formuláře</small></div>
+              <div class="change-action">vlož</div>
+            </div>
+            <div class="change-item">
+              <div class="change-icon">→</div>
+              <div class="change-text">Předmět zástavy: <strong style="color:var(--text)">Byt 3+kk, Eliášova 24, Bubeneč</strong>, LV 1842<small>čl. III · podle KN automaticky doplněn katastr a parc. č.</small></div>
+              <div class="change-action">vlož</div>
+            </div>
+            <div class="change-item">
+              <div class="change-icon add">+</div>
+              <div class="change-text">Přidán odst. <strong style="color:var(--text)">o pojištění nemovitosti</strong> ve prospěch věřitele<small>čl. III, odst. 4 · standardní klauzule pro úvěry &gt; 5M</small></div>
+              <div class="change-action">přidat</div>
+            </div>
+            <div class="change-item">
+              <div class="change-icon flag">!</div>
+              <div class="change-text">Sazba <strong style="color:var(--text)">6,40 % p.a.</strong> je o 0,15 pp pod průměrem ProfiLend (6,55 %)<small>čl. IV · ověřit u úvěrového výboru</small></div>
+              <div class="change-action">flag</div>
+            </div>
+            <div class="change-item">
+              <div class="change-icon flag">!</div>
+              <div class="change-text"><strong style="color:var(--text)">Předčasné splacení</strong> — sankce 1 % je hraniční pro spotřebitelské úvěry<small>čl. V · doporučujeme upřesnit definici "účelně vynaložených nákladů"</small></div>
+              <div class="change-action">flag</div>
+            </div>
+            <div class="change-item">
+              <div class="change-icon">→</div>
+              <div class="change-text">Generován <strong style="color:var(--text)">splátkový kalendář</strong> jako příloha č. 1<small>240 splátek · auto-výpočet z parametrů</small></div>
+              <div class="change-action">příloha</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+    </div>
+
+  </div>
+
+</main>
+
+<div class="toast" id="toast"><svg viewBox="0 0 16 16"><path d="M3 8l3 3 7-7"/></svg><span id="toast-msg">Hotovo</span></div>
+
+<script>
+document.querySelectorAll('.template-card').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.template-card').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active');
+}));
+</script>
+</body>
+</html>

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marketing Agent — Investment Tools</title>
+<link rel="stylesheet" href="app-shell.css">
+<style>
+  .mk-grid{display:grid;grid-template-columns:1fr 1.05fr;gap:32px;align-items:start}
+  @media (max-width:1100px){ .mk-grid{grid-template-columns:1fr} }
+
+  .panel{background:var(--bg-raised);border:1px solid var(--line-faint);border-radius:var(--r-lg);overflow:hidden}
+  .panel-head{padding:22px 28px;border-bottom:1px solid var(--line-faint);display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .panel-title{font-family:var(--font-display);font-weight:400;font-size:17px;letter-spacing:var(--tracking-tight)}
+  .panel-title em{font-style:italic;color:var(--amber-warm)}
+  .panel-body{padding:24px 28px}
+
+  /* Channel chips */
+  .channels{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .channel{
+    display:inline-flex;align-items:center;gap:8px;padding:8px 14px;
+    border-radius:99px;border:1px solid var(--line);background:var(--bg-input);
+    cursor:pointer;font-size:12.5px;color:var(--text-mute);
+    transition:all var(--dur) var(--ease);
+  }
+  .channel:hover{color:var(--text-soft);border-color:var(--line-amber)}
+  .channel.active{background:var(--amber-tint);border-color:var(--amber);color:var(--amber-warm)}
+  .channel svg{width:14px;height:14px}
+
+  /* Tone selector */
+  .tone-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+  @media (max-width:600px){ .tone-grid{grid-template-columns:repeat(2,1fr)} }
+  .tone-card{
+    padding:14px 12px;border:1px solid var(--line-faint);border-radius:var(--r-md);
+    cursor:pointer;background:var(--bg);text-align:center;
+    transition:all var(--dur) var(--ease);
+  }
+  .tone-card:hover{border-color:var(--line-amber);background:var(--bg-input)}
+  .tone-card.active{border-color:var(--amber);background:var(--amber-tint)}
+  .tone-name{font-family:var(--font-display);font-style:italic;font-size:13px;color:var(--text);margin-bottom:2px}
+  .tone-desc{font-size:10.5px;color:var(--text-mute)}
+
+  /* Length slider */
+  .slider-wrap{margin-top:8px}
+  .slider-track{
+    position:relative;height:4px;background:var(--bg-input);border-radius:99px;
+    margin:18px 0 8px;
+  }
+  .slider-fill{position:absolute;left:0;top:0;height:100%;width:62%;background:var(--amber);border-radius:99px}
+  .slider-thumb{
+    position:absolute;left:62%;top:50%;width:14px;height:14px;border-radius:50%;
+    background:var(--amber);transform:translate(-50%,-50%);
+    box-shadow:0 0 0 4px rgba(232,185,90,0.18);
+  }
+  .slider-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-mute);font-family:var(--font-mono)}
+
+  /* Drive integration */
+  .drive-row{
+    display:flex;align-items:center;gap:14px;padding:14px 16px;
+    background:var(--bg-input);border:1px solid var(--line-faint);
+    border-radius:var(--r-md);margin-top:18px;
+  }
+  .drive-icon{
+    width:34px;height:34px;border-radius:7px;flex-shrink:0;
+    background:linear-gradient(135deg,#fbbc04 0%,#34a853 50%,#4285f4 100%);
+    display:flex;align-items:center;justify-content:center;color:#0a0e15;
+    font-family:var(--font-display);font-weight:600;font-size:13px;
+  }
+  .drive-info{flex:1;min-width:0}
+  .drive-info strong{display:block;font-size:13px;color:var(--text);font-family:var(--font-display);font-weight:400}
+  .drive-info small{font-size:11px;color:var(--text-mute);font-family:var(--font-mono)}
+
+  /* Section header in form */
+  .form-section-h{font-family:var(--font-display);font-size:13px;font-weight:400;margin:20px 0 10px;color:var(--text-soft);letter-spacing:0.06em;text-transform:uppercase}
+
+  /* AI strip (reused) */
+  .ai-strip{
+    display:flex;align-items:center;gap:14px;padding:16px 20px;
+    background:linear-gradient(135deg,rgba(232,185,90,0.08) 0%,rgba(212,165,116,0.05) 100%);
+    border:1px solid var(--line-amber);border-radius:var(--r-md);margin-bottom:24px;
+  }
+  .ai-strip .icon-glow{
+    width:36px;height:36px;border-radius:50%;flex-shrink:0;
+    background:radial-gradient(circle at 30% 30%,var(--amber) 0%,transparent 70%);
+    display:flex;align-items:center;justify-content:center;color:#1a1207;
+  }
+  .ai-strip-text{flex:1;font-size:13px;color:var(--text-soft)}
+  .ai-strip-text strong{color:var(--text);font-family:var(--font-display);font-weight:400}
+
+  /* ==== POST PREVIEWS ==== */
+  .preview-tabs{display:flex;border-bottom:1px solid var(--line-faint);background:var(--bg)}
+  .preview-tab{
+    padding:12px 20px;font-size:13px;color:var(--text-mute);cursor:pointer;
+    border-bottom:2px solid transparent;display:flex;align-items:center;gap:8px;
+    transition:all var(--dur) var(--ease);
+  }
+  .preview-tab:hover{color:var(--text-soft)}
+  .preview-tab.active{color:var(--amber-warm);border-bottom-color:var(--amber)}
+  .preview-tab svg{width:14px;height:14px}
+
+  /* IG post mockup */
+  .ig-post{
+    background:#fff;color:#262626;border-radius:8px;
+    border:1px solid #dbdbdb;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
+    overflow:hidden;max-width:480px;margin:0 auto;
+  }
+  .ig-head{display:flex;align-items:center;gap:10px;padding:12px 14px;font-size:13px}
+  .ig-avatar{
+    width:32px;height:32px;border-radius:50%;
+    background:linear-gradient(135deg,#d4a574 0%,#5a3a14 100%);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif;font-size:14px;color:#fff;font-weight:500;
+  }
+  .ig-handle strong{display:block;font-weight:600;font-size:13px}
+  .ig-handle small{color:#737373;font-size:11px}
+  .ig-image{
+    aspect-ratio:1/1;background:linear-gradient(180deg,#0a0e15 0%,#16202c 100%);
+    position:relative;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ig-image::before{
+    content:'';position:absolute;inset:0;
+    background:radial-gradient(circle at 30% 80%,rgba(232,185,90,0.18) 0%,transparent 50%);
+  }
+  .ig-image-content{
+    position:relative;z-index:2;text-align:center;color:#e8dfd0;padding:32px;
+    font-family:'Fraunces',serif;
+  }
+  .ig-image-eyebrow{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#d4a574;margin-bottom:14px}
+  .ig-image-title{font-size:28px;line-height:1.15;font-weight:300;letter-spacing:-0.01em;margin-bottom:14px}
+  .ig-image-title em{font-style:italic;color:#d4a574}
+  .ig-image-stat{
+    display:inline-block;padding:4px 10px;border:1px solid rgba(212,165,116,0.4);
+    border-radius:99px;font-size:10px;color:#d4a574;letter-spacing:0.04em;
+    font-family:'JetBrains Mono',monospace;font-style:normal;
+  }
+  .ig-actions{padding:10px 14px;display:flex;gap:14px;color:#262626}
+  .ig-actions svg{width:22px;height:22px}
+  .ig-caption{padding:0 14px 14px;font-size:13px;line-height:1.45}
+  .ig-caption strong{font-weight:600}
+  .ig-caption .tag{color:#003569}
+  .ig-meta{padding:0 14px 12px;font-size:10.5px;color:#737373;text-transform:uppercase;letter-spacing:0.05em}
+
+  /* Variants strip below preview */
+  .variants{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+  .variant{
+    padding:12px 14px;background:var(--bg);border:1px solid var(--line-faint);border-radius:var(--r-md);
+    cursor:pointer;transition:all var(--dur) var(--ease);
+  }
+  .variant:hover{border-color:var(--line-amber)}
+  .variant.active{border-color:var(--amber);background:var(--amber-tint)}
+  .variant-label{font-family:var(--font-mono);font-size:10px;color:var(--text-mute);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px}
+  .variant-snippet{font-size:11.5px;color:var(--text-soft);line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .variant.active .variant-label{color:var(--amber-warm)}
+
+  /* Schedule strip */
+  .schedule{
+    display:grid;grid-template-columns:repeat(7,1fr);gap:6px;
+    background:var(--bg);border:1px solid var(--line-faint);border-radius:var(--r-md);
+    padding:14px;margin-top:18px;
+  }
+  .day{text-align:center;padding:8px 4px;font-size:11px;color:var(--text-mute)}
+  .day-label{font-family:var(--font-mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px}
+  .day-num{font-family:var(--font-display);font-size:18px;color:var(--text-soft);margin-bottom:6px}
+  .day.today .day-num{color:var(--amber-warm)}
+  .day-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);margin:0 auto;opacity:0}
+  .day.has-post .day-dot{opacity:1}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-left">
+    <a href="hero-preview.html" class="logo">
+      <span class="logo-mark">IT</span>
+      <span class="logo-text">Investment Tools</span>
+    </a>
+  </div>
+  <div class="nav-menu nav-center">
+    <div class="nav-item"><a class="nav-link">Osobní <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a></div>
+    <div class="nav-item"><a class="nav-link">Pracovní <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a></div>
+    <div class="nav-item"><a class="nav-link current">ProfiLend <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a></div>
+  </div>
+  <div class="nav-right-slot"></div>
+</nav>
+
+<main class="app">
+
+  <div class="app-meta">
+    <nav class="crumbs">
+      <a>ProfiLend</a><span class="sep">/</span><span class="current">Marketing Agent</span>
+    </nav>
+    <div class="app-tools">
+      <span class="updated-tag"><svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><circle cx="4.5" cy="4.5" r="3"/></svg>Brand: ProfiLend · Instagram &amp; LinkedIn</span>
+    </div>
+  </div>
+
+  <div class="app-head">
+    <div class="app-head-left">
+      <div class="eyebrow">PROFILEND · MARKETING</div>
+      <h1 class="app-title">Marketing <em>Agent</em></h1>
+      <p class="app-sub">AI generování příspěvků pro sociální sítě podle ProfiLend brand guide. Dávková tvorba, plánování a publikace.</p>
+    </div>
+    <div class="app-actions">
+      <button class="btn btn-secondary"><svg viewBox="0 0 16 16"><path d="M2 4h12v9H2zM2 7h12M5 4V2M11 4V2"/></svg>Plánovač</button>
+      <button class="btn btn-primary"><svg viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>Publikovat</button>
+    </div>
+  </div>
+
+  <div class="workspace-wide">
+
+    <div class="ai-strip">
+      <div class="icon-glow">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v3M8 11v3M2 8h3M11 8h3M4.5 4.5l2 2M9.5 9.5l2 2M4.5 11.5l2-2M9.5 6.5l2-2"/></svg>
+      </div>
+      <div class="ai-strip-text">
+        <strong>Claude Sonnet 4.5</strong> dodržuje <strong>ProfiLend Brand Guide v1.0</strong> — barvy, typografii (Fraunces), tón hlasu (důvěryhodný, věcný, bez emoji) a šablony Drive.
+      </div>
+      <button class="btn btn-ghost"><svg viewBox="0 0 16 16"><path d="M2 8a6 6 0 1011-3.5"/><path d="M11 2v3h-3"/></svg>Přegenerovat</button>
+    </div>
+
+    <div class="mk-grid">
+
+      <!-- ============ FORM ============ -->
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Brief &amp; <em>parametry</em></div>
+          <span style="font-size:11px;color:var(--text-mute);font-family:var(--font-mono)">3 varianty / kanál</span>
+        </div>
+        <div class="panel-body">
+
+          <label class="field-label">Téma příspěvku</label>
+          <textarea class="input" rows="3">Růst úvěrového portfolia ProfiLend o 28 % YoY. Zdůraznit 240 nových klientů, průměrné LTV 65 % a 0 nesplácených úvěrů od 2024.</textarea>
+
+          <h3 class="form-section-h">Kanály</h3>
+          <div class="channels">
+            <span class="channel active">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="3"/><circle cx="8" cy="8" r="3"/><circle cx="11.5" cy="4.5" r="0.8" fill="currentColor"/></svg>
+              Instagram
+            </span>
+            <span class="channel active">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 7v4M5 5.5v0.01M8 7v4M8 9c0-1 0.6-2 2-2s2 1 2 2v2"/></svg>
+              LinkedIn
+            </span>
+            <span class="channel">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 5l6 4 6-4"/></svg>
+              Newsletter
+            </span>
+            <span class="channel">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 6v6M9 12V8c0-1 0.5-2 2-2s2 1 2 2v4M5 4.5v0.01"/></svg>
+              X (Twitter)
+            </span>
+          </div>
+
+          <h3 class="form-section-h">Tón hlasu</h3>
+          <div class="tone-grid">
+            <div class="tone-card">
+              <div class="tone-name">Edukativní</div>
+              <div class="tone-desc">vysvětluje koncepty</div>
+            </div>
+            <div class="tone-card active">
+              <div class="tone-name">Důvěryhodný</div>
+              <div class="tone-desc">data, fakta, profesionální</div>
+            </div>
+            <div class="tone-card">
+              <div class="tone-name">Inspirativní</div>
+              <div class="tone-desc">case study, příběhy</div>
+            </div>
+            <div class="tone-card">
+              <div class="tone-name">Konverzační</div>
+              <div class="tone-desc">otázka, dialog</div>
+            </div>
+          </div>
+
+          <h3 class="form-section-h">Délka</h3>
+          <div class="slider-wrap">
+            <div class="slider-track">
+              <div class="slider-fill"></div>
+              <div class="slider-thumb"></div>
+            </div>
+            <div class="slider-labels">
+              <span>krátký · 50 znaků</span>
+              <span>střední · 250</span>
+              <span>dlouhý · 600</span>
+            </div>
+          </div>
+
+          <h3 class="form-section-h">Klíčová data</h3>
+          <div class="field" style="margin-bottom:10px">
+            <label class="field-label">Hlavní statistika (volitelně)</label>
+            <input class="input" value="+28 % YoY · 240 nových klientů">
+          </div>
+          <div class="field">
+            <label class="field-label">Call to action</label>
+            <input class="input" value="Rezervujte si konzultaci na profilend.cz/poradenstvi">
+          </div>
+
+          <div class="drive-row">
+            <div class="drive-icon">G</div>
+            <div class="drive-info">
+              <strong>Marketing / Brand kit / ProfiLend Visual v1.0</strong>
+              <small>obrázky · šablony · typografie · paleta</small>
+            </div>
+            <button class="btn-icon" title="Otevřít"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h8v8M13 3L5 11M5 3v3M5 13h8"/></svg></button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============ PREVIEW ============ -->
+      <section class="panel">
+        <div class="preview-tabs">
+          <div class="preview-tab active">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="3"/><circle cx="8" cy="8" r="3"/><circle cx="11.5" cy="4.5" r="0.8" fill="currentColor"/></svg>
+            Instagram · feed
+          </div>
+          <div class="preview-tab">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 7v4M5 5.5v0.01M8 7v4M8 9c0-1 0.6-2 2-2s2 1 2 2v2"/></svg>
+            LinkedIn
+          </div>
+          <div class="preview-tab" style="margin-left:auto;color:var(--text-mute);font-size:11px;font-family:var(--font-mono)">var. B / 3</div>
+        </div>
+
+        <div class="panel-body" style="padding:32px 28px;background:var(--bg)">
+          <div class="ig-post">
+            <div class="ig-head">
+              <div class="ig-avatar">P</div>
+              <div class="ig-handle">
+                <strong>profilend.cz</strong>
+                <small>Sponzorováno</small>
+              </div>
+            </div>
+            <div class="ig-image">
+              <div class="ig-image-content">
+                <div class="ig-image-eyebrow">Q1 2026 · VÝSLEDKY</div>
+                <div class="ig-image-title">Portfolio rostlo<br/>o <em>28 %</em> YoY</div>
+                <div class="ig-image-stat">240 nových klientů · 0 nesplácených</div>
+              </div>
+            </div>
+            <div class="ig-actions">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+            </div>
+            <div class="ig-caption">
+              <strong>profilend.cz</strong> Q1 2026 jsme uzavřeli s 240 novými klienty a růstem úvěrového portfolia o 28 %. Průměrné LTV stabilně drží na 65 %, žádný nesplácený úvěr od 2024.<br/><br/>
+              Důsledné podklady, transparentní podmínky a trpělivá due diligence — to dělá rozdíl.<br/><br/>
+              Rezervujte si konzultaci → odkaz v bio.<br/>
+              <span class="tag">#ProfiLend</span> <span class="tag">#financovani</span> <span class="tag">#nemovitosti</span> <span class="tag">#hypoteka</span>
+            </div>
+            <div class="ig-meta">25. dubna · plánováno na pátek 17:00</div>
+          </div>
+
+          <div class="variants">
+            <div class="variant">
+              <div class="variant-label">Var. A · věcná</div>
+              <div class="variant-snippet">Q1 2026: růst portfolia o 28 % YoY. 240 nových klientů, LTV 65 %, 0 nesplácených úvěrů od 2024…</div>
+            </div>
+            <div class="variant active">
+              <div class="variant-label">Var. B · příběh</div>
+              <div class="variant-snippet">Q1 2026 jsme uzavřeli s 240 novými klienty a růstem úvěrového portfolia o 28 %. Průměrné LTV stabilně drží na 65 %…</div>
+            </div>
+            <div class="variant">
+              <div class="variant-label">Var. C · otázka</div>
+              <div class="variant-snippet">Co stojí za růstem úvěrového portfolia o 28 % YoY? Trpělivá due diligence, transparentní podmínky a 240 spokojených klientů…</div>
+            </div>
+          </div>
+
+          <div class="schedule">
+            <div class="day"><div class="day-label">Po</div><div class="day-num">21</div><div class="day-dot"></div></div>
+            <div class="day has-post"><div class="day-label">Út</div><div class="day-num">22</div><div class="day-dot"></div></div>
+            <div class="day"><div class="day-label">St</div><div class="day-num">23</div><div class="day-dot"></div></div>
+            <div class="day has-post"><div class="day-label">Čt</div><div class="day-num">24</div><div class="day-dot"></div></div>
+            <div class="day today has-post"><div class="day-label">Pá</div><div class="day-num">25</div><div class="day-dot"></div></div>
+            <div class="day"><div class="day-label">So</div><div class="day-num">26</div><div class="day-dot"></div></div>
+            <div class="day has-post"><div class="day-label">Ne</div><div class="day-num">27</div><div class="day-dot"></div></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+
+</main>
+
+<div class="toast" id="toast"><svg viewBox="0 0 16 16"><path d="M3 8l3 3 7-7"/></svg><span id="toast-msg">Hotovo</span></div>
+
+<script>
+document.querySelectorAll('.tone-card').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.tone-card').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active');
+}));
+document.querySelectorAll('.channel').forEach(c=>c.addEventListener('click',()=>{
+  c.classList.toggle('active');
+}));
+document.querySelectorAll('.preview-tab').forEach(t=>t.addEventListener('click',()=>{
+  if(t.classList.contains('active'))return;
+  if(t.textContent.includes('var.'))return;
+  document.querySelectorAll('.preview-tab').forEach(x=>{ if(!x.textContent.includes('var.')) x.classList.remove('active'); });
+  t.classList.add('active');
+}));
+document.querySelectorAll('.variant').forEach(v=>v.addEventListener('click',()=>{
+  document.querySelectorAll('.variant').forEach(x=>x.classList.remove('active'));
+  v.classList.add('active');
+}));
+</script>
+</body>
+</html>

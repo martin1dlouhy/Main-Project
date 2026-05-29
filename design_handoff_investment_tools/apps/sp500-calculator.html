@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S&P 500 Portfolio — Investment Tools</title>
+<link rel="stylesheet" href="app-shell.css">
+<style>
+  /* Layout: input panel sticks above table */
+  .calc-panel{
+    background:var(--bg-raised);border:1px solid var(--line-faint);
+    border-radius:var(--r-lg);padding:32px 36px;margin-bottom:28px;
+    display:grid;grid-template-columns:1.4fr 1fr;gap:48px;align-items:end;
+  }
+  @media (max-width:980px){ .calc-panel{grid-template-columns:1fr;gap:24px} }
+
+  .calc-input-row{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:flex-end}
+  .calc-input-row .input{font-size:24px;font-family:var(--font-display);font-weight:300;letter-spacing:-0.01em;padding:14px 18px;font-variant-numeric:tabular-nums}
+  .calc-input-row .currency-select{
+    padding:14px 18px;font-size:14px;color:var(--text-soft);
+    background:var(--bg-input);border:1px solid var(--line);border-radius:var(--r-md);
+    font-family:var(--font-mono);min-width:90px;text-align:center;
+  }
+
+  .quick-amounts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .quick-amounts button{
+    padding:6px 12px;font-size:12px;font-family:var(--font-mono);
+    color:var(--text-mute);background:var(--bg-input);
+    border:1px solid var(--line);border-radius:99px;
+    transition:all var(--dur) var(--ease);
+  }
+  .quick-amounts button:hover{color:var(--amber-warm);border-color:var(--line-amber)}
+
+  /* Right side — summary stats */
+  .calc-summary{display:flex;flex-direction:column;gap:18px;border-left:1px solid var(--line-faint);padding-left:48px}
+  @media (max-width:980px){ .calc-summary{border-left:0;padding-left:0;border-top:1px solid var(--line-faint);padding-top:24px} }
+  .summary-row{display:flex;justify-content:space-between;align-items:baseline;gap:16px}
+  .summary-label{font-size:12px;color:var(--text-mute);letter-spacing:0.06em;text-transform:uppercase}
+  .summary-value{font-family:var(--font-display);font-weight:300;font-size:18px;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+  .summary-value.lg{font-size:24px;color:var(--amber-warm);font-style:italic}
+
+  /* Sector breakdown — horizontal bars */
+  .panel-section{margin-bottom:32px}
+  .panel-head{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+    padding-bottom:14px;margin-bottom:18px;border-bottom:1px solid var(--line-faint);
+  }
+  .panel-title{
+    font-family:var(--font-display);font-weight:400;font-size:18px;
+    letter-spacing:var(--tracking-tight);
+  }
+  .panel-title em{font-style:italic;color:var(--amber-warm)}
+  .panel-meta{font-size:12px;color:var(--text-mute);font-family:var(--font-display);font-style:italic}
+
+  .sectors-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);
+    gap:8px 48px;
+  }
+  @media (max-width:980px){ .sectors-grid{grid-template-columns:1fr} }
+  .sector-row{
+    display:grid;grid-template-columns:1fr auto;align-items:center;
+    gap:12px;padding:10px 0;border-bottom:1px solid var(--line-faint);
+  }
+  .sector-bar{
+    grid-column:1/-1;height:3px;background:var(--bg-input);
+    border-radius:99px;overflow:hidden;margin-top:4px;
+  }
+  .sector-bar-fill{height:100%;background:var(--amber);border-radius:99px}
+  .sector-name{font-size:13.5px;color:var(--text-soft)}
+  .sector-pct{
+    font-family:var(--font-mono);font-size:12.5px;color:var(--text);
+    font-variant-numeric:tabular-nums;
+  }
+  .sector-amount{font-family:var(--font-mono);font-size:11px;color:var(--text-mute);font-variant-numeric:tabular-nums;grid-column:1/-1;margin-top:-2px}
+
+  /* Holdings — compact */
+  .holdings-head{
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:12px;margin-bottom:14px;
+  }
+  .holdings-head .input{padding:8px 14px;font-size:13px;width:280px}
+  .ticker{
+    width:40px;height:40px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-style:italic;font-size:13px;font-weight:500;
+    background:var(--bg-input);color:var(--amber-warm);
+    border:1px solid var(--line);letter-spacing:0;
+  }
+  .stock-cell{display:flex;align-items:center;gap:12px}
+  .stock-cell .info strong{display:block;font-family:var(--font-display);font-size:14px;color:var(--text);font-weight:400}
+  .stock-cell .info small{font-size:11px;color:var(--text-mute)}
+  .delta-pill{
+    display:inline-flex;align-items:center;gap:4px;padding:2px 8px;
+    border-radius:99px;font-size:11px;font-weight:500;font-family:var(--font-mono);
+  }
+  .delta-pill.up{color:var(--success);background:var(--success-tint)}
+  .delta-pill.down{color:var(--danger);background:var(--danger-tint)}
+
+  /* Note */
+  .note{
+    margin-top:24px;padding:14px 18px;
+    background:var(--bg-input);border:1px solid var(--line-faint);border-left:2px solid var(--amber);
+    border-radius:var(--r-sm);font-size:12.5px;color:var(--text-mute);line-height:1.6;
+    display:flex;gap:12px;align-items:flex-start;
+  }
+  .note svg{width:14px;height:14px;flex-shrink:0;margin-top:2px;color:var(--amber);stroke-width:1.6}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-left">
+    <a href="hero-preview.html" class="logo">
+      <span class="logo-mark">IT</span>
+      <span class="logo-text">Investment Tools</span>
+    </a>
+  </div>
+  <div class="nav-menu nav-center">
+    <div class="nav-item"><a class="nav-link current">Osobní <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a></div>
+    <div class="nav-item"><a class="nav-link">Pracovní <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a></div>
+    <div class="nav-item"><a class="nav-link">ProfiLend <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a></div>
+  </div>
+  <div class="nav-right-slot"></div>
+</nav>
+
+<main class="app">
+
+  <div class="app-meta">
+    <nav class="crumbs">
+      <a>Osobní</a><span class="sep">/</span><span class="current">S&amp;P 500 Portfolio</span>
+    </nav>
+    <div class="app-tools">
+      <span class="updated-tag"><svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><circle cx="4.5" cy="4.5" r="3"/></svg>Data: 25. dub 2026, 22:14 UTC</span>
+    </div>
+  </div>
+
+  <div class="app-head">
+    <div class="app-head-left">
+      <div class="eyebrow">OSOBNÍ · KALKULAČKA</div>
+      <h1 class="app-title">S&amp;P 500 <em>Portfolio</em></h1>
+      <p class="app-sub">Rozložte investici do indexu S&amp;P 500 na jednotlivé tituly. Sektorová alokace, váhy podle tržní kapitalizace, denní aktualizace.</p>
+    </div>
+    <div class="app-actions">
+      <button class="btn btn-secondary"><svg viewBox="0 0 16 16"><path d="M8 2v9M5 8l3 3 3-3M3 14h10"/></svg>Export CSV</button>
+    </div>
+  </div>
+
+  <div class="workspace-wide">
+
+    <!-- ===== INPUT PANEL ===== -->
+    <div class="calc-panel">
+      <div>
+        <label class="field-label">Investiční částka</label>
+        <div class="calc-input-row">
+          <input class="input" type="text" value="2 500 000" inputmode="numeric">
+          <div class="currency-select">CZK</div>
+        </div>
+        <div class="quick-amounts">
+          <button>500 000</button>
+          <button>1 000 000</button>
+          <button>2 500 000</button>
+          <button>5 000 000</button>
+          <button>10 000 000</button>
+        </div>
+      </div>
+
+      <div class="calc-summary">
+        <div class="summary-row">
+          <span class="summary-label">Akcií</span>
+          <span class="summary-value">503</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Sektorů</span>
+          <span class="summary-value">11</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Vážený P/E</span>
+          <span class="summary-value">22.4×</span>
+        </div>
+        <div class="summary-row" style="padding-top:14px;border-top:1px solid var(--line-faint)">
+          <span class="summary-label">Kurz USD/CZK</span>
+          <span class="summary-value lg">23.84</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SECTORS ===== -->
+    <div class="panel-section">
+      <div class="panel-head">
+        <div class="panel-title">Sektorová <em>alokace</em></div>
+        <span class="panel-meta">11 sektorů GICS</span>
+      </div>
+      <div class="sectors-grid">
+        <div class="sector-row">
+          <span class="sector-name">Information Technology</span>
+          <span class="sector-pct">29.4%</span>
+          <span class="sector-amount">735 000 CZK · 30 826 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:100%"></div></div>
+        </div>
+        <div class="sector-row">
+          <span class="sector-name">Financials</span>
+          <span class="sector-pct">13.8%</span>
+          <span class="sector-amount">345 000 CZK · 14 472 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:46.9%"></div></div>
+        </div>
+        <div class="sector-row">
+          <span class="sector-name">Health Care</span>
+          <span class="sector-pct">11.2%</span>
+          <span class="sector-amount">280 000 CZK · 11 745 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:38.1%"></div></div>
+        </div>
+        <div class="sector-row">
+          <span class="sector-name">Consumer Discretionary</span>
+          <span class="sector-pct">10.5%</span>
+          <span class="sector-amount">262 500 CZK · 11 011 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:35.7%"></div></div>
+        </div>
+        <div class="sector-row">
+          <span class="sector-name">Communication Services</span>
+          <span class="sector-pct">9.1%</span>
+          <span class="sector-amount">227 500 CZK · 9 542 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:31.0%"></div></div>
+        </div>
+        <div class="sector-row">
+          <span class="sector-name">Industrials</span>
+          <span class="sector-pct">8.4%</span>
+          <span class="sector-amount">210 000 CZK · 8 808 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:28.6%"></div></div>
+        </div>
+        <div class="sector-row">
+          <span class="sector-name">Consumer Staples</span>
+          <span class="sector-pct">5.9%</span>
+          <span class="sector-amount">147 500 CZK · 6 187 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:20.1%"></div></div>
+        </div>
+        <div class="sector-row">
+          <span class="sector-name">Energy</span>
+          <span class="sector-pct">4.2%</span>
+          <span class="sector-amount">105 000 CZK · 4 404 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:14.3%"></div></div>
+        </div>
+        <div class="sector-row">
+          <span class="sector-name">Utilities</span>
+          <span class="sector-pct">2.6%</span>
+          <span class="sector-amount">65 000 CZK · 2 727 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:8.8%"></div></div>
+        </div>
+        <div class="sector-row">
+          <span class="sector-name">Real Estate</span>
+          <span class="sector-pct">2.5%</span>
+          <span class="sector-amount">62 500 CZK · 2 621 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:8.5%"></div></div>
+        </div>
+        <div class="sector-row">
+          <span class="sector-name">Materials</span>
+          <span class="sector-pct">2.4%</span>
+          <span class="sector-amount">60 000 CZK · 2 516 USD</span>
+          <div class="sector-bar"><div class="sector-bar-fill" style="width:8.2%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== HOLDINGS ===== -->
+    <div class="panel-section">
+      <div class="panel-head">
+        <div class="panel-title">Top <em>30 pozic</em></div>
+        <span class="panel-meta">≈ 52% indexu</span>
+      </div>
+
+      <div class="holdings-head">
+        <input class="input" placeholder="Hledat ticker, společnost, sektor…">
+        <div class="segmented">
+          <button class="active">Top 30</button>
+          <button>Top 100</button>
+          <button>Vše (503)</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:40px">#</th>
+              <th>Společnost</th>
+              <th>Sektor</th>
+              <th class="right">Váha</th>
+              <th class="right">Investice</th>
+              <th class="right">Akcie</th>
+              <th class="right">Cena</th>
+              <th class="right">D / D</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td><div class="stock-cell"><div class="ticker">AAPL</div><div class="info"><strong>Apple Inc.</strong><small>Hardware · iPhone</small></div></div></td><td>Tech</td><td class="right">7.42%</td><td class="right">185 500</td><td class="right">37.2</td><td class="right">209.18</td><td class="right"><span class="delta-pill up">↗ 0.8%</span></td></tr>
+            <tr><td>2</td><td><div class="stock-cell"><div class="ticker">MSFT</div><div class="info"><strong>Microsoft Corp.</strong><small>Software · Cloud</small></div></div></td><td>Tech</td><td class="right">6.85%</td><td class="right">171 250</td><td class="right">17.4</td><td class="right">412.65</td><td class="right"><span class="delta-pill up">↗ 1.2%</span></td></tr>
+            <tr><td>3</td><td><div class="stock-cell"><div class="ticker">NVDA</div><div class="info"><strong>NVIDIA Corp.</strong><small>Polovodiče · AI</small></div></div></td><td>Tech</td><td class="right">6.18%</td><td class="right">154 500</td><td class="right">79.5</td><td class="right">81.42</td><td class="right"><span class="delta-pill up">↗ 2.4%</span></td></tr>
+            <tr><td>4</td><td><div class="stock-cell"><div class="ticker">AMZN</div><div class="info"><strong>Amazon.com</strong><small>E-commerce · AWS</small></div></div></td><td>Cons. Disc.</td><td class="right">3.62%</td><td class="right">90 500</td><td class="right">19.8</td><td class="right">191.52</td><td class="right"><span class="delta-pill down">↘ 0.3%</span></td></tr>
+            <tr><td>5</td><td><div class="stock-cell"><div class="ticker">META</div><div class="info"><strong>Meta Platforms</strong><small>Sociální sítě</small></div></div></td><td>Comm.</td><td class="right">2.51%</td><td class="right">62 750</td><td class="right">5.0</td><td class="right">524.30</td><td class="right"><span class="delta-pill up">↗ 1.8%</span></td></tr>
+            <tr><td>6</td><td><div class="stock-cell"><div class="ticker">GOOG</div><div class="info"><strong>Alphabet (A)</strong><small>Search · YouTube</small></div></div></td><td>Comm.</td><td class="right">2.18%</td><td class="right">54 500</td><td class="right">14.0</td><td class="right">163.42</td><td class="right"><span class="delta-pill up">↗ 0.6%</span></td></tr>
+            <tr><td>7</td><td><div class="stock-cell"><div class="ticker">GOOGL</div><div class="info"><strong>Alphabet (C)</strong><small>Search · YouTube</small></div></div></td><td>Comm.</td><td class="right">1.86%</td><td class="right">46 500</td><td class="right">12.0</td><td class="right">162.18</td><td class="right"><span class="delta-pill up">↗ 0.6%</span></td></tr>
+            <tr><td>8</td><td><div class="stock-cell"><div class="ticker">BRK</div><div class="info"><strong>Berkshire Hathaway</strong><small>Holding · Buffett</small></div></div></td><td>Financials</td><td class="right">1.74%</td><td class="right">43 500</td><td class="right">3.6</td><td class="right">510.84</td><td class="right"><span class="delta-pill up">↗ 0.4%</span></td></tr>
+            <tr><td>9</td><td><div class="stock-cell"><div class="ticker">LLY</div><div class="info"><strong>Eli Lilly</strong><small>Farmacie</small></div></div></td><td>Health</td><td class="right">1.52%</td><td class="right">38 000</td><td class="right">1.7</td><td class="right">932.40</td><td class="right"><span class="delta-pill down">↘ 0.5%</span></td></tr>
+            <tr><td>10</td><td><div class="stock-cell"><div class="ticker">JPM</div><div class="info"><strong>JPMorgan Chase</strong><small>Banka</small></div></div></td><td>Financials</td><td class="right">1.38%</td><td class="right">34 500</td><td class="right">6.8</td><td class="right">214.18</td><td class="right"><span class="delta-pill up">↗ 0.9%</span></td></tr>
+            <tr><td>11</td><td><div class="stock-cell"><div class="ticker">TSLA</div><div class="info"><strong>Tesla Inc.</strong><small>Auta · EV</small></div></div></td><td>Cons. Disc.</td><td class="right">1.22%</td><td class="right">30 500</td><td class="right">7.4</td><td class="right">172.65</td><td class="right"><span class="delta-pill down">↘ 1.8%</span></td></tr>
+            <tr><td>12</td><td><div class="stock-cell"><div class="ticker">V</div><div class="info"><strong>Visa Inc.</strong><small>Platby</small></div></div></td><td>Financials</td><td class="right">1.08%</td><td class="right">27 000</td><td class="right">3.9</td><td class="right">288.40</td><td class="right"><span class="delta-pill up">↗ 0.3%</span></td></tr>
+            <tr><td>13</td><td><div class="stock-cell"><div class="ticker">XOM</div><div class="info"><strong>ExxonMobil</strong><small>Ropa · Energetika</small></div></div></td><td>Energy</td><td class="right">1.04%</td><td class="right">26 000</td><td class="right">9.4</td><td class="right">115.92</td><td class="right"><span class="delta-pill up">↗ 1.4%</span></td></tr>
+            <tr><td>14</td><td><div class="stock-cell"><div class="ticker">UNH</div><div class="info"><strong>UnitedHealth</strong><small>Zdravotní pojišť.</small></div></div></td><td>Health</td><td class="right">0.98%</td><td class="right">24 500</td><td class="right">2.1</td><td class="right">488.20</td><td class="right"><span class="delta-pill down">↘ 0.2%</span></td></tr>
+            <tr><td>15</td><td><div class="stock-cell"><div class="ticker">MA</div><div class="info"><strong>Mastercard</strong><small>Platby</small></div></div></td><td>Financials</td><td class="right">0.91%</td><td class="right">22 750</td><td class="right">1.9</td><td class="right">502.85</td><td class="right"><span class="delta-pill up">↗ 0.5%</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v3.5M8 11h.01"/></svg>
+        <div>
+          <strong style="color:var(--text-soft);font-weight:500">Poznámka:</strong> Hodnoty jsou orientační — vážené tržní kapitalizací k 25. dub 2026. Pro skutečnou alokaci nelze koupit zlomky některých titulů; výsledná investice se zaokrouhlí na celé akcie. Daňové dopady, transakční poplatky a měnové riziko nejsou zahrnuty.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<div class="toast" id="toast"><svg viewBox="0 0 16 16"><path d="M3 8l3 3 7-7"/></svg><span id="toast-msg">Hotovo</span></div>
+
+<script>
+document.querySelectorAll('.segmented').forEach(seg=>{
+  seg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    seg.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  }));
+});
+document.querySelectorAll('.quick-amounts button').forEach(b=>b.addEventListener('click',()=>{
+  const input=document.querySelector('.calc-input-row .input');
+  if(input) input.value=b.textContent;
+}));
+</script>
+
+</body>
+</html>

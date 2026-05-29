@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debt Calculator — Investment Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="app-shell.css">
+<style>
+  /* Layout: form vlevo, výsledky vpravo */
+  .calc-grid{
+    display:grid;grid-template-columns:minmax(380px, 440px) 1fr;
+    gap:32px;align-items:start;
+  }
+  @media (max-width: 1100px){ .calc-grid{grid-template-columns:1fr} }
+
+  /* Result hero — velké číslo splátky */
+  .result-hero{
+    background:linear-gradient(135deg, var(--bg-raised) 0%, var(--bg) 100%);
+    border:1px solid var(--line-faint);border-radius:var(--r-lg);
+    padding:32px 36px;position:relative;overflow:hidden;
+  }
+  .result-hero::before{
+    content:'';position:absolute;top:-40%;right:-10%;
+    width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle, var(--amber-glow) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .result-hero-eyebrow{
+    font-size:var(--fs-eyebrow);letter-spacing:var(--tracking-eyebrow);
+    text-transform:uppercase;color:var(--amber);font-weight:500;margin-bottom:14px;
+  }
+  .result-hero-amount{
+    font-family:var(--font-display);font-weight:300;font-size:64px;
+    letter-spacing:var(--tracking-display);line-height:1;
+    font-variant-numeric:tabular-nums;color:var(--text);
+  }
+  .result-hero-amount sup{font-size:0.32em;color:var(--amber-warm);margin-left:6px;font-weight:400;vertical-align:0.3em}
+  .result-hero-sub{
+    margin-top:14px;font-family:var(--font-display);font-style:italic;
+    font-size:14px;color:var(--text-soft);
+  }
+
+  .result-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+    background:var(--line-faint);
+    margin-top:24px;border-top:1px solid var(--line-faint);
+    padding-top:24px;
+    background:transparent;
+  }
+  .result-item{padding:0 4px}
+  .result-item:not(:last-child){border-right:1px solid var(--line-faint);padding-right:18px;margin-right:0}
+  .result-item:not(:first-child){padding-left:18px}
+  .result-label{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute);margin-bottom:8px}
+  .result-value{font-family:var(--font-display);font-weight:400;font-size:22px;font-variant-numeric:tabular-nums;color:var(--text)}
+  .result-value-mono{font-family:var(--font-mono);font-size:14px;color:var(--text-soft);margin-top:2px}
+
+  /* Schedule preview */
+  .schedule-card{
+    margin-top:24px;background:var(--bg-raised);
+    border:1px solid var(--line-faint);border-radius:var(--r-lg);overflow:hidden;
+  }
+  .schedule-head{
+    padding:18px 24px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid var(--line-faint);
+  }
+  .schedule-title{font-family:var(--font-display);font-weight:400;font-size:15px;color:var(--text)}
+  .schedule-title em{font-style:italic;color:var(--amber-warm)}
+
+  /* Composition bar — visualizace úrok vs jistina */
+  .composition{
+    margin-top:18px;padding:18px 22px;
+    background:var(--bg-raised);border:1px solid var(--line-faint);
+    border-radius:var(--r-lg);
+  }
+  .composition-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .composition-title{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-mute)}
+  .composition-total{font-family:var(--font-display);font-size:14px;color:var(--text-soft);font-style:italic}
+  .composition-bar{
+    height:10px;border-radius:5px;overflow:hidden;display:flex;
+    background:var(--bg-input);
+  }
+  .composition-bar .principal{background:var(--amber);height:100%}
+  .composition-bar .interest{background:rgba(232,185,124,0.30);height:100%}
+  .composition-legend{display:flex;gap:24px;margin-top:12px;font-size:12px}
+  .legend-dot{display:inline-flex;align-items:center;gap:8px;color:var(--text-soft)}
+  .legend-dot::before{content:'';width:8px;height:8px;border-radius:50%}
+  .legend-dot.principal::before{background:var(--amber)}
+  .legend-dot.interest::before{background:rgba(232,185,124,0.30)}
+  .legend-dot strong{color:var(--text);font-family:var(--font-mono);font-size:12px;margin-left:4px}
+</style>
+</head>
+<body>
+
+<!-- ============== HEADER ============== -->
+<nav class="nav" data-screen-label="Header">
+  <div class="nav-left">
+    <a href="hero-preview.html" class="logo">
+      <span class="logo-mark">IT</span>
+      <span class="logo-text">Investment Tools</span>
+    </a>
+  </div>
+  <div class="nav-menu nav-center">
+    <div class="nav-item">
+      <a class="nav-link current">Osobní <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="debt-calculator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M16 5 v22"/><path d="M9 27 h14"/><path d="M6 11 h20"/><path d="M6 11 l-3 7 a3 3 0 0 0 6 0 z"/><path d="M26 11 l-3 7 a3 3 0 0 0 6 0 z"/></svg></span><div><div class="dd-title">Debt Calculator</div><div class="dd-meta">Dluhové financování</div></div></a>
+        <a class="dd-item" href="re-prompt-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 14 L14 6 L23 14 V25 H5 Z"/><path d="M11 25 V18 H17 V25"/></svg></span><div><div class="dd-title">R-E Prompt Generator</div><div class="dd-meta">AI valuace nemovitostí</div></div></a>
+        <a class="dd-item" href="sp500-calculator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M4 26 H28"/><path d="M4 22 L10 16 L14 19 L20 9 L26 13"/></svg></span><div><div class="dd-title">S&amp;P 500 Portfolio</div><div class="dd-meta">Rozklad indexu</div></div></a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <a class="nav-link">Pracovní <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="portfolio-dashboard.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><path d="M16 6 A10 10 0 0 1 26 16"/><path d="M16 16 L26 16"/><path d="M16 16 L16 6"/></svg></span><div><div class="dd-title">Portfolio Dashboard</div><div class="dd-meta">Přehled portfolia</div></div></a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <a class="nav-link">ProfiLend <svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="termsheet-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span><div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy &amp; export</div></div></a>
+        <a class="dd-item" href="loan-documentation.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg></span><div><div class="dd-title">Úvěrová dokumentace</div><div class="dd-meta">AI generování</div></div></a>
+        <a class="dd-item" href="marketing-agent.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 7 H23 a2 2 0 0 1 2 2 V19 a2 2 0 0 1 -2 2 H13 L8 26 V21 H5 a2 2 0 0 1 -2 -2 V9 a2 2 0 0 1 2 -2 Z"/></svg></span><div><div class="dd-title">Marketing Agent</div><div class="dd-meta">Sociální obsah</div></div></a>
+      </div>
+    </div>
+  </div>
+  <div class="nav-right-slot"></div>
+</nav>
+
+<main class="app">
+
+  <div class="app-meta">
+    <nav class="crumbs">
+      <a href="hero-preview.html">Investment Tools</a>
+      <span class="sep">/</span>
+      <a>Osobní</a>
+      <span class="sep">/</span>
+      <span class="current">Debt Calculator</span>
+    </nav>
+    <div class="app-tools">
+      <div class="segmented" id="currency-switch">
+        <button class="active" data-cur="CZK">CZK</button>
+        <button data-cur="EUR">EUR</button>
+        <button data-cur="USD">USD</button>
+      </div>
+      <button class="btn-icon" title="Historie"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg></button>
+    </div>
+  </div>
+
+  <div class="app-head">
+    <div class="app-head-left">
+      <div class="eyebrow">OSOBNÍ · KALKULAČKA</div>
+      <h1 class="app-title">Debt <em>Calculator</em></h1>
+      <p class="app-sub">Spočítejte si měsíční splátku, celkový úrok a splátkový kalendář pro úvěr či hypotéku. Anuitní i lineární splácení.</p>
+    </div>
+    <div class="app-actions">
+      <button class="btn btn-secondary" id="reset-btn"><svg viewBox="0 0 16 16"><path d="M2 8a6 6 0 1011-3.5"/><path d="M11 2v3h-3"/></svg>Reset</button>
+      <button class="btn btn-secondary" id="export-btn"><svg viewBox="0 0 16 16"><path d="M3 11v2h10v-2"/><path d="M8 2v8M5 7l3 3 3-3"/></svg>Export CSV</button>
+    </div>
+  </div>
+
+  <div class="workspace-wide">
+    <div class="calc-grid">
+
+      <!-- ============ FORM ============ -->
+      <aside class="form-panel">
+        <div class="form-section">
+          <div class="form-section-head"><span class="form-section-num">1</span> Parametry úvěru</div>
+
+          <div class="field">
+            <label class="field-label">Částka úvěru</label>
+            <div class="input-currency">
+              <input id="f-amount" value="3 200 000">
+              <div class="currency-tag">CZK</div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label">Úroková sazba</label>
+              <div class="input-pct">
+                <input id="f-rate" value="5.45">
+                <div class="pct-tag">% p.a.</div>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Splatnost</label>
+              <div class="input-pct">
+                <input id="f-years" value="25">
+                <div class="pct-tag">let</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Typ splácení</label>
+            <div class="dropdown-field" data-dropdown>
+              <button type="button" class="dropdown-trigger" aria-expanded="false">
+                <span class="dropdown-value">Anuitní (konstantní splátka)</span>
+                <svg viewBox="0 0 12 8" class="dropdown-chevron"><path d="M1 1.5l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+              </button>
+              <ul class="dropdown-menu">
+                <li class="dropdown-option selected">Anuitní (konstantní splátka)</li>
+                <li class="dropdown-option">Lineární (klesající splátka)</li>
+                <li class="dropdown-option">Bullet (jistina na konci)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-head"><span class="form-section-num">2</span> Volitelné</div>
+
+          <div class="field">
+            <label class="field-label">Mimořádná splátka (ročně)</label>
+            <div class="input-currency">
+              <input id="f-extra" value="0">
+              <div class="currency-tag">CZK</div>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label">Datum čerpání</label>
+              <input class="input" type="date" value="2026-06-01">
+            </div>
+            <div class="field">
+              <label class="field-label">Frekvence</label>
+              <input class="input" value="Měsíčně" readonly>
+            </div>
+          </div>
+        </div>
+
+        <div class="submit-row">
+          <div class="submit-hint">Výsledky se přepočítávají v reálném čase. Pro přesné údaje konzultujte s bankou.</div>
+          <div class="submit-actions">
+            <button class="btn btn-primary" id="calc-btn"><svg viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4"/></svg>Spočítat</button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ============ RESULTS ============ -->
+      <section>
+        <div class="result-hero">
+          <div class="result-hero-eyebrow">MĚSÍČNÍ SPLÁTKA</div>
+          <div class="result-hero-amount" id="r-monthly">19 580<sup>CZK</sup></div>
+          <div class="result-hero-sub">Anuitní splácení, 25 let, fixace 5 let</div>
+        </div>
+
+        <div class="composition">
+          <div class="composition-head">
+            <div class="composition-title">Rozložení celkových plateb</div>
+            <div class="composition-total" id="r-total-text">Celkem zaplaceno 5 874 000 CZK</div>
+          </div>
+          <div class="composition-bar">
+            <div class="principal" style="flex:54.5"></div>
+            <div class="interest" style="flex:45.5"></div>
+          </div>
+          <div class="composition-legend">
+            <span class="legend-dot principal">Jistina <strong>3 200 000</strong></span>
+            <span class="legend-dot interest">Úroky <strong>2 674 000</strong></span>
+          </div>
+        </div>
+
+        <div class="schedule-card">
+          <div class="schedule-head">
+            <div class="schedule-title">Splátkový <em>kalendář</em></div>
+            <div class="segmented">
+              <button class="active">Ročně</button>
+              <button>Měsíčně</button>
+            </div>
+          </div>
+          <div class="table-wrap" style="border:none;border-radius:0">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Rok</th>
+                  <th class="right">Splátka</th>
+                  <th class="right">Jistina</th>
+                  <th class="right">Úrok</th>
+                  <th class="right">Zůstatek</th>
+                </tr>
+              </thead>
+              <tbody id="schedule-body">
+                <tr><td><strong>2026</strong></td><td class="right">234 960</td><td class="right">62 870</td><td class="right">172 090</td><td class="right">3 137 130</td></tr>
+                <tr><td><strong>2027</strong></td><td class="right">234 960</td><td class="right">66 380</td><td class="right">168 580</td><td class="right">3 070 750</td></tr>
+                <tr><td><strong>2028</strong></td><td class="right">234 960</td><td class="right">70 090</td><td class="right">164 870</td><td class="right">3 000 660</td></tr>
+                <tr><td><strong>2029</strong></td><td class="right">234 960</td><td class="right">74 010</td><td class="right">160 950</td><td class="right">2 926 650</td></tr>
+                <tr><td><strong>2030</strong></td><td class="right">234 960</td><td class="right">78 150</td><td class="right">156 810</td><td class="right">2 848 500</td></tr>
+                <tr><td><strong>2031</strong></td><td class="right">234 960</td><td class="right">82 520</td><td class="right">152 440</td><td class="right">2 765 980</td></tr>
+                <tr><td><strong>2032</strong></td><td class="right">234 960</td><td class="right">87 130</td><td class="right">147 830</td><td class="right">2 678 850</td></tr>
+                <tr><td><strong>2033</strong></td><td class="right">234 960</td><td class="right">92 000</td><td class="right">142 960</td><td class="right">2 586 850</td></tr>
+                <tr><td colspan="5" style="text-align:center;color:var(--text-mute);font-style:italic;font-family:var(--font-display);padding:14px 0">… dalších 17 let</td></tr>
+                <tr><td><strong>2050</strong></td><td class="right">234 960</td><td class="right">222 990</td><td class="right">11 970</td><td class="right">0</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 16 16"><path d="M3 8l3 3 7-7"/></svg>
+  <span id="toast-msg">Vypočteno</span>
+</div>
+
+<script>
+function fmt(n){return Math.round(n).toLocaleString('cs-CZ').replace(/,/g,' ')}
+
+function calcAnuity(P, rPct, years){
+  const r = rPct/100/12;
+  const n = years*12;
+  const m = P * r / (1 - Math.pow(1+r, -n));
+  return m;
+}
+function recalc(){
+  const P = parseFloat(document.getElementById('f-amount').value.replace(/\s/g,''))||0;
+  const r = parseFloat(document.getElementById('f-rate').value)||0;
+  const y = parseFloat(document.getElementById('f-years').value)||1;
+  const m = calcAnuity(P, r, y);
+  const total = m*y*12;
+  const interest = total - P;
+  document.getElementById('r-monthly').innerHTML = fmt(m) + '<sup>CZK</sup>';
+  document.getElementById('r-total-text').textContent = 'Celkem zaplaceno ' + fmt(total) + ' CZK';
+  document.querySelector('.legend-dot.principal strong').textContent = fmt(P);
+  document.querySelector('.legend-dot.interest strong').textContent = fmt(interest);
+  const pp = (P/total)*100;
+  document.querySelector('.composition-bar .principal').style.flex = pp;
+  document.querySelector('.composition-bar .interest').style.flex = (100-pp);
+}
+['f-amount','f-rate','f-years'].forEach(id => {
+  document.getElementById(id).addEventListener('input', recalc);
+});
+
+/* Currency switch */
+document.querySelectorAll('#currency-switch button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#currency-switch button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const cur = btn.dataset.cur;
+    document.querySelectorAll('.currency-tag').forEach(t => t.textContent = cur);
+  });
+});
+
+/* Custom dropdowns */
+document.querySelectorAll('[data-dropdown]').forEach(dd => {
+  const trigger = dd.querySelector('.dropdown-trigger');
+  const value = dd.querySelector('.dropdown-value');
+  const options = dd.querySelectorAll('.dropdown-option');
+  trigger.addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = dd.classList.contains('open');
+    document.querySelectorAll('[data-dropdown].open').forEach(o => {
+      o.classList.remove('open');
+      o.querySelector('.dropdown-trigger').setAttribute('aria-expanded','false');
+    });
+    if(!wasOpen){ dd.classList.add('open'); trigger.setAttribute('aria-expanded','true'); }
+  });
+  options.forEach(opt => {
+    opt.addEventListener('click', () => {
+      options.forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      value.textContent = opt.textContent.trim();
+      dd.classList.remove('open');
+      trigger.setAttribute('aria-expanded','false');
+    });
+  });
+});
+document.addEventListener('click', () => {
+  document.querySelectorAll('[data-dropdown].open').forEach(o => {
+    o.classList.remove('open');
+    o.querySelector('.dropdown-trigger').setAttribute('aria-expanded','false');
+  });
+});
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toast-msg').textContent=msg;
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);
+}
+document.getElementById('export-btn').addEventListener('click',()=>toast('Splátkový kalendář exportován do CSV'));
+document.getElementById('reset-btn').addEventListener('click',()=>toast('Formulář resetován'));
+document.getElementById('calc-btn').addEventListener('click',()=>{recalc();toast('Vypočteno');});
+</script>
+</body>
+</html>
