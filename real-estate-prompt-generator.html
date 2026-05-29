@@ -3856,7 +3856,7 @@
             setTimeout(() => {
                 toast.classList.add('hide');
                 setTimeout(() => toast.remove(), 300);
-            }, 4000);
+            }, 5000);
         }
 
         function openInChatGPT() {
@@ -5384,6 +5384,24 @@
             if (promptTextEl) promptTextEl.textContent = '';
             const propertySummaryEl = document.getElementById('propertySummary');
             if (propertySummaryEl) propertySummaryEl.innerHTML = '';
+            // Čištění kroku 3 (checkboxy materiálů) — bez vyčištění zde drží UI předchozí
+            // výběr až do návratu na step 3, který by repopulate spustil
+            const inputsGridEl = document.getElementById('inputsGrid');
+            if (inputsGridEl) inputsGridEl.innerHTML = '';
+            // Čištění kroku 4 (formulář s detaily) — populateDetailForm jinak nereaguje
+            // pokud propertyType je zatím prázdný
+            const detailFormEl = document.getElementById('detailForm');
+            if (detailFormEl) detailFormEl.innerHTML = '';
+            // Reset live preview textů v krocích 3 a 5
+            const previewDefault = 'Náhled se zobrazí, jakmile vyplníte údaje...';
+            const pc2 = document.getElementById('previewContent2');
+            if (pc2) pc2.textContent = previewDefault;
+            const pc3 = document.getElementById('previewContent3');
+            if (pc3) pc3.textContent = previewDefault;
+            // Zavřít otevřené preview-panel (uživatel by jinak po vstupu na nový case
+            // viděl rozbalený panel, který tam zbyl z předchozí valuace)
+            document.querySelectorAll('.preview-panel.show').forEach(p => p.classList.remove('show'));
+            document.querySelectorAll('.preview-toggle').forEach(t => t.classList.add('collapsed'));
             updateStepIndicator();
             showSection(1);
             localStorage.removeItem('prompt-gen-state');
