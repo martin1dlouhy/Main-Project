@@ -1257,6 +1257,13 @@
                             <input type="text" class="form-input" id="f-early-repayment" placeholder="např. Možné, 6 % poplatek" value="Ano, poplatek 6 % z jistiny">
                         </div>
                     </div>
+                    <div id="payment-calc-box" style="display:none;margin-top:1rem;padding:12px 16px;background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;">
+                        <span style="font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);font-weight:600;">Orientační splátka pro klienta</span>
+                        <div style="display:flex;align-items:baseline;gap:0.6rem;flex-wrap:wrap;margin-top:4px;">
+                            <span id="payment-calc-value" style="font-size:1.25rem;font-weight:700;color:var(--accent);font-family:var(--font-display,inherit);"></span>
+                            <span id="payment-calc-note" style="font-size:0.8rem;color:var(--text-muted);"></span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Poplatky -->
@@ -1733,6 +1740,83 @@
         return y + '-' + m + '-' + day;
     }
 
+    // ===== REGULAR PAYMENT CALC =====
+    // Payment mode comes from the existing "Placení úroků" field
+    // (Měsíční / Čtvrtletní / Pololetní / Anuitní / Úroky s jistinou k splatnosti) —
+    // same logic family as the Debt Calculator. Feeds the on-screen box + the DOCX export.
+    function maturityMonths(maturityStr, unit) {
+        var v = parseFloat(String(maturityStr || '').replace(',', '.'));
+        if (!v || v <= 0) return 0;
+        return unit === 'měsíců' ? Math.round(v) : Math.round(v * 12);
+    }
+
+    function calcPayment(amount, ratePct, months, mode) {
+        if (!(amount > 0) || !(ratePct > 0)) return null;
+        var annual = amount * (ratePct / 100);
+        if (mode === 'Měsíční')    return { value: annual / 12,     period: '/ měsíc',     note: 'úrok měsíčně, jistina k splatnosti' };
+        if (mode === 'Čtvrtletní') return { value: annual * 3 / 12, period: '/ čtvrtletí', note: 'úrok čtvrtletně, jistina k splatnosti' };
+        if (mode === 'Pololetní')  return { value: annual * 6 / 12, period: '/ pololetí',  note: 'úrok pololetně, jistina k splatnosti' };
+        if (mode === 'Anuitní') {
+            if (months <= 0) return null;
+            var r = ratePct / 100 / 12;
+            var pmt = r === 0 ? amount / months
+                              : amount * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+            return { value: pmt, period: '/ měsíc', note: 'anuita (úrok + jistina), ' + months + ' měsíců' };
+        }
+        if (mode === 'Úroky s jistinou k splatnosti')
+            return { value: null, period: '', note: 'Bez pravidelných splátek — úrok i jistina k datu splatnosti' };
+        return null;
+    }
+
+    function fmtMoney(v) {
+        return Math.round(v).toLocaleString('cs-CZ');
+    }
+
+    // Display string for the DOCX export (built from the saved data object).
+    function paymentDisplayFromData(data) {
+        var amount = parseAmount(data.amount);
+        var rate = parseFloat(String(data.interest || '').replace(',', '.')) || 0;
+        var months = maturityMonths(data.maturity, data.maturityUnit);
+        var res = calcPayment(amount, rate, months, data.interestPayment);
+        if (!res) return '';
+        if (res.value == null) return res.note;
+        return fmtMoney(res.value) + ' ' + (data.currency || 'CZK') + ' ' + res.period;
+    }
+
+    // Live update of the on-screen "orientační splátka" box.
+    function updatePaymentCalc() {
+        var box = document.getElementById('payment-calc-box');
+        if (!box) return;
+        var amount = parseAmount(document.getElementById('f-amount').value);
+        var rate = parseFloat(String(document.getElementById('f-interest').value || '').replace(',', '.')) || 0;
+        var months = maturityMonths(document.getElementById('f-maturity').value, document.getElementById('f-maturity-unit').value);
+        var mode = document.getElementById('f-interest-payment').value;
+        var res = calcPayment(amount, rate, months, mode);
+        if (!res) { box.style.display = 'none'; return; }
+        var currency = document.getElementById('f-currency').value || 'CZK';
+        box.style.display = 'block';
+        var valEl = document.getElementById('payment-calc-value');
+        if (res.value == null) {
+            valEl.style.display = 'none';                       // bullet — no regular payment, note carries the message
+        } else {
+            valEl.style.display = '';
+            valEl.textContent = fmtMoney(res.value) + ' ' + currency + ' ' + res.period;
+        }
+        document.getElementById('payment-calc-note').textContent = res.note;
+    }
+
+    function initPaymentCalc() {
+        ['f-amount', 'f-interest', 'f-maturity'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('input', updatePaymentCalc);
+        });
+        ['f-maturity-unit', 'f-interest-payment', 'f-currency'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('change', updatePaymentCalc);
+        });
+        updatePaymentCalc();
+    }
+
     function calcLTV() {
         var amount = parseAmount(document.getElementById('f-amount').value);
         var collateral = parseAmount(document.getElementById('f-collateral-value').value);
@@ -1830,6 +1914,14 @@
 
     // ===== POPULATE FORM =====
     function populateForm(data) {
+        // LV panel is per-case — drop any LV carried over from a previously opened case.
+        // (Analysed LVs aren't persisted per case; switching cases must not leak the previous one's LVs.)
+        lvFiles = [];
+        var _lvInstr = document.getElementById('lv-instructions');
+        if (_lvInstr) _lvInstr.value = '';
+        renderLVFileList();
+        if (typeof renderLVResults === 'function') renderLVResults();
+
         document.getElementById('f-borrower').value = data.borrower || '';
         document.getElementById('f-ico').value = data.ico || '';
         document.getElementById('f-spisova-znacka').value = data.spisovaZnacka || '';
@@ -1894,6 +1986,7 @@
         });
 
         calcLTV();
+        updatePaymentCalc();
 
         // Sync custom dropdowns
         ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type','f-maturity-unit'].forEach(function(id) {
@@ -1944,6 +2037,7 @@
         document.getElementById('doc-smenka').checked = false;
         document.getElementById('doc-vinkulace').checked = false;
         calcLTV();
+        updatePaymentCalc();
 
         // Sync custom dropdowns
         ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type','f-maturity-unit'].forEach(function(id) {
@@ -2167,6 +2261,8 @@
             var md = new Date(data.maturityDate);
             xml += buildFieldXml('Datum splatnosti:', md.toLocaleDateString('cs-CZ'));
         }
+        var paymentStrXml = paymentDisplayFromData(data);
+        if (paymentStrXml) xml += buildFieldXml('Pravidelná splátka:', paymentStrXml);
         if (data.earlyRepayment) xml += buildFieldXml('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
         if (data.originationFeeDisplay) xml += buildFieldXml('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
 
@@ -2292,6 +2388,8 @@
                 var md2 = new Date(data.maturityDate);
                 addField('Datum splatnosti:', md2.toLocaleDateString('cs-CZ'));
             }
+            var paymentStrDoc = paymentDisplayFromData(data);
+            if (paymentStrDoc) addField('Pravidelná splátka:', paymentStrDoc);
             if (data.earlyRepayment) addField('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
             if (data.originationFeeDisplay) addField('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
             if (data.collateralValue) {
@@ -3175,6 +3273,9 @@
 
         // Initialize maturity date auto-calculation
         initMaturityDateCalc();
+
+        // Initialize regular-payment calculation (driven by "Placení úroků")
+        initPaymentCalc();
 
         // Restore previously connected folder
         restoreFolderHandle();
