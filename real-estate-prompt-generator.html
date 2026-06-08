@@ -3273,15 +3273,16 @@
                 // Add loan purpose section
                 if (loanPurpose === 'refinancing') {
                     prompt += `## FINANCING PURPOSE\n`;
-                    prompt += `**Refinancing** — Existing collateral lender will be paid off.\n\n`;
+                    prompt += `**Refinancing** — The existing collateral lender will be paid off from our loan proceeds.\n\n`;
                     prompt += `### CRITICAL INSTRUCTIONS FOR REFINANCING:\n`;
                     prompt += `I am uploading the Title Deed (Land Registry), where another entity is registered as collateral lender. This lender **will be paid off as part of the refinancing** and we (ProfiLend) will be the **sole collateral lender**.\n\n`;
+                    prompt += `**STANDARD PAYOFF MECHANISM (treat as given — DO NOT ASK about it):**\n`;
+                    prompt += `Our loan is disbursed into an attorney/notary escrow. The original lender is paid from escrow and issues a release receipt (kvitance) plus consent to delete the lien. The deletion of the original lien and registration of ours happen simultaneously at the Land Registry. Our legal team handles this as a drawdown condition — **do not treat it as an open question, do not ask "what happens to the active lien"**.\n\n`;
                     prompt += `**Your tasks in the refinancing context:**\n`;
-                    prompt += `1. **Value the property as if the third-party collateral lien does not exist** — our financing will replace it\n`;
-                    prompt += `2. **List ALL liens, executions and legal obligations from Land Registry** — we need a complete overview of what is registered on the property\n`;
-                    prompt += `3. **Identify risks** — are there multiple collateral liens? Are there executions? Notes of disputes?\n`;
-                    prompt += `4. **Alert to discrepancies** — the borrower may claim only one lien, but the Land Registry reality may be different\n\n`;
-                    prompt += `⚠️ CRITICAL: Even when valuing the property "unencumbered", always explicitly list all liens and encumbrances from the Land Registry in the Red Flags section.\n\n`;
+                    prompt += `1. **Value the property as unencumbered** (the state after the existing lien is deleted) — do NOT deduct the refinanced lien from the value; our financing replaces it.\n`;
+                    prompt += `2. **List ALL liens, executions and legal obligations from the Land Registry** in the Red Flags section as an overview and pre-drawdown conditions — NOT as questions.\n`;
+                    prompt += `3. **Escalate only real risks** — if you find an ADDITIONAL lien beyond the one being refinanced, an execution or a dispute, flag it clearly. The refinanced lien itself is not a risk.\n`;
+                    prompt += `4. **Alert to discrepancies** — the borrower may claim only one lien, but the Land Registry reality may be different.\n\n`;
                 } else if (loanPurpose === 'acquisition') {
                     prompt += `## FINANCING PURPOSE\n`;
                     prompt += `**Acquisition** — Borrower is purchasing this property.\n\n`;
@@ -3373,15 +3374,16 @@
                 // Add loan purpose section
                 if (loanPurpose === 'refinancing') {
                     prompt += `## ÚČEL FINANCOVÁNÍ\n`;
-                    prompt += `**Refinancování** — Stávající zástavní věřitel bude vyplacen.\n\n`;
+                    prompt += `**Refinancování** — Stávající zástavní věřitel bude vyplacen z čerpání našeho úvěru.\n\n`;
                     prompt += `### DŮLEŽITÉ INSTRUKCE PRO REFINANCOVÁNÍ:\n`;
                     prompt += `Nahrávám ti List vlastnictví (LV), kde je jako zástavní věřitel zapsán jiný subjekt. Tento věřitel **bude v rámci refinancování vyplacen** a my (ProfiLend) budeme **jediný zástavní věřitel**.\n\n`;
+                    prompt += `**STANDARDNÍ MECHANISMUS VYPLACENÍ (považuj za daný — NEPTEJ SE na něj):**\n`;
+                    prompt += `Čerpání našeho úvěru probíhá do advokátní/notářské úschovy. Z úschovy je vyplacen původní věřitel, který vystaví kvitanci (potvrzení o zániku pohledávky) a souhlas s výmazem zástavního práva. Na katastru proběhne souběžně výmaz původního zástavního práva a vklad našeho. Tento postup zajišťuje naše právní oddělení jako podmínku čerpání — **neřeš ho jako otevřenou otázku, neptej se „co se stane s aktivní zástavou"**.\n\n`;
                     prompt += `**Tvé úkoly v kontextu refinancování:**\n`;
-                    prompt += `1. **Oceň nemovitost tak, jako by zástavní právo třetí strany neexistovalo** — naše financování jej nahradí\n`;
-                    prompt += `2. **Vypiš VŠECHNY zástavy, exekuce a právní závazky z LV** — potřebujeme kompletní přehled, co vše je na nemovitosti zapsáno\n`;
-                    prompt += `3. **Identifikuj rizika** — existuje zástavní právo více věřitelů? Jsou tam exekuce? Poznámky sporů?\n`;
-                    prompt += `4. **Upozorni na nesrovnalosti** — dlužník může tvrdit, že jde o jednu zástavu, ale realita na LV může být jiná\n\n`;
-                    prompt += `⚠️ DŮLEŽITÉ: I když oceňuješ nemovitost "bez zatížení", vždy explicitně uveď seznam všech zástav a břemen z LV v sekci Red Flags.\n\n`;
+                    prompt += `1. **Oceň nemovitost jako nezatíženou** (stav po výmazu stávající zástavy) — refinancované zástavní právo NEODEČÍTEJ od hodnoty, naše financování jej nahradí.\n`;
+                    prompt += `2. **Vypiš VŠECHNY zástavy, exekuce a právní závazky z LV** do sekce Red Flags jako přehled a podmínky před čerpáním — NE jako otázky.\n`;
+                    prompt += `3. **Eskaluj jen skutečná rizika** — pokud najdeš DALŠÍ zástavu nad rámec té jedné refinancované, exekuci nebo spor, jasně to označ. Samotné refinancované zástavní právo rizikem není.\n`;
+                    prompt += `4. **Upozorni na nesrovnalosti** — dlužník může tvrdit, že jde o jednu zástavu, ale realita na LV může být jiná.\n\n`;
                 } else if (loanPurpose === 'acquisition') {
                     prompt += `## ÚČEL FINANCOVÁNÍ\n`;
                     prompt += `**Akvizice** — Dlužník pořizuje tuto nemovitost.\n\n`;
