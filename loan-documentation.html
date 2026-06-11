@@ -1719,10 +1719,17 @@
                         </div>
                         <div class="form-grid">
                             <div class="form-group">
-                                <button type="button" class="btn btn-outline" onclick="openImportModal()">
+                                <button type="button" class="btn btn-outline" onclick="openImportModal()" title="Načte uložená data případu z Term Sheet Generátoru (Drive / lokální)">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                     Importovat term sheet
                                 </button>
+                            </div>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-outline" onclick="document.getElementById('filledTsInput').click()" title="Word vrácený klientem s vyplněnou tabulkou Údaje pro smluvní dokumentaci — údaje se doplní do formuláře, čte se lokálně v prohlížeči">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+                                    Nahrát vyplněný TS od klienta
+                                </button>
+                                <input type="file" id="filledTsInput" accept=".docx" style="display:none;" onchange="importFilledTermSheet(this.files[0]); this.value='';">
                             </div>
                         </div>
                         <div style="margin-top: 1rem;">
@@ -2205,6 +2212,18 @@
             <div id="importList" class="modal-list"></div>
             <div class="modal-actions">
                 <button class="btn btn-outline btn-small" onclick="closeModal('importModal')">Zavřít</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILLED TS SUMMARY MODAL -->
+    <div class="modal-overlay" id="filledTsModal">
+        <div class="modal">
+            <h3>Načtení vyplněného Term Sheetu</h3>
+            <p id="filledTsIntro"></p>
+            <div id="filledTsResults" class="modal-list"></div>
+            <div class="modal-actions">
+                <button class="btn btn-outline btn-small" onclick="closeModal('filledTsModal')">Zavřít</button>
             </div>
         </div>
     </div>
@@ -4435,6 +4454,218 @@
                 var el = document.getElementById(fid);
                 if (el && el.value && typeof formatAmount === 'function') formatAmount(el);
             });
+        }
+
+        /* ─── NAHRÁT VYPLNĚNÝ TERM SHEET (Word vrácený klientem) ─── */
+        // Čte tabulku „ÚDAJE PRO SMLUVNÍ DOKUMENTACI" lokálně v prohlížeči (PizZip +
+        // DOMParser, žádné AI / API volání). Popisky řádků MUSÍ odpovídat
+        // buildClientDataRows() v termsheet-generator.html — při změně popisku tam
+        // je nutné upravit mapování zde.
+
+        function normalizeTsLabel(s) {
+            return String(s || '')
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // odstranit diakritiku
+                .replace(/[—–]/g, '-')                               // sjednotit pomlčky
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // mapa: normalizovaný popisek → id pole formuláře (string), nebo speciální cíl
+        var FILLED_TS_FIELD_MAP = (function() {
+            var m = {};
+            function add(label, target) { m[normalizeTsLabel(label)] = target; }
+            add('Jednatel / zástupce (kdo podepisuje)', 'representativeName');
+            add('Funkce podepisujícího', 'representativeRole');
+            add('Kontaktní osoba', 'contactName');
+            add('Telefon', 'contactPhone');
+            add('E-mail', 'contactEmail');
+            add('Doručovací adresa (pokud jiná než sídlo)', 'deliveryAddress');
+            add('Číslo účtu pro čerpání úvěru', 'borrowerAccount');
+            add('Banka (název)', 'borrowerBank');
+            add('Zástavce — jméno / název', 'pledgorName');
+            add('Zástavce — IČO / rodné číslo', 'pledgorIco');
+            add('Zástavce — bydliště / sídlo', 'pledgorAddress');
+            add('Zástavce — spisová značka (pokud právnická osoba)', 'pledgorSpisovaZnacka');
+            add('Zástavce — jednatel / zástupce (pokud právnická osoba)', 'pledgorRepresentativeName');
+            add('Zástavce — funkce', 'pledgorRepresentativeRole');
+            add('Zástavce — doručovací adresa (pokud jiná)', 'pledgorDeliveryAddress');
+            add('Vlastníci nemovitostí (dle LV)', 'propertyOwners');
+            add('Stávající věřitel', { refi: 'creditor' });
+            add('Číslo úvěrové smlouvy u stávajícího věřitele', { refi: 'contract' });
+            add('Zůstatek k doplacení (payoff)', { refi: 'payoff' });
+            add('Kontakt na stávajícího věřitele', { refi: 'contact' });
+            add('Data a výše jednotlivých čerpání', { note: 'Tranše čerpání' });
+            add('Pojišťovna', { note: 'Pojišťovna (vinkulace)' });
+            add('Číslo pojistné smlouvy', { note: 'Číslo pojistné smlouvy' });
+            add('Pojistná částka', { note: 'Pojistná částka' });
+            add('Číslo odhadu', 'appraisalRef');
+            add('Odhadce (jméno)', 'appraiser');
+            add('Datum odhadu', { date: 'appraisalDate' });
+            add('Hodnota odhadu', { amount: 'appraisalValue' });
+            return m;
+        })();
+
+        // hodnoty, které klient používá pro „nevyplněno"
+        var TS_EMPTY_VALUES = ['', '-', '--', '—', '–', 'n/a', 'na', 'nevyplneno', 'neuvedeno', 'x', 'xxx'];
+
+        function tsCellText(tc) {
+            // text buňky: odstavce spojené \n, runy v odstavci zřetězené
+            var out = [];
+            var paras = tc.getElementsByTagNameNS('*', 'p');
+            for (var i = 0; i < paras.length; i++) {
+                var ts = paras[i].getElementsByTagNameNS('*', 't');
+                var line = '';
+                for (var j = 0; j < ts.length; j++) line += ts[j].textContent;
+                if (line.trim()) out.push(line.trim());
+            }
+            return out.join('\n');
+        }
+
+        function parseCsDateToIso(s) {
+            s = String(s || '').trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+            var m = s.match(/^(\d{1,2})\s*\.\s*(\d{1,2})\s*\.\s*(\d{4})\.?$/);
+            if (!m) return null;
+            var d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
+            if (d < 1 || d > 31 || mo < 1 || mo > 12) return null;
+            return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+        }
+
+        async function importFilledTermSheet(file) {
+            if (!file) return;
+            var report = { filled: [], skipped: [], manual: [], unparsed: [], refi: {}, _pledgorTouched: false };
+            try {
+                var buf = await file.arrayBuffer();
+                var zip;
+                try {
+                    zip = new PizZip(buf);
+                } catch (zipErr) {
+                    showToast('Soubor není platný .docx. Starý .doc nebo PDF nelze načíst — uložte ve Wordu jako .docx.', 'error');
+                    return;
+                }
+                var docFile = zip.file('word/document.xml');
+                if (!docFile) {
+                    showToast('V souboru chybí obsah Wordu (word/document.xml) — je to opravdu .docx?', 'error');
+                    return;
+                }
+                var xmlDoc = new DOMParser().parseFromString(docFile.asText(), 'application/xml');
+
+                // Najít tabulku s nejvíce známými popisky (min. 3 shody)
+                var tables = xmlDoc.getElementsByTagNameNS('*', 'tbl');
+                var best = null, bestScore = 0;
+                for (var t = 0; t < tables.length; t++) {
+                    var score = 0;
+                    var trs = tables[t].getElementsByTagNameNS('*', 'tr');
+                    for (var r = 0; r < trs.length; r++) {
+                        var tcs = trs[r].getElementsByTagNameNS('*', 'tc');
+                        if (tcs.length === 2 && FILLED_TS_FIELD_MAP[normalizeTsLabel(tsCellText(tcs[0]))]) score++;
+                    }
+                    if (score > bestScore) { bestScore = score; best = tables[t]; }
+                }
+                if (!best || bestScore < 3) {
+                    showToast('Tabulka „Údaje pro smluvní dokumentaci" v dokumentu nenalezena. Je to Term Sheet s blokem pro klienta?', 'error');
+                    return;
+                }
+
+                var rows = best.getElementsByTagNameNS('*', 'tr');
+                for (var i = 0; i < rows.length; i++) {
+                    var cells = rows[i].getElementsByTagNameNS('*', 'tc');
+                    if (cells.length !== 2) continue; // hlavičky sekcí (sloučené buňky) přeskočit
+                    var label = tsCellText(cells[0]);
+                    var target = FILLED_TS_FIELD_MAP[normalizeTsLabel(label)];
+                    if (!target) continue;
+                    var value = tsCellText(cells[1]).trim();
+                    if (TS_EMPTY_VALUES.indexOf(normalizeTsLabel(value)) !== -1) continue; // nevyplněno
+
+                    applyFilledTsValue(label, target, value, report);
+                }
+
+                finalizeFilledTsImport(report);
+            } catch (err) {
+                console.error('importFilledTermSheet error:', err);
+                showToast('Načtení selhalo: ' + (err && err.message || err), 'error');
+            }
+        }
+
+        function applyFilledTsValue(label, target, value, report) {
+            var singleLine = value.replace(/\n+/g, ', ');
+            if (typeof target === 'string') {
+                // textarea pole snesou víc řádků, inputy dostanou jednořádkovou verzi
+                var multiline = (target === 'propertyOwners');
+                fillTsField(target, multiline ? value : singleLine, label, report);
+                return;
+            }
+            if (target.refi) { report.refi[target.refi] = singleLine; return; }
+            if (target.note) { report.manual.push({ label: target.note, value: value }); return; }
+            if (target.date) {
+                var iso = parseCsDateToIso(singleLine);
+                if (iso) fillTsField(target.date, iso, label, report);
+                else report.unparsed.push({ label: label, value: singleLine, reason: 'datum v nečekaném formátu' });
+                return;
+            }
+            if (target.amount) {
+                fillTsField(target.amount, singleLine, label, report);
+                var ael = document.getElementById(target.amount);
+                if (ael && ael.value && typeof formatAmount === 'function') formatAmount(ael);
+            }
+        }
+
+        function fillTsField(fieldId, value, label, report) {
+            var el = document.getElementById(fieldId);
+            if (!el) { report.unparsed.push({ label: label, value: value, reason: 'pole nenalezeno' }); return; }
+            if (el.value && el.value.trim()) {
+                report.skipped.push({ label: label, value: value, current: el.value.trim() });
+                return;
+            }
+            el.value = value;
+            report.filled.push({ label: label, value: value });
+            if (fieldId.indexOf('pledgor') === 0) report._pledgorTouched = true;
+        }
+
+        function finalizeFilledTsImport(report) {
+            // Refinancování → jedno pole „Existující zástavní právo k výmazu"
+            var refiParts = [];
+            if (report.refi.creditor) refiParts.push('Stávající věřitel: ' + report.refi.creditor);
+            if (report.refi.contract) refiParts.push('smlouva č. ' + report.refi.contract);
+            if (report.refi.payoff) refiParts.push('zůstatek k doplacení: ' + report.refi.payoff);
+            if (report.refi.contact) refiParts.push('kontakt: ' + report.refi.contact);
+            if (refiParts.length) fillTsField('existingPledge', refiParts.join('; '), 'Refinancování (payoff)', report);
+
+            // Vyplněný zástavce → odškrtnout „stejný jako dlužník" / „z LV"
+            if (report._pledgorTouched) {
+                var sameEl = document.getElementById('pledgorSameAsBorrower');
+                var fromLvEl = document.getElementById('pledgorFromLV');
+                if (sameEl && sameEl.checked) { sameEl.checked = false; if (typeof onPledgorSameAsBorrowerChange === 'function') onPledgorSameAsBorrowerChange(); }
+                if (fromLvEl && fromLvEl.checked) { fromLvEl.checked = false; if (typeof onPledgorFromLVChange === 'function') onPledgorFromLVChange(); }
+            }
+
+            renderFilledTsSummary(report);
+            showToast('Vyplněný Term Sheet načten: ' + report.filled.length + ' polí doplněno.', report.filled.length ? 'success' : 'info');
+        }
+
+        function renderFilledTsSummary(report) {
+            var intro = document.getElementById('filledTsIntro');
+            var box = document.getElementById('filledTsResults');
+            intro.textContent = 'Doplněno ' + report.filled.length + ' polí'
+                + (report.skipped.length ? ', přeskočeno ' + report.skipped.length + ' (už vyplněná, nepřepsáno)' : '')
+                + (report.manual.length ? ', ' + report.manual.length + ' k ručnímu použití' : '') + '.';
+            var html = '';
+            report.filled.forEach(function(f) {
+                html += '<div class="modal-item"><strong>✓ ' + escapeHtml(f.label) + '</strong><div class="modal-item-meta">' + escapeHtml(f.value) + '</div></div>';
+            });
+            report.skipped.forEach(function(f) {
+                html += '<div class="modal-item"><strong>↷ ' + escapeHtml(f.label) + '</strong><div class="modal-item-meta">Pole už obsahuje: „' + escapeHtml(f.current) + '" — z TS: „' + escapeHtml(f.value) + '"</div></div>';
+            });
+            report.manual.forEach(function(f) {
+                html += '<div class="modal-item"><strong>✎ ' + escapeHtml(f.label) + '</strong><div class="modal-item-meta">' + escapeHtml(f.value) + ' — nemá pole ve formuláři: tranše zapiš do splátkového kalendáře, pojistku použij u šablony vinkulace</div></div>';
+            });
+            report.unparsed.forEach(function(f) {
+                html += '<div class="modal-item"><strong>⚠ ' + escapeHtml(f.label) + '</strong><div class="modal-item-meta">' + escapeHtml(f.value) + ' — ' + escapeHtml(f.reason) + ', doplň ručně</div></div>';
+            });
+            if (!html) html = '<p style="color: var(--text-secondary); padding: 12px;">Tabulka nalezena, ale klient nevyplnil žádnou hodnotu.</p>';
+            box.innerHTML = html;
+            document.getElementById('filledTsModal').classList.add('visible');
         }
 
         /* ─── FORM ─── */
