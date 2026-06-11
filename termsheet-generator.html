@@ -1215,7 +1215,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Čerpání</label>
-                            <select class="form-select" id="f-drawdown-type">
+                            <select class="form-select" id="f-drawdown-type" onchange="autoPrecheckClientData()">
                                 <option value="Jednorázové">Jednorázové</option>
                                 <option value="Ve tranších">Ve tranších</option>
                             </select>
@@ -1396,7 +1396,7 @@
                             <span>Směnka</span>
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="doc-vinkulace">
+                            <input type="checkbox" id="doc-vinkulace" onchange="autoPrecheckClientData()">
                             <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
                             <span>Vinkulace pojistného plnění</span>
                         </label>
@@ -1408,6 +1408,51 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             Přidat dokument
                         </button>
+                    </div>
+                </div>
+
+                <!-- Údaje od klienta (blok k vyplnění v Term Sheetu) -->
+                <div class="form-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
+                        Údaje od klienta
+                    </h2>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item" title="Na konec Term Sheetu (za podmínky) se vloží zvýrazněná výzva a tabulka, kterou klient po odsouhlasení vyplní. Vrácený Word pak načteš v aplikaci Úvěrová dokumentace.">
+                            <input type="checkbox" id="cd-enabled" checked onchange="toggleClientDataOptions()">
+                            <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span>Vložit blok „Údaje pro smluvní dokumentaci"</span>
+                        </label>
+                    </div>
+                    <div id="cd-options" style="margin-left:1.75rem;margin-top:0.5rem;">
+                        <p class="form-hint" style="margin:0 0 0.5rem;">Osoby, kontakt a účet pro čerpání jsou v tabulce vždy. Volitelné bloky (předvolí se samy podle případu):</p>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="cd-pledgor">
+                                <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <span>Zástavce (jiný než dlužník)</span>
+                            </label>
+                            <label class="checkbox-item" title="Předvolí se samo, když LV analýza najde existující zástavní právo">
+                                <input type="checkbox" id="cd-refi">
+                                <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <span>Refinancování — payoff stávajícího věřitele</span>
+                            </label>
+                            <label class="checkbox-item" title="Předvolí se samo při čerpání ve tranších">
+                                <input type="checkbox" id="cd-tranches">
+                                <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <span>Tranše čerpání</span>
+                            </label>
+                            <label class="checkbox-item" title="Předvolí se samo při vinkulaci pojistného plnění">
+                                <input type="checkbox" id="cd-insurance">
+                                <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <span>Pojištění nemovitosti (vinkulace)</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="cd-appraisal">
+                                <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <span>Odhad nemovitosti (dodává klient)</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -1907,6 +1952,14 @@
             validityDate: document.getElementById('f-validity-date').value,
             clientNote: document.getElementById('f-client-note').value.trim(),
             notes: document.getElementById('f-notes').value.trim(),
+            clientChecklist: {
+                enabled: document.getElementById('cd-enabled').checked,
+                pledgor: document.getElementById('cd-pledgor').checked,
+                refi: document.getElementById('cd-refi').checked,
+                tranches: document.getElementById('cd-tranches').checked,
+                insurance: document.getElementById('cd-insurance').checked,
+                appraisal: document.getElementById('cd-appraisal').checked
+            },
             createdAt: currentEditId ? (termSheets.find(function(t) { return t.id === currentEditId; }) || {}).createdAt || new Date().toISOString() : new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -1947,6 +2000,16 @@
         document.getElementById('f-validity-date').value = data.validityDate || '';
         document.getElementById('f-client-note').value = data.clientNote || '';
         document.getElementById('f-notes').value = data.notes || '';
+
+        // Údaje od klienta — starší případy bez clientChecklist dostanou default (blok zapnutý)
+        var cc = data.clientChecklist || {};
+        document.getElementById('cd-enabled').checked = cc.enabled !== false;
+        document.getElementById('cd-pledgor').checked = !!cc.pledgor;
+        document.getElementById('cd-refi').checked = !!cc.refi;
+        document.getElementById('cd-tranches').checked = !!cc.tranches;
+        document.getElementById('cd-insurance').checked = !!cc.insurance;
+        document.getElementById('cd-appraisal').checked = !!cc.appraisal;
+        toggleClientDataOptions();
 
         // Collateral items
         var list = document.getElementById('collateral-list');
@@ -2036,6 +2099,13 @@
         document.getElementById('doc-nz').checked = true;
         document.getElementById('doc-smenka').checked = false;
         document.getElementById('doc-vinkulace').checked = false;
+        document.getElementById('cd-enabled').checked = true;
+        document.getElementById('cd-pledgor').checked = false;
+        document.getElementById('cd-refi').checked = false;
+        document.getElementById('cd-tranches').checked = false;
+        document.getElementById('cd-insurance').checked = false;
+        document.getElementById('cd-appraisal').checked = false;
+        toggleClientDataOptions();
         calcLTV();
         updatePaymentCalc();
 
@@ -2233,6 +2303,143 @@
         return xml;
     }
 
+    // ===== ÚDAJE OD KLIENTA — blok k vyplnění v Term Sheetu =====
+    function toggleClientDataOptions() {
+        var on = document.getElementById('cd-enabled').checked;
+        document.getElementById('cd-options').style.display = on ? '' : 'none';
+    }
+
+    // Auto-předvolba volitelných bloků podle případu. Jen zaškrtává (nikdy neodškrtává),
+    // aby nepřepsala ruční volbu — odškrtnout může jen uživatel.
+    function autoPrecheckClientData() {
+        if (document.getElementById('doc-vinkulace').checked) {
+            document.getElementById('cd-insurance').checked = true;
+        }
+        if (document.getElementById('f-drawdown-type').value === 'Ve tranších') {
+            document.getElementById('cd-tranches').checked = true;
+        }
+        try {
+            if (typeof allResults !== 'undefined' && Array.isArray(allResults) && allResults.some(function(lv) {
+                return lv && lv.zastavni_prava && lv.zastavni_prava.length > 0;
+            })) {
+                document.getElementById('cd-refi').checked = true;
+            }
+        } catch (e) { /* allResults nemusí existovat před první LV analýzou */ }
+    }
+
+    // Řádky tabulky pro klienta — JEDINÝ zdroj popisků. Aplikace Úvěrová dokumentace
+    // (importFilledTermSheet v loan-documentation.html) mapuje TYTÉŽ popisky na pole
+    // formuláře — při změně textu popisku je nutné upravit mapování i tam.
+    function buildClientDataRows(data) {
+        var cc = (data && data.clientChecklist) || {};
+        var rows = [
+            { h: 'Osoby a podpis' },
+            { l: 'Jednatel / zástupce (kdo podepisuje)' },
+            { l: 'Funkce podepisujícího' },
+            { l: 'Kontaktní osoba' },
+            { l: 'Telefon' },
+            { l: 'E-mail' },
+            { l: 'Doručovací adresa (pokud jiná než sídlo)' },
+            { h: 'Bankovní spojení' },
+            { l: 'Číslo účtu pro čerpání úvěru' },
+            { l: 'Banka (název)' }
+        ];
+        if (cc.pledgor) {
+            rows.push({ h: 'Zástavce — vyplňte, pokud nemovitost nevlastní dlužník' });
+            rows.push({ l: 'Zástavce — jméno / název' });
+            rows.push({ l: 'Zástavce — IČO / rodné číslo' });
+            rows.push({ l: 'Zástavce — bydliště / sídlo' });
+            rows.push({ l: 'Zástavce — spisová značka (pokud právnická osoba)' });
+            rows.push({ l: 'Zástavce — jednatel / zástupce (pokud právnická osoba)' });
+            rows.push({ l: 'Zástavce — funkce' });
+            rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná)' });
+            rows.push({ l: 'Vlastníci nemovitostí (dle LV)' });
+        }
+        if (cc.refi) {
+            rows.push({ h: 'Refinancování — stávající zástavní právo' });
+            rows.push({ l: 'Stávající věřitel' });
+            rows.push({ l: 'Číslo úvěrové smlouvy u stávajícího věřitele' });
+            rows.push({ l: 'Zůstatek k doplacení (payoff)' });
+            rows.push({ l: 'Kontakt na stávajícího věřitele' });
+        }
+        if (cc.tranches) {
+            rows.push({ h: 'Tranše čerpání' });
+            rows.push({ l: 'Data a výše jednotlivých čerpání' });
+        }
+        if (cc.insurance) {
+            rows.push({ h: 'Pojištění nemovitosti (vinkulace)' });
+            rows.push({ l: 'Pojišťovna' });
+            rows.push({ l: 'Číslo pojistné smlouvy' });
+            rows.push({ l: 'Pojistná částka' });
+        }
+        if (cc.appraisal) {
+            rows.push({ h: 'Odhad nemovitosti' });
+            rows.push({ l: 'Číslo odhadu' });
+            rows.push({ l: 'Odhadce (jméno)' });
+            rows.push({ l: 'Datum odhadu' });
+            rows.push({ l: 'Hodnota odhadu' });
+        }
+        return rows;
+    }
+
+    // XML blok pro generování ze šablony — vkládá se za podmínky, před box Upozornění
+    function buildClientDataBlockXml(data) {
+        var rows = buildClientDataRows(data);
+        var CAL = '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>';
+
+        var xml = '<w:p><w:pPr><w:spacing w:before="360" w:after="0"/></w:pPr><w:r><w:t></w:t></w:r></w:p>';
+
+        // Zvýrazněná výzva — stejný vizuální jazyk jako box Upozornění (ProfiLend modrá)
+        xml += '<w:p><w:pPr><w:pBdr>' +
+               '<w:top w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
+               '<w:left w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
+               '<w:bottom w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
+               '<w:right w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
+               '</w:pBdr><w:shd w:val="clear" w:fill="E8F8FD"/>' +
+               '<w:spacing w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
+               '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="22"/><w:color w:val="07B7ED"/></w:rPr>' +
+               '<w:t xml:space="preserve">V případě odsouhlasení Term Sheetu prosíme o vyplnění údajů níže. </w:t></w:r>' +
+               '<w:r><w:rPr>' + CAL + '<w:sz w:val="20"/><w:color w:val="555555"/></w:rPr>' +
+               '<w:t>Vyplněný dokument nám prosím zašlete zpět.</w:t></w:r></w:p>';
+
+        // Nadpis tabulky
+        xml += '<w:p><w:pPr><w:spacing w:before="240" w:after="80"/></w:pPr>' +
+               '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="22"/></w:rPr>' +
+               '<w:t>ÚDAJE PRO SMLUVNÍ DOKUMENTACI</w:t></w:r></w:p>';
+
+        // Tabulka 2 sloupce: popisek | prázdná buňka k vyplnění klientem
+        xml += '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>' +
+               '<w:top w:val="single" w:sz="4" w:color="BFBFBF"/>' +
+               '<w:left w:val="single" w:sz="4" w:color="BFBFBF"/>' +
+               '<w:bottom w:val="single" w:sz="4" w:color="BFBFBF"/>' +
+               '<w:right w:val="single" w:sz="4" w:color="BFBFBF"/>' +
+               '<w:insideH w:val="single" w:sz="4" w:color="BFBFBF"/>' +
+               '<w:insideV w:val="single" w:sz="4" w:color="BFBFBF"/>' +
+               '</w:tblBorders>' +
+               '<w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar>' +
+               '</w:tblPr><w:tblGrid><w:gridCol w:w="4250"/><w:gridCol w:w="5110"/></w:tblGrid>';
+
+        rows.forEach(function(r) {
+            if (r.h) {
+                xml += '<w:tr><w:tc><w:tcPr><w:gridSpan w:val="2"/><w:shd w:val="clear" w:fill="E8F8FD"/></w:tcPr>' +
+                       '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>' +
+                       '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="20"/><w:color w:val="0B6E8C"/></w:rPr>' +
+                       '<w:t xml:space="preserve">' + xmlEscape(r.h) + '</w:t></w:r></w:p></w:tc></w:tr>';
+            } else {
+                xml += '<w:tr>' +
+                       '<w:tc><w:tcPr><w:tcW w:w="4250" w:type="dxa"/></w:tcPr>' +
+                       '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>' +
+                       '<w:r><w:rPr>' + CAL + '<w:sz w:val="20"/></w:rPr>' +
+                       '<w:t xml:space="preserve">' + xmlEscape(r.l) + '</w:t></w:r></w:p></w:tc>' +
+                       '<w:tc><w:tcPr><w:tcW w:w="5110" w:type="dxa"/></w:tcPr>' +
+                       '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr></w:p></w:tc>' +
+                       '</w:tr>';
+            }
+        });
+        xml += '</w:tbl>';
+        return xml;
+    }
+
     function buildTermSheetBodyXml(data) {
         var xml = '';
 
@@ -2293,6 +2500,11 @@
 
         // Poznámka pro klienta — součást Term Sheetu
         if (data.clientNote) xml += buildFieldXml('Poznámka:', data.clientNote);
+
+        // Údaje od klienta — blok k vyplnění (za podmínkami, před Upozorněním)
+        if (data.clientChecklist && data.clientChecklist.enabled) {
+            xml += buildClientDataBlockXml(data);
+        }
 
         // Upozornění — vždy na konci, ProfiLend barva #07B7ED
         xml += '<w:p><w:pPr><w:spacing w:before="400" w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
@@ -2428,6 +2640,53 @@
                 addField('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
             }
             if (data.clientNote) addField('Poznámka:', data.clientNote);
+
+            // Údaje od klienta — blok k vyplnění (zrcadlí template cestu)
+            if (data.clientChecklist && data.clientChecklist.enabled) {
+                var ccRows = buildClientDataRows(data);
+                children.push(new D.Paragraph({ children: [], spacing: { before: 360 } }));
+                children.push(new D.Paragraph({
+                    children: [
+                        new D.TextRun({ text: 'V případě odsouhlasení Term Sheetu prosíme o vyplnění údajů níže. ', bold: true, size: 22, font: 'Calibri', color: '07B7ED' }),
+                        new D.TextRun({ text: 'Vyplněný dokument nám prosím zašlete zpět.', size: 20, font: 'Calibri', color: '555555' })
+                    ],
+                    shading: { type: D.ShadingType.CLEAR, fill: 'E8F8FD' },
+                    border: {
+                        top: { style: D.BorderStyle.SINGLE, size: 6, color: '07B7ED', space: 8 },
+                        bottom: { style: D.BorderStyle.SINGLE, size: 6, color: '07B7ED', space: 8 },
+                        left: { style: D.BorderStyle.SINGLE, size: 6, color: '07B7ED', space: 8 },
+                        right: { style: D.BorderStyle.SINGLE, size: 6, color: '07B7ED', space: 8 }
+                    },
+                    spacing: { after: 120 }
+                }));
+                children.push(new D.Paragraph({
+                    children: [new D.TextRun({ text: 'ÚDAJE PRO SMLUVNÍ DOKUMENTACI', bold: true, size: 22, font: 'Calibri' })],
+                    spacing: { before: 120, after: 80 }
+                }));
+                children.push(new D.Table({
+                    width: { size: 100, type: D.WidthType.PERCENTAGE },
+                    rows: ccRows.map(function(r) {
+                        if (r.h) {
+                            return new D.TableRow({ children: [new D.TableCell({
+                                columnSpan: 2,
+                                shading: { type: D.ShadingType.CLEAR, fill: 'E8F8FD' },
+                                children: [new D.Paragraph({ children: [new D.TextRun({ text: r.h, bold: true, size: 20, font: 'Calibri' })] })]
+                            })] });
+                        }
+                        return new D.TableRow({ children: [
+                            new D.TableCell({
+                                width: { size: 45, type: D.WidthType.PERCENTAGE },
+                                children: [new D.Paragraph({ children: [new D.TextRun({ text: r.l, size: 20, font: 'Calibri' })] })]
+                            }),
+                            new D.TableCell({
+                                width: { size: 55, type: D.WidthType.PERCENTAGE },
+                                children: [new D.Paragraph({ children: [] })]
+                            })
+                        ] });
+                    })
+                }));
+            }
+
             children.push(new D.Paragraph({ children: [], spacing: { before: 300 } }));
             children.push(new D.Paragraph({
                 children: [
@@ -3009,6 +3268,9 @@
         });
 
         container.innerHTML = html;
+
+        // Auto-předvolba checklistu pro klienta (např. payoff při nalezeném zástavním právu)
+        autoPrecheckClientData();
     }
 
     function insertLVToCollateral(resultIdx) {
