@@ -384,6 +384,29 @@
             padding: 8px;
         }
 
+        /* Custom dropdown widget (nahrazuje nativní <select> z nav.js convertSelectsToDropdowns).
+           Closed trigger sjednocen s velikostí ostatních R-E inputů (17px, 14px radius);
+           otevřené menu je editorial dark z app-shell.css — pryč s OS-native modrým seznamem. */
+        .container .dropdown-trigger {
+            padding: 16px 20px;
+            font-size: 17px;
+            font-weight: 500;
+            border-radius: 14px;
+        }
+        .container .dropdown-menu {
+            border-radius: 14px;
+            padding: 8px;
+        }
+        .container .dropdown-option {
+            font-size: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+        }
+        .container .dropdown-chevron {
+            width: 13px;
+            height: 8px;
+        }
+
         /* Custom number input spinners */
         .container input[type="number"] {
             -moz-appearance: textfield;
@@ -1937,6 +1960,27 @@
             outline: none;
         }
 
+        /* Custom dropdown ve filter baru — auto-width (nerozhodí flex řádek), menší velikost
+           jako filter select. Musí přijít po .container .dropdown-* (rovná specificita, vyhrává pořadí). */
+        .search-filter-bar .dropdown-field {
+            flex: 0 0 auto;
+            width: auto;
+            min-width: 220px;
+        }
+        .search-filter-bar .dropdown-trigger {
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 400;
+            border-radius: 8px;
+        }
+        .search-filter-bar .dropdown-menu {
+            border-radius: 8px;
+        }
+        .search-filter-bar .dropdown-option {
+            font-size: 14px;
+            padding: 10px 12px;
+        }
+
         .filter-results-count {
             padding: 10px 0;
             font-size: 13px;
@@ -3076,7 +3120,7 @@
                 if (field.type === 'textarea') {
                     html += `<textarea id="${fieldId}" placeholder="${field.placeholder || ''}" onchange="formDataUpdated()" onkeyup="updatePreview()"></textarea>`;
                 } else if (field.type === 'select') {
-                    html += `<select id="${fieldId}" onchange="formDataUpdated(); updatePreview()"><option value="">-- Vyberte --</option>`;
+                    html += `<select id="${fieldId}" class="re-select" onchange="formDataUpdated(); updatePreview()"><option value="">-- Vyberte --</option>`;
                     field.options.forEach(opt => html += `<option value="${opt}">${opt}</option>`);
                     html += '</select>';
                 } else if (field.type === 'number') {
@@ -3119,6 +3163,13 @@
             for (const [fieldId, value] of Object.entries(formData)) {
                 const el = document.getElementById(fieldId);
                 if (el) el.value = value;
+            }
+
+            // Editorial custom dropdowny místo nativních <select> (web-app-builder skill sekce 8).
+            // Voláno PO restore hodnot — konvertor přečte aktuální .value a nastaví správný initial
+            // label + selected option. Skrytý <select> zůstává jako data store (id, .value, change event).
+            if (typeof window.convertSelectsToDropdowns === 'function') {
+                window.convertSelectsToDropdowns('#detailForm select.re-select');
             }
         }
 
@@ -4802,7 +4853,7 @@
                         <!-- C6: Search and Filter Bar -->
                         <div class="search-filter-bar">
                             <input type="text" placeholder="Hledat v názvu nebo poznámkách..." id="filterSearchInput" oninput="onFilterSearchChange(this.value)">
-                            <select id="filterPropertyTypeSelect" onchange="onFilterPropertyTypeChange(this.value)">
+                            <select id="filterPropertyTypeSelect" class="re-select" onchange="onFilterPropertyTypeChange(this.value)">
                                 <option value="">Všechny typy</option>
                                 ${[...new Set(saved.map(s => s.propertyType))].map(type => {
                                     const config = propertyConfigs[type];
@@ -4860,6 +4911,11 @@
             }
             if (typeSelect && filterPropertyType) {
                 typeSelect.value = filterPropertyType;
+            }
+
+            // Editorial custom dropdown pro filter (po restore .value — viz populateDetailForm)
+            if (typeof window.convertSelectsToDropdowns === 'function') {
+                window.convertSelectsToDropdowns('#savedValuationsContainer select.re-select');
             }
 
             // C2: Show/hide compare floating bar
