@@ -742,7 +742,8 @@ function buildLoanDocDataDescription(formData) {
     // smlouvy, kde zástavce není relevantní (úvěrová bez zástavy, plná moc apod.).
     var hasPledgorFields = formData.pledgorName || formData.pledgorIco || formData.pledgorBirthDate ||
         formData.pledgorAddress || formData.pledgorDeliveryAddress ||
-        formData.pledgorRepresentativeName || formData.pledgorSpisovaZnacka;
+        formData.pledgorRepresentativeName || formData.pledgorSpisovaZnacka ||
+        formData.pledgorPhone || formData.pledgorEmail;
     if (formData.pledgorSameAsBorrower || formData.pledgorFromLV || hasPledgorFields) {
         d += '\n=== ZÁSTAVCE ===\n';
         if (formData.pledgorSameAsBorrower) {
@@ -761,12 +762,14 @@ function buildLoanDocDataDescription(formData) {
                 if (formData.pledgorRepresentativeRole) d += ', funkce: ' + formData.pledgorRepresentativeRole;
                 d += '\n';
             }
+            if (formData.pledgorPhone) d += 'Telefon zástavce: ' + formData.pledgorPhone + '\n';
+            if (formData.pledgorEmail) d += 'E-mail zástavce: ' + formData.pledgorEmail + '\n';
         }
     }
 
     d += '\n=== DODATEČNÉ ÚDAJE ===\n';
     if (formData.representativeName) d += 'Jednatel/zástupce dlužníka: ' + formData.representativeName + ', funkce: ' + (formData.representativeRole || '') + '\n';
-    if (formData.contactName) d += 'Kontaktní osoba: ' + formData.contactName + ', tel: ' + (formData.contactPhone || '') + ', e-mail: ' + (formData.contactEmail || '') + '\n';
+    if (formData.contactName || formData.contactPhone || formData.contactEmail) d += 'Kontaktní osoba: ' + (formData.contactName || '-') + ', tel: ' + (formData.contactPhone || '') + ', e-mail: ' + (formData.contactEmail || '') + '\n';
     if (formData.deliveryAddress) d += 'Adresa pro doručování dlužníka: ' + formData.deliveryAddress + '\n';
     if (formData.borrowerAccount) d += 'Účet dlužníka: ' + formData.borrowerAccount + ' u ' + (formData.borrowerBank || '') + '\n';
     if (formData.lenderAccount) d += 'Účet věřitele: ' + formData.lenderAccount + ' u ' + (formData.lenderBank || '') + '\n';

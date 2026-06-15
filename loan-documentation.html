@@ -1854,6 +1854,7 @@
                             <div class="form-group">
                                 <label class="form-label">Datum splatnosti</label>
                                 <input type="date" id="maturityDate" class="form-input">
+                                <span class="form-hint" id="maturityDate-hint" style="font-size:0.82em;color:var(--text-muted);margin-top:2px;display:none;"></span>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Předčasné splacení (pokuta %)</label>
@@ -1986,6 +1987,14 @@
                             <div class="form-group">
                                 <label class="form-label">Funkce</label>
                                 <input type="text" id="pledgorRepresentativeRole" class="form-input" placeholder="Jednatel">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Telefon zástavce</label>
+                                <input type="text" id="pledgorPhone" class="form-input" placeholder="+420 123 456 789">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">E-mail zástavce</label>
+                                <input type="email" id="pledgorEmail" class="form-input" placeholder="zastavce@email.cz">
                             </div>
                         </div>
                         <p class="pledgor-hint">Pokud zaškrtneš „Zástavce je vlastník z LV", pole zde nech prázdná — AI si údaje vezme z přiloženého výpisu KN v manuálním chatu. Pro plně automatický API workflow vyplň ručně.</p>
@@ -2915,6 +2924,48 @@
             fileInput.addEventListener('change', function() {
                 Array.from(this.files).forEach(function(file) { uploadTemplate(file); });
                 this.value = '';
+            });
+
+            loanInitMaturityDate();
+        }
+
+        // Datum splatnosti = Datum čerpání + Doba splatnosti (jednotka let/měsíců).
+        // Zrcadlí calcMaturityDate() z termsheet-generator.html, jen s loan-doc id polí.
+        function loanCalcMaturityDate() {
+            var val = parseFloat(document.getElementById('maturity').value);
+            var unit = document.getElementById('maturityUnit').value;
+            var drawdownDate = document.getElementById('drawdownDate').value;
+            var hint = document.getElementById('maturityDate-hint');
+            if (!val || val <= 0 || !drawdownDate) { if (hint) hint.style.display = 'none'; return; }
+            var base = new Date(drawdownDate + 'T00:00:00');
+            if (isNaN(base.getTime())) { if (hint) hint.style.display = 'none'; return; }
+            if (unit === 'let') {
+                base.setFullYear(base.getFullYear() + Math.floor(val));
+                var frac = val - Math.floor(val);
+                if (frac > 0) base.setMonth(base.getMonth() + Math.round(frac * 12));
+            } else {
+                base.setMonth(base.getMonth() + Math.round(val));
+            }
+            // Lokální komponenty (NE toISOString — to převádí na UTC a v CZ pásmu posune o den zpět).
+            var iso = base.getFullYear() + '-' + String(base.getMonth() + 1).padStart(2, '0') + '-' + String(base.getDate()).padStart(2, '0');
+            document.getElementById('maturityDate').value = iso;
+            if (hint) {
+                hint.textContent = 'Automaticky: ' + base.toLocaleDateString('cs-CZ');
+                hint.style.display = 'block';
+            }
+        }
+
+        function loanInitMaturityDate() {
+            ['maturity', 'maturityUnit', 'drawdownDate'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('change', loanCalcMaturityDate);
+                if (id === 'maturity') el.addEventListener('input', loanCalcMaturityDate);
+            });
+            // Ruční override — když Martin změní datum přímo, schovej hint a respektuj jeho hodnotu.
+            var md = document.getElementById('maturityDate');
+            if (md) md.addEventListener('input', function() {
+                document.getElementById('maturityDate-hint').style.display = 'none';
             });
         }
 
@@ -4020,9 +4071,10 @@
 
             // Zástavce — mirror server-side buildLoanDocDataDescription logiky.
             // Sekce se vynechá, pokud žádný pledgor checkbox není zaškrtnutý a všechna pole prázdná.
-            var hasPledgorFields = formData.pledgorName || formData.pledgorIco ||
+            var hasPledgorFields = formData.pledgorName || formData.pledgorIco || formData.pledgorBirthDate ||
                 formData.pledgorAddress || formData.pledgorDeliveryAddress ||
-                formData.pledgorRepresentativeName || formData.pledgorSpisovaZnacka;
+                formData.pledgorRepresentativeName || formData.pledgorSpisovaZnacka ||
+                formData.pledgorPhone || formData.pledgorEmail;
             if (formData.pledgorSameAsBorrower || formData.pledgorFromLV || hasPledgorFields) {
                 d += '\n=== ZÁSTAVCE ===\n';
                 if (formData.pledgorSameAsBorrower) {
@@ -4041,12 +4093,14 @@
                         if (formData.pledgorRepresentativeRole) d += ', funkce: ' + formData.pledgorRepresentativeRole;
                         d += '\n';
                     }
+                    if (formData.pledgorPhone) d += 'Telefon zástavce: ' + formData.pledgorPhone + '\n';
+                    if (formData.pledgorEmail) d += 'E-mail zástavce: ' + formData.pledgorEmail + '\n';
                 }
             }
 
             d += '\n=== DODATEČNÉ ÚDAJE ===\n';
             if (formData.representativeName) d += 'Jednatel/zástupce dlužníka: ' + formData.representativeName + ', funkce: ' + (formData.representativeRole || '') + '\n';
-            if (formData.contactName) d += 'Kontaktní osoba: ' + formData.contactName + ', tel: ' + (formData.contactPhone || '') + ', e-mail: ' + (formData.contactEmail || '') + '\n';
+            if (formData.contactName || formData.contactPhone || formData.contactEmail) d += 'Kontaktní osoba: ' + (formData.contactName || '-') + ', tel: ' + (formData.contactPhone || '') + ', e-mail: ' + (formData.contactEmail || '') + '\n';
             if (formData.deliveryAddress) d += 'Adresa pro doručování dlužníka: ' + formData.deliveryAddress + '\n';
             if (formData.borrowerAccount) d += 'Účet dlužníka: ' + formData.borrowerAccount + ' u ' + (formData.borrowerBank || '') + '\n';
             if (formData.lenderAccount) d += 'Účet věřitele: ' + formData.lenderAccount + ' u ' + (formData.lenderBank || '') + '\n';
@@ -4257,12 +4311,13 @@
         async function downloadForManualChat() {
             updateSelectedDocs();
             var templateIds = Object.keys(selectedTemplates);
+            // Blokující alert (zůstane na odkliknutí) — toast probliknul moc rychle.
             if (templateIds.length === 0) {
-                showToast('Zaškrtni alespoň jednu šablonu pro stažení', 'error', 5000);
+                alert('Zaškrtni alespoň jednu šablonu (v sekci „Dokumenty k vygenerování") — bez šablony není co stáhnout.');
                 return;
             }
             if (!document.getElementById('uvereovany').value) {
-                showToast('Vyplň aspoň jméno dlužníka — bez něj nemá prompt smysl', 'error', 5000);
+                alert('Vyplň aspoň jméno dlužníka (pole „Úvěrovaný") — bez něj nemá prompt smysl.');
                 return;
             }
 
@@ -4278,32 +4333,8 @@
 
                 var zip = new JSZip();
 
-                // Instrukční soubor (česky, krok-za-krokem)
-                var instrukce = '=== INSTRUKCE PRO MANUÁLNÍ AI CHAT ===\n\n' +
-                    'Tento .zip byl vygenerován ProfiLend Investment Tools pro klienta: ' + (formData.uvereovany || '-') + '\n\n' +
-                    'Doporučený postup:\n\n' +
-                    '1. Otevři Claude.ai (MAX plán s Code Interpreter)\n' +
-                    '   nebo ChatGPT.com (Plus plán s Code Interpreter / Data Analysis)\n\n' +
-                    '2. V chatu klikni na "+" / "Připojit soubor" a nahraj DOCX šablonu\n' +
-                    '   z tohoto .zip (např. "Smlouva o úvěru - Šablona.docx")\n\n' +
-                    '3. Paste celý obsah souboru "prompt-pro-AI.txt" jako svou zprávu\n\n' +
-                    '4. Pošli — AI spustí Python sandbox (Code Interpreter), upraví\n' +
-                    '   DOCX podle instrukcí, vrátí stažitelný odkaz na upravený soubor\n\n' +
-                    '5. Stáhni upravený DOCX, otevři ve Wordu\n' +
-                    '   Recenze → Sledování změn ukáže revize jako track changes\n\n' +
-                    '6. Pro čistou verzi: Recenze → Přijmout všechny revize\n\n' +
-                    '=== PROČ MANUÁLNĚ? ===\n\n' +
-                    'Naše integrace přes Anthropic/OpenAI API používá find/replace přístup —\n' +
-                    'AI vidí jen plain text a vrací páry { hledat, nahradit }. Pro komplexní\n' +
-                    'smlouvy s přílohami a křížovými odkazy to selhává: AI smaže Nemovitosti\n' +
-                    'LV 100 ve výčtu, ale zapomene na Přílohu 1C v jiné části dokumentu.\n\n' +
-                    'Code Interpreter v Claude.ai / ChatGPT umí Python python-docx, vidí celý\n' +
-                    'dokument se strukturou (paragrafy, tabulky, headings) a může opravdu\n' +
-                    'editovat DOCX. To čisté API neumí.\n\n' +
-                    'Tip: použij to pro komplexní (úvěrová, zástavní). Pro jednoduché\n' +
-                    '(plná moc, vinkulace) můžeš zůstat u automatického "Generovat dokumenty".\n';
-
-                zip.file('INSTRUKCE.txt', instrukce);
+                // INSTRUKCE.txt záměrně NEpřidáváme — postup je v UI modálu a Martin ho zná.
+                // Do zipu patří jen šablony (.docx) + prompty (.txt) pro AI.
 
                 statusEl.textContent = 'Načítám šablony a generuji prompt…';
                 var ready = 0;
@@ -4479,7 +4510,6 @@
             add('Úvěrovaný', 'uvereovany');
             add('Jednatel / zástupce (kdo podepisuje)', 'representativeName');
             add('Funkce podepisujícího', 'representativeRole');
-            add('Kontaktní osoba', 'contactName');
             add('Telefon', 'contactPhone');
             add('E-mail', 'contactEmail');
             // Adresy jsou v Term Sheetu rozdělené (ulice / PSČ / město) — složíme je zpět do
@@ -4498,6 +4528,8 @@
             add('Zástavce — spisová značka (pokud právnická osoba)', 'pledgorSpisovaZnacka');
             add('Zástavce — jednatel / zástupce (pokud právnická osoba)', 'pledgorRepresentativeName');
             add('Zástavce — funkce', 'pledgorRepresentativeRole');
+            add('Zástavce — telefon', 'pledgorPhone');
+            add('Zástavce — e-mail', 'pledgorEmail');
             add('Zástavce — doručovací adresa (pokud jiná): ulice a č.p.', { addr: 'pledgorDeliveryAddress', part: 'street' });
             add('Zástavce — doručovací adresa (pokud jiná): PSČ', { addr: 'pledgorDeliveryAddress', part: 'zip' });
             add('Zástavce — doručovací adresa (pokud jiná): město', { addr: 'pledgorDeliveryAddress', part: 'city' });
@@ -4534,6 +4566,132 @@
             return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
         }
 
+        // Parsuje tělo Term Sheetu (mimo tabulku) na údaje k financování. TS generátor je
+        // staví přes buildFieldXml(): tučný popisek (bez odrážky) + hodnota jako odrážka
+        // (ListParagraph s numbering). Čteme jen odstavce PŘÍMO v <w:body>, ne v tabulce.
+        // Popisky se musí shodovat s buildTermSheetBodyXml() v termsheet-generator.html.
+        function applyFinancingFromBody(xmlDoc, report) {
+            var body = (xmlDoc.getElementsByTagNameNS('*', 'body') || [])[0];
+            if (!body) return;
+
+            function paraText(p) {
+                var ts = p.getElementsByTagNameNS('*', 't');
+                var s = '';
+                for (var i = 0; i < ts.length; i++) s += ts[i].textContent;
+                return s.trim();
+            }
+            // Hodnota = odrážka (má numbering). Popisek = nemá.
+            function isBullet(p) { return p.getElementsByTagNameNS('*', 'numPr').length > 0; }
+            function norm(s) { return normalizeTsLabel(String(s).replace(/:\s*$/, '')); }
+
+            // popisek (bez diakritiky, bez dvojtečky) → jak naplnit pole
+            var FIN = {};
+            function fadd(raw, spec) { FIN[norm(raw)] = spec; }
+            fadd('Účel úvěru', { id: 'purpose', label: 'Účel úvěru' });
+            fadd('Úvěrovaná částka', { id: 'amount', kind: 'amount', label: 'Úvěrovaná částka' });
+            fadd('Měna', { id: 'currency', kind: 'select', label: 'Měna' });
+            fadd('Datum čerpání', { id: 'drawdownDate', kind: 'date', label: 'Datum čerpání' });
+            fadd('Čerpání', { id: 'drawdownType', kind: 'select', label: 'Čerpání' });
+            fadd('Úrok', { id: 'interest', kind: 'interest', label: 'Úrok' });
+            fadd('Placení úroků', { id: 'interestPayment', kind: 'select', label: 'Placení úroků' });
+            fadd('Doba splatnosti', { kind: 'maturity', label: 'Doba splatnosti' });
+            fadd('Datum splatnosti', { id: 'maturityDate', kind: 'date', label: 'Datum splatnosti' });
+            fadd('Předčasné splacení', { id: 'earlyRepayment', label: 'Předčasné splacení' });
+            fadd('Ostatní náklady a poplatky', { id: 'otherCosts', label: 'Ostatní náklady' }); // volný text, ne číslo
+            fadd('Zajištění', { kind: 'collateral', label: 'Zajištění (LV)' });
+
+            // Sesbírat popisek → [hodnoty] z přímých dětí <w:body> (tabulka je samostatný uzel = přeskočí se)
+            var collected = {}, order = [], lastKey = null;
+            var kids = body.childNodes;
+            for (var k = 0; k < kids.length; k++) {
+                var el = kids[k];
+                if (el.nodeType !== 1 || (el.localName || '').toLowerCase() !== 'p') { lastKey = null; continue; }
+                var txt = paraText(el);
+                if (!txt) continue;
+                if (isBullet(el)) {
+                    if (lastKey) collected[lastKey].push(txt);
+                } else {
+                    var key = norm(txt);
+                    if (FIN[key]) { lastKey = key; if (!collected[key]) { collected[key] = []; order.push(key); } }
+                    else { lastKey = null; }
+                }
+            }
+
+            // TS a loan-doc mají u některých selectů jiné názvy voleb — přelož je.
+            var SELECT_VALUE_MAP = {
+                drawdownType: { 'Ve tranších': 'Postupné' },
+                interestPayment: { 'Čtvrtletní': 'Kvartální', 'Anuitní': 'Anuita (měsíčně)' }
+            };
+            function setFin(id, value, label, isSelect) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                if (isSelect) {
+                    var mapped = (SELECT_VALUE_MAP[id] && SELECT_VALUE_MAP[id][value]) || value;
+                    var hasOpt = Array.prototype.some.call(el.options || [], function(o) { return o.value === mapped; });
+                    if (!hasOpt) {
+                        report.unparsed.push({ label: label, value: value, reason: 'volba „' + value + '" není v nabídce — vyber ručně' });
+                        return;
+                    }
+                    value = mapped;
+                }
+                el.value = value;
+                report.filled.push({ label: label, value: value });
+                if (isSelect && typeof window.syncCustomDropdown === 'function') window.syncCustomDropdown(id);
+            }
+
+            order.forEach(function(key) {
+                var spec = FIN[key], vals = collected[key];
+                if (!vals || !vals.length) return;
+                var v = vals[0];
+                if (spec.kind === 'collateral') {
+                    for (var i = 0; i < 5; i++) {
+                        var inp = document.getElementById('collateralItem' + i);
+                        var chk = document.getElementById('collateralActive' + i);
+                        if (inp) inp.value = vals[i] || '';
+                        if (chk) chk.checked = i < vals.length;
+                        if (typeof updateCollateralRowState === 'function') updateCollateralRowState(i);
+                    }
+                    report.filled.push({ label: spec.label, value: vals.join(' | ') });
+                    return;
+                }
+                if (spec.kind === 'amount') {
+                    var amt = v.replace(/\s*(CZK|EUR|USD|Kč)\s*$/i, '').trim();
+                    setFin(spec.id, amt, spec.label, false);
+                    var ael = document.getElementById(spec.id);
+                    if (ael && typeof formatAmount === 'function') formatAmount(ael);
+                    return;
+                }
+                if (spec.kind === 'interest') {
+                    var m = v.match(/^([\d.,]+)/);
+                    setFin(spec.id, m ? m[1] : v, spec.label, false);
+                    return;
+                }
+                if (spec.kind === 'date') {
+                    var iso = parseCsDateToIso(v);
+                    if (iso) setFin(spec.id, iso, spec.label, false);
+                    else report.unparsed.push({ label: spec.label, value: v, reason: 'datum v nečekaném formátu' });
+                    return;
+                }
+                if (spec.kind === 'maturity') {
+                    var mm = v.match(/^([\d.,]+)\s*(.*)$/);
+                    if (mm) {
+                        setFin('maturity', mm[1], 'Doba splatnosti', false);
+                        setFin('maturityUnit', /^měs/i.test(mm[2].trim()) ? 'měsíců' : 'let', 'Jednotka', true);
+                    }
+                    return;
+                }
+                if (spec.kind === 'select') { setFin(spec.id, v, spec.label, true); return; }
+                setFin(spec.id, v, spec.label, false); // default: text
+            });
+
+            // Datum splatnosti nepřišlo z těla → dopočítej z čerpání + doby (issue: auto-datum)
+            var mdEl = document.getElementById('maturityDate');
+            if (mdEl && !mdEl.value && document.getElementById('drawdownDate').value
+                && document.getElementById('maturity').value && typeof loanCalcMaturityDate === 'function') {
+                loanCalcMaturityDate();
+            }
+        }
+
         async function importFilledTermSheet(file) {
             if (!file) return;
             var report = { filled: [], skipped: [], manual: [], unparsed: [], refi: {}, addr: {}, _pledgorTouched: false };
@@ -4553,7 +4711,7 @@
                 }
                 var xmlDoc = new DOMParser().parseFromString(docFile.asText(), 'application/xml');
 
-                // Najít tabulku s nejvíce známými popisky (min. 3 shody)
+                // (1) Tabulka „Údaje pro smluvní dokumentaci" — kontakt/banka/zástavce (vyplnil klient)
                 var tables = xmlDoc.getElementsByTagNameNS('*', 'tbl');
                 var best = null, bestScore = 0;
                 for (var t = 0; t < tables.length; t++) {
@@ -4565,22 +4723,26 @@
                     }
                     if (score > bestScore) { bestScore = score; best = tables[t]; }
                 }
-                if (!best || bestScore < 3) {
-                    showToast('Tabulka „Údaje pro smluvní dokumentaci" v dokumentu nenalezena. Je to Term Sheet s blokem pro klienta?', 'error');
-                    return;
+                if (best && bestScore >= 3) {
+                    var rows = best.getElementsByTagNameNS('*', 'tr');
+                    for (var i = 0; i < rows.length; i++) {
+                        var cells = rows[i].getElementsByTagNameNS('*', 'tc');
+                        if (cells.length !== 2) continue; // hlavičky sekcí (sloučené buňky) přeskočit
+                        var label = tsCellText(cells[0]);
+                        var target = FILLED_TS_FIELD_MAP[normalizeTsLabel(label)];
+                        if (!target) continue;
+                        var value = tsCellText(cells[1]).trim();
+                        if (TS_EMPTY_VALUES.indexOf(normalizeTsLabel(value)) !== -1) continue; // nevyplněno
+                        applyFilledTsValue(label, target, value, report);
+                    }
                 }
 
-                var rows = best.getElementsByTagNameNS('*', 'tr');
-                for (var i = 0; i < rows.length; i++) {
-                    var cells = rows[i].getElementsByTagNameNS('*', 'tc');
-                    if (cells.length !== 2) continue; // hlavičky sekcí (sloučené buňky) přeskočit
-                    var label = tsCellText(cells[0]);
-                    var target = FILLED_TS_FIELD_MAP[normalizeTsLabel(label)];
-                    if (!target) continue;
-                    var value = tsCellText(cells[1]).trim();
-                    if (TS_EMPTY_VALUES.indexOf(normalizeTsLabel(value)) !== -1) continue; // nevyplněno
+                // (2) Tělo Term Sheetu — údaje k financování (částka, LV, úrok, splatnost…) z odstavců
+                applyFinancingFromBody(xmlDoc, report);
 
-                    applyFilledTsValue(label, target, value, report);
+                if (report.filled.length === 0 && report.manual.length === 0) {
+                    showToast('V dokumentu se nenašla tabulka „Údaje pro smluvní dokumentaci" ani údaje k financování. Je to Term Sheet z generátoru?', 'error');
+                    return;
                 }
 
                 finalizeFilledTsImport(report);
@@ -4758,6 +4920,8 @@
             document.getElementById('pledgorDeliveryAddress').value = data.pledgorDeliveryAddress || '';
             document.getElementById('pledgorRepresentativeName').value = data.pledgorRepresentativeName || '';
             document.getElementById('pledgorRepresentativeRole').value = data.pledgorRepresentativeRole || '';
+            document.getElementById('pledgorPhone').value = data.pledgorPhone || '';
+            document.getElementById('pledgorEmail').value = data.pledgorEmail || '';
             if (typeof applyPledgorDisabledState === 'function') applyPledgorDisabledState();
 
             document.getElementById('representativeName').value = data.representativeName || '';
@@ -4811,7 +4975,8 @@
         var PLEDGOR_INPUT_IDS = [
             'pledgorName', 'pledgorIco', 'pledgorBirthDate', 'pledgorSpisovaZnacka',
             'pledgorAddress', 'pledgorDeliveryAddress',
-            'pledgorRepresentativeName', 'pledgorRepresentativeRole'
+            'pledgorRepresentativeName', 'pledgorRepresentativeRole',
+            'pledgorPhone', 'pledgorEmail'
         ];
 
         // Vrátí pledgor pole vyplněná z dlužníka (uvereovany/ico/sidlo/...).
@@ -4826,6 +4991,8 @@
             document.getElementById('pledgorDeliveryAddress').value = document.getElementById('deliveryAddress').value || '';
             document.getElementById('pledgorRepresentativeName').value = document.getElementById('representativeName').value || '';
             document.getElementById('pledgorRepresentativeRole').value = document.getElementById('representativeRole').value || '';
+            document.getElementById('pledgorPhone').value = document.getElementById('contactPhone').value || '';
+            document.getElementById('pledgorEmail').value = document.getElementById('contactEmail').value || '';
         }
 
         function clearPledgorFields() {
@@ -4872,6 +5039,9 @@
         function collectFormData() {
             return {
                 uvereovany: document.getElementById('uvereovany').value,
+                // Kanonický klíč pro buildDataDescriptionPreview() i server buildLoanDocDataDescription()
+                // — ty čtou formData.borrower. Bez tohoto by "Název" dlužníka chyběl v každém promptu.
+                borrower: document.getElementById('uvereovany').value,
                 ico: document.getElementById('ico').value,
                 spisovaZnacka: document.getElementById('spisovaZnacka').value,
                 sidlo: document.getElementById('sidlo').value,
@@ -4915,6 +5085,8 @@
                 pledgorDeliveryAddress: document.getElementById('pledgorDeliveryAddress').value,
                 pledgorRepresentativeName: document.getElementById('pledgorRepresentativeName').value,
                 pledgorRepresentativeRole: document.getElementById('pledgorRepresentativeRole').value,
+                pledgorPhone: document.getElementById('pledgorPhone').value,
+                pledgorEmail: document.getElementById('pledgorEmail').value,
                 representativeName: document.getElementById('representativeName').value,
                 representativeRole: document.getElementById('representativeRole').value,
                 contactName: document.getElementById('contactName').value,

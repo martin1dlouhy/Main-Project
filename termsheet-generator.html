@@ -2322,7 +2322,6 @@
             { l: 'Úvěrovaný', v: (data && data.borrower) || '' },
             { l: 'Jednatel / zástupce (kdo podepisuje)' },
             { l: 'Funkce podepisujícího' },
-            { l: 'Kontaktní osoba' },
             { l: 'Telefon' },
             { l: 'E-mail' },
             { l: 'Doručovací adresa (pokud jiná než sídlo) — ulice a č.p.' },
@@ -2346,6 +2345,8 @@
             rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná): ulice a č.p.' });
             rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná): PSČ' });
             rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná): město' });
+            rows.push({ l: 'Zástavce — telefon' });
+            rows.push({ l: 'Zástavce — e-mail' });
         }
         if (cc.refi) {
             rows.push({ h: 'Refinancování — stávající zástavní právo' });
@@ -3457,7 +3458,8 @@
         } else {
             base.setMonth(base.getMonth() + Math.round(val));
         }
-        var iso = base.toISOString().slice(0, 10);
+        // Lokální komponenty (NE toISOString — to převádí na UTC a v CZ pásmu posune o den zpět).
+        var iso = base.getFullYear() + '-' + String(base.getMonth() + 1).padStart(2, '0') + '-' + String(base.getDate()).padStart(2, '0');
         document.getElementById('f-maturity-date').value = iso;
         hint.textContent = 'Automaticky: ' + base.toLocaleDateString('cs-CZ');
         hint.style.display = 'block';
