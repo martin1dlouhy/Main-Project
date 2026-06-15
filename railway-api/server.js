@@ -740,7 +740,7 @@ function buildLoanDocDataDescription(formData) {
     //   (c) jinak                       → použít explicitně vyplněná pole pledgor*
     // Sekce se vynechá úplně, pokud (c) a všechna pledgor* pole jsou prázdná — typické pro
     // smlouvy, kde zástavce není relevantní (úvěrová bez zástavy, plná moc apod.).
-    var hasPledgorFields = formData.pledgorName || formData.pledgorIco ||
+    var hasPledgorFields = formData.pledgorName || formData.pledgorIco || formData.pledgorBirthDate ||
         formData.pledgorAddress || formData.pledgorDeliveryAddress ||
         formData.pledgorRepresentativeName || formData.pledgorSpisovaZnacka;
     if (formData.pledgorSameAsBorrower || formData.pledgorFromLV || hasPledgorFields) {
@@ -752,6 +752,7 @@ function buildLoanDocDataDescription(formData) {
         } else {
             if (formData.pledgorName) d += 'Název / Jméno: ' + formData.pledgorName + '\n';
             if (formData.pledgorIco) d += 'IČO / RČ: ' + formData.pledgorIco + '\n';
+            if (formData.pledgorBirthDate) d += 'Datum narození: ' + formData.pledgorBirthDate + '\n';
             if (formData.pledgorSpisovaZnacka) d += 'Spisová značka: ' + formData.pledgorSpisovaZnacka + '\n';
             if (formData.pledgorAddress) d += 'Bydliště / Sídlo: ' + formData.pledgorAddress + '\n';
             if (formData.pledgorDeliveryAddress) d += 'Doručovací adresa: ' + formData.pledgorDeliveryAddress + '\n';
