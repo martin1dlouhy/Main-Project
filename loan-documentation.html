@@ -1963,6 +1963,10 @@
                                 <label class="form-label">IČO / Rodné číslo</label>
                                 <input type="text" id="pledgorIco" class="form-input" placeholder="12345678 nebo RČ">
                             </div>
+                            <div class="form-group">
+                                <label class="form-label">Datum narození (fyzická osoba)</label>
+                                <input type="text" id="pledgorBirthDate" class="form-input" placeholder="1. 5. 1980">
+                            </div>
                             <div class="form-group form-group-single">
                                 <label class="form-label">Spisová značka (pokud právnická osoba)</label>
                                 <input type="text" id="pledgorSpisovaZnacka" class="form-input" placeholder="C 123456 vedená u Městského soudu v Praze">
@@ -4028,6 +4032,7 @@
                 } else {
                     if (formData.pledgorName) d += 'Název / Jméno: ' + formData.pledgorName + '\n';
                     if (formData.pledgorIco) d += 'IČO / RČ: ' + formData.pledgorIco + '\n';
+                    if (formData.pledgorBirthDate) d += 'Datum narození: ' + formData.pledgorBirthDate + '\n';
                     if (formData.pledgorSpisovaZnacka) d += 'Spisová značka: ' + formData.pledgorSpisovaZnacka + '\n';
                     if (formData.pledgorAddress) d += 'Bydliště / Sídlo: ' + formData.pledgorAddress + '\n';
                     if (formData.pledgorDeliveryAddress) d += 'Doručovací adresa: ' + formData.pledgorDeliveryAddress + '\n';
@@ -4471,34 +4476,35 @@
         var FILLED_TS_FIELD_MAP = (function() {
             var m = {};
             function add(label, target) { m[normalizeTsLabel(label)] = target; }
+            add('Úvěrovaný', 'uvereovany');
             add('Jednatel / zástupce (kdo podepisuje)', 'representativeName');
             add('Funkce podepisujícího', 'representativeRole');
             add('Kontaktní osoba', 'contactName');
             add('Telefon', 'contactPhone');
             add('E-mail', 'contactEmail');
-            add('Doručovací adresa (pokud jiná než sídlo)', 'deliveryAddress');
+            // Adresy jsou v Term Sheetu rozdělené (ulice / PSČ / město) — složíme je zpět do
+            // jednoho pole formuláře (deliveryAddress / pledgorAddress / pledgorDeliveryAddress).
+            add('Doručovací adresa (pokud jiná než sídlo) — ulice a č.p.', { addr: 'deliveryAddress', part: 'street' });
+            add('Doručovací adresa — PSČ', { addr: 'deliveryAddress', part: 'zip' });
+            add('Doručovací adresa — město', { addr: 'deliveryAddress', part: 'city' });
             add('Číslo účtu pro čerpání úvěru', 'borrowerAccount');
             add('Banka (název)', 'borrowerBank');
-            add('Zástavce — jméno / název', 'pledgorName');
-            add('Zástavce — IČO / rodné číslo', 'pledgorIco');
-            add('Zástavce — bydliště / sídlo', 'pledgorAddress');
+            add('Zástavce — jméno', 'pledgorName');
+            add('Zástavce — IČO', 'pledgorIco');
+            add('Zástavce — datum narození', 'pledgorBirthDate');
+            add('Zástavce — bydliště/sídlo: ulice a č.p.', { addr: 'pledgorAddress', part: 'street' });
+            add('Zástavce — bydliště/sídlo: PSČ', { addr: 'pledgorAddress', part: 'zip' });
+            add('Zástavce — bydliště/sídlo: město', { addr: 'pledgorAddress', part: 'city' });
             add('Zástavce — spisová značka (pokud právnická osoba)', 'pledgorSpisovaZnacka');
             add('Zástavce — jednatel / zástupce (pokud právnická osoba)', 'pledgorRepresentativeName');
             add('Zástavce — funkce', 'pledgorRepresentativeRole');
-            add('Zástavce — doručovací adresa (pokud jiná)', 'pledgorDeliveryAddress');
-            add('Vlastníci nemovitostí (dle LV)', 'propertyOwners');
+            add('Zástavce — doručovací adresa (pokud jiná): ulice a č.p.', { addr: 'pledgorDeliveryAddress', part: 'street' });
+            add('Zástavce — doručovací adresa (pokud jiná): PSČ', { addr: 'pledgorDeliveryAddress', part: 'zip' });
+            add('Zástavce — doručovací adresa (pokud jiná): město', { addr: 'pledgorDeliveryAddress', part: 'city' });
             add('Stávající věřitel', { refi: 'creditor' });
-            add('Číslo úvěrové smlouvy u stávajícího věřitele', { refi: 'contract' });
             add('Zůstatek k doplacení (payoff)', { refi: 'payoff' });
             add('Kontakt na stávajícího věřitele', { refi: 'contact' });
             add('Data a výše jednotlivých čerpání', { note: 'Tranše čerpání' });
-            add('Pojišťovna', { note: 'Pojišťovna (vinkulace)' });
-            add('Číslo pojistné smlouvy', { note: 'Číslo pojistné smlouvy' });
-            add('Pojistná částka', { note: 'Pojistná částka' });
-            add('Číslo odhadu', 'appraisalRef');
-            add('Odhadce (jméno)', 'appraiser');
-            add('Datum odhadu', { date: 'appraisalDate' });
-            add('Hodnota odhadu', { amount: 'appraisalValue' });
             return m;
         })();
 
@@ -4530,7 +4536,7 @@
 
         async function importFilledTermSheet(file) {
             if (!file) return;
-            var report = { filled: [], skipped: [], manual: [], unparsed: [], refi: {}, _pledgorTouched: false };
+            var report = { filled: [], skipped: [], manual: [], unparsed: [], refi: {}, addr: {}, _pledgorTouched: false };
             try {
                 var buf = await file.arrayBuffer();
                 var zip;
@@ -4593,6 +4599,11 @@
                 return;
             }
             if (target.refi) { report.refi[target.refi] = singleLine; return; }
+            if (target.addr) {
+                if (!report.addr[target.addr]) report.addr[target.addr] = {};
+                report.addr[target.addr][target.part] = singleLine;
+                return;
+            }
             if (target.note) { report.manual.push({ label: target.note, value: value }); return; }
             if (target.date) {
                 var iso = parseCsDateToIso(singleLine);
@@ -4620,10 +4631,23 @@
         }
 
         function finalizeFilledTsImport(report) {
+            // Rozdělené adresy (ulice / PSČ / město) → složit do jednoho pole formuláře.
+            // Formát: „Ulice a č.p., PSČ Město" (např. „Dlouhá 1, 110 00 Praha").
+            var ADDR_LABELS = {
+                deliveryAddress: 'Doručovací adresa dlužníka',
+                pledgorAddress: 'Zástavce — bydliště / sídlo',
+                pledgorDeliveryAddress: 'Zástavce — doručovací adresa'
+            };
+            Object.keys(report.addr).forEach(function(fieldId) {
+                var p = report.addr[fieldId];
+                var cityLine = [p.zip, p.city].filter(Boolean).join(' ');
+                var combined = [p.street, cityLine].filter(Boolean).join(', ');
+                if (combined) fillTsField(fieldId, combined, ADDR_LABELS[fieldId] || fieldId, report);
+            });
+
             // Refinancování → jedno pole „Existující zástavní právo k výmazu"
             var refiParts = [];
             if (report.refi.creditor) refiParts.push('Stávající věřitel: ' + report.refi.creditor);
-            if (report.refi.contract) refiParts.push('smlouva č. ' + report.refi.contract);
             if (report.refi.payoff) refiParts.push('zůstatek k doplacení: ' + report.refi.payoff);
             if (report.refi.contact) refiParts.push('kontakt: ' + report.refi.contact);
             if (refiParts.length) fillTsField('existingPledge', refiParts.join('; '), 'Refinancování (payoff)', report);
@@ -4728,6 +4752,7 @@
             document.getElementById('pledgorFromLV').checked = !!data.pledgorFromLV;
             document.getElementById('pledgorName').value = data.pledgorName || '';
             document.getElementById('pledgorIco').value = data.pledgorIco || '';
+            document.getElementById('pledgorBirthDate').value = data.pledgorBirthDate || '';
             document.getElementById('pledgorSpisovaZnacka').value = data.pledgorSpisovaZnacka || '';
             document.getElementById('pledgorAddress').value = data.pledgorAddress || '';
             document.getElementById('pledgorDeliveryAddress').value = data.pledgorDeliveryAddress || '';
@@ -4784,7 +4809,7 @@
         // Stav 3: pledgorFromLV → pole se vyprázdní + disable (AI doplní z přiloženého LV)
 
         var PLEDGOR_INPUT_IDS = [
-            'pledgorName', 'pledgorIco', 'pledgorSpisovaZnacka',
+            'pledgorName', 'pledgorIco', 'pledgorBirthDate', 'pledgorSpisovaZnacka',
             'pledgorAddress', 'pledgorDeliveryAddress',
             'pledgorRepresentativeName', 'pledgorRepresentativeRole'
         ];
@@ -4795,6 +4820,7 @@
         function copyBorrowerToPledgor() {
             document.getElementById('pledgorName').value = document.getElementById('uvereovany').value || '';
             document.getElementById('pledgorIco').value = document.getElementById('ico').value || '';
+            document.getElementById('pledgorBirthDate').value = ''; // dlužník nemá datum narození (PO)
             document.getElementById('pledgorSpisovaZnacka').value = document.getElementById('spisovaZnacka').value || '';
             document.getElementById('pledgorAddress').value = document.getElementById('sidlo').value || '';
             document.getElementById('pledgorDeliveryAddress').value = document.getElementById('deliveryAddress').value || '';
@@ -4883,6 +4909,7 @@
                 pledgorFromLV: document.getElementById('pledgorFromLV').checked,
                 pledgorName: document.getElementById('pledgorName').value,
                 pledgorIco: document.getElementById('pledgorIco').value,
+                pledgorBirthDate: document.getElementById('pledgorBirthDate').value,
                 pledgorSpisovaZnacka: document.getElementById('pledgorSpisovaZnacka').value,
                 pledgorAddress: document.getElementById('pledgorAddress').value,
                 pledgorDeliveryAddress: document.getElementById('pledgorDeliveryAddress').value,

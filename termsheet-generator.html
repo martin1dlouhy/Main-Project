@@ -1396,7 +1396,7 @@
                             <span>Směnka</span>
                         </label>
                         <label class="checkbox-item">
-                            <input type="checkbox" id="doc-vinkulace" onchange="autoPrecheckClientData()">
+                            <input type="checkbox" id="doc-vinkulace">
                             <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
                             <span>Vinkulace pojistného plnění</span>
                         </label>
@@ -1441,16 +1441,6 @@
                                 <input type="checkbox" id="cd-tranches">
                                 <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
                                 <span>Tranše čerpání</span>
-                            </label>
-                            <label class="checkbox-item" title="Předvolí se samo při vinkulaci pojistného plnění">
-                                <input type="checkbox" id="cd-insurance">
-                                <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-                                <span>Pojištění nemovitosti (vinkulace)</span>
-                            </label>
-                            <label class="checkbox-item">
-                                <input type="checkbox" id="cd-appraisal">
-                                <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-                                <span>Odhad nemovitosti (dodává klient)</span>
                             </label>
                         </div>
                     </div>
@@ -1956,9 +1946,7 @@
                 enabled: document.getElementById('cd-enabled').checked,
                 pledgor: document.getElementById('cd-pledgor').checked,
                 refi: document.getElementById('cd-refi').checked,
-                tranches: document.getElementById('cd-tranches').checked,
-                insurance: document.getElementById('cd-insurance').checked,
-                appraisal: document.getElementById('cd-appraisal').checked
+                tranches: document.getElementById('cd-tranches').checked
             },
             createdAt: currentEditId ? (termSheets.find(function(t) { return t.id === currentEditId; }) || {}).createdAt || new Date().toISOString() : new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -2007,8 +1995,6 @@
         document.getElementById('cd-pledgor').checked = !!cc.pledgor;
         document.getElementById('cd-refi').checked = !!cc.refi;
         document.getElementById('cd-tranches').checked = !!cc.tranches;
-        document.getElementById('cd-insurance').checked = !!cc.insurance;
-        document.getElementById('cd-appraisal').checked = !!cc.appraisal;
         toggleClientDataOptions();
 
         // Collateral items
@@ -2103,8 +2089,6 @@
         document.getElementById('cd-pledgor').checked = false;
         document.getElementById('cd-refi').checked = false;
         document.getElementById('cd-tranches').checked = false;
-        document.getElementById('cd-insurance').checked = false;
-        document.getElementById('cd-appraisal').checked = false;
         toggleClientDataOptions();
         calcLTV();
         updatePaymentCalc();
@@ -2312,9 +2296,6 @@
     // Auto-předvolba volitelných bloků podle případu. Jen zaškrtává (nikdy neodškrtává),
     // aby nepřepsala ruční volbu — odškrtnout může jen uživatel.
     function autoPrecheckClientData() {
-        if (document.getElementById('doc-vinkulace').checked) {
-            document.getElementById('cd-insurance').checked = true;
-        }
         if (document.getElementById('f-drawdown-type').value === 'Ve tranších') {
             document.getElementById('cd-tranches').checked = true;
         }
@@ -2330,54 +2311,51 @@
     // Řádky tabulky pro klienta — JEDINÝ zdroj popisků. Aplikace Úvěrová dokumentace
     // (importFilledTermSheet v loan-documentation.html) mapuje TYTÉŽ popisky na pole
     // formuláře — při změně textu popisku je nutné upravit mapování i tam.
+    // Řádek může mít { h: 'nadpis sekce' }, nebo { l: 'popisek', v: 'předvyplněná hodnota' }.
+    // `v` je volitelné — pravá buňka se předvyplní (např. Úvěrovaný = jméno dlužníka), klient ji
+    // jen potvrdí. Adresy jsou rozdělené (ulice / PSČ / město) jako na běžných webových formulářích;
+    // aplikace Úvěrová dokumentace je při importu zase složí do jednoho pole.
     function buildClientDataRows(data) {
         var cc = (data && data.clientChecklist) || {};
         var rows = [
             { h: 'Osoby a podpis' },
+            { l: 'Úvěrovaný', v: (data && data.borrower) || '' },
             { l: 'Jednatel / zástupce (kdo podepisuje)' },
             { l: 'Funkce podepisujícího' },
             { l: 'Kontaktní osoba' },
             { l: 'Telefon' },
             { l: 'E-mail' },
-            { l: 'Doručovací adresa (pokud jiná než sídlo)' },
+            { l: 'Doručovací adresa (pokud jiná než sídlo) — ulice a č.p.' },
+            { l: 'Doručovací adresa — PSČ' },
+            { l: 'Doručovací adresa — město' },
             { h: 'Bankovní spojení' },
             { l: 'Číslo účtu pro čerpání úvěru' },
             { l: 'Banka (název)' }
         ];
         if (cc.pledgor) {
             rows.push({ h: 'Zástavce — vyplňte, pokud nemovitost nevlastní dlužník' });
-            rows.push({ l: 'Zástavce — jméno / název' });
-            rows.push({ l: 'Zástavce — IČO / rodné číslo' });
-            rows.push({ l: 'Zástavce — bydliště / sídlo' });
+            rows.push({ l: 'Zástavce — jméno' });
+            rows.push({ l: 'Zástavce — IČO' });
+            rows.push({ l: 'Zástavce — datum narození' });
+            rows.push({ l: 'Zástavce — bydliště/sídlo: ulice a č.p.' });
+            rows.push({ l: 'Zástavce — bydliště/sídlo: PSČ' });
+            rows.push({ l: 'Zástavce — bydliště/sídlo: město' });
             rows.push({ l: 'Zástavce — spisová značka (pokud právnická osoba)' });
             rows.push({ l: 'Zástavce — jednatel / zástupce (pokud právnická osoba)' });
             rows.push({ l: 'Zástavce — funkce' });
-            rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná)' });
-            rows.push({ l: 'Vlastníci nemovitostí (dle LV)' });
+            rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná): ulice a č.p.' });
+            rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná): PSČ' });
+            rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná): město' });
         }
         if (cc.refi) {
             rows.push({ h: 'Refinancování — stávající zástavní právo' });
             rows.push({ l: 'Stávající věřitel' });
-            rows.push({ l: 'Číslo úvěrové smlouvy u stávajícího věřitele' });
             rows.push({ l: 'Zůstatek k doplacení (payoff)' });
             rows.push({ l: 'Kontakt na stávajícího věřitele' });
         }
         if (cc.tranches) {
             rows.push({ h: 'Tranše čerpání' });
             rows.push({ l: 'Data a výše jednotlivých čerpání' });
-        }
-        if (cc.insurance) {
-            rows.push({ h: 'Pojištění nemovitosti (vinkulace)' });
-            rows.push({ l: 'Pojišťovna' });
-            rows.push({ l: 'Číslo pojistné smlouvy' });
-            rows.push({ l: 'Pojistná částka' });
-        }
-        if (cc.appraisal) {
-            rows.push({ h: 'Odhad nemovitosti' });
-            rows.push({ l: 'Číslo odhadu' });
-            rows.push({ l: 'Odhadce (jméno)' });
-            rows.push({ l: 'Datum odhadu' });
-            rows.push({ l: 'Hodnota odhadu' });
         }
         return rows;
     }
@@ -2426,13 +2404,16 @@
                        '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="20"/><w:color w:val="0B6E8C"/></w:rPr>' +
                        '<w:t xml:space="preserve">' + xmlEscape(r.h) + '</w:t></w:r></w:p></w:tc></w:tr>';
             } else {
+                var valRun = r.v
+                    ? '<w:r><w:rPr>' + CAL + '<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">' + xmlEscape(r.v) + '</w:t></w:r>'
+                    : '';
                 xml += '<w:tr>' +
                        '<w:tc><w:tcPr><w:tcW w:w="4250" w:type="dxa"/></w:tcPr>' +
                        '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>' +
                        '<w:r><w:rPr>' + CAL + '<w:sz w:val="20"/></w:rPr>' +
                        '<w:t xml:space="preserve">' + xmlEscape(r.l) + '</w:t></w:r></w:p></w:tc>' +
                        '<w:tc><w:tcPr><w:tcW w:w="5110" w:type="dxa"/></w:tcPr>' +
-                       '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr></w:p></w:tc>' +
+                       '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>' + valRun + '</w:p></w:tc>' +
                        '</w:tr>';
             }
         });
@@ -2680,7 +2661,7 @@
                             }),
                             new D.TableCell({
                                 width: { size: 55, type: D.WidthType.PERCENTAGE },
-                                children: [new D.Paragraph({ children: [] })]
+                                children: [new D.Paragraph({ children: r.v ? [new D.TextRun({ text: r.v, size: 20, font: 'Calibri' })] : [] })]
                             })
                         ] });
                     })
