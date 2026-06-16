@@ -4958,7 +4958,17 @@ function renderContactSuggestions() {
     }
 
     title.textContent = 'Návrhy kontaktů (' + sugs.length + ')';
-    div.innerHTML = sugs.map((c, i) => {
+
+    // Poznámka o skrytých návrzích (nenalezeno v ARES) + přepínač pro jejich zobrazení.
+    const hiddenCount = (state.vyhlHidden && state.vyhlHidden.length) || 0;
+    const hiddenNote = hiddenCount > 0
+        ? '<div class="info-note" style="margin-bottom:12px;font-size:12.5px;">' +
+            '🛡️ <strong>' + hiddenCount + ' návrh' + (hiddenCount === 1 ? '' : (hiddenCount < 5 ? 'y' : 'ů')) + ' skryto</strong> — firma nenalezena v ARES (možná halucinace nebo zahraniční/nová firma). ' +
+            '<a href="#" onclick="toggleVyhlShowHidden();return false;" style="color:var(--amber-warm);text-decoration:underline;">Zobrazit i nenalezené</a>' +
+          '</div>'
+        : '';
+
+    div.innerHTML = hiddenNote + sugs.map((c, i) => {
         const badge = makeBadge(c._sources || []);
         const meta = [];
         if (c.email) meta.push('<span class="vyhl-meta-item">✉ ' + escapeHtml(c.email) + '</span>');
@@ -4982,7 +4992,7 @@ function renderContactSuggestions() {
                 '<div class="vyhl-firma">' + escapeHtml(c.firma || '—') + '</div>' +
                 (c.kontaktniOsoba ? '<div class="vyhl-osoba"><strong>' + escapeHtml(c.kontaktniOsoba) + '</strong>' + (c.role ? ' — ' + escapeHtml(c.role) : '') + '</div>' : '') +
                 (meta.length > 0 ? '<div class="vyhl-meta">' + meta.join('') + '</div>' : '') +
-                (c.ico ? '<div class="vyhl-meta" style="margin-top:6px;">' + aresFlagHTML(c._aresCheck) + '</div>' : '') +
+                (c.firma ? '<div class="vyhl-meta" style="margin-top:6px;">' + aresFlagHTML(c._aresCheck) + '</div>' : '') +
             '</div>' +
             '<div class="vyhl-badges">' + badge + '</div>' +
         '</div>';
@@ -5383,8 +5393,8 @@ function buildPromptFE(mode, ctx) {
             'PRAVIDLA PRO JMÉNO KONTAKTNÍ OSOBY (KRITICKÉ — nejčastější zdroj halucinací):',
             '- NIKDY si jméno osoby nevymýšlej a neodhaduj. Uveď konkrétní osobu POUZE pokud jsi ji našel v konkrétním ověřitelném zdroji (justice.cz / obchodní rejstřík, ARES, firemní web sekce „o nás / management / tým", oficiální LinkedIn firmy).',
             '- Pokud osobu nemůžeš ověřit, vrať "kontaktniOsoba": null a "role": null — kontakt zůstane na úrovni firmy. RADĚJI ŽÁDNÉ JMÉNO NEŽ ŠPATNÉ. Vymyšlené jméno je horší než prázdné pole, protože působí důvěryhodně a projde dál.',
-            '- U s.r.o. / a.s. je nejbezpečnější ověřená osoba JEDNATEL z obchodního rejstříku. Pokud znáš IČO, preferuj jednatele zapsaného v rejstříku.',
-            '- IČO MUSÍ patřit přesně té firmě, kterou uvádíš — zkontroluj, že u toho IČO v rejstříku sedí název I sídlo. Nikdy nepřiřazuj náhodné nebo podobné IČO.',
+            '- IČO NEHÁDEJ. Vrať ho POUZE pokud jsi ho opravdu viděl v konkrétním zdroji (justice.cz / ARES detail firmy). Když si nejsi jistý, vrať "ico": null — aplikace si IČO sama spolehlivě dohledá v ARES podle NÁZVU firmy. Vymyšlené 8místné IČO je HORŠÍ než null, protože přiřadí kontakt ke špatné firmě a vypadá důvěryhodně.',
+            '- Nejdůležitější je proto PŘESNÝ NÁZEV FIRMY (podle něj se dohledá IČO i sídlo). Raději ověřený název bez IČO než smyšlené IČO.',
             '- Do "zdrojUrl" vždy uveď konkrétní URL, kde jsi osobu a firmu ověřil. Bez ověřitelného zdroje osobu neuváděj.',
             '',
             'PRAVIDLA PRO LINKEDIN URL (důležité — AI obvykle halucinuje):',
@@ -5409,8 +5419,8 @@ function buildPromptFE(mode, ctx) {
             '{',
             '  "contacts": [',
             '    {',
-            '      "firma": "název s.r.o./a.s. (povinné)",',
-            '      "ico": "8místné IČO | null",',
+            '      "firma": "PŘESNÝ název firmy vč. právní formy (povinné — podle něj se dohledá IČO)",',
+            '      "ico": "8místné IČO JEN pokud ověřené z rejstříku, jinak null (nehádej!)",',
             '      "kontaktniOsoba": "Jméno Příjmení | null",',
             '      "role": "Managing Partner | null",',
             '      "email": "veřejný email | null",',
@@ -6844,34 +6854,100 @@ function matchPersonToJednatele(person, jednatele) {
     });
     return best;
 }
-// Ověří pole AI návrhů proti ARES (omezená konkurence, gentle k veřejnému API).
+// Vyčistí název firmy pro ARES name-search: pryč právní formu a popisné dodatky
+// (advokátní kancelář, organizační složka…), které by hledání zúžily na nulu.
+// "Kinstellar, s.r.o., advokátní kancelář" → "Kinstellar".
+function cleanFirmaForAresSearch(firma) {
+    if (!firma) return '';
+    let v = String(firma);
+    // Popisné dodatky kdekoli v názvu. POZOR: žádné koncové \b — za českým "kancelář"
+    // (končí na "ř") JS \b nezabere (ř není ASCII slovní znak), takže by se nic nesmazalo.
+    // Lookahead na mezeru/interpunkci/konec místo \b.
+    v = v.replace(/,?\s*(advokátní\s+(?:a\s+daňová\s+)?kancelář|advokáti|organizační\s+složka|odštěpný\s+závod|pobočka(?:\s+zahraniční\s+osoby)?)(?=[\s,;)]|$)/gi, '');
+    v = v.replace(/\b(LLP|LLC|Ltd\.?|GmbH|AG|S\.\s?p\.\s?A\.?)\b/gi, '');
+    v = v.replace(/[,;\s]+$/, '');     // ořež koncovou interpunkci PŘED strip legal form
+    v = stripFirmaLegalForm(v);        // smaže koncovou právní formu (i tu, co byla uprostřed po ořezu dodatku)
+    return v.replace(/[,;\s]+$/, '').replace(/\s+/g, ' ').trim();
+}
+// Skóre shody názvu (0–1). Dělí počtem tokenů KRATŠÍ strany, aby kratší AI název
+// plně obsažený v delším ARES názvu skóroval 1 ("CMS Cameron McKenna" ⊂ "CMS Cameron
+// McKenna Nabarro Olswang, advokáti, v.o.s.").
+function firmaMatchScore(aiFirma, aresNazev) {
+    const a = _normFirmaCmp(aiFirma), b = _normFirmaCmp(aresNazev);
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    const at = a.split(' ').filter(Boolean), bt = b.split(' ').filter(Boolean);
+    if (!at.length || !bt.length) return 0;
+    const bset = new Set(bt);
+    const common = at.filter(t => bset.has(t)).length;
+    return common / Math.min(at.length, bt.length);
+}
+
+// Ověří AI návrhy proti ARES. KLÍČOVÁ ZMĚNA proti staré verzi: nevěříme IČO od AI
+// (halucinuje ho). Postup pro každý kontakt:
+//   1) Když AI dalo platné 8místné IČO → ověříme ho. Sedí-li i název → hotovo (vč. jednatelů z VR).
+//   2) Jinak (IČO chybí / není v rejstříku / název nesedí) → vyhledáme firmu v ARES PODLE NÁZVU,
+//      vezmeme nejlepší shodu a její SKUTEČNÉ IČO TIŠE dosadíme do c.ico.
+//   3) Když firma nejde dohledat ani podle názvu → status 'not-found' (kontakt se skryje z návrhů).
+// Síťová chyba = 'error' (kontakt NEskrýváme — netrestáme za výpadek ARES).
 async function verifyContactsAgainstAres(contacts) {
     const list = (contacts || []).filter(c => c && typeof c === 'object');
     const POOL = 4;
     let idx = 0;
+
+    async function aresByIco(ico) {
+        const res = await fetch('/api/ares?ico=' + encodeURIComponent(ico));
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success || !Array.isArray(data.data) || !data.data.length) return null;
+        return data.data[0];
+    }
+    async function aresByName(firma) {
+        const q = cleanFirmaForAresSearch(firma);
+        if (!q || q.length < 3) return null;
+        const res = await fetch('/api/ares?name=' + encodeURIComponent(q));
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success || !Array.isArray(data.data) || !data.data.length) return null;
+        let best = null, bestScore = 0;
+        data.data.forEach(s => {
+            const sc = firmaMatchScore(firma, s.nazev);
+            if (sc > bestScore) { bestScore = sc; best = s; }
+        });
+        return bestScore >= 0.6 ? best : null;   // dost vysoký práh, ať nepřiřadíme cizí firmu
+    }
+
     async function worker() {
         while (idx < list.length) {
             const c = list[idx++];
-            const ico = (c.ico || '').toString().replace(/\s/g, '');
-            if (!/^\d{1,8}$/.test(ico)) { c._aresCheck = { status: 'no-ico' }; continue; }
             try {
-                const res = await fetch('/api/ares?ico=' + encodeURIComponent(ico));
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok || !data.success || !Array.isArray(data.data) || !data.data.length) {
-                    c._aresCheck = { status: 'ico-not-found', ico: ico };
-                    continue;
+                const ico = (c.ico || '').toString().replace(/\s/g, '');
+                let subj = null;
+                let resolvedFromName = false;
+
+                // 1) IČO-first (vrací i jednatele z VR)
+                if (/^\d{8}$/.test(ico)) {
+                    subj = await aresByIco(ico);
+                    if (subj && !firmaMatchesAres(c.firma, subj.nazev)) subj = null; // IČO sedí na jinou firmu
                 }
-                const subj = data.data[0];
+                // 2) Fallback: dohledání podle názvu
+                if (!subj && c.firma) {
+                    const named = await aresByName(c.firma);
+                    if (named) { subj = named; resolvedFromName = true; }
+                }
+                // 3) Nenalezeno
+                if (!subj) { c._aresCheck = { status: 'not-found' }; continue; }
+
+                // TICHÁ oprava IČO — dosaď skutečné z ARES
+                if (subj.ico) c.ico = String(subj.ico);
+
                 const jednatele = Array.isArray(subj.jednatele) ? subj.jednatele : [];
-                const companyOk = firmaMatchesAres(c.firma, subj.nazev);
                 const person = (c.kontaktniOsoba || '').trim();
                 let personStatus = 'no-person', matched = null;
                 if (person) {
-                    if (!jednatele.length) personStatus = 'no-jednatele-data';
+                    if (!jednatele.length) personStatus = 'no-jednatele-data'; // name-search nevrací VR
                     else { const m = matchPersonToJednatele(person, jednatele); personStatus = m.status; matched = m.matched; }
                 }
                 c._aresCheck = {
-                    status: 'ok', aresNazev: subj.nazev || null, companyOk: companyOk,
+                    status: 'ok', aresNazev: subj.nazev || null, resolvedFromName: resolvedFromName,
                     jednatele: jednatele, personStatus: personStatus, matchedJednatel: matched
                 };
             } catch (e) {
@@ -6882,35 +6958,64 @@ async function verifyContactsAgainstAres(contacts) {
     await Promise.all(Array.from({ length: Math.min(POOL, list.length) || 1 }, worker));
 }
 // HTML barevného flagu do karty návrhu kontaktu.
+// Filozofie po přerámování: kotva důvěry = firma reálně existuje v ARES (zelená).
+// To, že kontaktní osoba NENÍ jednatel, je u partnerů/ředitelů NORMÁLNÍ → žádné varování.
+// Oranžová zůstává jen u skutečně podezřelé kolize jména (stejné příjmení, jiné křestní).
 function aresFlagHTML(chk) {
     if (!chk) return '<span style="font-size:10.5px;color:var(--text-mute);">⏳ ověřuji v rejstříku…</span>';
     const wrap = (color, bg, txt) => '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;font-size:10.5px;font-weight:500;border-radius:99px;color:' + color + ';background:' + bg + ';">' + txt + '</span>';
-    const jednListek = j => ((j || []).map(x => escapeHtml(x.jmeno)).join(', ') || '—');
     switch (chk.status) {
-        case 'no-ico':        return '';   // bez IČO nelze ověřit
-        case 'ico-not-found': return wrap('var(--danger)', 'var(--danger-tint)', '✗ IČO ' + escapeHtml(chk.ico || '') + ' není v rejstříku');
-        case 'error':         return wrap('var(--text-mute)', 'transparent', 'ⓘ ARES nedostupný');
+        case 'not-found': return wrap('var(--text-mute)', 'transparent', 'ⓘ nenalezeno v ARES — ověř ručně');
+        case 'error':     return wrap('var(--text-mute)', 'transparent', 'ⓘ ARES nedostupný — neověřeno');
         case 'ok': {
             const parts = [];
-            if (!chk.companyOk) parts.push(wrap('var(--danger)', 'var(--danger-tint)', '✗ firma nesedí na IČO (rejstřík: ' + escapeHtml(chk.aresNazev || '?') + ')'));
-            if (chk.personStatus === 'full') parts.push(wrap('var(--success)', 'var(--success-tint)', '✓ osoba je jednatel'));
-            else if (chk.personStatus === 'surname') parts.push(wrap('var(--warning)', 'var(--warning-tint)', '⚠ jméno se neshoduje — rejstřík: ' + escapeHtml((chk.matchedJednatel && chk.matchedJednatel.jmeno) || '?')));
-            else if (chk.personStatus === 'no-match') parts.push(wrap('var(--warning)', 'var(--warning-tint)', '⚠ osoba není mezi jednateli (' + jednListek(chk.jednatele) + ')'));
-            else if (chk.personStatus === 'no-jednatele-data') parts.push(wrap('var(--text-mute)', 'transparent', 'ⓘ rejstřík neuvádí jednatele'));
+            // Firma potvrzená v rejstříku (kotva)
+            parts.push(wrap('var(--success)', 'var(--success-tint)', '✓ ARES: ' + escapeHtml(chk.aresNazev || '?')));
+            // Osoba: jen pozitivní/skutečně-podezřelý signál. Partner ≠ jednatel = ticho.
+            if (chk.personStatus === 'full') {
+                parts.push(wrap('var(--success)', 'var(--success-tint)', '✓ statutární zástupce'));
+            } else if (chk.personStatus === 'surname') {
+                parts.push(wrap('var(--warning)', 'var(--warning-tint)', '⚠ jméno nesedí s rejstříkem (' + escapeHtml((chk.matchedJednatel && chk.matchedJednatel.jmeno) || '?') + ')'));
+            }
             return parts.join(' ');
         }
         default: return '';
     }
 }
-// Spustí ARES verifikaci pro aktuální AI návrhy kontaktů (fire-and-forget) a po
-// dokončení překreslí karty s flagy. Volá se z auto i manuální vyhledávací cesty.
+// Spustí ARES verifikaci pro aktuální AI návrhy kontaktů a po dokončení:
+//   - tiše opraví IČO (děje se uvnitř verifyContactsAgainstAres)
+//   - rozdělí návrhy na viditelné (potvrzené/neověřené) a SKRYTÉ (nenalezené v ARES)
+//   - překreslí karty s flagy
+// Volá se z auto i manuální vyhledávací cesty.
 function triggerAresVerifyForContacts() {
     if (state.vyhlLastMode !== 'contacts') return;
     const sugs = state.lastVyhlSuggestions || [];
     if (!sugs.length) return;
     verifyContactsAgainstAres(sugs).then(function () {
-        if (state.vyhlLastMode === 'contacts') renderContactSuggestions();
+        if (state.vyhlLastMode !== 'contacts') return;
+        // Rozděl: 'not-found' (nenalezeno v ARES) → skrýt. Vše ostatní (ok / error / pending) → zobrazit.
+        const visible = [], hidden = [];
+        (state.lastVyhlSuggestions || []).forEach(function (c) {
+            if (c._aresCheck && c._aresCheck.status === 'not-found') hidden.push(c);
+            else visible.push(c);
+        });
+        state.vyhlHidden = hidden;
+        state.vyhlShowHidden = false;
+        state.lastVyhlSuggestions = visible;
+        state.vyhlSelected = new Set();   // indexy se změnily → reset výběru
+        renderContactSuggestions();
     }).catch(function (err) { console.warn('ARES verify error:', err); });
+}
+
+// Přidá skryté (nenalezené v ARES) návrhy zpět mezi viditelné. Jednosměrné — po
+// zobrazení už zůstanou (mají vlastní šedý flag „nenalezeno v ARES").
+function toggleVyhlShowHidden() {
+    if (state.vyhlHidden && state.vyhlHidden.length) {
+        state.lastVyhlSuggestions = (state.lastVyhlSuggestions || []).concat(state.vyhlHidden);
+        state.vyhlHidden = [];
+        state.vyhlShowHidden = true;
+        renderContactSuggestions();
+    }
 }
 
 // Heuristika: vypadá hodnota jako reálné jméno firmy, NE jako segment / poznámka / nesmysl?
