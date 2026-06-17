@@ -5200,7 +5200,7 @@ async function applyContacts() {
         firma: s.firma || '', ico: s.ico || '', sidlo: s.sidlo || '',
         web: s.web || '', email: s.email || '', telefon: s.telefon || '',
         kontaktniOsoba: s.kontaktniOsoba || '', role: s.role || '',
-        linkedinUrl: resolveImportLinkedInUrl(s.linkedinUrl, s.kontaktniOsoba, s.firma), facebookUrl: '',
+        linkedinUrl: resolveImportLinkedInUrl(s.linkedinUrl, s.kontaktniOsoba, s.firma, s.role), facebookUrl: '',
         zdrojUrl: s.zdrojUrl || '',
         tagy: 'AI-' + (s._sources || []).join('+'),
         poznamka: 'AI návrh z ' + new Date().toLocaleDateString('cs-CZ') + ' (' + (s._sources || []).join(' + ') + ')',
@@ -6466,10 +6466,11 @@ function startCleanupLinkedInUrls() {
         if (!c.linkedinUrl) return false;
         const kind = classifyLinkedInUrl(c.linkedinUrl);
         const isCandidateKind = kind === 'profile' || kind === 'search' || kind === 'other';
-        // google-search k přestavbě: má segment text (drift) NEBO je to starý site:linkedin
-        // formát (v EU nefunguje) → přepsat na nový plain "Jméno Firma LinkedIn" dotaz.
+        // google-search k přestavbě: má segment text (drift), je to starý site:linkedin
+        // formát (v EU nefunguje), NEBO má v query akademický titul (JUDr/Mgr… = šum,
+        // u notářů vzatý jako „značka") → přepsat na čistý "Jméno Profese LinkedIn".
         const isStaleGoogleSearch = kind === 'google-search' &&
-            (hasStaleSegmentInUrl(c.linkedinUrl) || /site(%3a|:)linkedin/i.test(c.linkedinUrl));
+            (hasStaleSegmentInUrl(c.linkedinUrl) || /site(%3a|:)linkedin/i.test(c.linkedinUrl) || googleQueryHasAcademicTitle(c.linkedinUrl));
         if (!isCandidateKind && !isStaleGoogleSearch) return false;
         const isAI = (c.tagy && /AI-/i.test(c.tagy)) ||
                      (c.spolehlivost && /(claude|openai|gemini)/i.test(c.spolehlivost));
@@ -6497,7 +6498,7 @@ function renderCleanupList() {
         state.cleanupSelected.size + ' z ' + cands.length + ' k přepsání';
 
     div.innerHTML = cands.map((c, i) => {
-        const newUrl = buildLinkedInSearchUrl(c.kontaktniOsoba, c.firma);
+        const newUrl = buildLinkedInSearchUrl(c.kontaktniOsoba, c.firma, c.role);
         const isSelected = state.cleanupSelected.has(i);
         const aiLabel = c.spolehlivost ? '(' + escapeHtml(c.spolehlivost) + ')' : (c.tagy ? '(' + escapeHtml(c.tagy) + ')' : '');
         return '<div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;padding:12px 14px;border-bottom:1px solid var(--line-faint);">' +
@@ -6562,7 +6563,7 @@ async function executeCleanupLinkedInUrls() {
 
     for (const c of toProcess) {
         try {
-            const newUrl = buildLinkedInSearchUrl(c.kontaktniOsoba, c.firma);
+            const newUrl = buildLinkedInSearchUrl(c.kontaktniOsoba, c.firma, c.role);
             const oldUrl = c.linkedinUrl;
             const oldKind = classifyLinkedInUrl(oldUrl);
             const oldReason = oldKind === 'profile' ? 'možná halucinace, často 404'
@@ -6838,23 +6839,67 @@ function classifyLinkedInUrl(url) {
 // krátké, bez lomítek, bez známých segment markerů. Pokud je tam segment text (např.
 // "Ex-bankéři corporate / RE / private banking") kvůli posunutí dat, vynecháme ho,
 // aby URL byla použitelná i při data driftu.
-function buildLinkedInSearchUrl(kontaktniOsoba, firma) {
-    const name = (kontaktniOsoba || '').trim();
+// Akademické tituly (české) — v LinkedIn jménech nejsou a v Google query jen šumí.
+// U notářů/advokátů, kde firma = jméno osoby, by se jinak titul vybral jako „značka".
+const ACADEMIC_TITLE_SET = new Set([
+    'prof','doc','judr','jcdr','mudr','mddr','mvdr','pharmdr','rndr','phdr','paeddr','thdr',
+    'thlic','mgr','mga','ing','arch','bc','bca','dr','phmr','csc','drsc','dsc','mba','dis','msc','phd','llm','thd'
+]);
+function isAcademicTitleToken(tok) {
+    return ACADEMIC_TITLE_SET.has(String(tok || '').toLowerCase().replace(/\./g, '').trim());
+}
+// Odstraní akademické tituly z textu (jen pro vyhledávání — uložené jméno zůstává s titulem).
+// "JUDr. Jan Stránský" → "Jan Stránský", "Mgr. Petra Vymazalová" → "Petra Vymazalová".
+function stripAcademicTitles(s) {
+    if (!s) return '';
+    return String(s).split(/[\s,]+/).filter(Boolean)
+        .filter(function (tok) { return !isAcademicTitleToken(tok); })
+        .join(' ').trim();
+}
+// Vybere disambiguátor z názvu firmy: první slovo, které NENÍ titul, NENÍ část jména
+// osoby a NENÍ obecné/geo. Pro reálné firmy vrátí značku ("Dentons"); pro samostatné
+// profese (firma = jméno osoby + "notář") vrátí profesi ("notář") — lepší než titul.
+function pickFirmaDisambiguator(text, nameTokensSet) {
+    const stripped = stripAcademicTitles(stripFirmaLegalForm(text || ''));
+    if (!stripped) return '';
+    const skipGeneric = /^(skupina|česká|český|české|čeští|group|holding|international|czech|cz|sk|cr|the|a|s|co)$/i;
+    const toks = stripped.split(/[\s,]+/).filter(Boolean)
+        .map(function (t) { return t.replace(/^[^0-9A-Za-zÀ-ž&]+|[^0-9A-Za-zÀ-ž&]+$/g, ''); })
+        .filter(Boolean);
+    for (var i = 0; i < toks.length; i++) {
+        var tok = toks[i];
+        var norm = _normPersonName(tok);
+        if (!norm) continue;
+        if (skipGeneric.test(tok)) continue;
+        if (isAcademicTitleToken(tok)) continue;
+        if (nameTokensSet.has(norm)) continue;   // část jména osoby → přeskoč
+        return tok;
+    }
+    return '';
+}
+
+function buildLinkedInSearchUrl(kontaktniOsoba, firma, role) {
+    // Vyčisti akademické tituly ze jména (JUDr./Mgr./Ing.…) — v query jen šumí a u
+    // samostatných profesí způsobí, že se titul vezme jako „značka" (viz notáři).
+    const cleanName = stripAcademicTitles((kontaktniOsoba || '').trim());
     // Bez jména osoby NEgenerujeme nic — hledáme PROFIL konkrétního člověka, ne firemní
     // stránku. Pokud kontakt nemá osobu, LinkedIn pole zůstane prázdné.
-    if (!name) return '';
+    if (!cleanName) return '';
+    const nameTokens = new Set(_normPersonName(cleanName).split(' ').filter(Boolean));
+
+    // Disambiguátor: 1) distinktivní slovo z firmy (značka "Dentons" NEBO profese "notář"),
+    // 2) fallback profese z pole role, 3) nic (jen čisté jméno).
+    let disambig = '';
     const rawCompany = (firma || '').trim();
-    // Z firmy bereme JEN jedno značkové slovo (ne celý název) — viz firmaBrandWord.
-    const brand = looksLikeRealFirma(rawCompany) ? firmaBrandWord(rawCompany) : '';
+    if (looksLikeRealFirma(rawCompany)) disambig = pickFirmaDisambiguator(rawCompany, nameTokens);
+    if (!disambig && role) disambig = pickFirmaDisambiguator(role, nameTokens);
 
     // OBYČEJNÝ Google dotaz, BEZ operátoru site:. `site:linkedin.com/in` v EU vrací skoro
-    // nulu (GDPR delisting osobních profilů + LinkedIn blokuje boty na /in/) — Google pak
-    // ukáže náhodné indexované profily (šum). Plain "Jméno Značka LinkedIn" Google sám
-    // seřadí a správný profil dá první. Ověřeno na Jiří Stržínek: site: → šum (Aleš Baum),
-    // plain → "Jiri Strzinek – Partner at Dentons" jako 1. výsledek.
+    // nulu (GDPR delisting osobních profilů + LinkedIn blokuje boty na /in/). Plain
+    // "Jméno Profese/Značka LinkedIn" Google sám seřadí a správný profil dá první.
     // POZOR: žádné uvozovky — přesná fráze jména v EU naráží na GDPR filtr → 0 výsledků.
-    const parts = [name];
-    if (brand) parts.push(brand);
+    const parts = [cleanName];
+    if (disambig) parts.push(disambig);
     parts.push('LinkedIn');   // klíčové slovo nasměruje ranking na profil
     return 'https://www.google.com/search?q=' + encodeURIComponent(parts.join(' '));
 }
@@ -6862,14 +6907,14 @@ function buildLinkedInSearchUrl(kontaktniOsoba, firma) {
 // Pro AI import: zaručí funkční LinkedIn odkaz u NOVÝCH AI kontaktů.
 // Ověřenou profilovou URL (/in/) a firemní stránku (/company/) necháme být; cokoli
 // jiného (Google search, LinkedIn vlastní /search/, prázdné, nestandardní) deterministicky
-// přestavíme na funkční Google site:linkedin.com/in search z jména + firmy — nezávisle
+// přestavíme na funkční obyčejný Google dotaz z jména + profese/značky — nezávisle
 // na tom, jestli AI dodržela prompt.
 // POZNÁMKA: prochází tudy POUZE nově importované AI kontakty. Ručně vložené URL
 // (asistentka v Sheetu, ruční formulář) tudy NEjdou a zůstávají nedotčené.
-function resolveImportLinkedInUrl(aiUrl, kontaktniOsoba, firma) {
+function resolveImportLinkedInUrl(aiUrl, kontaktniOsoba, firma, role) {
     const kind = classifyLinkedInUrl(aiUrl);
     if (kind === 'profile' || kind === 'company') return (aiUrl || '').trim();
-    const built = buildLinkedInSearchUrl(kontaktniOsoba, firma);
+    const built = buildLinkedInSearchUrl(kontaktniOsoba, firma, role);
     return built || (aiUrl || '').trim();
 }
 
@@ -7155,6 +7200,18 @@ function hasStaleSegmentInUrl(url) {
         }
     } catch (e) { /* malformed URL — leave as-is */ }
     return false;
+}
+
+// Má Google-search query v sobě akademický titul (JUDr/Mgr/Ing…)? Signatura starých
+// rozbitých dotazů u notářů/advokátů ("JUDr. Jan Stránský JUDr LinkedIn") — cleanup je
+// pak přestaví na čistý "Jméno Profese LinkedIn".
+function googleQueryHasAcademicTitle(url) {
+    try {
+        const m = String(url).match(/[?&]q=([^&]*)/);
+        if (!m) return false;
+        const q = decodeURIComponent(m[1].replace(/\+/g, ' '));
+        return q.split(/\s+/).some(isAcademicTitleToken);
+    } catch (e) { return false; }
 }
 
 function linkedInBadgeHTML(kind) {
