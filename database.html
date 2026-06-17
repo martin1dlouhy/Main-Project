@@ -2094,7 +2094,7 @@
 
             <div class="settings-panel">
                 <h4>Vyčistit AI LinkedIn URLs (halucinace + stale URLs po driftu)</h4>
-                <p class="panel-desc">Tři typy URLs, které tahle akce regeneruje: <strong>(1)</strong> halucinovaná profilová URL (<code style="font-family:var(--font-mono);font-size:11px;color:var(--amber-warm);">linkedin.com/in/jan-novak</code> = AI uhodlo slug, nefunguje); <strong>(2)</strong> LinkedIn vlastní vyhledávací URL (<code style="font-family:var(--font-mono);font-size:11px;color:var(--amber-warm);">linkedin.com/search/results/people/?keywords=…</code> bez přihlášení vrací prázdno); <strong>(3)</strong> staré Google search URLs, které mají v query segment text místo firmy (přežitek z doby kdy byl Sheet posunutý). Akce všechny přepíše na <strong>Google site:linkedin.com/in search</strong> s aktuálním jménem + firmou (pokud firma je reálná, ne segment). Klikneš první výsledek = reálný profil. Původní URL se zachová v poznámce.</p>
+                <p class="panel-desc">Tři typy URLs, které tahle akce regeneruje: <strong>(1)</strong> halucinovaná profilová URL (<code style="font-family:var(--font-mono);font-size:11px;color:var(--amber-warm);">linkedin.com/in/jan-novak</code> = AI uhodlo slug, nefunguje); <strong>(2)</strong> LinkedIn vlastní vyhledávací URL (<code style="font-family:var(--font-mono);font-size:11px;color:var(--amber-warm);">linkedin.com/search/results/people/?keywords=…</code> bez přihlášení vrací prázdno); <strong>(3)</strong> staré Google search URLs, které mají v query segment text místo firmy (přežitek z doby kdy byl Sheet posunutý). Plus <strong>(4)</strong> staré Google URL s operátorem site:linkedin.com/in (v EU kvůli GDPR vrací šum). Akce všechny přepíše na <strong>obyčejný Google dotaz „Jméno Firma LinkedIn"</strong> (pokud firma je reálná, ne segment). Klikneš první výsledek = reálný profil. Původní URL se zachová v poznámce.</p>
                 <div class="settings-row">
                     <div>
                         <div class="settings-row-label">Vyčistit AI LinkedIn URLs</div>
@@ -2303,7 +2303,7 @@
             <div class="info-note warning" style="margin-bottom: 16px;">
                 <strong>Co se stane:</strong>
                 <ul style="margin-top: 8px; padding-left: 18px; color: var(--text-soft);">
-                    <li>Stará URL (halucinovaná /in/ nebo LinkedIn /search/) bude přepsána na <strong>Google site:linkedin.com/in search</strong> s jménem a firmou v keywords</li>
+                    <li>Stará URL (halucinovaná /in/, LinkedIn /search/, nebo staré site:linkedin) bude přepsána na <strong>obyčejný Google dotaz „Jméno Firma LinkedIn"</strong></li>
                     <li>Klikneš v kontaktu na 🔍 odkaz → Google najde profil → otevřeš první výsledek = reálná LinkedIn URL</li>
                     <li>Původní URL se uloží do poznámky kontaktu (pro případ ověření)</li>
                     <li>Vybíráš checkboxy — co odškrtneš, zůstane beze změny</li>
@@ -3612,6 +3612,11 @@ async function saveContact() {
     } else {
         // CREATE
         if (refuseIfMisaligned('Přidání kontaktu')) return;
+        // LIMIT max 3/firma (tvrdě i pro ruční přidání).
+        if (hasCompanyIdentity(data.ico, data.firma) && companyCountInDb(data.ico, data.firma) >= MAX_PER_COMPANY) {
+            toast('error', 'Firma „' + (data.firma || '?') + '" už má ' + MAX_PER_COMPANY + ' kontakty v databázi (limit). Další nelze přidat.');
+            return;
+        }
         const newContact = Object.assign({
             id: generateId(),
             createdAt: now,
@@ -4172,11 +4177,24 @@ async function doImport() {
 
     if (refuseIfMisaligned('CSV import')) return;
 
+    // LIMIT max 3/firma (tvrdě i pro CSV). Počítá DB + už přijaté v dávce (companyCountIn).
+    const accepted = []; let skippedCount = 0;
+    newContacts.forEach(function (c) {
+        if (!hasCompanyIdentity(c.ico, c.firma)) { accepted.push(c); return; }
+        const total = companyCountInDb(c.ico, c.firma) + companyCountIn(accepted, c.ico, c.firma);
+        if (total >= MAX_PER_COMPANY) { skippedCount++; return; }
+        accepted.push(c);
+    });
+    if (accepted.length === 0) {
+        toast('warning', 'Nic neimportováno — firmy už mají max ' + MAX_PER_COMPANY + ' kontakty v databázi.');
+        return;
+    }
+
     try {
-        toast('info', 'Importuji ' + newContacts.length + ' kontaktů…');
-        await sheetsAppend(SHEET_TABS.contacts, newContacts.map(contactToRow));
-        await logActivity('', 'import', 'Importováno ' + newContacts.length + ' kontaktů z CSV');
-        toast('success', 'Importováno ' + newContacts.length + ' kontaktů.');
+        toast('info', 'Importuji ' + accepted.length + ' kontaktů…');
+        await sheetsAppend(SHEET_TABS.contacts, accepted.map(contactToRow));
+        await logActivity('', 'import', 'Importováno ' + accepted.length + ' kontaktů z CSV' + (skippedCount ? ' (' + skippedCount + ' přeskočeno, limit ' + MAX_PER_COMPANY + '/firma)' : ''));
+        toast('success', 'Importováno ' + accepted.length + ' kontaktů.' + (skippedCount ? ' ' + skippedCount + ' přeskočeno (limit ' + MAX_PER_COMPANY + '/firma).' : ''));
         closeImportModal();
         await syncFromSheet();
     } catch (err) {
@@ -4739,6 +4757,38 @@ function getExistingContactKeys() {
     };
 }
 
+// ============================================================
+// LIMIT KONTAKTŮ NA FIRMU — max 3 stejné společnosti v databázi (tvrdě, všude).
+// Identita firmy: IČO (po ARES spolehlivé) NEBO normalizovaný název. Kontakt se počítá
+// do firmy, když sedí IČO NEBO normalizovaný název (robustní i když část kontaktů IČO nemá).
+// ============================================================
+const MAX_PER_COMPANY = 3;
+
+// Má kontakt identitu firmy (aby šlo limitovat)? Bez IČO i názvu = nelze.
+function hasCompanyIdentity(ico, firma) {
+    const i = (ico || '').toString().replace(/\s/g, '');
+    return /^\d{8}$/.test(i) || !!_normFirmaCmp(firma || '');
+}
+// Patří kontakt c ke stejné firmě jako (ico, firma)? Shoda přes IČO NEBO normalizovaný název.
+function _companyMatches(c, ico, firma) {
+    const i = (ico || '').toString().replace(/\s/g, '');
+    const ci = (c.ico || '').toString().replace(/\s/g, '');
+    if (/^\d{8}$/.test(i) && i === ci) return true;
+    const n = _normFirmaCmp(firma || ''), cn = _normFirmaCmp(c.firma || '');
+    return !!n && n === cn;
+}
+// Kolik položek v `list` patří té firmě (stejná logika pro DB i pro rozpracovanou dávku).
+function companyCountIn(list, ico, firma, ignoreId) {
+    return (list || []).filter(function (c) {
+        if (ignoreId && c.id === ignoreId) return false;
+        return _companyMatches(c, ico, firma);
+    }).length;
+}
+// Kolik kontaktů té firmy už je v DB (volitelně ignoruj jedno ID — pro edit existujícího).
+function companyCountInDb(ico, firma, ignoreId) {
+    return companyCountIn(state.contacts, ico, firma, ignoreId);
+}
+
 // ----- Build payload (společné pro auto + manual) -----
 function buildAIPayload() {
     const mode = state.vyhlMode;
@@ -4993,6 +5043,7 @@ function renderContactSuggestions() {
                 (c.kontaktniOsoba ? '<div class="vyhl-osoba"><strong>' + escapeHtml(c.kontaktniOsoba) + '</strong>' + (c.role ? ' — ' + escapeHtml(c.role) : '') + '</div>' : '') +
                 (meta.length > 0 ? '<div class="vyhl-meta">' + meta.join('') + '</div>' : '') +
                 (c.firma ? '<div class="vyhl-meta" style="margin-top:6px;">' + aresFlagHTML(c._aresCheck) + '</div>' : '') +
+                (c.firma && companyCountInDb(c.ico, c.firma) >= MAX_PER_COMPANY ? '<div class="vyhl-meta" style="margin-top:4px;"><span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;font-size:10.5px;font-weight:500;border-radius:99px;color:var(--warning);background:var(--warning-tint);">⚠ firma už má ' + MAX_PER_COMPANY + ' kontakty v DB — přidání se přeskočí</span></div>' : '') +
             '</div>' +
             '<div class="vyhl-badges">' + badge + '</div>' +
         '</div>';
@@ -5125,8 +5176,23 @@ async function applyContacts() {
     const segmentPrio = segment ? String(segment.priorita) : '2';
 
     const toAdd = Array.from(state.vyhlSelected).map(i => state.lastVyhlSuggestions[i]);
+
+    // LIMIT max 3/firma napříč DB (tvrdě). Počítá se stejnou logikou DB + už přijaté
+    // v této dávce (companyCountIn), takže různé psaní/IČO téže firmy v jedné dávce se sečte.
+    const accepted = [], skippedFirmy = [];
+    toAdd.forEach(function (s) {
+        if (!hasCompanyIdentity(s.ico, s.firma)) { accepted.push(s); return; } // bez identity nelimitujeme
+        const total = companyCountInDb(s.ico, s.firma) + companyCountIn(accepted, s.ico, s.firma);
+        if (total >= MAX_PER_COMPANY) { skippedFirmy.push(s.firma || s.kontaktniOsoba || '?'); return; }
+        accepted.push(s);
+    });
+    if (accepted.length === 0) {
+        toast('warning', 'Nic nepřidáno — vybrané firmy už mají max ' + MAX_PER_COMPANY + ' kontakty v databázi.');
+        return;
+    }
+
     const now = new Date().toISOString();
-    const newContacts = toAdd.map(s => ({
+    const newContacts = accepted.map(s => ({
         id: generateId(),
         createdAt: now, updatedAt: now,
         typ: segmentTyp, segment: segmentNazev,
@@ -5147,8 +5213,8 @@ async function applyContacts() {
     try {
         toast('info', 'Přidávám ' + newContacts.length + ' kontaktů…');
         await sheetsAppend(SHEET_TABS.contacts, newContacts.map(contactToRow));
-        await logActivity('', 'ai-import', 'AI vyhledávač přidal ' + newContacts.length + ' kontaktů (' + segmentNazev + ')');
-        toast('success', 'Přidáno ' + newContacts.length + ' kontaktů.');
+        await logActivity('', 'ai-import', 'AI vyhledávač přidal ' + newContacts.length + ' kontaktů (' + segmentNazev + ')' + (skippedFirmy.length ? ' · ' + skippedFirmy.length + ' přeskočeno (limit ' + MAX_PER_COMPANY + '/firma)' : ''));
+        toast('success', 'Přidáno ' + newContacts.length + ' kontaktů.' + (skippedFirmy.length ? ' ' + skippedFirmy.length + ' přeskočeno (firma už má ' + MAX_PER_COMPANY + ').' : ''));
         resetVyhlResults();
         await syncFromSheet();
     } catch (err) {
@@ -5386,6 +5452,7 @@ function buildPromptFE(mode, ctx) {
             '- Použij web search pro každý zdroj a vytahej konkrétní jména + role + kontakty',
             '- Vrať MAX ' + ctx.maxResults + ' nejlepších kontaktů (kvalita > kvantita)',
             '- KAŽDÝ kontakt MUSÍ být ověřitelný v reálu — žádné halucinace',
+            '- LIMIT NA FIRMU: u firem, které už mám v seznamu existujících kontaktů 3× a víc, NEhledej další osoby — radši najdi NOVÉ firmy (v DB platí max 3 kontakty na firmu).',
             '- Cílíme na decision-makery: Partner, Managing Partner, Director, CEO, Owner, Head of, Senior',
             '- Vyhni se juniorům, asistentům, info@/contact@ adresám',
             '- Email/telefon = jen pokud je v reálu veřejně dostupné. Jinak null.',
@@ -5400,10 +5467,10 @@ function buildPromptFE(mode, ctx) {
             'PRAVIDLA PRO LINKEDIN URL (důležité — AI obvykle halucinuje):',
             '- Profilová URL formátu https://linkedin.com/in/{slug} vraceť POUZE pokud jsi OPRAVDU ověřil přes web search, že daný profil existuje (otevři ho, vidíš jméno na stránce).',
             '- NIKDY negeneruj URL podle jména automaticky (např. /in/jan-novak nebo /in/jan-novak-ceo). LinkedIn slug obsahuje obvykle náhodný hash (např. /in/jan-novak-a8b2c4f) a Tvůj odhad bude z 90 % halucinace = 404.',
-            '- Pokud nemůžeš ověřit konkrétní profilovou URL, vrať **Google site:linkedin.com/in search URL** v tomto formátu:',
-            '  https://www.google.com/search?q=site%3Alinkedin.com%2Fin+Jméno+Příjmení+Značka',
-            '  (URL-encoded `site:linkedin.com/in Jméno Příjmení ZnačkaFirmy`. PRAVIDLA: (1) Jméno ANI firmu NEDÁVEJ do uvozovek — jen volná klíčová slova; uvozovky kolem celého jména v EU naráží na GDPR filtr Googlu (osobní profily se z přesné shody odstraní) → 0 výsledků. (2) Z firmy použij JEN jedno značkové slovo (napiš "ATALIAN", ne "ATALIAN CZ s.r.o."; "ProfiLend", ne "ProfiLend Group s.r.o.") — Google site: dělá AND přes všechna slova, takže každé slovo navíc, které není doslova na profilu, srazí výsledek klidně na nulu. Vynech právní formu, zemi (CZ/SK) i obecná slova (Skupina, Group, Holding). Google relevanci seřadí sám — správná osoba bývá první. NEPOUŽÍVEJ LinkedIn vlastní /search/ — bez přihlášení vrací prázdno.)',
-            '- Pokud nemáš ani jméno (jen firmu), vrať Google search pro company stránku: https://www.google.com/search?q=site%3Alinkedin.com%2Fcompany+Firma',
+            '- Pokud nemůžeš ověřit konkrétní profilovou URL, vrať **obyčejný Google vyhledávací dotaz** v tomto formátu:',
+            '  https://www.google.com/search?q=Jméno+Příjmení+Značka+LinkedIn',
+            '  (URL-encoded `Jméno Příjmení ZnačkaFirmy LinkedIn`. PRAVIDLA: (1) NEPOUŽÍVEJ operátor site:linkedin.com/in — v EU kvůli GDPR delistingu osobních profilů vrací skoro nulu / náhodný šum. Obyčejný dotaz funguje líp, Google správný profil seřadí první. (2) BEZ uvozovek — přesná fráze jména naráží na GDPR filtr → 0 výsledků. (3) Z firmy JEN jedno značkové slovo (napiš "Dentons", ne "Dentons Europe LLP"; "ATALIAN", ne "ATALIAN CZ s.r.o.") — vynech právní formu, zemi i obecná slova. (4) Přidej na konec slovo "LinkedIn" — nasměruje Google na profil.)',
+            '- Pokud nemáš jméno osoby (jen firmu), vrať "linkedinUrl": null — hledáme profil konkrétního člověka, ne firemní stránku.',
             (ctx.preferLinkedIn
                 ? '\n- PRIORITA LINKEDIN: Pro tuto variantu vraceť POUZE kontakty, kde umíš dodat OVĚŘENOU profilovou URL (/in/{slug}). Google search URL je akceptovatelná jako fallback, ale ideální je ověřená profilová. Kontakty, kde nemáš ani jméno (chybí keywords pro Google search), zcela vyřaď.'
                 : ''),
@@ -5426,7 +5493,7 @@ function buildPromptFE(mode, ctx) {
             '      "email": "veřejný email | null",',
             '      "telefon": "veřejný tel | null",',
             '      "web": "https://… | null",',
-            '      "linkedinUrl": "BUĎ ověřená profilová URL https://linkedin.com/in/{slug} NEBO Google search URL https://www.google.com/search?q=site%3Alinkedin.com%2Fin+Jméno+Příjmení+Značka (jméno + JEDNO značkové slovo firmy, vše BEZ uvozovek!) NEBO null",',
+            '      "linkedinUrl": "BUĎ ověřená profilová URL https://linkedin.com/in/{slug} NEBO obyčejný Google dotaz https://www.google.com/search?q=Jméno+Příjmení+Značka+LinkedIn (BEZ site: a BEZ uvozovek; jméno + jedno značkové slovo + slovo LinkedIn) NEBO null (když nemáš jméno osoby)",',
             '      "sidlo": "adresa | null",',
             '      "zdrojUrl": "URL zdroje kde jsi to našel | null"',
             '    }',
@@ -6399,7 +6466,10 @@ function startCleanupLinkedInUrls() {
         if (!c.linkedinUrl) return false;
         const kind = classifyLinkedInUrl(c.linkedinUrl);
         const isCandidateKind = kind === 'profile' || kind === 'search' || kind === 'other';
-        const isStaleGoogleSearch = kind === 'google-search' && hasStaleSegmentInUrl(c.linkedinUrl);
+        // google-search k přestavbě: má segment text (drift) NEBO je to starý site:linkedin
+        // formát (v EU nefunguje) → přepsat na nový plain "Jméno Firma LinkedIn" dotaz.
+        const isStaleGoogleSearch = kind === 'google-search' &&
+            (hasStaleSegmentInUrl(c.linkedinUrl) || /site(%3a|:)linkedin/i.test(c.linkedinUrl));
         if (!isCandidateKind && !isStaleGoogleSearch) return false;
         const isAI = (c.tagy && /AI-/i.test(c.tagy)) ||
                      (c.spolehlivost && /(claude|openai|gemini)/i.test(c.spolehlivost));
@@ -6501,7 +6571,7 @@ async function executeCleanupLinkedInUrls() {
                              : 'nestandardní formát';
             const note = '\n\n— LinkedIn cleanup ' + dateStr + ' —\n' +
                          'Původní AI návrh (' + oldReason + '): ' + oldUrl +
-                         (newUrl ? '\nNahrazeno Google site:linkedin.com search — klikni první výsledek = reálný profil.' : '\nNelze vytvořit search URL (chybí jméno i firma).');
+                         (newUrl ? '\nNahrazeno obyčejným Google dotazem (Jméno Firma LinkedIn) — klikni první výsledek = reálný profil.' : '\nNelze vytvořit search URL (chybí jméno osoby).');
             c.poznamka = (c.poznamka || '').trim() + note;
             c.linkedinUrl = newUrl;
             c.updatedAt = now;
@@ -6515,7 +6585,7 @@ async function executeCleanupLinkedInUrls() {
 
     try {
         await logActivity('', 'cleanup-linkedin',
-            'Bulk přepis ' + updated + ' AI LinkedIn URLs na Google site:linkedin search' +
+            'Bulk přepis ' + updated + ' AI LinkedIn URLs na obyčejný Google dotaz (Jméno Firma LinkedIn)' +
             (failed > 0 ? ' (' + failed + ' selhalo)' : ''));
     } catch (e) { /* non-fatal */ }
 
@@ -6744,8 +6814,9 @@ function classifyLinkedInUrl(url) {
     if (!url || typeof url !== 'string') return 'none';
     const u = url.trim().toLowerCase();
     if (!u) return 'none';
-    // Google site:linkedin.com/in search URL — náš preferovaný fallback
-    if (/^https?:\/\/(www\.)?google\.[a-z.]+\/search\?.*(linkedin\.com|site(%3a|:)linkedin)/i.test(u)) return 'google-search';
+    // Google search URL hledající LinkedIn — chytí nový plain formát ("…+linkedin")
+    // i starý site:linkedin formát ("site%3alinkedin", "linkedin.com").
+    if (/^https?:\/\/(www\.)?google\.[a-z.]+\/search\?.*linkedin/i.test(u)) return 'google-search';
     // Profilová URL: linkedin.com/in/{slug}
     if (/^https?:\/\/([\w-]+\.)*linkedin\.com\/in\/[^\s?#]+/i.test(u)) return 'profile';
     // LinkedIn vlastní search URL (legacy nebo manuálně vložené)
@@ -6769,26 +6840,23 @@ function classifyLinkedInUrl(url) {
 // aby URL byla použitelná i při data driftu.
 function buildLinkedInSearchUrl(kontaktniOsoba, firma) {
     const name = (kontaktniOsoba || '').trim();
+    // Bez jména osoby NEgenerujeme nic — hledáme PROFIL konkrétního člověka, ne firemní
+    // stránku. Pokud kontakt nemá osobu, LinkedIn pole zůstane prázdné.
+    if (!name) return '';
     const rawCompany = (firma || '').trim();
     // Z firmy bereme JEN jedno značkové slovo (ne celý název) — viz firmaBrandWord.
     const brand = looksLikeRealFirma(rawCompany) ? firmaBrandWord(rawCompany) : '';
 
-    if (name) {
-        // DŮLEŽITÉ: jméno ANI firmu nedáváme do uvozovek — jen volná klíčová slova.
-        // Uvozovky = přesná fráze. U celého jména to v EU naráží na GDPR filtr Googlu
-        // (osobní LinkedIn profily se z přesné shody jména odstraňují) → 0 výsledků.
-        // Ověřeno: `..."João Paulo Pereira da Silva" ATALIAN` = nula; bez uvozovek
-        // + jen značka `... João Paulo Pereira da Silva ATALIAN` = 15 profilů, správný
-        // 1. (celé `ATALIAN CZ` = zase nula — proto jen jedno značkové slovo).
-        const parts = ['site:linkedin.com/in', name];
-        if (brand) parts.push(brand);
-        return 'https://www.google.com/search?q=' + encodeURIComponent(parts.join(' '));
-    }
-    // Fallback: bez jména hledáme firemní stránku (jen značkové slovo, bez uvozovek)
-    if (brand) {
-        return 'https://www.google.com/search?q=' + encodeURIComponent('site:linkedin.com/company ' + brand);
-    }
-    return '';
+    // OBYČEJNÝ Google dotaz, BEZ operátoru site:. `site:linkedin.com/in` v EU vrací skoro
+    // nulu (GDPR delisting osobních profilů + LinkedIn blokuje boty na /in/) — Google pak
+    // ukáže náhodné indexované profily (šum). Plain "Jméno Značka LinkedIn" Google sám
+    // seřadí a správný profil dá první. Ověřeno na Jiří Stržínek: site: → šum (Aleš Baum),
+    // plain → "Jiri Strzinek – Partner at Dentons" jako 1. výsledek.
+    // POZOR: žádné uvozovky — přesná fráze jména v EU naráží na GDPR filtr → 0 výsledků.
+    const parts = [name];
+    if (brand) parts.push(brand);
+    parts.push('LinkedIn');   // klíčové slovo nasměruje ranking na profil
+    return 'https://www.google.com/search?q=' + encodeURIComponent(parts.join(' '));
 }
 
 // Pro AI import: zaručí funkční LinkedIn odkaz u NOVÝCH AI kontaktů.
