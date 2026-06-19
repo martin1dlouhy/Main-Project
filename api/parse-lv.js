@@ -119,19 +119,18 @@ module.exports = async function handler(req, res) {
             (instructions ? 'POKYN OD UŽIVATELE: ' + instructions + '\n\n' : '') +
             inputText;
 
-        // Use assistant prefill to force JSON output — Claude must continue from "{"
+        // claude-sonnet-4-6 nepodporuje assistant prefill — konverzace musí končit user zprávou.
+        // JSON vynucuje system prompt ("Vrať POUZE platný JSON…"); tryParseJSON ho robustně extrahuje.
         var message = await client.messages.create({
             model: 'claude-sonnet-4-6',
             max_tokens: 8192,
             messages: [
-                { role: 'user', content: userContent },
-                { role: 'assistant', content: '{' }
+                { role: 'user', content: userContent }
             ],
             system: systemPrompt
         });
 
-        // Reconstruct full JSON — prefill "{" + Claude's continuation
-        var responseText = '{' + message.content[0].text;
+        var responseText = (message.content[0] && message.content[0].text) || '';
         console.log('Claude response length:', responseText.length, 'first 100 chars:', responseText.substring(0, 100));
 
         var parsed = tryParseJSON(responseText);

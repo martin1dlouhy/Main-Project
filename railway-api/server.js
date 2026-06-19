@@ -385,18 +385,10 @@ app.post('/api/parse-lv', async function (req, res) {
             userContentParts = textContent;
         }
 
-        // Image mode: no prefill — Claude can return array directly for multiple LVs
-        // Text mode: use "{" prefill to force JSON (original behavior)
+        // claude-sonnet-4-6 nepodporuje assistant prefill — konverzace musí končit user zprávou.
+        // JSON (objekt nebo pole) vynucuje system prompt; tryParseJSON ho robustně extrahuje.
         var maxTokens = mode === 'images' ? 16384 : 8192;
-        var messages;
-        if (mode === 'images') {
-            messages = [{ role: 'user', content: userContentParts }];
-        } else {
-            messages = [
-                { role: 'user', content: userContentParts },
-                { role: 'assistant', content: '{' }
-            ];
-        }
+        var messages = [{ role: 'user', content: userContentParts }];
 
         var message = await client.messages.create({
             model: 'claude-sonnet-4-6',
@@ -405,10 +397,7 @@ app.post('/api/parse-lv', async function (req, res) {
             system: systemPrompt
         });
 
-        // Reconstruct response — add prefill "{" only for text mode
-        var responseText = mode === 'images'
-            ? message.content[0].text
-            : '{' + message.content[0].text;
+        var responseText = (message.content[0] && message.content[0].text) || '';
         var stopReason = message.stop_reason || 'unknown';
         console.log('Claude response length:', responseText.length, 'stop_reason:', stopReason, 'mode:', mode, 'first 200 chars:', responseText.substring(0, 200));
 
@@ -1027,17 +1016,17 @@ app.post('/api/generate-loan-doc', async function (req, res) {
             // claude-sonnet-4-20250514 z května 2025). Opus 4.7 by byl chytřejší,
             // ale pomalejší a dražší — pro vyplňování smluv stačí Sonnet.
             modelUsed = 'claude-sonnet-4-6';
+            // claude-sonnet-4-6 nepodporuje assistant prefill — bez něj, JSON vynucuje system prompt.
             var message = await client.messages.create({
                 model: modelUsed,
                 max_tokens: 16384,
                 temperature: 0,
                 messages: [
-                    { role: 'user', content: userContent },
-                    { role: 'assistant', content: '{' }
+                    { role: 'user', content: userContent }
                 ],
                 system: systemPrompt
             });
-            rawText = '{' + message.content[0].text;
+            rawText = (message.content[0] && message.content[0].text) || '';
             usage = {
                 input_tokens: message.usage.input_tokens,
                 output_tokens: message.usage.output_tokens
