@@ -240,13 +240,13 @@ app.post('/api/parse-lv', async function (req, res) {
         '    }\n' +
         '  ],\n' +
         '  "omezeni": ["další omezení vlastnického práva - textové popisy"],\n' +
-        '  "collateral_summary": "Stručný jednořádkový popis pro pole zajištění v Term Sheetu, např: LV 303, kú Čečovice — pozemky p.č. 456/2, 456/3 (celkem 2 500 m²)"\n' +
+        '  "collateral_summary": "Krátká IDENTIFIKACE zástavy do Term Sheetu. Formát: LV [číslo], kú [území] ([obec]) — [parcely]. POUZE identifikace (LV, kú, parcely s výměrou a druhem), NIKDY vlastník ani stav zástavních práv/věcných břemen. Má-li LV více než 4 parcely, nevypisuj všechny — shrň počtem a celkovou výměrou (např. LV 100, kú Zahádka (Čížkov) — 32 pozemků, cca 12,5 ha). Příklad krátkého: LV 41, kú Hejčín (Olomouc) — st. p.č. St. 319 (165 m², zastavěná plocha, součástí bytový dům č.p. 255) + p.č. 406/21 (515 m², zahrada)"\n' +
         '}\n\n' +
         'Pokud některé údaje v textu nejsou, vrať null nebo prázdné pole.\n' +
         'Pokud text obsahuje více LV, vrať pole JSON objektů.\n' +
-        'Klíč "collateral_summary" je nejdůležitější — měl by obsahovat stručný popis vhodný do Term Sheetu.\n' +
+        'Klíč "collateral_summary" je čistě IDENTIFIKACE zástavy do Term Sheetu — krátký, bez vlastníka a bez stavu zástav/břemen; u LV s mnoha parcelami shrň, nevypisuj všechny.\n' +
         'Text může být špatně extrahovaný z PDF — pokus se i tak rozpoznat klíčové údaje (číslo LV, katastrální území, parcely).\n' +
-        'U velkých LV s mnoha parcelami uveď VŠECHNY parcely — nevynechávej žádnou.\n' +
+        'U velkých LV uveď VŠECHNY parcely v poli "parcely" (kvůli úplnosti dat), ale "collateral_summary" drž KRÁTKÝ — shrnutí, ne výčet všech parcel.\n' +
         'Pokud dostaneš obrázky stránek PDF místo textu, přečti a analyzuj je stejným způsobem.\n' +
         'Pokud PDF obsahuje více LV (každý na jiné stránce/stránkách), vrať pole JSON objektů — jeden objekt pro každý LV.';
 
