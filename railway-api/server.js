@@ -399,7 +399,7 @@ app.post('/api/parse-lv', async function (req, res) {
         }
 
         var message = await client.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6',
             max_tokens: maxTokens,
             messages: messages,
             system: systemPrompt
@@ -2261,7 +2261,7 @@ async function callClaudeWithWebSearch(apiKey, prompt, mode, thorough) {
     var msg;
     try {
         msg = await client.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6',
             max_tokens: maxTokens,
             temperature: 0.4,
             tools: tools,
@@ -2271,7 +2271,7 @@ async function callClaudeWithWebSearch(apiKey, prompt, mode, thorough) {
         // Fallback: bez web search (např. tool není povolený na účtu)
         console.warn('[claude] web_search tool nedostupný, fallback bez něj:', toolErr.message);
         msg = await client.messages.create({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-6',
             max_tokens: maxTokens,
             temperature: 0.4,
             messages: [{ role: 'user', content: prompt }]
