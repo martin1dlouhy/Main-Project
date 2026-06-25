@@ -774,6 +774,21 @@ function buildLoanDocDataDescription(formData) {
     if (formData.breachPenalty) d += 'Smluvní pokuta za porušení: ' + formData.breachPenalty + ' %\n';
     if (formData.signDate) d += 'Datum podpisu: ' + formData.signDate + '\n';
     if (formData.signPlace) d += 'Místo podpisu: ' + formData.signPlace + '\n';
+
+    if (formData.hasGuarantee || formData.guarantorName) {
+        d += '\n=== OSOBNÍ RUČENÍ (RUČITEL) ===\n';
+        d += 'Úvěr je zajištěn osobním ručením — PONECHEJ a vyplň klauzuli ručitele v úvěrové smlouvě (NEMAŽ ji). Ručitel:\n';
+        if (formData.guarantorName) d += 'Jméno / název: ' + formData.guarantorName + '\n';
+        if (formData.guarantorIco) d += 'IČO / RČ: ' + formData.guarantorIco + '\n';
+        if (formData.guarantorBirthDate) d += 'Datum narození: ' + formData.guarantorBirthDate + '\n';
+        if (formData.guarantorAddress) d += 'Bydliště / Sídlo: ' + formData.guarantorAddress + '\n';
+        if (formData.guarantorMaxAmount) d += 'Ručení do výše: ' + formData.guarantorMaxAmount + '\n';
+    }
+
+    if (formData.notes) {
+        d += '\n=== DOPLŇUJÍCÍ POKYNY OD MARTINA (zohledni je) ===\n' + formData.notes + '\n';
+    }
+
     return d;
 }
 

@@ -2000,6 +2000,42 @@
                         <p class="pledgor-hint">Pokud zaškrtneš „Zástavce je vlastník z LV", pole zde nech prázdná — AI si údaje vezme z přiloženého výpisu KN v manuálním chatu. Pro plně automatický API workflow vyplň ručně.</p>
                     </div>
 
+                    <!-- Section: Osobní ručení -->
+                    <div class="section">
+                        <div class="section-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                            Osobní ručení
+                        </div>
+                        <label class="checkbox-item" title="Úvěr je zajištěn osobním ručením. AI ponechá a vyplní klauzuli ručitele v úvěrové smlouvě. Pro samostatné ručitelské prohlášení nahraj jeho šablonu do Google Drive jako další dokument.">
+                            <input type="checkbox" id="hasGuarantee" onchange="toggleGuaranteeFields()">
+                            <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="checkbox-label">Úvěr je zajištěn osobním ručením (ručitel)</span>
+                        </label>
+                        <div class="form-grid" id="guaranteeFields" style="display:none; margin-top:0.75rem;">
+                            <div class="form-group">
+                                <label class="form-label">Ručitel — jméno / název</label>
+                                <input type="text" id="guarantorName" class="form-input" placeholder="Jméno fyzické osoby nebo název firmy">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">IČO / Rodné číslo</label>
+                                <input type="text" id="guarantorIco" class="form-input" placeholder="12345678 nebo RČ">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Datum narození (fyzická osoba)</label>
+                                <input type="text" id="guarantorBirthDate" class="form-input" placeholder="1. 5. 1980">
+                            </div>
+                            <div class="form-group form-group-single">
+                                <label class="form-label">Bydliště / Sídlo ručitele</label>
+                                <input type="text" id="guarantorAddress" class="form-input" placeholder="Ulice a číslo, PSČ, město">
+                            </div>
+                            <div class="form-group form-group-single">
+                                <label class="form-label">Ručení do výše (volitelné)</label>
+                                <input type="text" id="guarantorMaxAmount" class="form-input" placeholder="např. 8 000 000 CZK nebo jistina + příslušenství">
+                            </div>
+                        </div>
+                        <p class="pledgor-hint">Zaškrtni, pokud má deal osobní ručení — AI pak ponechá a vyplní klauzuli ručitele v úvěrové smlouvě. Samostatné ručitelské prohlášení vygeneruješ z jeho šablony (nahraj ji do Google Drive jako další dokument).</p>
+                    </div>
+
                     <!-- Section 7: Dodatečné údaje -->
                     <div class="section">
                         <div class="section-title">
@@ -4118,6 +4154,20 @@
             if (formData.signDate) d += 'Datum podpisu: ' + formData.signDate + '\n';
             if (formData.signPlace) d += 'Místo podpisu: ' + formData.signPlace + '\n';
 
+            if (formData.hasGuarantee || formData.guarantorName) {
+                d += '\n=== OSOBNÍ RUČENÍ (RUČITEL) ===\n';
+                d += 'Úvěr je zajištěn osobním ručením — PONECHEJ a vyplň klauzuli ručitele v úvěrové smlouvě (NEMAŽ ji). Ručitel:\n';
+                if (formData.guarantorName) d += 'Jméno / název: ' + formData.guarantorName + '\n';
+                if (formData.guarantorIco) d += 'IČO / RČ: ' + formData.guarantorIco + '\n';
+                if (formData.guarantorBirthDate) d += 'Datum narození: ' + formData.guarantorBirthDate + '\n';
+                if (formData.guarantorAddress) d += 'Bydliště / Sídlo: ' + formData.guarantorAddress + '\n';
+                if (formData.guarantorMaxAmount) d += 'Ručení do výše: ' + formData.guarantorMaxAmount + '\n';
+            }
+
+            if (formData.notes) {
+                d += '\n=== DOPLŇUJÍCÍ POKYNY OD MARTINA (zohledni je) ===\n' + formData.notes + '\n';
+            }
+
             return d;
         }
 
@@ -4536,7 +4586,6 @@
             add('Stávající věřitel', { refi: 'creditor' });
             add('Zůstatek k doplacení (payoff)', { refi: 'payoff' });
             add('Kontakt na stávajícího věřitele', { refi: 'contact' });
-            add('Data a výše jednotlivých čerpání', { note: 'Tranše čerpání' });
             return m;
         })();
 
@@ -4725,15 +4774,34 @@
                 }
                 if (best && bestScore >= 3) {
                     var rows = best.getElementsByTagNameNS('*', 'tr');
+                    var inTranche = false;      // jsme v sekci „Tranše čerpání" (mřížka Částka | Datum)?
+                    var tranches = [];
                     for (var i = 0; i < rows.length; i++) {
                         var cells = rows[i].getElementsByTagNameNS('*', 'tc');
-                        if (cells.length !== 2) continue; // hlavičky sekcí (sloučené buňky) přeskočit
-                        var label = tsCellText(cells[0]);
-                        var target = FILLED_TS_FIELD_MAP[normalizeTsLabel(label)];
+                        if (cells.length === 1) {
+                            // hlavička sekce (sloučená buňka) — nastaví/zruší tranše režim
+                            inTranche = normalizeTsLabel(tsCellText(cells[0])).indexOf('transe') !== -1;
+                            continue;
+                        }
+                        if (cells.length !== 2) continue;
+                        var c0 = tsCellText(cells[0]).trim();
+                        var c1 = tsCellText(cells[1]).trim();
+                        if (inTranche) {
+                            var n0 = normalizeTsLabel(c0);
+                            if (n0 === 'castka' || n0 === 'datum') continue; // záhlaví sloupců
+                            if (c0 || c1) tranches.push({ castka: c0, datum: c1 });
+                            continue;
+                        }
+                        var target = FILLED_TS_FIELD_MAP[normalizeTsLabel(c0)];
                         if (!target) continue;
-                        var value = tsCellText(cells[1]).trim();
-                        if (TS_EMPTY_VALUES.indexOf(normalizeTsLabel(value)) !== -1) continue; // nevyplněno
-                        applyFilledTsValue(label, target, value, report);
+                        if (TS_EMPTY_VALUES.indexOf(normalizeTsLabel(c1)) !== -1) continue; // nevyplněno
+                        applyFilledTsValue(c0, target, c1, report);
+                    }
+                    if (tranches.length) {
+                        var tStr = tranches.map(function(t, ix) {
+                            return (ix + 1) + ') ' + (t.castka || '?') + ' — ' + (t.datum || '?');
+                        }).join('; ');
+                        report.manual.push({ label: 'Tranše čerpání', value: tStr });
                     }
                 }
 
@@ -4924,6 +4992,14 @@
             document.getElementById('pledgorEmail').value = data.pledgorEmail || '';
             if (typeof applyPledgorDisabledState === 'function') applyPledgorDisabledState();
 
+            document.getElementById('hasGuarantee').checked = !!data.hasGuarantee;
+            document.getElementById('guarantorName').value = data.guarantorName || '';
+            document.getElementById('guarantorIco').value = data.guarantorIco || '';
+            document.getElementById('guarantorBirthDate').value = data.guarantorBirthDate || '';
+            document.getElementById('guarantorAddress').value = data.guarantorAddress || '';
+            document.getElementById('guarantorMaxAmount').value = data.guarantorMaxAmount || '';
+            if (typeof toggleGuaranteeFields === 'function') toggleGuaranteeFields();
+
             document.getElementById('representativeName').value = data.representativeName || '';
             document.getElementById('representativeRole').value = data.representativeRole || '';
             document.getElementById('contactName').value = data.contactName || '';
@@ -5036,6 +5112,11 @@
             applyPledgorDisabledState();
         }
 
+        function toggleGuaranteeFields() {
+            var on = document.getElementById('hasGuarantee').checked;
+            document.getElementById('guaranteeFields').style.display = on ? '' : 'none';
+        }
+
         function collectFormData() {
             return {
                 uvereovany: document.getElementById('uvereovany').value,
@@ -5108,7 +5189,13 @@
                 breachPenalty: document.getElementById('breachPenalty').value,
                 signDate: document.getElementById('signDate').value,
                 signPlace: document.getElementById('signPlace').value,
-                notes: document.getElementById('notes').value
+                notes: document.getElementById('notes').value,
+                hasGuarantee: document.getElementById('hasGuarantee').checked,
+                guarantorName: document.getElementById('guarantorName').value,
+                guarantorIco: document.getElementById('guarantorIco').value,
+                guarantorBirthDate: document.getElementById('guarantorBirthDate').value,
+                guarantorAddress: document.getElementById('guarantorAddress').value,
+                guarantorMaxAmount: document.getElementById('guarantorMaxAmount').value
             };
         }
 
@@ -5124,6 +5211,7 @@
                 document.querySelectorAll('#documentCheckboxes input[type="checkbox"]').forEach(function(cb) {
                     cb.checked = false;
                 });
+                if (typeof toggleGuaranteeFields === 'function') toggleGuaranteeFields();
                 showToast('Formulář resetován', 'info');
             }
         }
