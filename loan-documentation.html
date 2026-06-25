@@ -688,7 +688,10 @@
         .checkbox-group-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            /* Rezervuje výšku ~2 řádků nadpisu, aby sloupce s 1řádkovým i 2řádkovým
+               názvem kategorie měly checkboxy zarovnané ve stejné linii. */
+            min-height: 2.75rem;
             margin-bottom: 0.375rem;
             padding: 0.25rem 0;
             border-bottom: 1px solid var(--border-color);
@@ -2011,7 +2014,27 @@
                             <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
                             <span class="checkbox-label">Úvěr je zajištěn osobním ručením (ručitel)</span>
                         </label>
-                        <div class="form-grid" id="guaranteeFields" style="display:none; margin-top:0.75rem;">
+                        <div id="guaranteeFields" style="display:none; margin-top:0.75rem;">
+                            <p class="form-label" style="margin-bottom:0.5rem;">Kdo poskytuje osobní ručení:</p>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="guarantorBorrowerRep">
+                                    <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                    <span class="checkbox-label">Dlužník — jednatel</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="guarantorPledgor">
+                                    <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                    <span class="checkbox-label">Zástavce — jednatel / vlastníci nemovitosti</span>
+                                </label>
+                                <label class="checkbox-item">
+                                    <input type="checkbox" id="guarantorBothSpouses">
+                                    <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                    <span class="checkbox-label">Oba manželé (SJM) — ručitelské prohlášení podepíší oba</span>
+                                </label>
+                            </div>
+                            <p class="form-label" style="margin:0.75rem 0 0.5rem;">Konkrétní ručitel (volitelné — když ručí jiná osoba):</p>
+                            <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Ručitel — jméno / název</label>
                                 <input type="text" id="guarantorName" class="form-input" placeholder="Jméno fyzické osoby nebo název firmy">
@@ -2031,6 +2054,7 @@
                             <div class="form-group form-group-single">
                                 <label class="form-label">Ručení do výše (volitelné)</label>
                                 <input type="text" id="guarantorMaxAmount" class="form-input" placeholder="např. 8 000 000 CZK nebo jistina + příslušenství">
+                            </div>
                             </div>
                         </div>
                         <p class="pledgor-hint">Zaškrtni, pokud má deal osobní ručení — AI pak ponechá a vyplní klauzuli ručitele v úvěrové smlouvě. Samostatné ručitelské prohlášení vygeneruješ z jeho šablony (nahraj ji do Google Drive jako další dokument).</p>
@@ -2697,7 +2721,8 @@
             { name: 'Úvěrové smlouvy', order: 1 },
             { name: 'Zástavní smlouvy', order: 2 },
             { name: 'Plná moc k přímému prodeji', order: 3 },
-            { name: 'Vinkulace pojistného plnění', order: 4 }
+            { name: 'Vinkulace pojistného plnění', order: 4 },
+            { name: 'Ručení', order: 5 }
         ];
 
         // Idempotent: any DEFAULT_CATEGORIES name not present in the DB gets added.
@@ -2776,7 +2801,8 @@
                 { re: /\b(uver|uverov)/i, match: 'uver' },
                 { re: /\bzastav/i, match: 'zastav' },
                 { re: /\b(plna moc|pln moc|prodej|moc k prodeji)/i, match: 'plna moc' },
-                { re: /\b(vinkulac|pojistn|pojist plnen)/i, match: 'vinkulac' }
+                { re: /\b(vinkulac|pojistn|pojist plnen)/i, match: 'vinkulac' },
+                { re: /\b(rucitel|ruceni|rucen|rucitelsk)/i, match: 'rucen' }
             ];
             var detected = null;
             for (var i = 0; i < rules.length; i++) {
@@ -4156,8 +4182,11 @@
 
             if (formData.hasGuarantee || formData.guarantorName) {
                 d += '\n=== OSOBNÍ RUČENÍ (RUČITEL) ===\n';
-                d += 'Úvěr je zajištěn osobním ručením — PONECHEJ a vyplň klauzuli ručitele v úvěrové smlouvě (NEMAŽ ji). Ručitel:\n';
-                if (formData.guarantorName) d += 'Jméno / název: ' + formData.guarantorName + '\n';
+                d += 'Úvěr je zajištěn osobním ručením — PONECHEJ a vyplň klauzuli ručitele v úvěrové smlouvě (NEMAŽ ji). Ručí:\n';
+                if (formData.guarantorBorrowerRep) d += '- Jednatel dlužníka (použij údaje z DLUŽNÍK / DODATEČNÉ ÚDAJE).\n';
+                if (formData.guarantorPledgor) d += '- Zástavce / vlastníci nemovitosti (použij údaje ze ZÁSTAVCE / z LV).\n';
+                if (formData.guarantorBothSpouses) d += '- SJM: ručitelské prohlášení podepíší OBA manželé (vlastníci ve společném jmění manželů) — uveď oba.\n';
+                if (formData.guarantorName) d += 'Konkrétní ručitel: ' + formData.guarantorName + '\n';
                 if (formData.guarantorIco) d += 'IČO / RČ: ' + formData.guarantorIco + '\n';
                 if (formData.guarantorBirthDate) d += 'Datum narození: ' + formData.guarantorBirthDate + '\n';
                 if (formData.guarantorAddress) d += 'Bydliště / Sídlo: ' + formData.guarantorAddress + '\n';
@@ -4993,6 +5022,9 @@
             if (typeof applyPledgorDisabledState === 'function') applyPledgorDisabledState();
 
             document.getElementById('hasGuarantee').checked = !!data.hasGuarantee;
+            document.getElementById('guarantorBorrowerRep').checked = !!data.guarantorBorrowerRep;
+            document.getElementById('guarantorPledgor').checked = !!data.guarantorPledgor;
+            document.getElementById('guarantorBothSpouses').checked = !!data.guarantorBothSpouses;
             document.getElementById('guarantorName').value = data.guarantorName || '';
             document.getElementById('guarantorIco').value = data.guarantorIco || '';
             document.getElementById('guarantorBirthDate').value = data.guarantorBirthDate || '';
@@ -5191,6 +5223,9 @@
                 signPlace: document.getElementById('signPlace').value,
                 notes: document.getElementById('notes').value,
                 hasGuarantee: document.getElementById('hasGuarantee').checked,
+                guarantorBorrowerRep: document.getElementById('guarantorBorrowerRep').checked,
+                guarantorPledgor: document.getElementById('guarantorPledgor').checked,
+                guarantorBothSpouses: document.getElementById('guarantorBothSpouses').checked,
                 guarantorName: document.getElementById('guarantorName').value,
                 guarantorIco: document.getElementById('guarantorIco').value,
                 guarantorBirthDate: document.getElementById('guarantorBirthDate').value,

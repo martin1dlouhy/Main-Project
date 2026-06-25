@@ -777,8 +777,11 @@ function buildLoanDocDataDescription(formData) {
 
     if (formData.hasGuarantee || formData.guarantorName) {
         d += '\n=== OSOBNÍ RUČENÍ (RUČITEL) ===\n';
-        d += 'Úvěr je zajištěn osobním ručením — PONECHEJ a vyplň klauzuli ručitele v úvěrové smlouvě (NEMAŽ ji). Ručitel:\n';
-        if (formData.guarantorName) d += 'Jméno / název: ' + formData.guarantorName + '\n';
+        d += 'Úvěr je zajištěn osobním ručením — PONECHEJ a vyplň klauzuli ručitele v úvěrové smlouvě (NEMAŽ ji). Ručí:\n';
+        if (formData.guarantorBorrowerRep) d += '- Jednatel dlužníka (použij údaje z DLUŽNÍK / DODATEČNÉ ÚDAJE).\n';
+        if (formData.guarantorPledgor) d += '- Zástavce / vlastníci nemovitosti (použij údaje ze ZÁSTAVCE / z LV).\n';
+        if (formData.guarantorBothSpouses) d += '- SJM: ručitelské prohlášení podepíší OBA manželé (vlastníci ve společném jmění manželů) — uveď oba.\n';
+        if (formData.guarantorName) d += 'Konkrétní ručitel: ' + formData.guarantorName + '\n';
         if (formData.guarantorIco) d += 'IČO / RČ: ' + formData.guarantorIco + '\n';
         if (formData.guarantorBirthDate) d += 'Datum narození: ' + formData.guarantorBirthDate + '\n';
         if (formData.guarantorAddress) d += 'Bydliště / Sídlo: ' + formData.guarantorAddress + '\n';
