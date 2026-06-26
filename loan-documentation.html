@@ -2163,6 +2163,11 @@
                         <div class="form-group">
                             <textarea id="notes" class="form-textarea" placeholder="Dodatečné poznámky k dokumentaci"></textarea>
                         </div>
+                        <label class="checkbox-item" style="margin-top:0.5rem;" title="Do promptu se přidá pokyn, aby AI na konci zrekapitulovala podmínky čerpání a doptala se na nejasnosti. Podmínky čerpání bývají nejzásadnější a nejvariabilnější část dealu.">
+                            <input type="checkbox" id="recapDrawdown">
+                            <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span class="checkbox-label">Nech AI zrekapitulovat podmínky čerpání a doptat se na nejasnosti</span>
+                        </label>
                     </div>
                 </form>
             </div>
@@ -4197,6 +4202,11 @@
                 d += '\n=== DOPLŇUJÍCÍ POKYNY OD MARTINA (zohledni je) ===\n' + formData.notes + '\n';
             }
 
+            if (formData.recapDrawdown) {
+                d += '\n=== POKYN: PODMÍNKY ČERPÁNÍ (zrekapituluj a doptej se) ===\n' +
+                     'Na konci své odpovědi (vedle upraveného .docx) STRUČNĚ ZREKAPITULUJ podmínky čerpání tohoto dealu — co musí být splněno před čerpáním (žádost o čerpání, znalecký posudek/odhad, notářský zápis se svolením k vykonatelnosti, souhlasy stávajících zástavních věřitelů u refinancování, uzavření a vklad zástavní smlouvy do KN, zápis zástavního práva, pojištění/vinkulace). Ověř, že klauzule o čerpání ve smlouvě odpovídají dealu; pokud je cokoli nejasné nebo v DATA chybí, EXPLICITNĚ se doptej.\n';
+            }
+
             return d;
         }
 
@@ -5021,6 +5031,7 @@
             document.getElementById('pledgorEmail').value = data.pledgorEmail || '';
             if (typeof applyPledgorDisabledState === 'function') applyPledgorDisabledState();
 
+            document.getElementById('recapDrawdown').checked = !!data.recapDrawdown;
             document.getElementById('hasGuarantee').checked = !!data.hasGuarantee;
             document.getElementById('guarantorBorrowerRep').checked = !!data.guarantorBorrowerRep;
             document.getElementById('guarantorPledgor').checked = !!data.guarantorPledgor;
@@ -5222,6 +5233,7 @@
                 signDate: document.getElementById('signDate').value,
                 signPlace: document.getElementById('signPlace').value,
                 notes: document.getElementById('notes').value,
+                recapDrawdown: document.getElementById('recapDrawdown').checked,
                 hasGuarantee: document.getElementById('hasGuarantee').checked,
                 guarantorBorrowerRep: document.getElementById('guarantorBorrowerRep').checked,
                 guarantorPledgor: document.getElementById('guarantorPledgor').checked,

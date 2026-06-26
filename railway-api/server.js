@@ -792,6 +792,11 @@ function buildLoanDocDataDescription(formData) {
         d += '\n=== DOPLŇUJÍCÍ POKYNY OD MARTINA (zohledni je) ===\n' + formData.notes + '\n';
     }
 
+    if (formData.recapDrawdown) {
+        d += '\n=== POKYN: PODMÍNKY ČERPÁNÍ (zrekapituluj a doptej se) ===\n' +
+             'Na konci své odpovědi (vedle upraveného .docx) STRUČNĚ ZREKAPITULUJ podmínky čerpání tohoto dealu — co musí být splněno před čerpáním (žádost o čerpání, znalecký posudek/odhad, notářský zápis se svolením k vykonatelnosti, souhlasy stávajících zástavních věřitelů u refinancování, uzavření a vklad zástavní smlouvy do KN, zápis zástavního práva, pojištění/vinkulace). Ověř, že klauzule o čerpání ve smlouvě odpovídají dealu; pokud je cokoli nejasné nebo v DATA chybí, EXPLICITNĚ se doptej.\n';
+    }
+
     return d;
 }
 
