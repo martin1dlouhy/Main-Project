@@ -632,18 +632,38 @@
     </div>
 
     <div class="form-group">
+      <label>Konvence úročení (počet dní)</label>
+      <div class="dropdown-field" data-target-select="dayCountBasis">
+        <button class="dropdown-trigger" type="button" aria-expanded="false" aria-haspopup="listbox">
+          <span class="dropdown-label">ACT/360</span>
+          <svg class="dropdown-chevron" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <ul class="dropdown-menu" role="listbox">
+          <li class="dropdown-option selected" data-value="360" role="option">ACT/360</li>
+          <li class="dropdown-option" data-value="365" role="option">ACT/365</li>
+        </ul>
+      </div>
+      <select id="dayCountBasis" hidden onchange="calculate()">
+        <option value="360">ACT/360</option>
+        <option value="365">ACT/365</option>
+      </select>
+      <small>Úrok = jistina × sazba × skutečné dny / báze</small>
+    </div>
+
+    <div class="form-group">
       <label for="loanTerm">Doba splatnosti (měsíce)</label>
       <input type="text" id="loanTerm" placeholder="36" value="36" onchange="updateRepaymentDate(); calculate();">
     </div>
 
     <div class="form-group">
       <label for="drawdownDate">Datum čerpání</label>
-      <input type="date" id="drawdownDate" value="" onchange="updateRepaymentDate()">
+      <input type="date" id="drawdownDate" value="" onchange="syncTermFromDates(); calculate();">
     </div>
 
     <div class="form-group">
-      <label for="repaymentDate">Datum splatnosti (automaticky)</label>
-      <input type="date" id="repaymentDate" value="" readonly class="readonly-input">
+      <label for="repaymentDate">Datum splatnosti</label>
+      <input type="date" id="repaymentDate" value="" onchange="syncTermFromDates(); calculate();">
+      <small>Pevné datum — posun čerpání mění dobu i úrok</small>
     </div>
 
     <div class="form-group">
@@ -651,8 +671,6 @@
       <input type="date" id="earlyRepaymentDate" value="">
       <small>Ponechte prázdné pro běžné splacení bez poplatku</small>
     </div>
-
-    <div class="form-group"></div>
 
     <div class="form-group">
       <label for="setupFee">Poplatek za sjednání</label>
@@ -1127,6 +1145,17 @@
         }
     }
 
+    // Splatnost je zdroj pravdy. Z dat odvodí zobrazenou "Dobu (měsíce)".
+    // Posun čerpání tak zkracuje/prodlužuje dobu (pevná splatnost) → mění úrok.
+    function syncTermFromDates() {
+        const dd = document.getElementById('drawdownDate').value;
+        const rd = document.getElementById('repaymentDate').value;
+        if (dd && rd) {
+            const months = Math.round((new Date(rd) - new Date(dd)) / (1000 * 60 * 60 * 24 * 30.44));
+            if (months > 0) document.getElementById('loanTerm').value = months;
+        }
+    }
+
     function updatePaymentTypeInfo() {
         const paymentType = document.getElementById('paymentType').value;
         const interestFreqDiv = document.getElementById('interestPaymentFrequency');
@@ -1277,6 +1306,65 @@
         document.getElementById('chartSection').classList.add('show');
     }
 
+    // ===== Day-count interest (ACT/360 nebo ACT/365) =====
+    // Úrok se počítá ze skutečného počtu dní mezi daty, dělený zvolenou bází (360/365).
+    function getDayCountBasis() {
+        const el = document.getElementById('dayCountBasis');
+        const v = el ? parseInt(el.value, 10) : 360;
+        return v === 365 ? 365 : 360;
+    }
+    function daysBetween(d1, d2) {
+        return Math.round((d2 - d1) / 86400000);
+    }
+    // Prostý úrok za období na skutečné dny.
+    function dayCountInterest(principal, ratePct, basis, dFrom, dTo) {
+        return principal * (ratePct / 100) * (daysBetween(dFrom, dTo) / basis);
+    }
+    // Sestaví hranice plateb [d0=čerpání, d1, ..., dN=splatnost]. Poslední datum = splatnost.
+    function buildPeriodDates(drawdownDate, maturityDate, count, stepMonths) {
+        const dates = [new Date(drawdownDate)];
+        for (let i = 1; i < count; i++) {
+            const d = new Date(drawdownDate);
+            d.setMonth(d.getMonth() + i * stepMonths);
+            dates.push(d);
+        }
+        dates.push(new Date(maturityDate));
+        return dates;
+    }
+    // Anuita s úrokem počítaným na skutečné dny období. Pravidelnou splátku dopočítá tak,
+    // aby úvěr doběhl přesně na nulu. dates = [d0(čerpání), d1, ..., dN(splatnost)].
+    // Vrací { payment, totalInterest, rows:[{interest, principal, balance}] }.
+    function solveAnnuityDayCount(loanAmount, ratePct, basis, dates) {
+        const N = dates.length - 1;
+        if (N <= 0) return { payment: loanAmount, totalInterest: 0, rows: [] };
+        const factors = [];
+        for (let i = 1; i <= N; i++) {
+            factors.push((ratePct / 100) * (daysBetween(dates[i - 1], dates[i]) / basis));
+        }
+        function endBalance(pay) {
+            let b = loanAmount;
+            for (let i = 0; i < N; i++) { b = b + b * factors[i] - pay; }
+            return b;
+        }
+        let lo = 0, hi = loanAmount, guard = 0;
+        while (endBalance(hi) > 0 && guard++ < 80) hi *= 2;
+        for (let k = 0; k < 200; k++) {
+            const mid = (lo + hi) / 2;
+            if (endBalance(mid) > 0) lo = mid; else hi = mid;
+        }
+        const pay = (lo + hi) / 2;
+        let bal = loanAmount, totalInterest = 0;
+        const rows = [];
+        for (let j = 0; j < N; j++) {
+            const interest = bal * factors[j];
+            const principal = pay - interest;
+            bal = bal + interest - pay;
+            totalInterest += interest;
+            rows.push({ interest: interest, principal: principal, balance: Math.max(0, bal) });
+        }
+        return { payment: pay, totalInterest: totalInterest, rows: rows };
+    }
+
     function calculateIRR(cashFlows, dates) {
         let guess = 0.1;
         const maxIterations = 1000;
@@ -1355,64 +1443,59 @@
         const ltv = (loanAmount / propertyValue) * 100;
 
         let monthlyPayment, totalInterest, cashFlows, cashFlowDates;
+        const basis = getDayCountBasis();
+        const dd = new Date(drawdownDate);
+
+        // Stejná pojistka jako v calculate() — splatnost (i přes předčasné splacení) musí být po čerpání.
+        if (!(actualRepaymentDate > dd) || actualLoanTermMonths <= 0) {
+            return null;
+        }
 
         if (paymentType === 'annuity') {
-            const monthlyRate = interestRate / 100 / 12;
-            if (monthlyRate === 0) {
-                monthlyPayment = loanAmount / actualLoanTermMonths;
-            } else {
-                monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, actualLoanTermMonths)) /
-                                       (Math.pow(1 + monthlyRate, actualLoanTermMonths) - 1);
-            }
-            const totalPayment = monthlyPayment * actualLoanTermMonths;
-            totalInterest = totalPayment - loanAmount;
+            const numPeriods = Math.max(1, actualLoanTermMonths);
+            const dates = buildPeriodDates(dd, actualRepaymentDate, numPeriods, 1);
+            const ann = solveAnnuityDayCount(loanAmount, interestRate, basis, dates);
+            monthlyPayment = ann.payment;
+            totalInterest = ann.totalInterest;
 
             cashFlows = [-netDisbursement];
-            cashFlowDates = [new Date(drawdownDate)];
+            cashFlowDates = [new Date(dd)];
 
-            for (let i = 1; i <= actualLoanTermMonths; i++) {
-                const paymentDate = new Date(drawdownDate);
-                paymentDate.setMonth(paymentDate.getMonth() + i);
-                let payment = monthlyPayment;
-                if (i === actualLoanTermMonths) {
+            for (let i = 1; i <= numPeriods; i++) {
+                let payment = ann.payment;
+                if (i === numPeriods) {
                     if (isEarlyRepayment) payment += earlyRepaymentFeeAmount;
                     payment += contractualPenaltyAmount + otherFeesAmount;
                 }
                 cashFlows.push(payment);
-                cashFlowDates.push(paymentDate);
+                cashFlowDates.push(dates[i]);
             }
         } else if (paymentType === 'interestOnly') {
-            const annualInterest = loanAmount * (interestRate / 100);
-            const periodicInterestPayment = annualInterest * (interestFrequency / 12);
-            monthlyPayment = periodicInterestPayment;
-            const numberOfPayments = Math.floor(actualLoanTermMonths / interestFrequency);
-            totalInterest = periodicInterestPayment * numberOfPayments;
+            const numberOfPayments = Math.max(1, Math.floor(actualLoanTermMonths / interestFrequency));
+            const dates = buildPeriodDates(dd, actualRepaymentDate, numberOfPayments, interestFrequency);
+            totalInterest = dayCountInterest(loanAmount, interestRate, basis, dd, actualRepaymentDate);
+            monthlyPayment = dayCountInterest(loanAmount, interestRate, basis, dates[0], dates[1]);
 
             cashFlows = [-netDisbursement];
-            cashFlowDates = [new Date(drawdownDate)];
+            cashFlowDates = [new Date(dd)];
 
             for (let i = 1; i <= numberOfPayments; i++) {
-                cashFlows.push(periodicInterestPayment);
-                const paymentDate = new Date(drawdownDate);
-                paymentDate.setMonth(paymentDate.getMonth() + (i * interestFrequency));
-                cashFlowDates.push(paymentDate);
-            }
-
-            const finalFee = isEarlyRepayment ? earlyRepaymentFeeAmount : 0;
-            const finalPayment = periodicInterestPayment + loanAmount + finalFee + contractualPenaltyAmount + otherFeesAmount;
-
-            if (cashFlows.length > 1) {
-                cashFlows[cashFlows.length - 1] = finalPayment;
-            } else {
-                cashFlows.push(finalPayment);
-                cashFlowDates.push(actualRepaymentDate);
+                const periodInterest = dayCountInterest(loanAmount, interestRate, basis, dates[i - 1], dates[i]);
+                let payment = periodInterest;
+                if (i === numberOfPayments) {
+                    payment += loanAmount;
+                    if (isEarlyRepayment) payment += earlyRepaymentFeeAmount;
+                    payment += contractualPenaltyAmount + otherFeesAmount;
+                }
+                cashFlows.push(payment);
+                cashFlowDates.push(dates[i]);
             }
         } else if (paymentType === 'bullet') {
             monthlyPayment = 0;
-            totalInterest = loanAmount * (interestRate / 100) * (actualLoanTermMonths / 12);
+            totalInterest = dayCountInterest(loanAmount, interestRate, basis, dd, actualRepaymentDate);
 
             cashFlows = [-netDisbursement];
-            cashFlowDates = [new Date(drawdownDate)];
+            cashFlowDates = [new Date(dd)];
 
             const finalFee = isEarlyRepayment ? earlyRepaymentFeeAmount : 0;
             const finalPayment = loanAmount + totalInterest + finalFee + contractualPenaltyAmount + otherFeesAmount;
@@ -1508,65 +1591,58 @@
         const ltv = (loanAmount / propertyValue) * 100;
 
         let monthlyPayment, totalInterest, cashFlows, cashFlowDates;
+        const basis = getDayCountBasis();
+
+        if (!(actualRepaymentDate > drawdownDate) || actualLoanTermMonths <= 0) {
+            alert('Datum splatnosti musí být po datu čerpání.');
+            return;
+        }
 
         if (paymentType === 'annuity') {
-            const monthlyRate = interestRate / 100 / 12;
-            if (monthlyRate === 0) {
-                monthlyPayment = loanAmount / actualLoanTermMonths;
-            } else {
-                monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, actualLoanTermMonths)) /
-                                       (Math.pow(1 + monthlyRate, actualLoanTermMonths) - 1);
-            }
-            const totalPayment = monthlyPayment * actualLoanTermMonths;
-            totalInterest = totalPayment - loanAmount;
+            const numPeriods = Math.max(1, actualLoanTermMonths);
+            const dates = buildPeriodDates(drawdownDate, actualRepaymentDate, numPeriods, 1);
+            const ann = solveAnnuityDayCount(loanAmount, interestRate, basis, dates);
+            monthlyPayment = ann.payment;
+            totalInterest = ann.totalInterest;
 
             cashFlows = [-netDisbursement];
             cashFlowDates = [drawdownDate];
 
-            for (let i = 1; i <= actualLoanTermMonths; i++) {
-                const paymentDate = new Date(drawdownDate);
-                paymentDate.setMonth(paymentDate.getMonth() + i);
-
-                let payment = monthlyPayment;
-                if (i === actualLoanTermMonths) {
+            for (let i = 1; i <= numPeriods; i++) {
+                let payment = ann.payment;
+                if (i === numPeriods) {
                     if (isEarlyRepayment) payment += earlyRepaymentFeeAmount;
                     payment += contractualPenaltyAmount + otherFeesAmount;
                 }
-
                 cashFlows.push(payment);
-                cashFlowDates.push(paymentDate);
+                cashFlowDates.push(dates[i]);
             }
 
         } else if (paymentType === 'interestOnly') {
-            const annualInterest = loanAmount * (interestRate / 100);
-            const periodicInterestPayment = annualInterest * (interestFrequency / 12);
-            monthlyPayment = periodicInterestPayment;
-
-            const numberOfPayments = Math.floor(actualLoanTermMonths / interestFrequency);
-            totalInterest = periodicInterestPayment * numberOfPayments;
+            const numberOfPayments = Math.max(1, Math.floor(actualLoanTermMonths / interestFrequency));
+            const dates = buildPeriodDates(drawdownDate, actualRepaymentDate, numberOfPayments, interestFrequency);
+            // Součet úroků = jistina × sazba × skutečné dny (čerpání→splatnost) / báze.
+            totalInterest = dayCountInterest(loanAmount, interestRate, basis, drawdownDate, actualRepaymentDate);
+            monthlyPayment = dayCountInterest(loanAmount, interestRate, basis, dates[0], dates[1]);
 
             cashFlows = [-netDisbursement];
             cashFlowDates = [drawdownDate];
 
             for (let i = 1; i <= numberOfPayments; i++) {
-                cashFlows.push(periodicInterestPayment);
-                const paymentDate = new Date(drawdownDate);
-                paymentDate.setMonth(paymentDate.getMonth() + (i * interestFrequency));
-                cashFlowDates.push(paymentDate);
+                const periodInterest = dayCountInterest(loanAmount, interestRate, basis, dates[i - 1], dates[i]);
+                let payment = periodInterest;
+                if (i === numberOfPayments) {
+                    payment += loanAmount;
+                    if (isEarlyRepayment) payment += earlyRepaymentFeeAmount;
+                    payment += contractualPenaltyAmount + otherFeesAmount;
+                }
+                cashFlows.push(payment);
+                cashFlowDates.push(dates[i]);
             }
 
-            const finalFee = isEarlyRepayment ? earlyRepaymentFeeAmount : 0;
-            const finalPayment = periodicInterestPayment + loanAmount + finalFee + contractualPenaltyAmount + otherFeesAmount;
-
-            if (cashFlows.length > 1) {
-                cashFlows[cashFlows.length - 1] = finalPayment;
-            } else {
-                cashFlows.push(finalPayment);
-                cashFlowDates.push(actualRepaymentDate);
-            }
         } else if (paymentType === 'bullet') {
             monthlyPayment = 0;
-            totalInterest = loanAmount * (interestRate / 100) * (actualLoanTermMonths / 12);
+            totalInterest = dayCountInterest(loanAmount, interestRate, basis, drawdownDate, actualRepaymentDate);
 
             cashFlows = [-netDisbursement];
             cashFlowDates = [drawdownDate];
@@ -1646,7 +1722,7 @@
         const scheduleData = generatePaymentSchedule(paymentType, loanAmount, interestRate, actualLoanTermMonths,
                                drawdownDate, monthlyPayment, interestFrequency,
                                setupFeeAmount, earlyRepaymentFeeAmount, isEarlyRepayment,
-                               contractualPenaltyAmount, otherFeesAmount);
+                               contractualPenaltyAmount, otherFeesAmount, actualRepaymentDate, basis);
 
         generatePaymentChart(scheduleData);
 
@@ -1659,7 +1735,7 @@
 
     function generatePaymentSchedule(paymentType, loanAmount, interestRate, loanTermMonths,
                                     startDate, payment, interestFrequency, setupFee, earlyFee, isEarlyRepayment,
-                                    contractualPenalty, otherFees) {
+                                    contractualPenalty, otherFees, maturityDate, basis) {
         const scheduleBody = document.getElementById('scheduleBody');
         scheduleBody.innerHTML = '';
 
@@ -1669,15 +1745,16 @@
         const scheduleData = [];
 
         if (paymentType === 'annuity') {
-            const monthlyRate = interestRate / 100 / 12;
+            const numPeriods = Math.max(1, loanTermMonths);
+            const dates = buildPeriodDates(startDate, maturityDate, numPeriods, 1);
+            const ann = solveAnnuityDayCount(loanAmount, interestRate, basis, dates);
+            const levelPayment = ann.payment;
 
-            for (let i = 1; i <= loanTermMonths; i++) {
-                const paymentDate = new Date(startDate);
-                paymentDate.setMonth(paymentDate.getMonth() + i);
-
-                const interestPayment = balance * monthlyRate;
-                const principalPayment = payment - interestPayment;
-                const endingBalance = balance - principalPayment;
+            for (let i = 1; i <= numPeriods; i++) {
+                const row0 = ann.rows[i - 1];
+                const interestPayment = row0.interest;
+                const principalPayment = row0.principal;
+                const endingBalance = row0.balance;
 
                 totalInterestPaid += interestPayment;
                 totalPrincipalPaid += principalPayment;
@@ -1692,11 +1769,11 @@
                 const row = `
                     <tr>
                         <td class="text-center">${i}</td>
-                        <td>${paymentDate.toLocaleDateString('cs-CZ')}</td>
+                        <td>${dates[i].toLocaleDateString('cs-CZ')}</td>
                         <td class="text-right">${formatCurrency(balance)}</td>
                         <td class="text-right">${formatCurrency(interestPayment)}</td>
                         <td class="text-right">${formatCurrency(principalPayment)}</td>
-                        <td class="text-right">${formatCurrency(payment)}</td>
+                        <td class="text-right">${formatCurrency(levelPayment)}</td>
                         <td class="text-right">${formatCurrency(Math.max(0, endingBalance))}</td>
                     </tr>
                 `;
@@ -1705,16 +1782,14 @@
                 balance = endingBalance;
             }
         } else if (paymentType === 'interestOnly') {
-            const annualInterest = loanAmount * (interestRate / 100);
-            const periodicInterest = annualInterest * (interestFrequency / 12);
-            const numberOfPayments = Math.floor(loanTermMonths / interestFrequency);
+            const numberOfPayments = Math.max(1, Math.floor(loanTermMonths / interestFrequency));
+            const dates = buildPeriodDates(startDate, maturityDate, numberOfPayments, interestFrequency);
 
             for (let i = 1; i <= numberOfPayments; i++) {
-                const paymentDate = new Date(startDate);
-                paymentDate.setMonth(paymentDate.getMonth() + (i * interestFrequency));
+                const paymentDate = dates[i];
 
                 const isLastPayment = (i === numberOfPayments);
-                const interestPayment = periodicInterest;
+                const interestPayment = dayCountInterest(loanAmount, interestRate, basis, dates[i - 1], dates[i]);
                 const principalPayment = isLastPayment ? loanAmount : 0;
                 const earlyFeeToApply = (isLastPayment && isEarlyRepayment) ? earlyFee : 0;
                 const penaltyToApply = isLastPayment ? contractualPenalty : 0;
@@ -1757,10 +1832,9 @@
                 balance = endingBalance;
             }
         } else if (paymentType === 'bullet') {
-            const paymentDate = new Date(startDate);
-            paymentDate.setMonth(paymentDate.getMonth() + loanTermMonths);
+            const paymentDate = new Date(maturityDate);
 
-            const totalInterest = loanAmount * (interestRate / 100) * (loanTermMonths / 12);
+            const totalInterest = dayCountInterest(loanAmount, interestRate, basis, startDate, maturityDate);
             const earlyFeeToApply = isEarlyRepayment ? earlyFee : 0;
             const totalPayment = loanAmount + totalInterest + earlyFeeToApply + contractualPenalty + otherFees;
 
@@ -1921,6 +1995,11 @@
             otherFees: 0,
             otherFeesType: 'percent'
         });
+
+        if (!results) {
+            showToast('Datum předčasného splacení musí být po datu čerpání');
+            return;
+        }
 
         scenarios[index].results = results;
         renderComparisonTable();
@@ -2087,6 +2166,7 @@
                 interestRate: document.getElementById('interestRate').value,
                 loanTerm: document.getElementById('loanTerm').value,
                 drawdownDate: document.getElementById('drawdownDate').value,
+                repaymentDate: document.getElementById('repaymentDate').value,
                 earlyRepaymentDate: document.getElementById('earlyRepaymentDate').value,
                 setupFee: document.getElementById('setupFee').value,
                 setupFeeType: document.querySelector('input[name="setupFeeType"]:checked').value,
@@ -2097,7 +2177,8 @@
                 otherFees: document.getElementById('otherFees').value,
                 otherFeesType: document.querySelector('input[name="otherFeesType"]:checked').value,
                 paymentType: document.getElementById('paymentType').value,
-                interestFrequency: document.getElementById('interestFrequency').value
+                interestFrequency: document.getElementById('interestFrequency').value,
+                dayCountBasis: document.getElementById('dayCountBasis').value
             },
             scenarios
         };
@@ -2189,6 +2270,7 @@
         document.getElementById('interestRate').value = data.form.interestRate;
         document.getElementById('loanTerm').value = data.form.loanTerm;
         document.getElementById('drawdownDate').value = data.form.drawdownDate;
+        if (data.form.repaymentDate) document.getElementById('repaymentDate').value = data.form.repaymentDate;
         document.getElementById('earlyRepaymentDate').value = data.form.earlyRepaymentDate;
         document.getElementById('setupFee').value = data.form.setupFee;
         document.getElementById('earlyRepaymentFee').value = data.form.earlyRepaymentFee;
@@ -2196,6 +2278,7 @@
         document.getElementById('otherFees').value = data.form.otherFees;
         document.getElementById('paymentType').value = data.form.paymentType;
         document.getElementById('interestFrequency').value = data.form.interestFrequency;
+        document.getElementById('dayCountBasis').value = data.form.dayCountBasis || '360';
 
         const sftEl = document.querySelector(`input[name="setupFeeType"][value="${data.form.setupFeeType}"]`);
         if (sftEl) sftEl.checked = true;
@@ -2214,9 +2297,10 @@
         if (typeof window.syncCustomDropdown === 'function') {
             window.syncCustomDropdown('paymentType');
             window.syncCustomDropdown('interestFrequency');
+            window.syncCustomDropdown('dayCountBasis');
         }
         updatePaymentTypeInfo();
-        updateRepaymentDate();
+        if (!data.form.repaymentDate) updateRepaymentDate();
         calculate();
         showToast('Výpočet byl načten');
     }
@@ -2242,6 +2326,7 @@
             ir: document.getElementById('interestRate').value,
             lt: document.getElementById('loanTerm').value,
             dd: document.getElementById('drawdownDate').value,
+            rd: document.getElementById('repaymentDate').value,
             erd: document.getElementById('earlyRepaymentDate').value,
             sf: document.getElementById('setupFee').value,
             sft: document.querySelector('input[name="setupFeeType"]:checked').value,
@@ -2253,6 +2338,7 @@
             oft: document.querySelector('input[name="otherFeesType"]:checked').value,
             pt: document.getElementById('paymentType').value,
             ifr: document.getElementById('interestFrequency').value,
+            dcb: document.getElementById('dayCountBasis').value,
             curr: currentCurrency
         };
 
@@ -2283,6 +2369,7 @@
             document.getElementById('interestRate').value = data.ir;
             document.getElementById('loanTerm').value = data.lt;
             document.getElementById('drawdownDate').value = data.dd;
+            if (data.rd) document.getElementById('repaymentDate').value = data.rd;
             document.getElementById('earlyRepaymentDate').value = data.erd;
             document.getElementById('setupFee').value = data.sf;
             document.getElementById('earlyRepaymentFee').value = data.erf;
@@ -2290,6 +2377,7 @@
             document.getElementById('otherFees').value = data.of;
             document.getElementById('paymentType').value = data.pt;
             document.getElementById('interestFrequency').value = data.ifr;
+            document.getElementById('dayCountBasis').value = data.dcb || '360';
 
             document.querySelector(`input[name="setupFeeType"][value="${data.sft}"]`).checked = true;
             document.querySelector(`input[name="earlyRepaymentFeeType"][value="${data.erft}"]`).checked = true;
@@ -2300,9 +2388,10 @@
             if (typeof window.syncCustomDropdown === 'function') {
                 window.syncCustomDropdown('paymentType');
                 window.syncCustomDropdown('interestFrequency');
+                window.syncCustomDropdown('dayCountBasis');
             }
             updatePaymentTypeInfo();
-            updateRepaymentDate();
+            if (!data.rd) updateRepaymentDate();
             calculate();
             showToast('Parametry načteny z URL');
         } catch (e) {
