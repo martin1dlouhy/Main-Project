@@ -1050,12 +1050,6 @@
       </div>
     </div>
     <div class="nav-item">
-      <a class="nav-link">Pracovní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
-      <div class="dropdown">
-        <a class="dd-item" href="portfolio-dashboard.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10"/><path d="M16 6 A10 10 0 0 1 26 16"/><path d="M16 16 L26 16"/><path d="M16 16 L16 6"/><circle cx="16" cy="16" r="4"/></svg></span><div><div class="dd-title">Portfolio Dashboard</div><div class="dd-meta">Přehled portfolia</div></div></a>
-      </div>
-    </div>
-    <div class="nav-item">
       <a class="nav-link current">ProfiLend <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
       <div class="dropdown">
         <a class="dd-item" href="termsheet-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span><div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy &amp; export</div></div></a>
@@ -1523,7 +1517,6 @@
                     <ul>
                         <li><a href="index.html">Domů</a></li>
                         <li><a href="apps.html#osobni">Osobní</a></li>
-                        <li><a href="apps.html#pracovni">Pracovní</a></li>
                         <li><a href="apps.html#profilend">ProfiLend</a></li>
                     </ul>
                 </div>
@@ -2355,8 +2348,13 @@
             rows.push({ l: 'Kontakt na stávajícího věřitele' });
         }
         if (cc.tranches) {
+            // Mřížka 2 sloupce (Částka | Datum), 3 řádky na 3 čerpání. `cols` = záhlaví sloupců,
+            // `pair` = dvě prázdné buňky k vyplnění klientem.
             rows.push({ h: 'Tranše čerpání' });
-            rows.push({ l: 'Data a výše jednotlivých čerpání' });
+            rows.push({ cols: ['Částka', 'Datum'] });
+            rows.push({ pair: true });
+            rows.push({ pair: true });
+            rows.push({ pair: true });
         }
         return rows;
     }
@@ -2398,12 +2396,23 @@
                '<w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar>' +
                '</w:tblPr><w:tblGrid><w:gridCol w:w="4250"/><w:gridCol w:w="5110"/></w:tblGrid>';
 
+        function cellXml(w, runs) {
+            return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/></w:tcPr>' +
+                   '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>' + runs + '</w:p></w:tc>';
+        }
         rows.forEach(function(r) {
             if (r.h) {
                 xml += '<w:tr><w:tc><w:tcPr><w:gridSpan w:val="2"/><w:shd w:val="clear" w:fill="E8F8FD"/></w:tcPr>' +
                        '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>' +
                        '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="20"/><w:color w:val="0B6E8C"/></w:rPr>' +
                        '<w:t xml:space="preserve">' + xmlEscape(r.h) + '</w:t></w:r></w:p></w:tc></w:tr>';
+            } else if (r.cols) {
+                // záhlaví sloupců (tučné) — např. Částka | Datum
+                var hdr = function(t) { return '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">' + xmlEscape(t) + '</w:t></w:r>'; };
+                xml += '<w:tr>' + cellXml('4250', hdr(r.cols[0])) + cellXml('5110', hdr(r.cols[1])) + '</w:tr>';
+            } else if (r.pair) {
+                // dvě prázdné buňky k vyplnění (částka | datum)
+                xml += '<w:tr>' + cellXml('4250', '') + cellXml('5110', '') + '</w:tr>';
             } else {
                 var valRun = r.v
                     ? '<w:r><w:rPr>' + CAL + '<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">' + xmlEscape(r.v) + '</w:t></w:r>'
@@ -2654,6 +2663,18 @@
                                 shading: { type: D.ShadingType.CLEAR, fill: 'E8F8FD' },
                                 children: [new D.Paragraph({ children: [new D.TextRun({ text: r.h, bold: true, size: 20, font: 'Calibri' })] })]
                             })] });
+                        }
+                        if (r.cols) {
+                            return new D.TableRow({ children: [
+                                new D.TableCell({ width: { size: 45, type: D.WidthType.PERCENTAGE }, children: [new D.Paragraph({ children: [new D.TextRun({ text: r.cols[0], bold: true, size: 20, font: 'Calibri' })] })] }),
+                                new D.TableCell({ width: { size: 55, type: D.WidthType.PERCENTAGE }, children: [new D.Paragraph({ children: [new D.TextRun({ text: r.cols[1], bold: true, size: 20, font: 'Calibri' })] })] })
+                            ] });
+                        }
+                        if (r.pair) {
+                            return new D.TableRow({ children: [
+                                new D.TableCell({ width: { size: 45, type: D.WidthType.PERCENTAGE }, children: [new D.Paragraph({ children: [] })] }),
+                                new D.TableCell({ width: { size: 55, type: D.WidthType.PERCENTAGE }, children: [new D.Paragraph({ children: [] })] })
+                            ] });
                         }
                         return new D.TableRow({ children: [
                             new D.TableCell({
