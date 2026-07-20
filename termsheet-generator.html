@@ -1613,7 +1613,8 @@
 
     // ===== PIN AUTHENTICATION (server-side) =====
     (function initPIN() {
-        if (sessionStorage.getItem('ts-auth') === 'true') {
+        // Starší sessions nemají ts-token — vynutit nový PIN, jinak by parse-lv vracel 401.
+        if (sessionStorage.getItem('ts-auth') === 'true' && sessionStorage.getItem('ts-token')) {
             document.getElementById('pin-overlay').classList.add('hidden');
             return;
         }
@@ -1656,6 +1657,8 @@
         .then(function(data) {
             if (data.success) {
                 sessionStorage.setItem('ts-auth', 'true');
+                // Session token pro AI endpointy (parse-lv) — server ho od F2 vyžaduje.
+                sessionStorage.setItem('ts-token', data.sessionToken || '');
                 document.getElementById('pin-overlay').classList.add('hidden');
                 document.getElementById('pin-error').style.display = 'none';
                 digits.forEach(function(d) { d.value = ''; d.disabled = false; });
@@ -3191,7 +3194,7 @@
 
                 var response = await fetch(LV_API_BASE + '/api/parse-lv', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-Database-Token': sessionStorage.getItem('ts-token') || '' },
                     body: JSON.stringify(requestBody)
                 });
 

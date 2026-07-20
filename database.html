@@ -5024,9 +5024,9 @@ function renderContactSuggestions() {
                           lkKind === 'company'       ? 'LinkedIn firma ↗' :
                           lkKind === 'profile'       ? 'LinkedIn ↗' :
                                                        'LinkedIn ↗';
-            meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(c.linkedinUrl) + '" target="_blank" rel="noopener">' + label + '</a> ' + linkedInBadgeHTML(lkKind) + '</span>');
+            meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(sanitizeUrl(c.linkedinUrl)) + '" target="_blank" rel="noopener">' + label + '</a> ' + linkedInBadgeHTML(lkKind) + '</span>');
         }
-        if (c.web) meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(c.web) + '" target="_blank" rel="noopener">Web ↗</a></span>');
+        if (c.web) meta.push('<span class="vyhl-meta-item"><a href="' + escapeAttr(sanitizeUrl(c.web)) + '" target="_blank" rel="noopener">Web ↗</a></span>');
         if (c.sidlo) meta.push('<span class="vyhl-meta-item">📍 ' + escapeHtml(c.sidlo) + '</span>');
         if (c.ico) meta.push('<span class="vyhl-meta-item">IČO: ' + escapeHtml(c.ico) + '</span>');
         const isSelected = state.vyhlSelected.has(i);
@@ -5072,7 +5072,7 @@ function renderSourceSuggestions() {
             '<div class="vyhl-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>' +
             '<div class="vyhl-body">' +
                 '<div class="vyhl-firma">' + escapeHtml(s.nazev || '—') + '</div>' +
-                '<div class="vyhl-osoba"><a href="' + escapeAttr(s.url) + '" target="_blank" rel="noopener" style="color:var(--amber-warm);" onclick="event.stopPropagation()">' + escapeHtml(s.url) + ' ↗</a></div>' +
+                '<div class="vyhl-osoba"><a href="' + escapeAttr(sanitizeUrl(s.url)) + '" target="_blank" rel="noopener" style="color:var(--amber-warm);" onclick="event.stopPropagation()">' + escapeHtml(s.url) + ' ↗</a></div>' +
                 (s.poznamka ? '<div class="vyhl-meta" style="margin-top:6px;font-size:12.5px;color:var(--text-soft);">' + escapeHtml(s.poznamka) + '</div>' : '') +
                 (qualBadge || typBadge ? '<div class="vyhl-meta" style="margin-top:4px;display:flex;gap:10px;">' + qualBadge + (qualBadge && typBadge ? ' · ' : '') + typBadge + '</div>' : '') +
             '</div>' +
@@ -6786,6 +6786,14 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) {
     return String(s == null ? '' : s).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+// URL z AI výstupu smí do href jen s http/https schématem (blokuje javascript:, data: apod.).
+// Domény bez schématu (www.firma.cz z ARES) dostanou https:// prefix.
+function sanitizeUrl(u) {
+    u = String(u == null ? '' : u).trim();
+    if (/^https?:\/\//i.test(u)) return u;
+    if (/^www\.[\w-]/i.test(u)) return 'https://' + u;
+    return '#';
 }
 function slug(s) {
     return String(s || '').toLowerCase()

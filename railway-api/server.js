@@ -12,6 +12,13 @@ try { sharp = require('sharp'); } catch (e) { console.warn('[marketing] sharp no
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Railway běží za reverse proxy — req.ip pak bere skutečnou klientskou IP
+// z X-Forwarded-For dosazené proxy (ne spoofovatelnou klientem).
+app.set('trust proxy', 1);
+
+// Debug pole s interními prompty vracet jen mimo produkci.
+var DEBUG_RESPONSES = process.env.NODE_ENV !== 'production';
+
 // =============================================
 // MARKETING_CONFIG — central config for marketing endpoints
 // Cost values are estimates; OpenAI prices change — not authoritative.
@@ -132,7 +139,7 @@ app.post('/api/verify-pin', async function (req, res) {
         return res.status(500).json({ error: 'PIN_HASH is not configured on server.' });
     }
 
-    var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+    var ip = req.ip || req.connection.remoteAddress || 'unknown';
     var now = Date.now();
 
     // Rate limiting
@@ -164,7 +171,9 @@ app.post('/api/verify-pin', async function (req, res) {
 
     // SHA-256 comparison (no $ characters — safe for Railway env vars)
     var inputHash = crypto.createHash('sha256').update(pin).digest('hex');
-    if (inputHash === pinHash) {
+    var pinOk = inputHash.length === pinHash.length &&
+        crypto.timingSafeEqual(Buffer.from(inputHash), Buffer.from(pinHash));
+    if (pinOk) {
         // Reset attempts on success
         delete pinAttempts[ip];
         // Issue session token (legacy callers can ignore this field)
@@ -181,6 +190,9 @@ app.post('/api/verify-pin', async function (req, res) {
 // No timeout limit (unlike Vercel's 60s cap)
 // =============================================
 app.post('/api/parse-lv', async function (req, res) {
+    if (!verifyDatabaseToken(req)) {
+        return res.status(401).json({ error: 'Neplatná relace. Obnovte stránku a zadejte PIN.' });
+    }
     var apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
         return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not set. Add it in Railway → Variables.' });
@@ -917,6 +929,9 @@ function buildLoanDocManualUserContent(templateName, dataDescription, templateTe
 // prompt zkopírovat a paste do externí ChatGPT/Claude (manuální fallback).
 // =============================================
 app.post('/api/generate-loan-doc/preview', function (req, res) {
+    if (!verifyDatabaseToken(req)) {
+        return res.status(401).json({ error: 'Neplatná relace. Obnovte stránku a zadejte PIN.' });
+    }
     var formData = (req.body && req.body.formData) || {};
     var templateText = (req.body && req.body.templateText) || '';
     var templateName = (req.body && req.body.templateName) || '';
@@ -955,6 +970,9 @@ app.post('/api/generate-loan-doc/preview', function (req, res) {
 // No timeout limit — complex templates may take 2-3 minutes
 // =============================================
 app.post('/api/generate-loan-doc', async function (req, res) {
+    if (!verifyDatabaseToken(req)) {
+        return res.status(401).json({ error: 'Neplatná relace. Obnovte stránku a zadejte PIN.' });
+    }
     var apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
         return res.status(500).json({ error: 'ANTHROPIC_API_KEY is not set.' });
@@ -1304,10 +1322,37 @@ async function compressReferenceImage(dataUrlOrBase64) {
 }
 
 // =============================================
+// Rate limit pro marketing endpointy (bez PIN gate) — brání zneužití
+// OpenAI klíče kýmkoli, kdo zná URL. 30 požadavků / 10 minut / IP.
+// =============================================
+var marketingRate = {}; // { ip: { count, windowStart } }
+setInterval(function () {
+    var now = Date.now();
+    Object.keys(marketingRate).forEach(function (k) {
+        if (now - marketingRate[k].windowStart > 10 * 60 * 1000) delete marketingRate[k];
+    });
+}, 10 * 60 * 1000);
+
+function marketingRateLimited(req, res) {
+    var ip = req.ip || req.connection.remoteAddress || 'unknown';
+    var now = Date.now();
+    if (!marketingRate[ip] || now - marketingRate[ip].windowStart > 10 * 60 * 1000) {
+        marketingRate[ip] = { count: 0, windowStart: now };
+    }
+    marketingRate[ip].count++;
+    if (marketingRate[ip].count > 30) {
+        res.status(429).json({ error: 'Příliš mnoho požadavků. Zkuste to za pár minut.' });
+        return true;
+    }
+    return false;
+}
+
+// =============================================
 // POST /api/marketing/generate-image
 // Supports both legacy flat body and v2 { brandPreset, brief, options } body.
 // =============================================
 app.post('/api/marketing/generate-image', async function (req, res) {
+    if (marketingRateLimited(req, res)) return;
     var openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) {
         return res.status(500).json({ error: 'OPENAI_API_KEY is not set. Add it in Railway Variables.' });
@@ -1383,7 +1428,7 @@ app.post('/api/marketing/generate-image', async function (req, res) {
         // Validate length before sending to image model
         var validation = validatePromptLength(finalPrompt);
         if (!validation.ok) {
-            return res.status(400).json({ error: 'Prompt validation failed: ' + validation.reason, debug: { systemPrompt: systemPrompt, userPrompt: userPrompt, finalPrompt: finalPrompt } });
+            return res.status(400).json({ error: 'Prompt validation failed: ' + validation.reason, debug: DEBUG_RESPONSES ? { systemPrompt: systemPrompt, userPrompt: userPrompt, finalPrompt: finalPrompt } : undefined });
         }
 
         // Quality mapping
@@ -1408,10 +1453,13 @@ app.post('/api/marketing/generate-image', async function (req, res) {
             revisedPrompt: imageData.revised_prompt || null,
             model: imageModel,
             usedReferenceImages: referenceImages.length > 0,
-            debug: {
+            debug: DEBUG_RESPONSES ? {
                 systemPrompt: systemPrompt,
                 userPrompt: userPrompt,
                 finalPrompt: finalPrompt,
+                costEstimate: Number(costEstimate.toFixed(4)),
+                requestMode: normalized.mode
+            } : {
                 costEstimate: Number(costEstimate.toFixed(4)),
                 requestMode: normalized.mode
             }
@@ -1432,6 +1480,7 @@ app.post('/api/marketing/generate-image', async function (req, res) {
 });
 
 app.post('/api/marketing/generate', async function (req, res) {
+    if (marketingRateLimited(req, res)) return;
     var openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) {
         return res.status(500).json({ error: 'OPENAI_API_KEY is not set. Add it in Railway → Variables.' });
@@ -1785,16 +1834,19 @@ app.post('/api/marketing/generate', async function (req, res) {
                 posts: posts,
                 model: textModel,
                 cached: false,
-                debug: {
+                debug: DEBUG_RESPONSES ? {
                     requestMode: requestMode,
                     systemPrompt: systemPrompt,
                     userPrompt: userPrompt,
+                    costEstimate: Number(costEstimateText.toFixed(4))
+                } : {
+                    requestMode: requestMode,
                     costEstimate: Number(costEstimateText.toFixed(4))
                 }
             });
         } else {
             console.error('Invalid OpenAI response:', responseText.substring(0, 500));
-            return res.status(200).json({ success: false, error: 'AI nevrátilo platný formát. Zkuste to znovu.', debug: { requestMode: requestMode, systemPrompt: systemPrompt, userPrompt: userPrompt } });
+            return res.status(200).json({ success: false, error: 'AI nevrátilo platný formát. Zkuste to znovu.', debug: DEBUG_RESPONSES ? { requestMode: requestMode, systemPrompt: systemPrompt, userPrompt: userPrompt } : { requestMode: requestMode } });
         }
     } catch (err) {
         console.error('OpenAI API error:', err.message);

@@ -2520,6 +2520,8 @@
             .then(function(resp) { return resp.json(); })
             .then(function(data) {
                 if (data.success) {
+                    // Session token pro AI endpointy (generate-loan-doc) — server ho od F2 vyžaduje.
+                    sessionStorage.setItem('ld-token', data.sessionToken || '');
                     document.getElementById('pinOverlay').classList.add('hidden');
                     document.getElementById('appContainer').style.display = '';
                     digits.forEach(function(d) { d.value = ''; d.disabled = false; });
@@ -4340,7 +4342,7 @@
         function fetchPromptPreviewFromServer(payload, sysEl, dataEl, tplEl, fullEl, manualEl, formData, templateName, plainText) {
             return fetch(LOAN_API_BASE + '/api/generate-loan-doc/preview', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-Database-Token': sessionStorage.getItem('ld-token') || '' },
                 body: JSON.stringify(payload)
             }).then(function(resp) {
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -4456,7 +4458,7 @@
                     try {
                         var resp = await fetch(LOAN_API_BASE + '/api/generate-loan-doc/preview', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', 'X-Database-Token': sessionStorage.getItem('ld-token') || '' },
                             body: JSON.stringify({
                                 formData: formData,
                                 templateText: plainText,
@@ -5406,7 +5408,7 @@
                     }
                     return fetch(LOAN_API_BASE + '/api/generate-loan-doc', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', 'X-Database-Token': sessionStorage.getItem('ld-token') || '' },
                         body: JSON.stringify(payload)
                     }).then(function(response) {
                         return response.json();
