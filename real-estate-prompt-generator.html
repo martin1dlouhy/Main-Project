@@ -4089,10 +4089,25 @@
                     data[key] = value;
                 }
 
-                const trzni = parseFloat((data['TRŽNÍ_HODNOTA'] || '').replace(/\s/g, ''));
-                const zastavni = parseFloat((data['ZÁSTAVNÍ_HODNOTA'] || '').replace(/\s/g, ''));
+                // AI má vrátit čisté číslo, ale občas přijde české formátování (8.200.000 / 8 200 000,50).
+                // parseFloat by '8.200.000' tiše usekl na 8.2 — proto normalizace + sanity check řádovosti.
+                function parseAiCzk(raw) {
+                    let s = String(raw || '').replace(/\s/g, '').replace(/Kč|CZK/gi, '');
+                    if (s.indexOf(',') > -1) {
+                        s = s.replace(/\./g, '').replace(',', '.');
+                    } else if ((s.match(/\./g) || []).length > 1) {
+                        s = s.replace(/\./g, '');
+                    }
+                    return parseFloat(s);
+                }
+                const trzni = parseAiCzk(data['TRŽNÍ_HODNOTA']);
+                const zastavni = parseAiCzk(data['ZÁSTAVNÍ_HODNOTA']);
 
-                if (!isNaN(trzni) && !isNaN(zastavni)) {
+                // Nemovitost pod 100 000 Kč = téměř jistě chyba parsování (useknutá hodnota) —
+                // radši spadnout do manuálního režimu než tiše protáhnout špatné číslo do LTV.
+                const sane = (n) => !isNaN(n) && n >= 100000;
+
+                if (sane(trzni) && sane(zastavni)) {
                     aiParsedData[source] = {
                         trzniHodnota: trzni,
                         zastavniHodnota: zastavni,

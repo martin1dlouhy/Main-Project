@@ -546,9 +546,9 @@
   </div>
   <div class="app-tools">
     <div class="currency-selector">
-      <button class="currency-btn active" onclick="setCurrency('CZK')">CZK</button>
-      <button class="currency-btn" onclick="setCurrency('EUR')">EUR</button>
-      <button class="currency-btn" onclick="setCurrency('USD')">USD</button>
+      <button class="currency-btn active" onclick="setCurrency('CZK', true)">CZK</button>
+      <button class="currency-btn" onclick="setCurrency('EUR', true)">EUR</button>
+      <button class="currency-btn" onclick="setCurrency('USD', true)">USD</button>
     </div>
   </div>
 </div>
@@ -934,8 +934,15 @@
     };
 
     // Set currency
-    function setCurrency(currency) {
+    function setCurrency(currency, fromUser) {
+        if (!currencyConfig[currency]) currency = 'CZK';
+        var changed = currentCurrency !== currency;
         currentCurrency = currency;
+        // Přepnutí měny NEPŘEPOČÍTÁVÁ zadané částky — jen mění označení.
+        // Při ručním přepnutí na to upozornit, aby nevznikl dojem konverze.
+        if (fromUser && changed) {
+            showToast('Pozor: přepnutí měny nepřepočítává částky — mění se jen označení měny.');
+        }
 
         // Update button states
         document.querySelectorAll('.currency-btn').forEach(btn => {
@@ -1530,39 +1537,38 @@
         const contractualPenaltyInput = document.getElementById('contractualPenalty').value;
         const otherFeesInput = document.getElementById('otherFees').value;
 
+        // Prázdné/nevalidní pole poplatku = 0 (dřív parseFloat('') → NaN → 'NaN Kč' v souhrnu i PDF)
+        function safeNum(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
         let setupFeeAmount;
         if (setupFeeType === 'percent') {
-            const setupFeePercent = parseFloat(setupFeeInput);
-            setupFeeAmount = loanAmount * (setupFeePercent / 100);
+            setupFeeAmount = loanAmount * (safeNum(setupFeeInput) / 100);
         } else {
-            setupFeeAmount = parseFloat(parseFormattedNumber(setupFeeInput));
+            setupFeeAmount = safeNum(parseFormattedNumber(setupFeeInput));
         }
 
         let earlyRepaymentFeeAmount;
         if (earlyRepaymentFeeType === 'percent') {
-            const earlyRepaymentFeePercent = parseFloat(earlyRepaymentFeeInput);
-            earlyRepaymentFeeAmount = loanAmount * (earlyRepaymentFeePercent / 100);
+            earlyRepaymentFeeAmount = loanAmount * (safeNum(earlyRepaymentFeeInput) / 100);
         } else {
-            earlyRepaymentFeeAmount = parseFloat(parseFormattedNumber(earlyRepaymentFeeInput));
+            earlyRepaymentFeeAmount = safeNum(parseFormattedNumber(earlyRepaymentFeeInput));
         }
 
         let contractualPenaltyAmount = 0;
         if (contractualPenaltyInput && contractualPenaltyInput !== '0') {
             if (contractualPenaltyType === 'percent') {
-                const contractualPenaltyPercent = parseFloat(contractualPenaltyInput);
-                contractualPenaltyAmount = loanAmount * (contractualPenaltyPercent / 100);
+                contractualPenaltyAmount = loanAmount * (safeNum(contractualPenaltyInput) / 100);
             } else {
-                contractualPenaltyAmount = parseFloat(parseFormattedNumber(contractualPenaltyInput));
+                contractualPenaltyAmount = safeNum(parseFormattedNumber(contractualPenaltyInput));
             }
         }
 
         let otherFeesAmount = 0;
         if (otherFeesInput && otherFeesInput !== '0') {
             if (otherFeesType === 'percent') {
-                const otherFeesPercent = parseFloat(otherFeesInput);
-                otherFeesAmount = loanAmount * (otherFeesPercent / 100);
+                otherFeesAmount = loanAmount * (safeNum(otherFeesInput) / 100);
             } else {
-                otherFeesAmount = parseFloat(parseFormattedNumber(otherFeesInput));
+                otherFeesAmount = safeNum(parseFormattedNumber(otherFeesInput));
             }
         }
 
@@ -1956,7 +1962,8 @@
         const term = parseInt(document.getElementById(`scenario-term-${index}`).value);
         const fee = parseFloat(document.getElementById(`scenario-fee-${index}`).value);
 
-        if (!rate || !term || fee === undefined) {
+        // isNaN místo !rate — prázdné pole je NaN (ne undefined) a 0% sazba / 0 fee jsou legitimní
+        if (isNaN(rate) || isNaN(term) || term <= 0 || isNaN(fee)) {
             showToast('Vyplňte všechna pole scénáře');
             return;
         }
@@ -2283,7 +2290,7 @@
         scenarios = data.scenarios || [];
         scenarioCounter = scenarios.length;
 
-        setCurrency(data.currency);
+        setCurrency(data.currency || 'CZK');
         closeLoadModal();
         if (typeof window.syncCustomDropdown === 'function') {
             window.syncCustomDropdown('paymentType');
@@ -2370,12 +2377,14 @@
             document.getElementById('interestFrequency').value = data.ifr;
             document.getElementById('dayCountBasis').value = data.dcb || '360';
 
-            document.querySelector(`input[name="setupFeeType"][value="${data.sft}"]`).checked = true;
-            document.querySelector(`input[name="earlyRepaymentFeeType"][value="${data.erft}"]`).checked = true;
-            document.querySelector(`input[name="contractualPenaltyType"][value="${data.cpt}"]`).checked = true;
-            document.querySelector(`input[name="otherFeesType"][value="${data.oft}"]`).checked = true;
+            // Null-safe: starší sdílené URL nemusí mít všechny typy poplatků
+            [['setupFeeType', data.sft], ['earlyRepaymentFeeType', data.erft],
+             ['contractualPenaltyType', data.cpt], ['otherFeesType', data.oft]].forEach(function(p) {
+                var el = document.querySelector('input[name="' + p[0] + '"][value="' + p[1] + '"]');
+                if (el) el.checked = true;
+            });
 
-            setCurrency(data.curr);
+            setCurrency(data.curr || 'CZK');
             if (typeof window.syncCustomDropdown === 'function') {
                 window.syncCustomDropdown('paymentType');
                 window.syncCustomDropdown('interestFrequency');

@@ -485,14 +485,25 @@ async function loadSP500Data() {
 // ============================
 // EXCHANGE RATES
 // ============================
+let ratesSource = 'fallback'; // 'api' = živé kurzy, 'fallback' = zabudovaná záloha (může být zastaralá)
+
 async function fetchRates() {
     try {
-        const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        // Timeout, aby pomalé FX API neblokovalo načtení celé aplikace (Promise.all v init)
+        const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD', { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) throw new Error('FX API HTTP ' + res.status);
         const data = await res.json();
-        rates.EUR = data.rates.EUR || 0.92;
-        rates.CZK = data.rates.CZK || 23.5;
+        // Sanity rozsah — nesmyslný kurz (formát API se změnil) nepouštět do výpočtů
+        if (data.rates && data.rates.CZK > 10 && data.rates.CZK < 40) {
+            rates.EUR = data.rates.EUR || 0.92;
+            rates.CZK = data.rates.CZK;
+            ratesSource = 'api';
+        } else {
+            throw new Error('FX API vrátilo nevalidní kurz');
+        }
     } catch (e) {
-        console.log('Using fallback exchange rates');
+        console.log('Using fallback exchange rates:', e.message);
+        ratesSource = 'fallback';
     }
 }
 
@@ -512,7 +523,12 @@ function updateDataInfo() {
         dateEl.textContent = 'Záložní data';
         src = 'Data: ' + SP500_DATA.length + ' titulů S&P 500 — embedded fallback';
     }
-    src += ' · Kurzy: 1 USD = ' + rates.CZK.toFixed(2) + ' CZK | 1 USD = ' + rates.EUR.toFixed(4) + ' EUR';
+    // U záložních kurzů to říct nahlas — tiché zastaralé číslo je u přepočtů nebezpečné
+    if (ratesSource === 'api') {
+        src += ' · Kurzy (živé): 1 USD = ' + rates.CZK.toFixed(2) + ' CZK | 1 USD = ' + rates.EUR.toFixed(4) + ' EUR';
+    } else {
+        src += ' · <span style="color:var(--warning)">Kurzy: ZÁLOŽNÍ (nemusí být aktuální) — 1 USD = ' + rates.CZK.toFixed(2) + ' CZK</span>';
+    }
     document.getElementById('dataInfo').innerHTML = src;
 }
 

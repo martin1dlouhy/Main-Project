@@ -3394,7 +3394,16 @@
 
         function parseCzAmount(s) {
             if (s == null) return 0;
-            var str = String(s).replace(/\s/g, '').replace(',', '.');
+            var str = String(s).replace(/\s/g, '');
+            if (str.indexOf(',') > -1) {
+                // Desetinná čárka → tečky jsou tisícové oddělovače (38.000.000,50)
+                str = str.replace(/\./g, '').replace(',', '.');
+            } else if ((str.match(/\./g) || []).length > 1) {
+                // Víc teček bez čárky = tisícové oddělovače (38.000.000).
+                // Dřívější verze to tiše parsovala jako 38 → špatný splátkový kalendář.
+                str = str.replace(/\./g, '');
+            }
+            // Jediná tečka zůstává desetinná (sazba 10.375 se nesmí změnit).
             var n = parseFloat(str);
             return isNaN(n) ? 0 : n;
         }
