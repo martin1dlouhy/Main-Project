@@ -4501,6 +4501,24 @@ async function executeDuplicateCleanup() {
             return;
         }
 
+        // Pojistka proti smazání ŠPATNÝCH řádků: Sheet se mohl od skenu změnit
+        // (ruční editace, posun řádků). Ověřit, že na každém indexu je stále
+        // očekávané ID kontaktu — při neshodě cleanup zastavit a vynutit re-scan.
+        const liveRows = await sheetsRead(SHEET_TABS.contacts);
+        let mismatch = false;
+        state.dupeCleanupData.forEach(function (g) {
+            g.dupes.forEach(function (d) {
+                if (d._rowIndex && d._rowIndex >= 2) {
+                    const liveId = (liveRows[d._rowIndex - 1] && liveRows[d._rowIndex - 1][0]) || '';
+                    if (String(liveId) !== String(d.id || '')) mismatch = true;
+                }
+            });
+        });
+        if (mismatch) {
+            container.innerHTML = '<div class="info-note warning"><strong>Cleanup zastaven:</strong> Sheet se mezitím změnil — řádky už nesedí na očekávané kontakty. Spusť kontrolu duplicit znovu.</div>';
+            return;
+        }
+
         await sheetsDeleteRows(SHEET_TABS.contacts, rowIndexes);
         await logActivity('', 'dupe-cleanup', 'Auto-cleanup: smazáno ' + totalDeleted + ' duplicit, zachováno ' + state.dupeCleanupData.length + ' originálů');
 

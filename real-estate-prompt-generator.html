@@ -4764,8 +4764,10 @@
                     const idx = saved.findIndex(v => v.id === editingId);
                     if (idx !== -1) {
                         // Update — zachovej původní id + date, přidej updatedAt
+                        // (updatedAtIso = strojově porovnatelný timestamp pro GDrive merge)
                         saved[idx] = Object.assign({}, saved[idx], payload, {
-                            updatedAt: new Date().toLocaleString('cs-CZ')
+                            updatedAt: new Date().toLocaleString('cs-CZ'),
+                            updatedAtIso: new Date().toISOString()
                         });
                         isUpdate = true;
                     }
@@ -5700,23 +5702,33 @@
                             return v.id || v.timestamp || v.savedAt || v.createdAt ||
                                    ((v.name || '') + '|' + (v.address || '') + '|' + (v.date || ''));
                         }
-                        var seen = {};
-                        var merged = [];
-                        cloudArr.concat(localArr).forEach(function(v) {
+                        // Při kolizi klíče: novější updatedAtIso vyhrává; bez timestampů
+                        // vyhrává LOKÁLNÍ verze (dřív tiše vyhrával cloud a zahazoval editace).
+                        var byKey = {};
+                        var order = [];
+                        function takeNewer(existing, candidate) {
+                            var a = existing && existing.updatedAtIso;
+                            var b = candidate && candidate.updatedAtIso;
+                            if (a && b) return new Date(b) > new Date(a) ? candidate : existing;
+                            return existing; // bez ISO timestampů drž první = lokální
+                        }
+                        var noKey = [];
+                        localArr.concat(cloudArr).forEach(function(v) {
                             var k = valKey(v);
-                            if (!k) { merged.push(v); return; }
-                            if (seen[k]) return;
-                            seen[k] = true;
-                            merged.push(v);
+                            if (!k) { noKey.push(v); return; }
+                            if (byKey[k]) { byKey[k] = takeNewer(byKey[k], v); return; }
+                            byKey[k] = v;
+                            order.push(k);
                         });
+                        var merged = order.map(function(k){ return byKey[k]; }).concat(noKey);
 
                         var localCount = localArr.length;
                         var cloudCount = cloudArr.length;
                         var mergedCount = merged.length;
                         var mergedStr = JSON.stringify(merged);
 
-                        // Update localStorage, pokud se něco přidalo (z cloudu nebo z mergu)
-                        if (mergedCount !== localCount) {
+                        // Update localStorage podle skutečné změny OBSAHU (počet může sedět i při jiné verzi záznamu)
+                        if (mergedStr !== localRaw) {
                             localStorage.setItem('saved-valuations', mergedStr);
                             if (typeof renderSavedValuationsPanel === 'function') renderSavedValuationsPanel();
                             if (typeof updateSyncBarVisibility === 'function') updateSyncBarVisibility();

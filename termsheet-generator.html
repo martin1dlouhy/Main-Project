@@ -3561,13 +3561,16 @@
                         if (txt) {
                             var cloudData = JSON.parse(txt);
                             if (Array.isArray(cloudData) && cloudData.length > 0) {
-                                // Merge: prefer cloud for matching IDs
-                                var localIds = new Set(termSheets.map(function(t){ return t.id; }));
-                                var merged = termSheets.slice();
+                                // Merge: nové ID přidat; při shodě ID vyhrává NOVĚJŠÍ verze (updatedAt),
+                                // aby se editace z jiného zařízení neztratila.
+                                var localById = {};
+                                termSheets.forEach(function(t){ localById[t.id] = t; });
                                 for (var i = 0; i < cloudData.length; i++) {
                                     var c = cloudData[i];
-                                    if (!localIds.has(c.id)) {
-                                        merged.push(c);
+                                    var loc = localById[c.id];
+                                    if (!loc) {
+                                        await saveToDB(c);
+                                    } else if (c.updatedAt && loc.updatedAt && new Date(c.updatedAt) > new Date(loc.updatedAt)) {
                                         await saveToDB(c);
                                     }
                                 }

@@ -4594,9 +4594,23 @@
             // Drive (best effort; if offline, mark _pendingSync)
             if (window.GDriveSync && GDriveSync.isConnected()) {
                 try {
+                    // Detekce konfliktu: pokud Drive verzi mezitím změnilo jiné zařízení
+                    // (novější updatedAt, než ze kterého jsme editovali), upozornit před přepsáním.
+                    try {
+                        var curB = await GDriveSync.loadBinary('brand-presets/' + slug + '.json');
+                        if (curB && preset._baseUpdatedAt) {
+                            var curT = await new Promise(function(res){ var r = new FileReader(); r.onload = function(){ res(r.result); }; r.readAsText(new Blob([curB])); });
+                            var curP = JSON.parse(curT);
+                            if (curP && curP.updatedAt && new Date(curP.updatedAt) > new Date(preset._baseUpdatedAt)) {
+                                if (typeof showToast === 'function') showToast('Pozor: brand „' + (preset.displayName || slug) + '“ byl mezitím upraven jinde — přepisuji novější verzi z Drive.', 'error');
+                                console.warn('[BPv2] Conflict: Drive verze ' + curP.updatedAt + ' > base ' + preset._baseUpdatedAt);
+                            }
+                        }
+                    } catch(eC) { /* kontrola konfliktu je best-effort, nesmí blokovat uložení */ }
                     var blob = new Blob([JSON.stringify(preset, null, 2)], { type: 'application/json' });
                     await GDriveSync.saveBinary('brand-presets/' + slug + '.json', blob, 'application/json');
                     delete preset._pendingSync;
+                    preset._baseUpdatedAt = preset.updatedAt;
                     // Also maintain a tiny index for discovery
                     var idx = Object.keys(brandPresetsV2).map(function(s){ return { slug: s, displayName: brandPresetsV2[s].displayName }; });
                     var idxBlob = new Blob([JSON.stringify(idx, null, 2)], { type: 'application/json' });
@@ -4650,8 +4664,22 @@
                                 var t = await new Promise(function(res){ var r = new FileReader(); r.onload = function(){ res(r.result); }; r.readAsText(new Blob([b])); });
                                 var preset = JSON.parse(t);
                                 if (preset && preset.schemaVersion >= 2) {
-                                    brandPresetsV2[slug] = preset;
-                                    try { localStorage.setItem(BRAND_PRESETS_LOCAL_PREFIX + slug, JSON.stringify(preset)); } catch(e2) {}
+                                    // Neztratit lokální úpravy: pokud má lokální cache _pendingSync
+                                    // (neodeslaná editace) nebo novější updatedAt, vyhrává lokální verze
+                                    // — retryPendingSync ji pak pushne na Drive.
+                                    var localVer = null;
+                                    try { localVer = JSON.parse(localStorage.getItem(BRAND_PRESETS_LOCAL_PREFIX + slug) || 'null'); } catch(eL) {}
+                                    var keepLocal = localVer && localVer.schemaVersion >= 2 &&
+                                        (localVer._pendingSync ||
+                                         (localVer.updatedAt && preset.updatedAt && new Date(localVer.updatedAt) > new Date(preset.updatedAt)));
+                                    if (keepLocal) {
+                                        if (!localVer._pendingSync) localVer._pendingSync = true;
+                                        brandPresetsV2[slug] = localVer;
+                                    } else {
+                                        preset._baseUpdatedAt = preset.updatedAt || null;
+                                        brandPresetsV2[slug] = preset;
+                                        try { localStorage.setItem(BRAND_PRESETS_LOCAL_PREFIX + slug, JSON.stringify(preset)); } catch(e2) {}
+                                    }
                                 }
                             }
                         } catch(e) { console.warn('[BPv2] Failed to load preset ' + slug + ':', e); }

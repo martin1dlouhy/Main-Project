@@ -268,6 +268,13 @@ window.GDriveSync = (function() {
             updateButton();
             throw new Error('Token expired — prosím přihlaste se znovu');
         }
+        // Jakákoli jiná chyba (403 quota, 429, 500…) dřív tiše prošla jako „uloženo“.
+        // Vyhodit ji, aby ji volající zachytil a uživatel se dozvěděl, že zápis neproběhl.
+        if (!response.ok) {
+            let detail = '';
+            try { detail = (await response.text()).slice(0, 200); } catch (e) {}
+            throw new Error('Google Drive chyba ' + response.status + (detail ? ': ' + detail : ''));
+        }
         return response;
     }
 
