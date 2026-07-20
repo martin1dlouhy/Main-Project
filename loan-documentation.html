@@ -2517,7 +2517,11 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pin: pin })
             })
-            .then(function(resp) { return resp.json(); })
+            .then(function(resp) {
+                return resp.json().catch(function () {
+                    throw new Error('Server vrátil neplatnou odpověď (HTTP ' + resp.status + ')');
+                });
+            })
             .then(function(data) {
                 if (data.success) {
                     // Session token pro AI endpointy (generate-loan-doc) — server ho od F2 vyžaduje.
@@ -5313,6 +5317,32 @@
                 var templateName = selectedTemplates[templateId];
                 getAllFromDB('templates', function(templates) {
                     var template = templates.find(function(t) { return t.id.toString() === templateId; });
+                    var finishOne = function () {
+                        processed++;
+                        if (genProgress) genProgress.textContent = processed + ' / ' + total + ' dokumentů';
+                        if (genMeta) genMeta.textContent = processed < total ? providerLabel + ' vyplňuje dokumenty…' : 'Hotovo, ukládám…';
+                        if (processed === total) {
+                            if (genPanel) genPanel.hidden = true;
+                            var ok = Object.keys(generatedDocuments).length;
+                            if (ok > 0) {
+                                // Replacement summary: pokud AI vrátila ≥ 1 pár ale 0 se aplikovalo,
+                                // problém je v matchování (AI vymyslela find string, který v XML není).
+                                // Pokud vrátila 0 párů celkem, problém je v promptu (AI nic nenašla).
+                                var modelLabel = modelUsed ? ' · ' + modelUsed : '';
+                                var replMsg = modelLabel + ' · ' + totalApplied + '/' + totalAttempted + ' náhrad aplikováno';
+                                var tone = (totalApplied === 0) ? 'error' : (totalApplied < 3 ? 'info' : 'success');
+                                var head = (totalApplied === 0) ? 'Dokument vygenerován, ale BEZ vyplnění — AI nevrátila použitelné náhrady. Otevři F12 Console pro detail.' : 'Hotovo — vygenerováno ' + ok + '/' + total + (failed > 0 ? ' (' + failed + ' selhalo)' : '');
+                                showToast(head + replMsg, tone, totalApplied === 0 ? 10000 : 6000);
+                            } else {
+                                showToast('Generování selhalo — žádný dokument se nepodařilo vyplnit', 'error', 8000);
+                            }
+                            displayResults();
+                            if (ok > 0) {
+                                saveDocumentSet();
+                                saveGeneratedToDrive(formData, withTrackedChanges);
+                            }
+                        }
+                    };
                     if (template) {
                         processTemplate(template, formData, withTrackedChanges, function(result) {
                             if (result.success) {
@@ -5324,31 +5354,14 @@
                                 failed++;
                                 showToast('Chyba při generování: ' + templateName + (result.error ? ' (' + result.error + ')' : ''), 'error', 6000);
                             }
-                            processed++;
-                            if (genProgress) genProgress.textContent = processed + ' / ' + total + ' dokumentů';
-                            if (genMeta) genMeta.textContent = processed < total ? providerLabel + ' vyplňuje dokumenty…' : 'Hotovo, ukládám…';
-                            if (processed === total) {
-                                if (genPanel) genPanel.hidden = true;
-                                var ok = Object.keys(generatedDocuments).length;
-                                if (ok > 0) {
-                                    // Replacement summary: pokud AI vrátila ≥ 1 pár ale 0 se aplikovalo,
-                                    // problém je v matchování (AI vymyslela find string, který v XML není).
-                                    // Pokud vrátila 0 párů celkem, problém je v promptu (AI nic nenašla).
-                                    var modelLabel = modelUsed ? ' · ' + modelUsed : '';
-                                    var replMsg = modelLabel + ' · ' + totalApplied + '/' + totalAttempted + ' náhrad aplikováno';
-                                    var tone = (totalApplied === 0) ? 'error' : (totalApplied < 3 ? 'info' : 'success');
-                                    var head = (totalApplied === 0) ? 'Dokument vygenerován, ale BEZ vyplnění — AI nevrátila použitelné náhrady. Otevři F12 Console pro detail.' : 'Hotovo — vygenerováno ' + ok + '/' + total + (failed > 0 ? ' (' + failed + ' selhalo)' : '');
-                                    showToast(head + replMsg, tone, totalApplied === 0 ? 10000 : 6000);
-                                } else {
-                                    showToast('Generování selhalo — žádný dokument se nepodařilo vyplnit', 'error', 8000);
-                                }
-                                displayResults();
-                                if (ok > 0) {
-                                    saveDocumentSet();
-                                    saveGeneratedToDrive(formData, withTrackedChanges);
-                                }
-                            }
+                            finishOne();
                         });
+                    } else {
+                        // Šablona mezitím zmizela z IndexedDB (smazání/migrace) —
+                        // dřív se čítač nikdy nedopočítal a spinner visel navždy.
+                        failed++;
+                        showToast('Šablona nenalezena: ' + templateName + ' — přeskočeno', 'error', 6000);
+                        finishOne();
                     }
                 });
             });

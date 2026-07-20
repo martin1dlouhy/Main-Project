@@ -2743,7 +2743,10 @@ function checkPIN() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: pin })
     })
-    .then(r => r.json())
+    .then(r => r.json().catch(function () {
+        // non-JSON odpověď (502/HTML od proxy) → čitelná hláška místo parse chyby
+        throw new Error('Server vrátil neplatnou odpověď (HTTP ' + r.status + ')');
+    }))
     .then(data => {
         if (data.success) {
             sessionStorage.setItem(PIN_SESSION_KEY, 'true');

@@ -4029,6 +4029,8 @@
         function populatePropertySummary() {
             const config = propertyConfigs[propertyType];
             if (!config) return;
+            // Escapovat uživatelský vstup — stejný vzor jako v ostatních render funkcích
+            const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             let html = '';
             // Když user pracuje s načteným uloženým případem, ukaž jeho název + datum,
             // ať se v krok 6 (AI valuace) vyzná a neaktualizuje špatný záznam.
@@ -4037,21 +4039,21 @@
                     const saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
                     const item = saved.find(v => v.id === editingId);
                     if (item) {
-                        const updated = item.updatedAt ? `, aktualizováno ${item.updatedAt}` : '';
+                        const updated = item.updatedAt ? `, aktualizováno ${esc(item.updatedAt)}` : '';
                         html += `<div class="loaded-case-banner">
                             <span class="loaded-case-label">Pracujete s uloženým případem</span>
-                            <span class="loaded-case-name">${item.name}</span>
-                            <span class="loaded-case-meta">uloženo ${item.date}${updated}</span>
+                            <span class="loaded-case-name">${esc(item.name)}</span>
+                            <span class="loaded-case-meta">uloženo ${esc(item.date)}${updated}</span>
                         </div>`;
                     }
                 } catch (e) { /* ignore — fallback to no banner */ }
             }
-            html += `<div class="property-summary-item"><span class="summary-label">Typ</span><span class="summary-value">${config.name}</span></div>`;
-            if (formData.adresa) html += `<div class="property-summary-item"><span class="summary-label">Adresa</span><span class="summary-value">${formData.adresa}</span></div>`;
-            if (formData.uzitna_plocha) html += `<div class="property-summary-item"><span class="summary-label">Plocha</span><span class="summary-value">${formData.uzitna_plocha} m²</span></div>`;
-            if (formData.plocha) html += `<div class="property-summary-item"><span class="summary-label">Výměra</span><span class="summary-value">${formData.plocha} m²</span></div>`;
-            if (formData.stav) html += `<div class="property-summary-item"><span class="summary-label">Stav</span><span class="summary-value">${formData.stav}</span></div>`;
-            if (formData.typ_vlastnictvi) html += `<div class="property-summary-item"><span class="summary-label">Vlastnictví</span><span class="summary-value">${formData.typ_vlastnictvi}</span></div>`;
+            html += `<div class="property-summary-item"><span class="summary-label">Typ</span><span class="summary-value">${esc(config.name)}</span></div>`;
+            if (formData.adresa) html += `<div class="property-summary-item"><span class="summary-label">Adresa</span><span class="summary-value">${esc(formData.adresa)}</span></div>`;
+            if (formData.uzitna_plocha) html += `<div class="property-summary-item"><span class="summary-label">Plocha</span><span class="summary-value">${esc(formData.uzitna_plocha)} m²</span></div>`;
+            if (formData.plocha) html += `<div class="property-summary-item"><span class="summary-label">Výměra</span><span class="summary-value">${esc(formData.plocha)} m²</span></div>`;
+            if (formData.stav) html += `<div class="property-summary-item"><span class="summary-label">Stav</span><span class="summary-value">${esc(formData.stav)}</span></div>`;
+            if (formData.typ_vlastnictvi) html += `<div class="property-summary-item"><span class="summary-label">Vlastnictví</span><span class="summary-value">${esc(formData.typ_vlastnictvi)}</span></div>`;
             document.getElementById('propertySummary').innerHTML = html;
         }
 

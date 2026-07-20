@@ -2747,13 +2747,16 @@
     }
 
     function exportToExcel() {
+        // Oddělovač ';' = výchozí pro český Excel; BOM zajistí správnou diakritiku.
         let csv = 'Splátkový kalendář\n\n';
-        csv += 'Číslo,Datum,Počáteční zůstatek,Úrok,Jistina,Splátka,Konečný zůstatek\n';
+        csv += 'Číslo;Datum;Počáteční zůstatek;Úrok;Jistina;Splátka;Konečný zůstatek\n';
 
         const table = document.getElementById('scheduleTable');
         const rows = table.querySelectorAll('tbody tr');
 
         rows.forEach(row => {
+            // Souhrnné řádky (poplatky, CELKEM) mají colspany a rozbily by sloupce
+            if (row.classList.contains('fees-summary-row') || row.classList.contains('schedule-total')) return;
             const cols = row.querySelectorAll('td');
             const rowData = Array.from(cols).map(col => {
                 let text = col.textContent.trim();
@@ -2761,10 +2764,10 @@
                 text = text.replace(/\s/g, '');
                 return text;
             });
-            csv += rowData.join(',') + '\n';
+            csv += rowData.join(';') + '\n';
         });
 
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);

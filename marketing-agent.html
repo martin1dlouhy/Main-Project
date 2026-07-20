@@ -3524,6 +3524,9 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(requestBody)
                     });
+                    if (!response.ok && response.headers.get('content-type') && response.headers.get('content-type').indexOf('json') === -1) {
+                        throw new Error('Server nedostupný (HTTP ' + response.status + ')');
+                    }
                     data = await response.json();
                 }
 
@@ -3902,6 +3905,9 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(requestBody)
                     });
+                    if (!response.ok && response.headers.get('content-type') && response.headers.get('content-type').indexOf('json') === -1) {
+                        throw new Error('Server nedostupný (HTTP ' + response.status + ')');
+                    }
                     data = await response.json();
                 }
                 if (data.success && data.image) {
@@ -5190,7 +5196,7 @@
                 el.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.75rem;border:1px solid ' + (slug===brandStudioState.selectedSlug?'var(--accent)':'var(--border-color)') + ';border-radius:8px;margin-bottom:0.4rem;background:var(--bg-primary);cursor:pointer;';
                 var pendingFlag = p._pendingSync ? ' <span style="color:#F59E0B;font-size:11px;">⟳ pending</span>' : '';
                 el.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;"><div style="width:10px;height:10px;border-radius:50%;background:' + (p.identity.colors.accent || '#38BDF8') + ';"></div>' +
-                    '<span style="font-weight:600;color:var(--text-primary);font-size:13px;">' + (p.displayName || slug) + '</span>' + pendingFlag + '</div>' +
+                    '<span style="font-weight:600;color:var(--text-primary);font-size:13px;">' + escapeHtml(p.displayName || slug) + '</span>' + pendingFlag + '</div>' +
                     '<button onclick="event.stopPropagation();bsDeleteBrand(\'' + slug + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;" title="Smazat">×</button>';
                 el.onclick = function() { brandStudioState.selectedSlug = slug; renderBrandStudio(); };
                 c.appendChild(el);

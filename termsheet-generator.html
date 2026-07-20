@@ -1532,7 +1532,6 @@
     </div>
 
     <!-- ===== SCRIPTS ===== -->
-    <script src="script.js"></script>
     <script src="google-drive-sync.js"></script>
     <script>
     /* ================================================
@@ -1653,7 +1652,11 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pin: pin })
         })
-        .then(function(resp) { return resp.json(); })
+        .then(function(resp) {
+            return resp.json().catch(function () {
+                throw new Error('Server vrátil neplatnou odpověď (HTTP ' + resp.status + ')');
+            });
+        })
         .then(function(data) {
             if (data.success) {
                 sessionStorage.setItem('ts-auth', 'true');
@@ -2540,7 +2543,9 @@
                 console.log('Obsah vložen do šablony, XML struktura zachována');
             } else {
                 console.error('Regex pro body/sectPr nenašel shodu — šablona má neočekávanou strukturu');
-                showToast('Šablona má neočekávanou XML strukturu', 'error');
+                // Nepokračovat: výsledkem by byl DOCX s NEVYPLNĚNÝM tělem šablony,
+                // který by mohl odejít klientovi. Chybu zachytí catch volajícího.
+                throw new Error('Šablona má neočekávanou XML strukturu — dokument nebyl vygenerován. Zkuste znovu nahrát šablonu na Drive.');
             }
 
             zip.file('word/document.xml', docXml);
@@ -2722,6 +2727,17 @@
         if (errors.length > 0) {
             showToast('Vyplňte povinná pole: ' + errors.join(', '), 'error');
             return;
+        }
+
+        // Sanity check před dokumentem pro klienta: LTV nad 100 % = úvěr převyšuje
+        // hodnotu zástavy — téměř jistě překlep v částce nebo odhadní ceně.
+        var _amt = parseAmount(document.getElementById('f-amount').value);
+        var _col = parseAmount(document.getElementById('f-collateral-value').value);
+        if (_amt > 0 && _col > 0 && _amt > _col) {
+            var _ltv = (_amt / _col * 100).toFixed(1);
+            if (!confirm('Pozor: LTV je ' + _ltv + ' % — úvěr převyšuje hodnotu zástavy.\nZkontrolujte částku úvěru a odhadní cenu.\n\nOpravdu vygenerovat term sheet?')) {
+                return;
+            }
         }
 
         closeGenerateDialog();
@@ -3361,6 +3377,7 @@
             var response = await fetch('/api/ares?ico=' + encodeURIComponent(ico), {
                 signal: aresAbortController.signal
             });
+            if (!response.ok) throw new Error('ARES server nedostupný (HTTP ' + response.status + ')');
             var result = await response.json();
 
             if (result.success && result.data && result.data.length > 0) {
@@ -3386,6 +3403,7 @@
             var response = await fetch('/api/ares?name=' + encodeURIComponent(name), {
                 signal: aresAbortController.signal
             });
+            if (!response.ok) throw new Error('ARES server nedostupný (HTTP ' + response.status + ')');
             var result = await response.json();
 
             if (result.success && result.data && result.data.length > 0) {
