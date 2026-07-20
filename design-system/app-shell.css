@@ -71,7 +71,9 @@ input,textarea,select{font-family:inherit}
   opacity:0;pointer-events:none;transition:all .25s ease;
   box-shadow:0 20px 60px rgba(0,0,0,0.6);
 }
-.nav-item:hover .dropdown{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.nav-item:hover .dropdown,
+.nav-item:focus-within .dropdown,
+.nav-item.open .dropdown{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
 .dd-item{
   display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:7px;
   color:var(--text-soft);font-size:13.5px;transition:all .2s;
@@ -219,6 +221,13 @@ textarea.input{resize:vertical;min-height:80px;font-family:inherit;line-height:1
 .dropdown-option:hover{background:var(--amber-tint);color:var(--amber-warm)}
 .dropdown-option.selected{color:var(--amber-warm)}
 .dropdown-option.selected::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--amber);flex-shrink:0}
+
+/* ===== Keyboard focus (a11y) — viditelný fokus pro navigaci klávesnicí ===== */
+.dropdown-trigger:focus-visible{outline:none;background:var(--bg-input-hover);border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-glow)}
+.dropdown-option:focus-visible{outline:none;background:var(--amber-tint);color:var(--amber-warm)}
+.nav-link:focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:4px;color:var(--text)}
+.dd-item:focus-visible{outline:none;background:rgba(232,185,124,0.10);color:var(--text)}
+.btn:focus-visible,a.btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 
 /* ===== Info notes (risk callouts, alerts) ===== */
 /* Default: amber (positive / informational). Warning + danger keep their semantic

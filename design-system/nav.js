@@ -16,21 +16,69 @@
       return window.matchMedia('(hover: none)').matches || window.innerWidth < 800;
     };
 
+    var closeAll = function () {
+      navItems.forEach(function (n) {
+        n.classList.remove('open');
+        var l = n.querySelector('.nav-link');
+        if (l) l.setAttribute('aria-expanded', 'false');
+      });
+    };
+
     navItems.forEach(function (item) {
       var link = item.querySelector('.nav-link');
       if (!link) return;
+
+      // Klávesnicová dostupnost: <a> bez href není fokusovatelný — doplnit programově.
+      // Desktop hover zůstává beze změny; klávesnice dostává Enter/šipku/Escape.
+      if (!link.hasAttribute('href')) {
+        link.setAttribute('tabindex', '0');
+        link.setAttribute('role', 'button');
+      }
+      if (item.querySelector('.dropdown')) {
+        link.setAttribute('aria-haspopup', 'true');
+        link.setAttribute('aria-expanded', 'false');
+      }
+
       link.addEventListener('click', function (e) {
         if (!isTouchOrNarrow()) return;
         e.preventDefault();
         var wasOpen = item.classList.contains('open');
-        navItems.forEach(function (n) { n.classList.remove('open'); });
-        if (!wasOpen) item.classList.add('open');
+        closeAll();
+        if (!wasOpen) {
+          item.classList.add('open');
+          link.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      link.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          var wasOpen = item.classList.contains('open');
+          closeAll();
+          if (!wasOpen) {
+            item.classList.add('open');
+            link.setAttribute('aria-expanded', 'true');
+            var first = item.querySelector('.dd-item');
+            if (first) first.focus();
+          }
+        } else if (e.key === 'Escape') {
+          closeAll();
+          link.blur();
+        }
+      });
+
+      // Escape uvnitř rozbaleného menu — zavřít a vrátit fokus na odkaz sekce
+      item.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && e.target.closest('.dropdown')) {
+          closeAll();
+          link.focus();
+        }
       });
     });
 
     document.addEventListener('click', function (e) {
       if (!e.target.closest('.nav-item')) {
-        navItems.forEach(function (n) { n.classList.remove('open'); });
+        closeAll();
       }
     });
   }
@@ -139,10 +187,19 @@
       var targetId = field.getAttribute('data-target-select');
       var target = targetId ? document.getElementById(targetId) : null;
 
-      trigger.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var willOpen = !field.classList.contains('open');
+      // A11y: options jsou fokusovatelné programově (roving focus) a nesou aria-selected
+      var getOptions = function () {
+        return Array.prototype.slice.call(menu.querySelectorAll('.dropdown-option'));
+      };
+      var syncOptionA11y = function () {
+        getOptions().forEach(function (o) {
+          o.tabIndex = -1;
+          o.setAttribute('aria-selected', o.classList.contains('selected') ? 'true' : 'false');
+        });
+      };
+      syncOptionA11y();
+
+      var openField = function (focusSelected) {
         document.querySelectorAll('.dropdown-field.open').forEach(function (f) {
           if (f !== field) {
             f.classList.remove('open');
@@ -150,24 +207,89 @@
             if (t) t.setAttribute('aria-expanded', 'false');
           }
         });
-        field.classList.toggle('open', willOpen);
-        trigger.setAttribute('aria-expanded', String(willOpen));
+        field.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+        if (focusSelected) {
+          var sel = menu.querySelector('.dropdown-option.selected') || getOptions()[0];
+          if (sel) sel.focus();
+        }
+      };
+      var closeField = function (refocusTrigger) {
+        field.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+        if (refocusTrigger) trigger.focus();
+      };
+
+      trigger.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (field.classList.contains('open')) {
+          closeField(false);
+        } else {
+          openField(false);
+        }
       });
 
-      menu.addEventListener('click', function (e) {
-        var opt = e.target.closest('.dropdown-option');
-        if (!opt) return;
+      // Klávesnice na triggeru: šipka dolů/nahoru otevře a fokusuje vybranou volbu, Escape zavře
+      trigger.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          openField(true);
+        } else if (e.key === 'Escape') {
+          closeField(false);
+        }
+      });
+
+      var selectOption = function (opt) {
         var value = opt.getAttribute('data-value');
         label.textContent = opt.textContent.trim();
         menu.querySelectorAll('.dropdown-option').forEach(function (o) {
           o.classList.toggle('selected', o === opt);
         });
+        syncOptionA11y();
         if (target) {
           target.value = value;
           target.dispatchEvent(new Event('change', { bubbles: true }));
         }
-        field.classList.remove('open');
-        trigger.setAttribute('aria-expanded', 'false');
+        closeField(false);
+      };
+
+      menu.addEventListener('click', function (e) {
+        var opt = e.target.closest('.dropdown-option');
+        if (!opt) return;
+        selectOption(opt);
+      });
+
+      // Klávesnice v menu: šipky = pohyb, Enter/mezerník = výběr, Escape = zavřít, Home/End = kraje
+      menu.addEventListener('keydown', function (e) {
+        var opts = getOptions();
+        var idx = opts.indexOf(document.activeElement);
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          var next = opts[Math.min(idx + 1, opts.length - 1)];
+          if (next) next.focus();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          var prev = opts[Math.max(idx - 1, 0)];
+          if (prev) prev.focus();
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          if (opts[0]) opts[0].focus();
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          if (opts[opts.length - 1]) opts[opts.length - 1].focus();
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (idx > -1) {
+            selectOption(opts[idx]);
+            trigger.focus();
+          }
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeField(true);
+        } else if (e.key === 'Tab') {
+          closeField(false);
+        }
       });
     });
 
@@ -267,6 +389,7 @@
     if (label) label.textContent = opt.textContent.trim();
     field.querySelectorAll('.dropdown-option').forEach(function (o) {
       o.classList.toggle('selected', o === opt);
+      o.setAttribute('aria-selected', o === opt ? 'true' : 'false');
     });
   };
 
