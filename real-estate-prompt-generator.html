@@ -4832,6 +4832,7 @@
                     if (window.DashboardBridge) {
                         DashboardBridge.emit('re', 'oceneni_ulozeno', {
                             caseId: window.__dashCaseId || null,
+                            valuationId: editingId, // klíč deduplikace vůči auto-načtení z Drive
                             nazev: name,
                             ku: formData.katastralni_uzemi || null,
                             parcela: formData.parcelni_cislo || null,

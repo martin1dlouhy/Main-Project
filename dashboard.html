@@ -591,6 +591,7 @@
     <div class="modal-actions">
       <div class="left-group">
         <button type="button" class="btn btn-ghost btn-sm" id="d-btn-pause" onclick="togglePause()">Pozastavit</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="openMergeModal()">Sloučit s případem…</button>
         <button type="button" class="btn btn-ghost btn-sm" onclick="openCloseModal()">Uzavřít</button>
       </div>
       <button type="button" class="btn btn-ghost" onclick="closeModal('detailModal')">Zavřít</button>
@@ -645,10 +646,20 @@
   </div>
 </div>
 
-<div class="page-foot">
-  <span>Investment Tools · MMXXVI</span>
-  <span class="dot">·</span>
-  <span>Martin Dlouhý</span>
+<!-- ============== MODAL: Sloučit s případem… ============== -->
+<div class="modal-overlay" id="mergeModal">
+  <div class="modal-box">
+    <h3>Sloučit s případem</h3>
+    <p style="font-size:12px;color:var(--text-mute);margin-bottom:12px">
+      Vyber případ, <strong style="color:var(--text-soft)">do kterého</strong> se tento případ sloučí.
+      Nemovitosti a chybějící údaje se přenesou, tento případ se archivuje jako Sloučeno.
+    </p>
+    <input type="text" class="input" id="merge-search" placeholder="Hledat případ…" oninput="renderMergeList()">
+    <div class="pick-list" id="merge-list"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('mergeModal')">Zrušit</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -697,7 +708,7 @@ const TAH_LABELS = {
     ja: 'Já', klient: 'Klient', banka: 'Banka', odhadce: 'Odhadce',
     notar: 'Notář', katastr: 'Katastr', pravnik: 'Právník', jine: 'Jiné'
 };
-const VYSLEDEK_LABELS = { vyplaceno: 'Vyplaceno', zamitnuto: 'Zamítnuto', ztraceno: 'Ztraceno' };
+const VYSLEDEK_LABELS = { vyplaceno: 'Vyplaceno', zamitnuto: 'Zamítnuto', ztraceno: 'Ztraceno', slouceno: 'Sloučeno' };
 // Mapa: typ události → navržená fáze (posun JEN dopředu)
 const EVENT_FAZE = {
     oceneni_ulozeno: 'oceneni',
@@ -1164,6 +1175,7 @@ async function bootstrapApp() {
         await processQueue();
         renderAll();
         showToast('Připojeno. Dashboard načten.');
+        autoLoadREValuations(); // fire-and-forget — nová ocenění z R-E/Drive doručí do Doručených
     } catch (err) {
         console.error('Bootstrap error:', err);
         showToast('Chyba: ' + err.message, 'error');
@@ -1202,6 +1214,7 @@ async function reloadData() {
         await processQueue();
         renderAll();
         showToast('Data načtena znovu.');
+        autoLoadREValuations(); // fire-and-forget
     } catch (err) {
         console.error('Reload error:', err);
         showToast('Chyba načtení: ' + err.message, 'error');
@@ -1437,13 +1450,15 @@ async function applyEventToCase(c, ev, silent) {
     return changes;
 }
 
-// Zpracování fronty: caseId → tiché; jinak → Doručené
+// Zpracování fronty: caseId → tiché; ocenění bez case → plná automatika
+// (match → připojit, jinak založit nový případ); ostatní bez case → Doručené
 async function processQueue() {
     if (!window.DashboardBridge) { state.inboxEvents = []; return; }
     const events = DashboardBridge.peekEvents();
     const silentIds = [];
     const inbox = [];
     let silentCount = 0;
+    let createdCount = 0;
     for (const ev of events) {
         const caseId = ev.payload && ev.payload.caseId;
         const c = caseId ? findCase(caseId) : null;
@@ -1460,15 +1475,59 @@ async function processQueue() {
                 console.error('Silent event error:', err);
                 inbox.push(ev); // nech v Doručených, ať se neztratí
             }
+        } else if (ev.type === 'oceneni_ulozeno') {
+            try {
+                const outcome = await autoProcessValuationEvent(ev);
+                if (outcome === 'inbox') {
+                    inbox.push(ev); // nejednoznačné (2+ kandidátů) / konflikt zápisu
+                } else {
+                    silentIds.push(ev.id);
+                    if (outcome === 'created') createdCount++; else silentCount++;
+                }
+            } catch (err) {
+                console.error('Auto valuation error:', err);
+                inbox.push(ev);
+            }
         } else {
             inbox.push(ev);
         }
     }
     if (silentIds.length > 0) DashboardBridge.removeEvents(silentIds);
     state.inboxEvents = inbox;
-    if (silentCount > 0) {
-        showToast(silentCount + (silentCount === 1 ? ' událost připojena automaticky' : (silentCount < 5 ? ' události připojeny automaticky' : ' událostí připojeno automaticky')));
+    const parts = [];
+    if (createdCount > 0) parts.push(createdCount + (createdCount === 1 ? ' nový případ z ocenění' : (createdCount < 5 ? ' nové případy z ocenění' : ' nových případů z ocenění')));
+    if (silentCount > 0) parts.push(silentCount + (silentCount === 1 ? ' událost připojena automaticky' : (silentCount < 5 ? ' události připojeny automaticky' : ' událostí připojeno automaticky')));
+    if (parts.length > 0) showToast(parts.join(' · '));
+}
+
+// Ocenění bez známého case — PLNÁ AUTOMATIKA (žádné klikání):
+// právě 1 match → tiché připojení; žádný match → automaticky založit případ
+// (fáze Ocenění, název = název ocenění); 2+ kandidátů → nejednoznačné,
+// rozhodne Martin v Doručených.
+async function autoProcessValuationEvent(ev) {
+    const cands = matchCandidates(ev);
+    if (cands.length > 1) return 'inbox';
+    if (cands.length === 1) {
+        const res = await applyEventToCase(cands[0], ev, true);
+        return res === null ? 'inbox' : 'attached';
     }
+    const p = ev.payload || {};
+    const nems = eventNemovitosti(p).map(function (en) {
+        return {
+            ku: String(en.ku || ''), parcela: String(en.parcela || ''),
+            lv: String(en.lv || ''), hodnota: String(parseAmount(en.hodnota) || '')
+        };
+    });
+    const c = newCaseObject({
+        nazev: p.nazev || p.adresa || 'Ocenění bez názvu',
+        faze: 'oceneni',
+        vytvoreno: ev.ts || nowIso(),
+        nemovitosti: nems
+    });
+    await appendCase(c);
+    await addAction(c.id, 'zalozeno', 'Případ založen automaticky z ocenění', ev.source || 're');
+    await addAction(c.id, 'oceneni_ulozeno', eventTitle(ev), ev.source || 're', p);
+    return 'created';
 }
 
 // ============================================================
@@ -1496,12 +1555,145 @@ async function inboxAttach(evId, caseId) {
     }
 }
 
-function inboxIgnore(evId) {
+async function inboxIgnore(evId) {
     if (!window.DashboardBridge) return;
+    const ev = inboxEventById(evId);
+    // Ocenění z auto-načtení (id 'imp-…') — ignorace se zapíše do Akce s valuationId,
+    // aby se při dalším načtení z Drive nenabídlo znovu (platí napříč zařízeními).
+    if (ev && String(ev.id).indexOf('imp-') === 0 && ev.payload && ev.payload.valuationId != null) {
+        try {
+            await addAction('', 'ignorovano', 'Ocenění ignorováno — ' + (ev.payload.nazev || ''), 'manual',
+                { valuationId: ev.payload.valuationId });
+        } catch (e) {
+            console.error('Ignore persist failed:', e);
+            showToast('Ignorování se nepodařilo uložit: ' + e.message, 'error');
+            return;
+        }
+    }
     DashboardBridge.removeEvents([evId]);
     state.inboxEvents = state.inboxEvents.filter(function (e) { return e.id !== evId; });
     renderAll();
     showToast('Událost ignorována.');
+}
+
+// ============================================================
+// AUTOMATICKÉ NAČTENÍ OCENĚNÍ Z R-E GENERÁTORU (Drive + prohlížeč)
+// ============================================================
+// Běží samo po připojení a při každém obnovení dat — žádné tlačítko.
+// Dva zdroje (jen čtení): Google Drive 'ProfiLend Investment Tools/
+// R-E Prompt Generator/valuations.json' (R-E ho synchronizuje; stejný OAuth
+// klient → náš token na soubor vidí) + localStorage 'saved-valuations'
+// (tento prohlížeč). Nová ocenění se objeví v Doručených k založení/připojení.
+// Zpracovaná i ignorovaná se poznají podle valuationId v Akce (payload_json)
+// a znovu se nenabídnou — platí napříč zařízeními.
+async function loadREValuationsFromDrive() {
+    if (!state.accessToken) return [];
+    const rootId = await driveFindFolder('ProfiLend Investment Tools', null);
+    if (!rootId) return [];
+    const appId = await driveFindFolder('R-E Prompt Generator', rootId);
+    if (!appId) return [];
+    const file = await driveFindFile('valuations.json', appId);
+    if (!file) return [];
+    const res = await gfetch('https://www.googleapis.com/drive/v3/files/' + file.id + '?alt=media');
+    const txt = await res.text();
+    try {
+        let parsed = JSON.parse(txt);
+        // Recovery starého formátu (dvojité stringify) — stejně jako v R-E
+        if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch (e2) { } }
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) { return []; }
+}
+
+let _reAutoLoadRunning = false;
+async function autoLoadREValuations() {
+    if (_reAutoLoadRunning || !state.accessToken) return;
+    _reAutoLoadRunning = true;
+    try {
+    let localArr = [];
+    try {
+        const parsedLocal = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+        if (Array.isArray(parsedLocal)) localArr = parsedLocal;
+    } catch (e) { /* ignore */ }
+    let cloudArr = [];
+    try {
+        cloudArr = await loadREValuationsFromDrive();
+    } catch (e) { console.warn('Drive valuations load failed:', e); }
+    if (localArr.length === 0 && cloudArr.length === 0) return; // ticho — auto běh neotravuje
+    // Sloučení podle id — novější updatedAtIso vyhrává, jinak drží lokální verze
+    const byId = {};
+    const idOrder = [];
+    localArr.concat(cloudArr).forEach(function (v) {
+        if (!v || v.id == null) return;
+        const k = String(v.id);
+        if (byId[k]) {
+            const a = byId[k].updatedAtIso, b = v.updatedAtIso;
+            if (a && b && new Date(b) > new Date(a)) byId[k] = v;
+            return;
+        }
+        byId[k] = v;
+        idOrder.push(k);
+    });
+    const saved = idOrder.map(function (k) { return byId[k]; });
+    const inboxIds = {};
+    state.inboxEvents.forEach(function (e) { inboxIds[e.id] = true; });
+    // Ochrana Sheets kvót: max 15 nových případů na jeden běh — zbytek se
+    // založí při příštím otevření/obnovení (dedupe přes valuationId to zaručí).
+    const MAX_CREATED_PER_RUN = 15;
+    let created = 0, attached = 0, ambiguous = 0, deferred = 0;
+    for (const v of saved) {
+        if (!v || v.id == null) continue;
+        const evId = 'imp-' + v.id;
+        if (inboxIds[evId]) continue; // už čeká v Doručených (nejednoznačné z minula)
+        // Zpracované NEBO ignorované — jakýkoli Akce záznam s tímto valuationId
+        const marker = '"valuationId":' + JSON.stringify(v.id);
+        const done = state.actions.some(function (a) {
+            return (a.payload_json || '').indexOf(marker) !== -1;
+        });
+        if (done) continue;
+        if (created >= MAX_CREATED_PER_RUN) { deferred++; continue; }
+        const fd = v.formData || {};
+        let ts = v.updatedAtIso || '';
+        if (!ts) {
+            const d = new Date(Number(v.id)); // id = Date.now() při uložení
+            ts = isNaN(d.getTime()) ? nowIso() : d.toISOString();
+        }
+        const ev = {
+            id: evId,
+            source: 're',
+            type: 'oceneni_ulozeno',
+            ts: ts,
+            payload: {
+                caseId: null,
+                nazev: v.name || '',
+                ku: fd.katastralni_uzemi || null,
+                parcela: fd.parcelni_cislo || null,
+                lv: fd.lv || null,
+                adresa: fd.adresa || null,
+                hodnota: (v.avgTrzni != null ? v.avgTrzni : (v.avgZastavni != null ? v.avgZastavni : null)),
+                valuationId: v.id
+            }
+        };
+        try {
+            const outcome = await autoProcessValuationEvent(ev);
+            if (outcome === 'created') created++;
+            else if (outcome === 'attached') attached++;
+            else { state.inboxEvents.push(ev); ambiguous++; }
+        } catch (e) {
+            console.warn('Auto case from valuation failed:', e);
+        }
+    }
+    if (created + attached + ambiguous > 0) {
+        renderAll();
+        const parts = [];
+        if (created > 0) parts.push(created + (created === 1 ? ' nový případ z ocenění' : (created < 5 ? ' nové případy z ocenění' : ' nových případů z ocenění')));
+        if (attached > 0) parts.push(attached + ' připojeno k případům');
+        if (ambiguous > 0) parts.push(ambiguous + ' čeká v Doručených (nejednoznačné)');
+        if (deferred > 0) parts.push(deferred + ' se založí při příštím načtení');
+        showToast(parts.join(' · '));
+    }
+    } finally {
+        _reAutoLoadRunning = false;
+    }
 }
 
 function inboxNewCase(evId) {
@@ -1573,6 +1765,93 @@ function renderPickList() {
             '<span class="pick-faze">' + escapeHtml(FAZE_LABELS[c.faze] || c.faze) + '</span>' +
         '</div>';
     }).join('');
+}
+
+// ============================================================
+// SLOUČENÍ PŘÍPADŮ (klient s více nemovitostmi → jeden case)
+// ============================================================
+function openMergeModal() {
+    if (!findCase(state.detailId)) return;
+    document.getElementById('merge-search').value = '';
+    renderMergeList();
+    openModal('mergeModal');
+}
+
+function renderMergeList() {
+    const q = norm(document.getElementById('merge-search').value);
+    const host = document.getElementById('merge-list');
+    const srcId = state.detailId;
+    const open = state.cases
+        .filter(function (c) { return c.stav === 'aktivni' && c.id !== srcId; })
+        .sort(function (a, b) { return (b.aktualizovano || '').localeCompare(a.aktualizovano || ''); })
+        .filter(function (c) {
+            if (!q) return true;
+            return norm(c.nazev).indexOf(q) !== -1 || norm(c.klient).indexOf(q) !== -1 || norm(c.ico).indexOf(q) !== -1;
+        });
+    if (open.length === 0) {
+        host.innerHTML = '<div class="tl-empty">Žádný jiný otevřený případ.</div>';
+        return;
+    }
+    host.innerHTML = open.map(function (c) {
+        return '<div class="pick-item" onclick="confirmMergeInto(\'' + escapeHtml(c.id) + '\')">' +
+            '<div><div class="pick-name">' + escapeHtml(c.nazev || '(bez názvu)') + '</div>' +
+            '<div class="pick-meta">' + escapeHtml(c.klient || '—') + (c.ico ? ' · IČO ' + escapeHtml(c.ico) : '') + '</div></div>' +
+            '<span class="pick-faze">' + escapeHtml(FAZE_LABELS[c.faze] || c.faze) + '</span>' +
+        '</div>';
+    }).join('');
+}
+
+async function confirmMergeInto(targetId) {
+    const src = findCase(state.detailId);
+    const tgt = findCase(targetId);
+    if (!src || !tgt || src.id === tgt.id) return;
+    if (!confirm('Sloučit případ „' + (src.nazev || '') + '" do „' + (tgt.nazev || '') + '"?\n\n' +
+        'Nemovitosti a chybějící údaje se přenesou, případ „' + (src.nazev || '') + '" se archivuje jako Sloučeno.')) return;
+    try {
+        // Nemovitosti: sjednotit (dedupe přes kú+parcelu), chybějící hodnoty doplnit
+        (src.nemovitosti || []).forEach(function (sn) {
+            const dup = (tgt.nemovitosti || []).find(function (tn) {
+                return norm(tn.ku) === norm(sn.ku) && norm(tn.parcela) === norm(sn.parcela) &&
+                    (norm(sn.ku) || norm(sn.parcela));
+            });
+            if (!dup) {
+                tgt.nemovitosti = tgt.nemovitosti || [];
+                tgt.nemovitosti.push(sn);
+            } else if (!dup.hodnota && sn.hodnota) {
+                dup.hodnota = sn.hodnota;
+            }
+        });
+        // Prázdná pole cíle doplnit ze zdroje (částka nese s sebou i měnu)
+        if (!tgt.castka && src.castka) { tgt.castka = src.castka; tgt.mena = src.mena || tgt.mena; }
+        ['klient', 'ico', 'kontakt_jmeno', 'kontakt_telefon', 'kontakt_email', 'zdroj', 'ucel'].forEach(function (f) {
+            if (!tgt[f] && src[f]) tgt[f] = src[f];
+        });
+        if (src.poznamka) tgt.poznamka = (tgt.poznamka ? tgt.poznamka + '\n' : '') + src.poznamka;
+        if (FAZE_ORDER.indexOf(src.faze) > FAZE_ORDER.indexOf(tgt.faze)) tgt.faze = src.faze;
+        const okT = await writeCase(tgt);
+        if (!okT) return; // konflikt — writeCase udělal reload + toast
+        await addAction(tgt.id, 'slouceno', 'Sloučen případ „' + (src.nazev || '') + '"', 'manual', { zdrojovyCaseId: src.id });
+        // Zdroj archivovat jako Sloučeno
+        src.faze = 'uzavreno';
+        src.stav = 'uzavreno';
+        src.vysledek = 'slouceno';
+        src.duvod_uzavreni = 'Sloučeno do: ' + (tgt.nazev || '');
+        src.datum_uzavreni = todayIso();
+        const okS = await writeCase(src);
+        if (okS) {
+            await addAction(src.id, 'slouceno', 'Sloučeno do případu „' + (tgt.nazev || '') + '"', 'manual', { cilovyCaseId: tgt.id });
+        } else {
+            showToast('Cílový případ doplněn, ale archivace zdroje selhala — zopakujte sloučení.', 'warn');
+            return;
+        }
+        closeModal('mergeModal');
+        closeModal('detailModal');
+        renderAll();
+        showToast('Případy sloučeny do „' + (tgt.nazev || '') + '".');
+    } catch (err) {
+        console.error('Merge error:', err);
+        showToast('Sloučení selhalo: ' + err.message, 'error');
+    }
 }
 </script>
 <script>
