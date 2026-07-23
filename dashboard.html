@@ -1,0 +1,2317 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard | Investment Tools</title>
+<meta name="description" content="Řídicí věž ProfiLend — přehled všech případů, fází a dalších kroků napříč aplikacemi Investment Tools.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="design-system/tokens.css">
+<link rel="stylesheet" href="design-system/app-shell.css">
+<style>
+  body{padding-top:var(--header-h)}
+  .container{max-width:var(--container);margin:0 auto;padding:8px 40px 80px}
+
+  /* ===== Google connect badge (app-tools) ===== */
+  .gbtn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;
+    font-weight:500;font-family:inherit;color:var(--text-soft);background:transparent;
+    border:1px solid var(--line-strong);border-radius:var(--r-sm);cursor:pointer;
+    transition:all var(--dur) var(--ease);white-space:nowrap}
+  .gbtn:hover{border-color:var(--amber);color:var(--amber-warm)}
+  .gdot{width:7px;height:7px;border-radius:50%;background:var(--text-faint);flex-shrink:0}
+  .gbtn.on .gdot{background:var(--success);box-shadow:0 0 8px var(--success)}
+  .gbtn.on{color:var(--text-soft)}
+
+  /* ===== Panel „Dnes" ===== */
+  .today-panel{display:flex;gap:10px;align-items:stretch;margin:4px 0 22px;flex-wrap:wrap}
+  .today-chip{display:inline-flex;align-items:center;gap:12px;padding:12px 18px;
+    background:var(--bg-raised);border:1px solid var(--line-faint);border-radius:var(--r-md);
+    cursor:pointer;transition:all var(--dur) var(--ease);font-size:12.5px;color:var(--text-soft);
+    font-family:inherit}
+  .today-chip .chip-num{font-family:var(--font-display);font-weight:300;font-size:24px;
+    line-height:1;color:var(--text);font-variant-numeric:tabular-nums}
+  .today-chip:hover{border-color:var(--line-strong)}
+  .today-chip.active{border-color:var(--amber);background:var(--amber-tint);color:var(--amber-warm)}
+  .today-chip.active .chip-num{color:var(--amber-warm)}
+  .today-chip.overdue-hot .chip-num{color:var(--danger)}
+  .today-chip.active.overdue-hot .chip-num{color:var(--amber-warm)}
+
+  /* ===== Doručené (inbox) ===== */
+  .inbox{margin:0 0 24px;border:1px solid var(--line-amber);background:var(--bg-raised);
+    border-radius:var(--r-lg);overflow:hidden}
+  .inbox-head{padding:12px 18px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--amber);font-weight:600;border-bottom:1px solid var(--line-faint)}
+  .inbox-item{padding:14px 18px;border-bottom:1px solid var(--line-faint);display:flex;
+    gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .inbox-item:last-child{border-bottom:none}
+  .inbox-title{font-size:13.5px;color:var(--text);font-weight:500}
+  .inbox-time{font-size:11px;color:var(--text-mute);font-family:var(--font-mono);margin-top:3px}
+  .inbox-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn-sm{padding:7px 12px;font-size:12px}
+
+  /* ===== Board tools ===== */
+  .board-tools{display:flex;gap:12px;align-items:center;margin:0 0 16px;flex-wrap:wrap}
+  .board-search{flex:1;min-width:220px;max-width:360px}
+  .board-tools .spacer{flex:1}
+
+  /* ===== Kanban board ===== */
+  .board-wrap{overflow-x:auto;padding-bottom:8px}
+  .board{display:grid;grid-template-columns:repeat(5,minmax(232px,1fr));gap:14px;min-width:1200px}
+  .col{background:var(--bg);border:1px solid var(--line-faint);border-radius:var(--r-lg);
+    display:flex;flex-direction:column;min-height:220px}
+  .col-head{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;
+    border-bottom:1px solid var(--line-faint)}
+  .col-title{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--text-mute);font-weight:600}
+  .col-count{font-family:var(--font-mono);font-size:11px;color:var(--text-faint)}
+  .col-body{padding:10px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .col-hint{font-size:12px;color:var(--text-faint);font-style:italic;padding:16px 8px;text-align:center}
+
+  .case-card{background:var(--bg-raised);border:1px solid var(--line-faint);
+    border-radius:var(--r-md);padding:12px 14px;cursor:pointer;
+    transition:all var(--dur) var(--ease)}
+  .case-card:hover{border-color:var(--line-amber);background:var(--bg-elevated)}
+  .case-card.paused{opacity:.5}
+  .case-name{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.3}
+  .case-client{font-size:12px;color:var(--text-mute);margin-top:2px}
+  .case-amount{font-family:var(--font-mono);font-size:12.5px;color:var(--amber-warm);
+    margin-top:8px;font-variant-numeric:tabular-nums}
+  .case-chips{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}
+  .tah-chip{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:3px 9px;
+    border-radius:999px;border:1px solid var(--line);color:var(--text-soft);background:var(--bg-input)}
+  .tah-chip.ja{border-color:var(--amber);color:var(--amber-warm);background:var(--amber-tint)}
+  .badge-overdue{font-size:10px;letter-spacing:0.05em;padding:3px 9px;border-radius:999px;
+    background:var(--danger-tint);color:var(--danger);border:1px solid var(--danger)}
+  .badge-paused{font-size:10px;letter-spacing:0.05em;padding:3px 9px;border-radius:999px;
+    background:var(--warning-tint);color:var(--warning);border:1px solid var(--warning)}
+  .case-next{font-size:12px;color:var(--text-soft);margin-top:8px;line-height:1.4}
+  .case-next .case-date{font-family:var(--font-mono);font-size:11px;color:var(--text-mute)}
+  .case-foot{display:flex;justify-content:flex-end;gap:4px;margin-top:10px}
+  .arrow-btn{width:26px;height:26px;border-radius:var(--r-xs);border:1px solid var(--line);
+    background:transparent;color:var(--text-mute);cursor:pointer;font-size:13px;line-height:1;
+    font-family:inherit;transition:all var(--dur) var(--ease)}
+  .arrow-btn:hover{border-color:var(--amber);color:var(--amber-warm)}
+  .arrow-btn:disabled{opacity:.25;cursor:default}
+  .arrow-btn:disabled:hover{border-color:var(--line);color:var(--text-mute)}
+
+  /* ===== Archiv (Uzavřené) ===== */
+  .archive-wrap{display:none}
+  .archive-wrap.visible{display:block}
+  .board-view.hidden-view{display:none}
+  .result-chip{font-size:10px;letter-spacing:0.05em;text-transform:uppercase;padding:3px 9px;
+    border-radius:999px;border:1px solid var(--line);color:var(--text-soft)}
+  .result-chip.vyplaceno{border-color:var(--amber-warm);color:var(--amber-warm);background:var(--amber-tint)}
+  .result-chip.zamitnuto{border-color:var(--danger);color:var(--danger);background:var(--danger-tint)}
+  .result-chip.ztraceno{border-color:var(--line-strong);color:var(--text-mute)}
+
+  /* ===== Connect empty state ===== */
+  .connect-panel{margin:32px auto;max-width:560px;text-align:center;padding:56px 36px;
+    background:var(--bg-raised);border:1px solid var(--line-faint);border-radius:var(--r-lg)}
+  .connect-panel h3{font-family:var(--font-display);font-weight:300;font-size:26px;
+    letter-spacing:-0.02em;color:var(--text);margin-bottom:10px}
+  .connect-panel p{font-size:13.5px;color:var(--text-mute);margin-bottom:24px;line-height:1.6}
+
+  /* ===== Modals ===== */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(7,9,16,0.85);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:48px 16px}
+  .modal-overlay.show{display:flex}
+  .modal-box{background:var(--bg-elevated);border:1px solid var(--line-strong);
+    border-radius:var(--r-lg);padding:32px;width:100%;max-width:520px;
+    box-shadow:var(--shadow-xl);margin:auto 0}
+  .modal-box.modal-lg{max-width:960px}
+  .modal-box h3{font-family:var(--font-display);font-weight:300;font-size:24px;
+    letter-spacing:-0.02em;margin-bottom:20px;color:var(--text)}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;flex-wrap:wrap}
+  .modal-actions .left-group{display:flex;gap:8px;flex-wrap:wrap;margin-right:auto}
+
+  /* ===== Forms ===== */
+  .fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .fgrid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .fg-full{grid-column:1/-1}
+  .form-group label{display:block;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--text-mute);font-weight:500;margin-bottom:7px}
+  .form-group label span{color:var(--amber)}
+  textarea.input{min-height:72px;resize:vertical;font-family:inherit;line-height:1.5}
+  .ico-row{display:flex;gap:8px}
+  .ico-row .input{flex:1}
+  .amount-row{display:grid;grid-template-columns:1fr 130px;gap:8px}
+  .req-star{color:var(--amber)}
+  input[type=date].input{color-scheme:dark}
+
+  /* ===== Detail: sekce ===== */
+  .dsec{margin-top:26px;padding-top:20px;border-top:1px solid var(--line-faint)}
+  .dsec-title{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--amber);font-weight:600;margin-bottom:14px;display:flex;
+    justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .ltv-badge{font-family:var(--font-mono);font-size:12px;color:var(--text-soft);
+    letter-spacing:0;text-transform:none;font-weight:500}
+  .ltv-badge strong{color:var(--amber-warm);font-weight:600}
+
+  .nem-head,.nem-row{display:grid;grid-template-columns:1.5fr 1fr 0.8fr 1.2fr 34px;gap:8px;
+    align-items:center}
+  .nem-head{margin-bottom:6px}
+  .nem-head span{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-faint)}
+  .nem-row{margin-bottom:8px}
+  .nem-del{width:32px;height:34px;border-radius:var(--r-xs);border:1px solid var(--line);
+    background:transparent;color:var(--text-mute);cursor:pointer;font-size:15px;line-height:1;
+    font-family:inherit;transition:all var(--dur) var(--ease)}
+  .nem-del:hover{border-color:var(--danger);color:var(--danger)}
+
+  .qa-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .qa-note-row{display:flex;gap:8px;margin-top:10px}
+  .qa-note-row .input{flex:1}
+
+  /* ===== Timeline ===== */
+  .tl{list-style:none;margin:0;padding:0;max-height:300px;overflow-y:auto}
+  .tl-item{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-faint);
+    align-items:flex-start}
+  .tl-item:last-child{border-bottom:none}
+  .tl-icon{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-mute)}
+  .tl-icon svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.6;
+    stroke-linecap:round;stroke-linejoin:round}
+  .tl-icon.re{color:var(--amber-warm);border-color:var(--line-amber)}
+  .tl-icon.termsheet{color:var(--amber);border-color:var(--line-amber)}
+  .tl-icon.loandoc{color:var(--amber-deep);border-color:var(--line-amber)}
+  .tl-text{font-size:12.5px;color:var(--text-soft);line-height:1.45}
+  .tl-date{font-size:11px;color:var(--text-faint);font-family:var(--font-mono);margin-top:1px}
+  .tl-empty{font-size:12px;color:var(--text-faint);font-style:italic;padding:10px 0}
+
+  /* ===== Pick case modal ===== */
+  .pick-list{max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-top:12px}
+  .pick-item{padding:11px 14px;border:1px solid var(--line-faint);border-radius:var(--r-sm);
+    background:var(--bg-raised);cursor:pointer;transition:all var(--dur) var(--ease);
+    display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .pick-item:hover{border-color:var(--amber);background:var(--amber-tint)}
+  .pick-name{font-size:13px;font-weight:500;color:var(--text)}
+  .pick-meta{font-size:11px;color:var(--text-mute);margin-top:2px}
+  .pick-faze{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-mute);
+    white-space:nowrap}
+
+  /* ===== Toast ===== */
+  .toast.warn{border-left:3px solid var(--warning)}
+  .toast.error{border-left:3px solid var(--danger)}
+
+  @media (max-width:800px){
+    .nav{padding:18px 20px}
+    .nav-menu{display:none}
+    .container{padding:8px 20px 60px}
+    .fgrid,.fgrid-2{grid-template-columns:1fr}
+    .modal-box{padding:22px}
+    .nem-head{display:none}
+    .nem-row{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============== HEADER ============== -->
+<nav class="nav">
+  <div class="nav-left">
+    <a href="index.html" class="logo">
+      <span class="logo-mark">IT</span>
+      <span class="logo-text">Investment Tools</span>
+    </a>
+  </div>
+
+  <div class="nav-menu nav-center">
+    <div class="nav-item"><a class="nav-link current" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-item">
+      <a class="nav-link">Osobní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="debt-calculator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M16 5 v22"/><path d="M9 27 h14"/><path d="M6 11 h20"/><path d="M6 11 l-3 7 a3 3 0 0 0 6 0 z"/><path d="M26 11 l-3 7 a3 3 0 0 0 6 0 z"/></svg></span>
+          <div><div class="dd-title">Debt Calculator</div><div class="dd-meta">Dluhové financování</div></div>
+        </a>
+        <a class="dd-item" href="real-estate-prompt-generator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 14 L14 6 L23 14 V25 H5 Z"/><path d="M11 25 V18 H17 V25"/><path d="M25 5 v4 M23 7 h4 M25 12 v2 M24 13 h2"/></svg></span>
+          <div><div class="dd-title">R-E Prompt Generator</div><div class="dd-meta">AI valuace nemovitostí</div></div>
+        </a>
+        <a class="dd-item" href="sp500-calculator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M4 26 H28"/><path d="M4 22 L10 16 L14 19 L20 9 L26 13"/><circle cx="10" cy="16" r="1.2"/><circle cx="14" cy="19" r="1.2"/><circle cx="20" cy="9" r="1.2"/><circle cx="26" cy="13" r="1.2"/></svg></span>
+          <div><div class="dd-title">S&amp;P 500 Portfolio</div><div class="dd-meta">Rozklad indexu</div></div>
+        </a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <a class="nav-link">ProfiLend <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="termsheet-generator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span>
+          <div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy &amp; export</div></div>
+        </a>
+        <a class="dd-item" href="loan-documentation.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M6 10 V30 H22"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg></span>
+          <div><div class="dd-title">Úvěrová dokumentace</div><div class="dd-meta">AI generování</div></div>
+        </a>
+        <a class="dd-item" href="marketing-agent.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 7 H23 a2 2 0 0 1 2 2 V19 a2 2 0 0 1 -2 2 H13 L8 26 V21 H5 a2 2 0 0 1 -2 -2 V9 a2 2 0 0 1 2 -2 Z"/><path d="M27 5 v3 M25.5 6.5 h3 M27 11 v2 M26 12 h2"/></svg></span>
+          <div><div class="dd-title">Marketing Agent</div><div class="dd-meta">Sociální obsah</div></div>
+        </a>
+        <a class="dd-item" href="database.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><ellipse cx="16" cy="8" rx="10" ry="3.5"/><path d="M6 8 V16 a10 3.5 0 0 0 20 0 V8"/><path d="M6 16 V24 a10 3.5 0 0 0 20 0 V16"/></svg></span>
+          <div><div class="dd-title">Database</div><div class="dd-meta">Kontakty &amp; segmenty</div></div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-right-slot"></div>
+</nav>
+
+<!-- ============== APP META + HEAD ============== -->
+<div class="app-meta">
+  <div class="crumbs">
+    <a href="index.html">Domů</a>
+    <span class="sep">/</span>
+    <span class="current">Dashboard</span>
+  </div>
+  <div class="app-tools">
+    <button type="button" class="gbtn" id="btn-google" onclick="onGoogleBtn()">
+      <span class="gdot" id="gdot"></span><span id="gtext">Připojit Google</span>
+    </button>
+  </div>
+</div>
+
+<div class="app-head">
+  <div class="app-head-left">
+    <div class="eyebrow">Přehled · Pipeline</div>
+    <h1 class="app-title">Dashboard <em>případů</em></h1>
+    <p class="app-sub">Všechny poptávky na jednom místě — v jaké jsou fázi, čí je tah a co je další krok.</p>
+  </div>
+  <div class="app-actions">
+    <button type="button" class="btn btn-primary" id="btn-new-case" onclick="openNewCaseModal()" style="display:none">Nová poptávka</button>
+  </div>
+</div>
+
+<!-- ============== MAIN ============== -->
+<main class="container">
+
+  <!-- Empty state: bez Google připojení -->
+  <div class="connect-panel" id="connect-panel">
+    <h3>Připojte Google účet</h3>
+    <p>Případy se ukládají do Google Sheets na vašem Drive — přihlášení ke Google je jediná brána k datům.</p>
+    <button type="button" class="btn btn-primary btn-lg" onclick="connectGoogle()">Připojit Google</button>
+  </div>
+
+  <!-- Board view (po připojení) -->
+  <div id="app-view" style="display:none">
+
+    <!-- Panel „Dnes" -->
+    <div class="today-panel" id="today-panel">
+      <button type="button" class="today-chip" id="chip-namne" onclick="toggleChip('namne')">
+        <span class="chip-num" id="cnt-namne">0</span> Na mně
+      </button>
+      <button type="button" class="today-chip" id="chip-ceka" onclick="toggleChip('ceka')">
+        <span class="chip-num" id="cnt-ceka">0</span> Čeká se
+      </button>
+      <button type="button" class="today-chip" id="chip-potermin" onclick="toggleChip('potermin')">
+        <span class="chip-num" id="cnt-potermin">0</span> Po termínu
+      </button>
+    </div>
+
+    <!-- Doručené -->
+    <div class="inbox" id="inbox" style="display:none">
+      <div class="inbox-head">Doručené — události z aplikací</div>
+      <div id="inbox-list"></div>
+    </div>
+
+    <!-- Board tools -->
+    <div class="board-tools">
+      <input type="text" class="input board-search" id="board-search" placeholder="Hledat — název, klient, IČO…" oninput="onSearch()">
+      <div class="spacer"></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="reloadData()">Načíst znovu</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-archive" onclick="toggleArchive()">Uzavřené <span id="archive-count"></span></button>
+    </div>
+
+    <!-- Kanban board -->
+    <div class="board-view" id="board-view">
+      <div class="board-wrap">
+        <div class="board" id="board"></div>
+      </div>
+    </div>
+
+    <!-- Archiv uzavřených -->
+    <div class="archive-wrap" id="archive-wrap">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Případ</th><th>Klient</th><th class="right">Částka</th>
+              <th>Výsledek</th><th>Uzavřeno</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="archive-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ============== MODAL: Nová poptávka ============== -->
+<div class="modal-overlay" id="newCaseModal">
+  <div class="modal-box modal-lg">
+    <h3>Nová <em style="font-style:italic;color:var(--amber-warm)">poptávka</em></h3>
+    <div class="fgrid">
+      <div class="form-group fg-full">
+        <label>Název případu <span class="req-star">*</span></label>
+        <input type="text" class="input" id="nc-nazev" placeholder="např. Novák s.r.o. – hala Brno">
+      </div>
+      <div class="form-group">
+        <label>Klient / firma</label>
+        <input type="text" class="input" id="nc-klient" placeholder="Firma nebo jméno" oninput="prefillNazevFromKlient()">
+      </div>
+      <div class="form-group">
+        <label>IČO</label>
+        <div class="ico-row">
+          <input type="text" class="input" id="nc-ico" placeholder="12345678" inputmode="numeric">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="aresLookupInto('nc-ico','nc-klient')">ARES</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Zdroj poptávky</label>
+        <input type="text" class="input" id="nc-zdroj" placeholder="např. Dvořák (poradce)">
+      </div>
+      <div class="form-group">
+        <label>Kontaktní osoba</label>
+        <input type="text" class="input" id="nc-kontakt-jmeno" placeholder="Jméno a příjmení">
+      </div>
+      <div class="form-group">
+        <label>Telefon</label>
+        <input type="text" class="input" id="nc-kontakt-telefon" placeholder="+420…">
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="text" class="input" id="nc-kontakt-email" placeholder="jmeno@firma.cz">
+      </div>
+      <div class="form-group">
+        <label>Požadovaná částka</label>
+        <div class="amount-row">
+          <input type="text" class="input" id="nc-castka" placeholder="25 000 000" oninput="formatAmount(this)">
+          <div>
+            <div class="dropdown-field" data-target-select="nc-mena">
+              <button class="dropdown-trigger" type="button" aria-expanded="false" aria-haspopup="listbox">
+                <span class="dropdown-label">CZK</span>
+                <svg class="dropdown-chevron" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              </button>
+              <ul class="dropdown-menu" role="listbox">
+                <li class="dropdown-option selected" data-value="CZK" role="option">CZK</li>
+                <li class="dropdown-option" data-value="EUR" role="option">EUR</li>
+                <li class="dropdown-option" data-value="USD" role="option">USD</li>
+              </ul>
+            </div>
+            <select id="nc-mena" hidden>
+              <option value="CZK" selected>CZK</option>
+              <option value="EUR">EUR</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group fg-full">
+        <label>Účel financování</label>
+        <input type="text" class="input" id="nc-ucel" placeholder="např. refinancování, akvizice, bridge">
+      </div>
+      <div class="form-group fg-full">
+        <label>Poznámka</label>
+        <textarea class="input" id="nc-poznamka" placeholder="Volitelná poznámka…"></textarea>
+      </div>
+    </div>
+    <div class="dsec">
+      <div class="dsec-title">Nemovitost (volitelně)</div>
+      <div class="nem-head">
+        <span>Katastrální území</span><span>Parcela</span><span>LV</span><span>Hodnota (CZK)</span><span></span>
+      </div>
+      <div class="nem-row">
+        <input type="text" class="input" id="nc-nem-ku" placeholder="např. Černošice">
+        <input type="text" class="input" id="nc-nem-parcela" placeholder="123/45">
+        <input type="text" class="input" id="nc-nem-lv" placeholder="303">
+        <input type="text" class="input" id="nc-nem-hodnota" placeholder="40 000 000" oninput="formatAmount(this)">
+        <span></span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('newCaseModal')">Zrušit</button>
+      <button type="button" class="btn btn-primary" onclick="createCaseFromModal()">Založit případ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== MODAL: Detail případu ============== -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-box modal-lg">
+    <h3 id="d-title">Detail případu</h3>
+    <div class="fgrid">
+      <div class="form-group fg-full">
+        <label>Název případu <span class="req-star">*</span></label>
+        <input type="text" class="input" id="d-nazev">
+      </div>
+      <div class="form-group">
+        <label>Klient / firma</label>
+        <input type="text" class="input" id="d-klient">
+      </div>
+      <div class="form-group">
+        <label>IČO</label>
+        <div class="ico-row">
+          <input type="text" class="input" id="d-ico" inputmode="numeric">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="aresLookupInto('d-ico','d-klient')">ARES</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Zdroj poptávky</label>
+        <input type="text" class="input" id="d-zdroj">
+      </div>
+      <div class="form-group">
+        <label>Kontaktní osoba</label>
+        <input type="text" class="input" id="d-kontakt-jmeno">
+      </div>
+      <div class="form-group">
+        <label>Telefon</label>
+        <input type="text" class="input" id="d-kontakt-telefon">
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="text" class="input" id="d-kontakt-email">
+      </div>
+      <div class="form-group">
+        <label>Požadovaná částka</label>
+        <div class="amount-row">
+          <input type="text" class="input" id="d-castka" oninput="formatAmount(this);updateLtv()">
+          <div>
+            <div class="dropdown-field" data-target-select="d-mena">
+              <button class="dropdown-trigger" type="button" aria-expanded="false" aria-haspopup="listbox">
+                <span class="dropdown-label">CZK</span>
+                <svg class="dropdown-chevron" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              </button>
+              <ul class="dropdown-menu" role="listbox">
+                <li class="dropdown-option selected" data-value="CZK" role="option">CZK</li>
+                <li class="dropdown-option" data-value="EUR" role="option">EUR</li>
+                <li class="dropdown-option" data-value="USD" role="option">USD</li>
+              </ul>
+            </div>
+            <select id="d-mena" hidden>
+              <option value="CZK" selected>CZK</option>
+              <option value="EUR">EUR</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Účel financování</label>
+        <input type="text" class="input" id="d-ucel">
+      </div>
+      <div class="form-group">
+        <label>Čí je tah</label>
+        <div class="dropdown-field" data-target-select="d-citah">
+          <button class="dropdown-trigger" type="button" aria-expanded="false" aria-haspopup="listbox">
+            <span class="dropdown-label">Já</span>
+            <svg class="dropdown-chevron" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+          <ul class="dropdown-menu" role="listbox">
+            <li class="dropdown-option selected" data-value="ja" role="option">Já</li>
+            <li class="dropdown-option" data-value="klient" role="option">Klient</li>
+            <li class="dropdown-option" data-value="banka" role="option">Banka</li>
+            <li class="dropdown-option" data-value="odhadce" role="option">Odhadce</li>
+            <li class="dropdown-option" data-value="notar" role="option">Notář</li>
+            <li class="dropdown-option" data-value="katastr" role="option">Katastr</li>
+            <li class="dropdown-option" data-value="pravnik" role="option">Právník</li>
+            <li class="dropdown-option" data-value="jine" role="option">Jiné</li>
+          </ul>
+        </div>
+        <select id="d-citah" hidden>
+          <option value="ja" selected>Já</option>
+          <option value="klient">Klient</option>
+          <option value="banka">Banka</option>
+          <option value="odhadce">Odhadce</option>
+          <option value="notar">Notář</option>
+          <option value="katastr">Katastr</option>
+          <option value="pravnik">Právník</option>
+          <option value="jine">Jiné</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Další krok</label>
+        <input type="text" class="input" id="d-dalsi-krok" placeholder="Co se má stát">
+      </div>
+      <div class="form-group">
+        <label>Termín</label>
+        <input type="date" class="input" id="d-termin">
+      </div>
+      <div class="form-group fg-full">
+        <label>Poznámka</label>
+        <textarea class="input" id="d-poznamka"></textarea>
+      </div>
+    </div>
+
+    <div class="dsec">
+      <div class="dsec-title">
+        <span>Nemovitosti</span>
+        <span class="ltv-badge" id="d-ltv"></span>
+      </div>
+      <div class="nem-head">
+        <span>Katastrální území</span><span>Parcela</span><span>LV</span><span>Hodnota (CZK)</span><span></span>
+      </div>
+      <div id="d-nem-rows"></div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addNemRow()">+ Přidat nemovitost</button>
+    </div>
+
+    <div class="dsec">
+      <div class="dsec-title">Rychlé akce</div>
+      <div class="qa-row">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="quickAction('ts_odeslan')">TS odeslán</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="quickAction('ts_vracen')">TS vrácen</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="quickAction('podepsano')">Podepsáno</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="quickAction('vklad_kn')">Vklad KN podán</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="quickAction('vyplaceno')">Vyplaceno</button>
+      </div>
+      <div class="qa-note-row">
+        <input type="text" class="input" id="d-qa-note" placeholder="Telefonát / poznámka do timeline…">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="quickNote()">Přidat</button>
+      </div>
+    </div>
+
+    <div class="dsec">
+      <div class="dsec-title">Otevřít v aplikaci</div>
+      <div class="qa-row">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="openInApp('real-estate-prompt-generator.html')">R-E Generator</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="openInApp('termsheet-generator.html')">Term Sheet</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="openInApp('loan-documentation.html')">Loan Doc</button>
+      </div>
+    </div>
+
+    <div class="dsec">
+      <div class="dsec-title">Timeline</div>
+      <ul class="tl" id="d-timeline"></ul>
+    </div>
+
+    <div class="modal-actions">
+      <div class="left-group">
+        <button type="button" class="btn btn-ghost btn-sm" id="d-btn-pause" onclick="togglePause()">Pozastavit</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="openCloseModal()">Uzavřít</button>
+      </div>
+      <button type="button" class="btn btn-ghost" onclick="closeModal('detailModal')">Zavřít</button>
+      <button type="button" class="btn btn-primary" onclick="saveDetail()">Uložit změny</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== MODAL: Uzavření případu ============== -->
+<div class="modal-overlay" id="closeModal">
+  <div class="modal-box">
+    <h3>Uzavřít případ</h3>
+    <div class="form-group">
+      <label>Výsledek</label>
+      <div class="dropdown-field" data-target-select="cl-vysledek">
+        <button class="dropdown-trigger" type="button" aria-expanded="false" aria-haspopup="listbox">
+          <span class="dropdown-label">Vyplaceno</span>
+          <svg class="dropdown-chevron" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <ul class="dropdown-menu" role="listbox">
+          <li class="dropdown-option selected" data-value="vyplaceno" role="option">Vyplaceno</li>
+          <li class="dropdown-option" data-value="zamitnuto" role="option">Zamítnuto</li>
+          <li class="dropdown-option" data-value="ztraceno" role="option">Ztraceno</li>
+        </ul>
+      </div>
+      <select id="cl-vysledek" hidden>
+        <option value="vyplaceno" selected>Vyplaceno</option>
+        <option value="zamitnuto">Zamítnuto</option>
+        <option value="ztraceno">Ztraceno</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-top:14px">
+      <label>Důvod uzavření</label>
+      <textarea class="input" id="cl-duvod" placeholder="Krátký důvod…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('closeModal')">Zrušit</button>
+      <button type="button" class="btn btn-primary" onclick="confirmCloseCase()">Uzavřít případ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== MODAL: Připojit k případu… ============== -->
+<div class="modal-overlay" id="pickModal">
+  <div class="modal-box">
+    <h3>Připojit k případu</h3>
+    <input type="text" class="input" id="pick-search" placeholder="Hledat případ…" oninput="renderPickList()">
+    <div class="pick-list" id="pick-list"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('pickModal')">Zrušit</button>
+    </div>
+  </div>
+</div>
+
+<div class="page-foot">
+  <span>Investment Tools · MMXXVI</span>
+  <span class="dot">·</span>
+  <span>Martin Dlouhý</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="design-system/nav.js" defer></script>
+<script src="dashboard-bridge.js"></script>
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const GOOGLE_CLIENT_ID = '765274611389-25tev1d2a60v2di4t0jfho7fbpqf8q9c.apps.googleusercontent.com';
+const GOOGLE_SCOPES = [
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/spreadsheets'
+].join(' ');
+
+const ROOT_FOLDER_NAME = 'ProfiLend Investment Tools';
+const APP_FOLDER_NAME = 'Dashboard';
+const SHEET_TITLE = 'ProfiLend Dashboard';
+const TAB_PRIPADY = 'Pripady';
+const TAB_AKCE = 'Akce';
+const TAB_UVERY = 'Uvery';
+
+// localStorage (ne sessionStorage — homepage widget klíče čte)
+const TOKEN_KEY = 'dashboard-gtoken';
+const TOKEN_EXPIRY_KEY = 'dashboard-gtoken-expiry';
+const SHEET_ID_KEY = 'dashboard-sheet-id';
+
+const PRIPADY_HEADER = [
+    'id', 'vytvoreno', 'aktualizovano', 'nazev', 'klient', 'ico',
+    'kontakt_jmeno', 'kontakt_telefon', 'kontakt_email', 'zdroj',
+    'castka', 'mena', 'ucel', 'faze', 'ci_tah', 'dalsi_krok', 'termin',
+    'pozastaveno', 'stav', 'vysledek', 'duvod_uzavreni', 'datum_uzavreni',
+    'nemovitosti_json', 'poznamka'
+];
+const AKCE_HEADER = ['id', 'pripad_id', 'datum', 'typ', 'popis', 'zdroj', 'payload_json'];
+const UVERY_HEADER = ['id', 'pripad_id', 'klient', 'castka', 'mena', 'datum_vyplaceni', 'poznamka'];
+
+const FAZE_ORDER = ['nova', 'oceneni', 'termsheet', 'dokumentace', 'cerpani', 'uzavreno'];
+const FAZE_LABELS = {
+    nova: 'Nová', oceneni: 'Ocenění', termsheet: 'Term Sheet',
+    dokumentace: 'Dokumentace', cerpani: 'Podpis & čerpání', uzavreno: 'Uzavřeno'
+};
+const TAH_LABELS = {
+    ja: 'Já', klient: 'Klient', banka: 'Banka', odhadce: 'Odhadce',
+    notar: 'Notář', katastr: 'Katastr', pravnik: 'Právník', jine: 'Jiné'
+};
+const VYSLEDEK_LABELS = { vyplaceno: 'Vyplaceno', zamitnuto: 'Zamítnuto', ztraceno: 'Ztraceno' };
+// Mapa: typ události → navržená fáze (posun JEN dopředu)
+const EVENT_FAZE = {
+    oceneni_ulozeno: 'oceneni',
+    ts_vygenerovan: 'termsheet',
+    ts_vracen: 'dokumentace',
+    dokumentace_vygenerovana: 'dokumentace'
+};
+
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+    accessToken: null,
+    tokenExpiry: 0,
+    spreadsheetId: null,
+    sheetTabIds: {},
+    headers: { Pripady: PRIPADY_HEADER.slice(), Akce: AKCE_HEADER.slice(), Uvery: UVERY_HEADER.slice() },
+    cases: [],           // objekty dle PRIPADY_HEADER + _row (1-based vč. headeru) + _base (aktualizovano při načtení) + nemovitosti []
+    actions: [],         // objekty dle AKCE_HEADER
+    inboxEvents: [],     // události z fronty bez caseId / bez matche
+    chipFilter: null,    // null | 'namne' | 'ceka' | 'potermin'
+    search: '',
+    archiveVisible: false,
+    detailId: null,      // id case otevřeného v detailu
+    pickEventId: null,   // událost, pro kterou je otevřený picker
+    loading: false
+};
+
+// ============================================================
+// HELPERS
+// ============================================================
+function escapeHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function generateId(prefix) {
+    return (prefix || 'x') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+}
+function nowIso() { return new Date().toISOString(); }
+function todayIso() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString('cs-CZ');
+}
+function fmtDateTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString('cs-CZ') + ' ' + d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+}
+function formatAmount(input) {
+    let raw = input.value.replace(/\s/g, '').replace(/[^0-9]/g, '');
+    if (raw) input.value = parseInt(raw, 10).toLocaleString('cs-CZ');
+    else input.value = '';
+}
+function parseAmount(str) {
+    // Číselný payload z událostí (např. nezaokrouhlený průměr AI ocenění) nese desetiny —
+    // zaokrouhlit; string-cesta by odstraněním tečky hodnotu tiše zkorumpovala.
+    if (typeof str === 'number' && isFinite(str)) return Math.round(str);
+    const raw = String(str == null ? '' : str).replace(/\s/g, '').replace(/ /g, '').replace(/[^0-9]/g, '');
+    return raw ? parseInt(raw, 10) : 0;
+}
+function fmtNum(n) {
+    return (n || n === 0) ? Number(n).toLocaleString('cs-CZ') : '';
+}
+// Normalizace pro match: lowercase, bez diakritiky, sjednocené mezery
+function norm(s) {
+    return String(s == null ? '' : s).toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\s+/g, ' ').trim();
+}
+function showToast(msg, type) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast' + (type ? ' ' + type : '');
+    // reflow → animace i při opakovaném volání
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () { toast.classList.remove('show'); }, 3500);
+}
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function rowToObject(row, header) {
+    const o = {};
+    header.forEach(function (key, i) { o[key] = (row && row[i] != null) ? String(row[i]) : ''; });
+    return o;
+}
+function objectToRow(obj, header) {
+    return header.map(function (key) { return obj[key] != null ? String(obj[key]) : ''; });
+}
+function parseNemovitosti(jsonStr) {
+    try {
+        const arr = JSON.parse(jsonStr || '[]');
+        return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+}
+function findCase(id) {
+    return state.cases.find(function (c) { return c.id === id; }) || null;
+}
+
+// ============================================================
+// GOOGLE OAUTH (GIS token client, localStorage persistence)
+// ============================================================
+let tokenClient = null;
+
+function initTokenClient() {
+    if (!window.google || !window.google.accounts) {
+        setTimeout(initTokenClient, 300);
+        return;
+    }
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: GOOGLE_SCOPES,
+        callback: handleTokenResponse
+    });
+}
+
+function handleTokenResponse(response) {
+    if (response.error) {
+        console.error('OAuth error:', response);
+        showToast('Přihlášení selhalo: ' + (response.error_description || response.error), 'error');
+        return;
+    }
+    state.accessToken = response.access_token;
+    state.tokenExpiry = Date.now() + ((response.expires_in || 3600) * 1000) - 60000;
+    localStorage.setItem(TOKEN_KEY, state.accessToken);
+    localStorage.setItem(TOKEN_EXPIRY_KEY, String(state.tokenExpiry));
+    updateGoogleUi(true);
+    bootstrapApp();
+}
+
+function restoreToken() {
+    const t = localStorage.getItem(TOKEN_KEY);
+    const exp = parseInt(localStorage.getItem(TOKEN_EXPIRY_KEY) || '0', 10);
+    if (t && exp > Date.now()) {
+        state.accessToken = t;
+        state.tokenExpiry = exp;
+        return true;
+    }
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    return false;
+}
+
+function connectGoogle() {
+    if (!tokenClient) {
+        initTokenClient();
+        setTimeout(connectGoogle, 500);
+        return;
+    }
+    tokenClient.requestAccessToken({ prompt: state.accessToken ? '' : 'consent' });
+}
+
+function disconnectGoogle() {
+    if (state.accessToken && window.google && google.accounts && google.accounts.oauth2) {
+        google.accounts.oauth2.revoke(state.accessToken, function () {});
+    }
+    state.accessToken = null;
+    state.tokenExpiry = 0;
+    state.spreadsheetId = null;
+    state.cases = [];
+    state.actions = [];
+    state.inboxEvents = [];
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    localStorage.removeItem(SHEET_ID_KEY);
+    updateGoogleUi(false);
+    document.getElementById('app-view').style.display = 'none';
+    document.getElementById('connect-panel').style.display = '';
+    document.getElementById('btn-new-case').style.display = 'none';
+}
+
+function onGoogleBtn() {
+    if (state.accessToken) {
+        if (confirm('Odpojit Google účet? Data zůstanou v Google Sheets, jen se odhlásíte.')) {
+            disconnectGoogle();
+        }
+    } else {
+        connectGoogle();
+    }
+}
+
+function updateGoogleUi(connected) {
+    const btn = document.getElementById('btn-google');
+    const text = document.getElementById('gtext');
+    if (connected) {
+        btn.classList.add('on');
+        text.textContent = 'Drive: připojeno';
+    } else {
+        btn.classList.remove('on');
+        text.textContent = 'Připojit Google';
+    }
+}
+
+// ============================================================
+// GOOGLE DRIVE / SHEETS API (vzor database.html)
+// ============================================================
+async function gfetch(url, options = {}) {
+    if (!state.accessToken) throw new Error('Nepřihlášeno ke Google');
+    const headers = Object.assign({
+        'Authorization': 'Bearer ' + state.accessToken
+    }, options.headers || {});
+    const res = await fetch(url, Object.assign({}, options, { headers }));
+    if (res.status === 401) {
+        state.accessToken = null;
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(TOKEN_EXPIRY_KEY);
+        updateGoogleUi(false);
+        document.getElementById('app-view').style.display = 'none';
+        document.getElementById('connect-panel').style.display = '';
+        document.getElementById('btn-new-case').style.display = 'none';
+        throw new Error('Google token vypršel — přihlaste se prosím znovu.');
+    }
+    if (res.status === 403) {
+        const body = await res.clone().text().catch(function () { return ''; });
+        if (body.indexOf('SERVICE_DISABLED') !== -1 || body.indexOf('has not been used') !== -1) {
+            showToast('Sheets API není povolené v Google Cloud Console.', 'error');
+            throw new Error('Sheets API disabled');
+        }
+    }
+    return res;
+}
+
+async function checkSheetsResponse(res, op) {
+    if (res.ok) return;
+    const body = await res.text().catch(function () { return ''; });
+    throw new Error(op + ' selhalo HTTP ' + res.status + ': ' + body.slice(0, 300));
+}
+
+async function driveFindFolder(name, parentId) {
+    const q = encodeURIComponent(
+        "name='" + name.replace(/'/g, "\\'") + "' and mimeType='application/vnd.google-apps.folder' and trashed=false" +
+        (parentId ? " and '" + parentId + "' in parents" : '')
+    );
+    const res = await gfetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)&spaces=drive');
+    const data = await res.json();
+    return data.files && data.files.length > 0 ? data.files[0].id : null;
+}
+
+async function driveCreateFolder(name, parentId) {
+    const meta = { name: name, mimeType: 'application/vnd.google-apps.folder' };
+    if (parentId) meta.parents = [parentId];
+    const res = await gfetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(meta)
+    });
+    const data = await res.json();
+    return data.id;
+}
+
+async function driveFindFile(name, parentId) {
+    const q = encodeURIComponent(
+        "name='" + name.replace(/'/g, "\\'") + "' and '" + parentId + "' in parents and trashed=false"
+    );
+    const res = await gfetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,mimeType)&spaces=drive');
+    const data = await res.json();
+    return data.files && data.files.length > 0 ? data.files[0] : null;
+}
+
+async function ensureFolders() {
+    let rootId = await driveFindFolder(ROOT_FOLDER_NAME, null);
+    if (!rootId) rootId = await driveCreateFolder(ROOT_FOLDER_NAME, null);
+    let appId = await driveFindFolder(APP_FOLDER_NAME, rootId);
+    if (!appId) appId = await driveCreateFolder(APP_FOLDER_NAME, rootId);
+    return appId;
+}
+
+async function loadTabIds(sheetId) {
+    const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + sheetId + '?fields=sheets.properties');
+    await checkSheetsResponse(res, 'loadTabIds');
+    const data = await res.json();
+    state.sheetTabIds = {};
+    (data.sheets || []).forEach(function (s) {
+        state.sheetTabIds[s.properties.title] = s.properties.sheetId;
+    });
+}
+
+async function ensureSpreadsheet() {
+    const cachedId = localStorage.getItem(SHEET_ID_KEY);
+    if (cachedId) {
+        try {
+            await loadTabIds(cachedId);
+            state.spreadsheetId = cachedId;
+            await ensureTabsAndHeaders();
+            return cachedId;
+        } catch (e) {
+            localStorage.removeItem(SHEET_ID_KEY);
+        }
+    }
+
+    const appFolderId = await ensureFolders();
+    const existing = await driveFindFile(SHEET_TITLE, appFolderId);
+    if (existing) {
+        state.spreadsheetId = existing.id;
+        localStorage.setItem(SHEET_ID_KEY, existing.id);
+        await loadTabIds(existing.id);
+        await ensureTabsAndHeaders();
+        return existing.id;
+    }
+
+    // Nový spreadsheet s taby Pripady / Akce / Uvery
+    const createRes = await gfetch('https://sheets.googleapis.com/v4/spreadsheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            properties: { title: SHEET_TITLE },
+            sheets: [
+                { properties: { title: TAB_PRIPADY } },
+                { properties: { title: TAB_AKCE } },
+                { properties: { title: TAB_UVERY } }
+            ]
+        })
+    });
+    await checkSheetsResponse(createRes, 'createSpreadsheet');
+    const createData = await createRes.json();
+    state.spreadsheetId = createData.spreadsheetId;
+    state.sheetTabIds = {};
+    (createData.sheets || []).forEach(function (s) {
+        state.sheetTabIds[s.properties.title] = s.properties.sheetId;
+    });
+    localStorage.setItem(SHEET_ID_KEY, state.spreadsheetId);
+
+    // Přesun do složky ProfiLend Investment Tools/Dashboard
+    await gfetch(
+        'https://www.googleapis.com/drive/v3/files/' + state.spreadsheetId +
+        '?addParents=' + appFolderId + '&removeParents=root&fields=id,parents',
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }
+    );
+
+    await ensureTabsAndHeaders();
+    return state.spreadsheetId;
+}
+
+// Chybějící taby doplní, header řádek 1 založí / zmigruje (chybějící sloupce append na konec)
+async function ensureTabsAndHeaders() {
+    const wanted = [
+        { tab: TAB_PRIPADY, header: PRIPADY_HEADER },
+        { tab: TAB_AKCE, header: AKCE_HEADER },
+        { tab: TAB_UVERY, header: UVERY_HEADER }
+    ];
+    // 1) chybějící taby
+    const missingTabs = wanted.filter(function (w) { return state.sheetTabIds[w.tab] === undefined; });
+    if (missingTabs.length > 0) {
+        const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + ':batchUpdate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                requests: missingTabs.map(function (w) { return { addSheet: { properties: { title: w.tab } } }; })
+            })
+        });
+        await checkSheetsResponse(res, 'addSheet');
+        const data = await res.json();
+        (data.replies || []).forEach(function (r) {
+            if (r.addSheet) state.sheetTabIds[r.addSheet.properties.title] = r.addSheet.properties.sheetId;
+        });
+    }
+    // 2) header migrace per tab
+    for (const w of wanted) {
+        const range = encodeURIComponent(w.tab + '!1:1');
+        const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values/' + range);
+        await checkSheetsResponse(res, 'readHeader(' + w.tab + ')');
+        const data = await res.json();
+        const current = (data.values && data.values[0]) ? data.values[0].map(String) : [];
+        if (current.length === 0) {
+            await sheetsPutRow(w.tab, 1, w.header);
+            state.headers[w.tab] = w.header.slice();
+        } else {
+            const missing = w.header.filter(function (h) { return current.indexOf(h) === -1; });
+            if (missing.length > 0) {
+                const merged = current.concat(missing);
+                await sheetsPutRow(w.tab, 1, merged);
+                state.headers[w.tab] = merged;
+            } else {
+                state.headers[w.tab] = current;
+            }
+        }
+    }
+}
+
+function colLetter(n) {
+    let s = '';
+    while (n > 0) {
+        const r = (n - 1) % 26;
+        s = String.fromCharCode(65 + r) + s;
+        n = Math.floor((n - 1) / 26);
+    }
+    return s;
+}
+
+// Explicitní 2-krokový append (vzor database.html — žádný :append endpoint)
+async function sheetsAppend(tabName, rows) {
+    if (!rows || rows.length === 0) return 0;
+    const colARange = encodeURIComponent(tabName + '!A:A');
+    const res1 = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values/' + colARange);
+    await checkSheetsResponse(res1, 'sheetsAppend.count(' + tabName + ')');
+    const data1 = await res1.json();
+    const currentRowCount = (data1.values || []).length;
+
+    const startRow = currentRowCount + 1;
+    const endRow = startRow + rows.length - 1;
+    const maxCols = Math.max.apply(null, rows.map(function (r) { return (r || []).length; }));
+    const lastCol = colLetter(maxCols);
+    const writeRange = encodeURIComponent(tabName + '!A' + startRow + ':' + lastCol + endRow);
+    const res2 = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
+        '/values/' + writeRange + '?valueInputOption=RAW', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: rows })
+    });
+    await checkSheetsResponse(res2, 'sheetsAppend.write(' + tabName + ' @ ' + startRow + ')');
+    return startRow;
+}
+
+async function sheetsPutRow(tabName, rowIndex, rowValues) {
+    const lastCol = colLetter(rowValues.length);
+    const range = encodeURIComponent(tabName + '!A' + rowIndex + ':' + lastCol + rowIndex);
+    const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
+        '/values/' + range + '?valueInputOption=RAW', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [rowValues] })
+    });
+    await checkSheetsResponse(res, 'sheetsPutRow(' + tabName + '!' + rowIndex + ')');
+}
+
+async function sheetsRead(tabName) {
+    const range = encodeURIComponent(tabName);
+    const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values/' + range);
+    await checkSheetsResponse(res, 'sheetsRead(' + tabName + ')');
+    const data = await res.json();
+    return data.values || [];
+}
+
+async function sheetsReadRow(tabName, rowIndex, colCount) {
+    const lastCol = colLetter(colCount);
+    const range = encodeURIComponent(tabName + '!A' + rowIndex + ':' + lastCol + rowIndex);
+    const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values/' + range);
+    await checkSheetsResponse(res, 'sheetsReadRow(' + tabName + '!' + rowIndex + ')');
+    const data = await res.json();
+    return (data.values && data.values[0]) ? data.values[0] : [];
+}
+</script>
+<script>
+// ============================================================
+// BOOTSTRAP / SYNC
+// ============================================================
+async function bootstrapApp() {
+    if (state.loading) return;
+    state.loading = true;
+    try {
+        showToast('Připojuji se ke Google Sheets…');
+        await ensureSpreadsheet();
+        await syncData();
+        document.getElementById('connect-panel').style.display = 'none';
+        document.getElementById('app-view').style.display = '';
+        document.getElementById('btn-new-case').style.display = '';
+        await processQueue();
+        renderAll();
+        showToast('Připojeno. Dashboard načten.');
+    } catch (err) {
+        console.error('Bootstrap error:', err);
+        showToast('Chyba: ' + err.message, 'error');
+    } finally {
+        state.loading = false;
+    }
+}
+
+async function syncData() {
+    const [pripadyRows, akceRows] = await Promise.all([
+        sheetsRead(TAB_PRIPADY),
+        sheetsRead(TAB_AKCE)
+    ]);
+    const ph = state.headers[TAB_PRIPADY];
+    state.cases = [];
+    for (let i = 1; i < pripadyRows.length; i++) {
+        const c = rowToObject(pripadyRows[i], ph);
+        if (!c.id) continue;
+        c._row = i + 1;
+        c._base = c.aktualizovano;
+        c.nemovitosti = parseNemovitosti(c.nemovitosti_json);
+        state.cases.push(c);
+    }
+    const ah = state.headers[TAB_AKCE];
+    state.actions = [];
+    for (let j = 1; j < akceRows.length; j++) {
+        const a = rowToObject(akceRows[j], ah);
+        if (!a.id) continue;
+        state.actions.push(a);
+    }
+}
+
+async function reloadData() {
+    try {
+        await syncData();
+        await processQueue();
+        renderAll();
+        showToast('Data načtena znovu.');
+    } catch (err) {
+        console.error('Reload error:', err);
+        showToast('Chyba načtení: ' + err.message, 'error');
+    }
+}
+
+// ============================================================
+// ZÁPIS CASE — newer-version-wins podle `aktualizovano`
+// ============================================================
+async function writeCase(c) {
+    const header = state.headers[TAB_PRIPADY];
+    // 1) přečti aktuální řádek a srovnej
+    const remoteRow = await sheetsReadRow(TAB_PRIPADY, c._row, header.length);
+    const remote = rowToObject(remoteRow, header);
+    if (remote.id !== c.id) {
+        // Řádky se posunuly (mazání/sort v Sheetu) → plný reload
+        await syncData();
+        renderAll();
+        showToast('Struktura Sheetu se změnila — data načtena znovu. Zopakujte prosím akci.', 'warn');
+        return false;
+    }
+    if (remote.aktualizovano && c._base && remote.aktualizovano > c._base) {
+        await syncData();
+        renderAll();
+        showToast('Případ byl mezitím změněn jinde — načtena novější verze. Zopakujte prosím úpravu.', 'warn');
+        return false;
+    }
+    // 2) zápis
+    c.aktualizovano = nowIso();
+    c.nemovitosti_json = JSON.stringify(c.nemovitosti || []);
+    await sheetsPutRow(TAB_PRIPADY, c._row, objectToRow(c, header));
+    c._base = c.aktualizovano;
+    return true;
+}
+
+async function appendCase(c) {
+    const header = state.headers[TAB_PRIPADY];
+    c.nemovitosti_json = JSON.stringify(c.nemovitosti || []);
+    const row = await sheetsAppend(TAB_PRIPADY, [objectToRow(c, header)]);
+    c._row = row;
+    c._base = c.aktualizovano;
+    state.cases.push(c);
+    return c;
+}
+
+async function addAction(pripadId, typ, popis, zdroj, payload) {
+    const a = {
+        id: generateId('a'),
+        pripad_id: pripadId,
+        datum: nowIso(),
+        typ: typ,
+        popis: popis || '',
+        zdroj: zdroj || 'manual',
+        payload_json: payload ? JSON.stringify(payload) : ''
+    };
+    await sheetsAppend(TAB_AKCE, [objectToRow(a, state.headers[TAB_AKCE])]);
+    state.actions.push(a);
+    return a;
+}
+
+async function appendUver(c, duvod) {
+    const u = {
+        id: generateId('u'),
+        pripad_id: c.id,
+        klient: c.klient || '',
+        castka: c.castka || '',
+        mena: c.mena || 'CZK',
+        datum_vyplaceni: todayIso(),
+        poznamka: duvod || ''
+    };
+    await sheetsAppend(TAB_UVERY, [objectToRow(u, state.headers[TAB_UVERY])]);
+}
+
+function newCaseObject(fields) {
+    const now = nowIso();
+    const c = Object.assign({
+        id: generateId('case'),
+        vytvoreno: now,
+        aktualizovano: now,
+        nazev: '', klient: '', ico: '',
+        kontakt_jmeno: '', kontakt_telefon: '', kontakt_email: '',
+        zdroj: '', castka: '', mena: 'CZK', ucel: '',
+        faze: 'nova', ci_tah: 'ja', dalsi_krok: '', termin: '',
+        pozastaveno: '', stav: 'aktivni', vysledek: '',
+        duvod_uzavreni: '', datum_uzavreni: '',
+        nemovitosti_json: '[]', poznamka: '',
+        nemovitosti: []
+    }, fields || {});
+    return c;
+}
+
+// Automatický posun fáze — JEN dopředu; jen lokální mutace, vrací původní fázi
+// (Akce záznam zapisuje volající až PO úspěšném writeCase) nebo null
+function maybeAdvanceFaze(c, targetFaze) {
+    if (!targetFaze) return null;
+    const cur = FAZE_ORDER.indexOf(c.faze);
+    const tgt = FAZE_ORDER.indexOf(targetFaze);
+    if (tgt <= cur) return null;
+    const old = c.faze;
+    c.faze = targetFaze;
+    return old;
+}
+
+// ============================================================
+// FRONTA UDÁLOSTÍ (DashboardBridge)
+// ============================================================
+function eventTitle(ev) {
+    const p = ev.payload || {};
+    const nem = (p.ku || p.parcela) ? ((p.ku || '') + (p.parcela ? ' p.č. ' + p.parcela : '')) : '';
+    switch (ev.type) {
+        case 'oceneni_ulozeno':
+            return 'Ocenění uloženo — ' + (p.nazev || nem || 'bez názvu');
+        case 'ts_vygenerovan':
+            return 'Term sheet vygenerován — ' + (p.klient || nem || 'bez klienta');
+        case 'ts_vracen':
+            return 'Term sheet vrácen — ' + (p.klient || 'bez klienta');
+        case 'dokumentace_vygenerovana':
+            return 'Dokumentace vygenerována — ' + (p.klient || 'bez klienta');
+        default:
+            return ev.type || 'Událost';
+    }
+}
+
+// Extrakce nemovitostí z payloadu (pole `nemovitosti`, pole `parcely` z TS, nebo jednotlivá pole)
+function eventNemovitosti(p) {
+    p = p || {};
+    if (Array.isArray(p.nemovitosti) && p.nemovitosti.length > 0) return p.nemovitosti;
+    if (Array.isArray(p.parcely) && p.parcely.length > 0) {
+        // Term Sheet emituje parcelní čísla jako pole `parcely` + společné ku/lv
+        return p.parcely.map(function (pc) {
+            return { ku: p.ku || '', parcela: String(pc == null ? '' : pc), lv: p.lv || '', hodnota: '' };
+        });
+    }
+    if (p.ku || p.parcela || p.lv) {
+        return [{ ku: p.ku || '', parcela: p.parcela || '', lv: p.lv || '', hodnota: p.hodnota || '' }];
+    }
+    return [];
+}
+
+// Kandidáti pro match: nemovitost přes kú+parcela (normalizovaně), klient přes IČO; LV bonus
+function matchCandidates(ev) {
+    const p = ev.payload || {};
+    const evNems = eventNemovitosti(p);
+    const evIco = String(p.ico || '').replace(/\s/g, '');
+    const scored = [];
+    state.cases.forEach(function (c) {
+        if (c.stav !== 'aktivni') return;
+        let score = 0;
+        evNems.forEach(function (en) {
+            if (!en.ku && !en.parcela) return;
+            (c.nemovitosti || []).forEach(function (cn) {
+                if (norm(cn.ku) && norm(cn.ku) === norm(en.ku) &&
+                    norm(cn.parcela) && norm(cn.parcela) === norm(en.parcela)) {
+                    score += 10;
+                    if (en.lv && cn.lv && norm(cn.lv) === norm(en.lv)) score += 2; // LV bonus jistoty
+                }
+            });
+        });
+        if (evIco && c.ico && c.ico.replace(/\s/g, '') === evIco) score += 8;
+        if (score > 0) scored.push({ c: c, score: score });
+    });
+    scored.sort(function (a, b) { return b.score - a.score; });
+    return scored.map(function (s) { return s.c; });
+}
+
+// Efekt události na case. silent=true → bez potvrzování (tiché párování).
+// Vrací popis pro toast/log.
+async function applyEventToCase(c, ev, silent) {
+    const p = ev.payload || {};
+    const changes = [];
+    if (ev.type === 'oceneni_ulozeno') {
+        const evNems = eventNemovitosti(p);
+        evNems.forEach(function (en) {
+            const existing = (c.nemovitosti || []).find(function (cn) {
+                return norm(cn.ku) === norm(en.ku) && norm(cn.parcela) === norm(en.parcela) && (norm(cn.ku) || norm(cn.parcela));
+            });
+            if (existing) {
+                // druhé kolo ocenění — aktualizace hodnoty
+                if (en.hodnota != null && String(en.hodnota) !== '') {
+                    const doUpdate = silent || confirm('Nemovitost ' + (en.ku || '') + ' p.č. ' + (en.parcela || '') +
+                        ' už u případu existuje. Aktualizovat hodnotu na ' + fmtNum(parseAmount(en.hodnota)) + ' CZK?');
+                    if (doUpdate) {
+                        existing.hodnota = String(parseAmount(en.hodnota) || en.hodnota);
+                        if (en.lv && !existing.lv) existing.lv = String(en.lv);
+                        changes.push('aktualizována hodnota nemovitosti');
+                    }
+                }
+            } else if (en.ku || en.parcela || en.lv) {
+                c.nemovitosti = c.nemovitosti || [];
+                c.nemovitosti.push({
+                    ku: String(en.ku || ''), parcela: String(en.parcela || ''),
+                    lv: String(en.lv || ''), hodnota: String(parseAmount(en.hodnota) || (en.hodnota || ''))
+                });
+                changes.push('přidána nemovitost');
+            }
+        });
+    } else if (ev.type === 'ts_vygenerovan') {
+        if (!c.klient && p.klient) { c.klient = String(p.klient); changes.push('doplněn klient'); }
+        if (!c.ico && p.ico) { c.ico = String(p.ico); changes.push('doplněno IČO'); }
+        if (!c.castka && p.castka) { c.castka = String(parseAmount(p.castka) || p.castka); changes.push('doplněna částka'); }
+        if (!c.mena && p.mena) { c.mena = String(p.mena); }
+        const evNems = eventNemovitosti(p);
+        evNems.forEach(function (en) {
+            const existing = (c.nemovitosti || []).find(function (cn) {
+                return norm(cn.ku) === norm(en.ku) && norm(cn.parcela) === norm(en.parcela) && (norm(cn.ku) || norm(cn.parcela));
+            });
+            if (!existing && (en.ku || en.parcela || en.lv)) {
+                c.nemovitosti = c.nemovitosti || [];
+                c.nemovitosti.push({
+                    ku: String(en.ku || ''), parcela: String(en.parcela || ''),
+                    lv: String(en.lv || ''), hodnota: String(parseAmount(en.hodnota) || (en.hodnota || ''))
+                });
+                changes.push('přidána nemovitost');
+            }
+        });
+    } else if (ev.type === 'ts_vracen') {
+        if (!c.klient && p.klient) { c.klient = String(p.klient); changes.push('doplněn klient'); }
+        if (!c.ico && p.ico) { c.ico = String(p.ico); changes.push('doplněno IČO'); }
+    }
+    // dokumentace_vygenerovana → jen Akce záznam (+ případný posun fáze níže)
+
+    // Nejdřív zápis case; timeline záznamy až po úspěchu — jinak by při konfliktu
+    // zápisu zůstal v timeline záznam o akci, která neproběhla.
+    const oldFaze = maybeAdvanceFaze(c, EVENT_FAZE[ev.type]);
+    const ok = await writeCase(c);
+    if (!ok) return null;
+    await addAction(c.id, ev.type, eventTitle(ev), ev.source || 'manual', p);
+    if (oldFaze) {
+        await addAction(c.id, 'faze_zmena',
+            'Fáze: ' + (FAZE_LABELS[oldFaze] || oldFaze) + ' → ' + (FAZE_LABELS[c.faze] || c.faze),
+            ev.source || 'manual');
+    }
+    return changes;
+}
+
+// Zpracování fronty: caseId → tiché; jinak → Doručené
+async function processQueue() {
+    if (!window.DashboardBridge) { state.inboxEvents = []; return; }
+    const events = DashboardBridge.peekEvents();
+    const silentIds = [];
+    const inbox = [];
+    let silentCount = 0;
+    for (const ev of events) {
+        const caseId = ev.payload && ev.payload.caseId;
+        const c = caseId ? findCase(caseId) : null;
+        if (c && c.stav === 'aktivni') {
+            try {
+                const res = await applyEventToCase(c, ev, true);
+                if (res === null) {
+                    inbox.push(ev); // konflikt zápisu — událost zůstává viditelná v Doručených
+                } else {
+                    silentIds.push(ev.id);
+                    silentCount++;
+                }
+            } catch (err) {
+                console.error('Silent event error:', err);
+                inbox.push(ev); // nech v Doručených, ať se neztratí
+            }
+        } else {
+            inbox.push(ev);
+        }
+    }
+    if (silentIds.length > 0) DashboardBridge.removeEvents(silentIds);
+    state.inboxEvents = inbox;
+    if (silentCount > 0) {
+        showToast(silentCount + (silentCount === 1 ? ' událost připojena automaticky' : (silentCount < 5 ? ' události připojeny automaticky' : ' událostí připojeno automaticky')));
+    }
+}
+
+// ============================================================
+// DORUČENÉ — akce
+// ============================================================
+function inboxEventById(evId) {
+    return state.inboxEvents.find(function (e) { return e.id === evId; }) || null;
+}
+
+async function inboxAttach(evId, caseId) {
+    const ev = inboxEventById(evId);
+    const c = findCase(caseId);
+    if (!ev || !c) return;
+    try {
+        const changes = await applyEventToCase(c, ev, false);
+        if (changes === null) return; // konflikt — writeCase udělal reload, událost zůstává v frontě
+        DashboardBridge.removeEvents([ev.id]);
+        state.inboxEvents = state.inboxEvents.filter(function (e) { return e.id !== ev.id; });
+        closeModal('pickModal');
+        renderAll();
+        showToast('Událost připojena k případu „' + c.nazev + '".');
+    } catch (err) {
+        console.error('Attach error:', err);
+        showToast('Připojení selhalo: ' + err.message, 'error');
+    }
+}
+
+function inboxIgnore(evId) {
+    if (!window.DashboardBridge) return;
+    DashboardBridge.removeEvents([evId]);
+    state.inboxEvents = state.inboxEvents.filter(function (e) { return e.id !== evId; });
+    renderAll();
+    showToast('Událost ignorována.');
+}
+
+function inboxNewCase(evId) {
+    const ev = inboxEventById(evId);
+    if (!ev) return;
+    const p = ev.payload || {};
+    const prefill = { eventId: evId };
+    if (ev.type === 'oceneni_ulozeno') {
+        prefill.nazev = p.nazev || '';
+        prefill.faze = 'oceneni';
+    } else if (ev.type === 'ts_vygenerovan') {
+        const lv = p.lv || ((eventNemovitosti(p)[0] || {}).lv || '');
+        prefill.nazev = p.nazevTs || ((p.klient || '') + (lv ? ' – LV ' + lv : ''));
+        prefill.faze = 'termsheet';
+    } else if (ev.type === 'ts_vracen') {
+        prefill.nazev = p.klient || '';
+        prefill.faze = 'dokumentace';
+    } else {
+        prefill.nazev = p.klient || p.nazev || '';
+        prefill.faze = 'dokumentace';
+    }
+    prefill.klient = p.klient || '';
+    prefill.ico = p.ico || '';
+    prefill.castka = p.castka || '';
+    prefill.mena = p.mena || 'CZK';
+    const nems = eventNemovitosti(p);
+    if (nems.length > 0) prefill.nemovitost = nems[0];
+    openNewCaseModal(prefill);
+}
+
+function openPickModal(evId) {
+    state.pickEventId = evId;
+    document.getElementById('pick-search').value = '';
+    renderPickList();
+    openModal('pickModal');
+}
+
+function renderPickList() {
+    const q = norm(document.getElementById('pick-search').value);
+    const host = document.getElementById('pick-list');
+    // Match kandidáti dané události patří nahoru se štítkem „navrženo"
+    const pickEv = inboxEventById(state.pickEventId);
+    const isCand = {};
+    if (pickEv) {
+        matchCandidates(pickEv).forEach(function (mc) { isCand[mc.id] = true; });
+    }
+    // všechny otevřené case, nedávno aktivní nahoře
+    const open = state.cases
+        .filter(function (c) { return c.stav === 'aktivni'; })
+        .sort(function (a, b) { return (b.aktualizovano || '').localeCompare(a.aktualizovano || ''); })
+        .filter(function (c) {
+            if (!q) return true;
+            return norm(c.nazev).indexOf(q) !== -1 || norm(c.klient).indexOf(q) !== -1 || norm(c.ico).indexOf(q) !== -1;
+        });
+    const ordered = open.filter(function (c) { return isCand[c.id]; })
+        .concat(open.filter(function (c) { return !isCand[c.id]; }));
+    if (ordered.length === 0) {
+        host.innerHTML = '<div class="tl-empty">Žádný otevřený případ.</div>';
+        return;
+    }
+    host.innerHTML = ordered.map(function (c) {
+        const suggested = isCand[c.id]
+            ? '<span class="pick-faze" style="color:var(--amber-warm);border-color:var(--line-amber)">navrženo</span>'
+            : '';
+        return '<div class="pick-item" onclick="inboxAttach(\'' + escapeHtml(state.pickEventId) + '\',\'' + escapeHtml(c.id) + '\')">' +
+            '<div><div class="pick-name">' + escapeHtml(c.nazev || '(bez názvu)') + '</div>' +
+            '<div class="pick-meta">' + escapeHtml(c.klient || '—') + (c.ico ? ' · IČO ' + escapeHtml(c.ico) : '') + '</div></div>' +
+            suggested +
+            '<span class="pick-faze">' + escapeHtml(FAZE_LABELS[c.faze] || c.faze) + '</span>' +
+        '</div>';
+    }).join('');
+}
+</script>
+<script>
+// ============================================================
+// RENDER
+// ============================================================
+function isOverdue(c) {
+    return !!(c.termin && c.termin < todayIso());
+}
+function activeCases() {
+    return state.cases.filter(function (c) { return c.stav === 'aktivni'; });
+}
+function closedCases() {
+    return state.cases.filter(function (c) { return c.stav !== 'aktivni'; });
+}
+
+function renderAll() {
+    renderToday();
+    renderInbox();
+    renderBoard();
+    renderArchive();
+}
+
+function renderToday() {
+    // Počítá se JEN z aktivních nepozastavených case
+    const act = activeCases().filter(function (c) { return c.pozastaveno !== '1'; });
+    const namne = act.filter(function (c) { return c.ci_tah === 'ja'; }).length;
+    const ceka = act.filter(function (c) { return c.ci_tah !== 'ja'; }).length;
+    const potermin = act.filter(isOverdue).length;
+    document.getElementById('cnt-namne').textContent = namne;
+    document.getElementById('cnt-ceka').textContent = ceka;
+    document.getElementById('cnt-potermin').textContent = potermin;
+    document.getElementById('chip-potermin').classList.toggle('overdue-hot', potermin > 0);
+    ['namne', 'ceka', 'potermin'].forEach(function (key) {
+        document.getElementById('chip-' + key).classList.toggle('active', state.chipFilter === key);
+    });
+}
+
+function toggleChip(key) {
+    state.chipFilter = (state.chipFilter === key) ? null : key;
+    renderToday();
+    renderBoard();
+}
+
+function onSearch() {
+    state.search = document.getElementById('board-search').value;
+    renderBoard();
+    renderArchive();
+}
+
+function matchesSearch(c) {
+    const q = norm(state.search);
+    if (!q) return true;
+    return norm(c.nazev).indexOf(q) !== -1 || norm(c.klient).indexOf(q) !== -1 || norm(c.ico).indexOf(q) !== -1;
+}
+
+function matchesChip(c) {
+    if (!state.chipFilter) return true;
+    if (c.pozastaveno === '1') return false; // chipy počítají jen nepozastavené
+    if (state.chipFilter === 'namne') return c.ci_tah === 'ja';
+    if (state.chipFilter === 'ceka') return c.ci_tah !== 'ja';
+    if (state.chipFilter === 'potermin') return isOverdue(c);
+    return true;
+}
+
+function renderInbox() {
+    const inbox = document.getElementById('inbox');
+    const list = document.getElementById('inbox-list');
+    if (state.inboxEvents.length === 0) {
+        inbox.style.display = 'none';
+        list.innerHTML = '';
+        return;
+    }
+    inbox.style.display = '';
+    list.innerHTML = state.inboxEvents.map(function (ev) {
+        const cands = matchCandidates(ev);
+        let directBtn = '';
+        if (cands.length === 1) {
+            directBtn = '<button type="button" class="btn btn-primary btn-sm" ' +
+                'onclick="inboxAttach(\'' + escapeHtml(ev.id) + '\',\'' + escapeHtml(cands[0].id) + '\')">' +
+                'Připojit k „' + escapeHtml(cands[0].nazev || cands[0].klient || 'případu') + '"</button>';
+        }
+        return '<div class="inbox-item">' +
+            '<div><div class="inbox-title">' + escapeHtml(eventTitle(ev)) + '</div>' +
+            '<div class="inbox-time">' + escapeHtml(fmtDateTime(ev.ts)) + '</div></div>' +
+            '<div class="inbox-actions">' +
+                directBtn +
+                '<button type="button" class="btn btn-secondary btn-sm" onclick="openPickModal(\'' + escapeHtml(ev.id) + '\')">Připojit k případu…</button>' +
+                '<button type="button" class="btn btn-secondary btn-sm" onclick="inboxNewCase(\'' + escapeHtml(ev.id) + '\')">Založit nový případ</button>' +
+                '<button type="button" class="btn btn-ghost btn-sm" onclick="inboxIgnore(\'' + escapeHtml(ev.id) + '\')">Ignorovat</button>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+const COL_HINTS = {
+    nova: 'Žádná nová poptávka — založte ji tlačítkem „Nová poptávka".',
+    oceneni: 'Nic se právě neoceňuje.',
+    termsheet: 'Žádný term sheet v běhu.',
+    dokumentace: 'Žádná dokumentace v přípravě.',
+    cerpani: 'Nic nečeká na podpis ani čerpání.'
+};
+
+function renderBoard() {
+    const board = document.getElementById('board');
+    const cols = FAZE_ORDER.slice(0, 5);
+    const visible = activeCases().filter(matchesSearch).filter(matchesChip);
+    board.innerHTML = cols.map(function (faze) {
+        const items = visible.filter(function (c) { return c.faze === faze; })
+            .sort(function (a, b) { return (b.aktualizovano || '').localeCompare(a.aktualizovano || ''); });
+        const cards = items.length === 0
+            ? '<div class="col-hint">' + escapeHtml(COL_HINTS[faze] || 'Prázdné.') + '</div>'
+            : items.map(renderCard).join('');
+        return '<div class="col">' +
+            '<div class="col-head"><span class="col-title">' + escapeHtml(FAZE_LABELS[faze]) + '</span>' +
+            '<span class="col-count">' + items.length + '</span></div>' +
+            '<div class="col-body">' + cards + '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function renderCard(c) {
+    const overdue = isOverdue(c);
+    const paused = c.pozastaveno === '1';
+    const idx = FAZE_ORDER.indexOf(c.faze);
+    const amount = c.castka ? fmtNum(parseAmount(c.castka)) + ' ' + (c.mena || 'CZK') : '';
+    let next = '';
+    if (c.dalsi_krok || c.termin) {
+        next = '<div class="case-next">' + escapeHtml(c.dalsi_krok || '') +
+            (c.termin ? ' <span class="case-date">do ' + escapeHtml(fmtDate(c.termin)) + '</span>' : '') + '</div>';
+    }
+    return '<div class="case-card' + (paused ? ' paused' : '') + '" onclick="openDetail(\'' + escapeHtml(c.id) + '\')">' +
+        '<div class="case-name">' + escapeHtml(c.nazev || '(bez názvu)') + '</div>' +
+        (c.klient ? '<div class="case-client">' + escapeHtml(c.klient) + '</div>' : '') +
+        (amount ? '<div class="case-amount">' + escapeHtml(amount) + '</div>' : '') +
+        '<div class="case-chips">' +
+            '<span class="tah-chip' + (c.ci_tah === 'ja' ? ' ja' : '') + '">' + escapeHtml(TAH_LABELS[c.ci_tah] || c.ci_tah || '—') + '</span>' +
+            (overdue && !paused ? '<span class="badge-overdue">Po termínu</span>' : '') +
+            (paused ? '<span class="badge-paused">Pozastaveno</span>' : '') +
+        '</div>' +
+        next +
+        '<div class="case-foot">' +
+            '<button type="button" class="arrow-btn" title="Posunout fázi zpět"' + (idx <= 0 ? ' disabled' : '') +
+                ' onclick="event.stopPropagation();movePhase(\'' + escapeHtml(c.id) + '\',-1)">←</button>' +
+            '<button type="button" class="arrow-btn" title="Posunout fázi vpřed"' + (idx >= 4 ? ' disabled' : '') +
+                ' onclick="event.stopPropagation();movePhase(\'' + escapeHtml(c.id) + '\',1)">→</button>' +
+        '</div>' +
+    '</div>';
+}
+
+async function movePhase(caseId, dir) {
+    const c = findCase(caseId);
+    if (!c) return;
+    const idx = FAZE_ORDER.indexOf(c.faze);
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx > 4) return;
+    const old = c.faze;
+    c.faze = FAZE_ORDER[newIdx];
+    try {
+        const ok = await writeCase(c);
+        if (!ok) return; // writeCase udělal reload + toast
+    } catch (err) {
+        c.faze = old;
+        console.error('Move phase error:', err);
+        showToast('Posun fáze selhal: ' + err.message, 'error');
+        return;
+    }
+    try {
+        await addAction(c.id, 'faze_zmena', 'Fáze: ' + (FAZE_LABELS[old] || old) + ' → ' + (FAZE_LABELS[c.faze] || c.faze), 'manual');
+    } catch (err) { console.error('Timeline zápis selhal:', err); }
+    renderAll();
+}
+
+// ============================================================
+// ARCHIV (Uzavřené)
+// ============================================================
+function toggleArchive() {
+    state.archiveVisible = !state.archiveVisible;
+    document.getElementById('board-view').classList.toggle('hidden-view', state.archiveVisible);
+    document.getElementById('archive-wrap').classList.toggle('visible', state.archiveVisible);
+    document.getElementById('btn-archive').innerHTML = state.archiveVisible
+        ? 'Zpět na board<span id="archive-count"></span>'
+        : 'Uzavřené <span id="archive-count"></span>';
+    renderArchive();
+}
+
+function renderArchive() {
+    const closed = closedCases().filter(matchesSearch)
+        .sort(function (a, b) { return (b.datum_uzavreni || '').localeCompare(a.datum_uzavreni || ''); });
+    const cnt = document.getElementById('archive-count');
+    const total = closedCases().length;
+    if (cnt) cnt.textContent = (!state.archiveVisible && total > 0) ? '(' + total + ')' : '';
+    const body = document.getElementById('archive-body');
+    if (closed.length === 0) {
+        body.innerHTML = '<tr><td colspan="6" style="color:var(--text-faint);font-style:italic">Žádný uzavřený případ.</td></tr>';
+        return;
+    }
+    body.innerHTML = closed.map(function (c) {
+        const amount = c.castka ? fmtNum(parseAmount(c.castka)) + ' ' + (c.mena || 'CZK') : '—';
+        return '<tr>' +
+            '<td><strong>' + escapeHtml(c.nazev || '(bez názvu)') + '</strong></td>' +
+            '<td>' + escapeHtml(c.klient || '—') + '</td>' +
+            '<td class="right">' + escapeHtml(amount) + '</td>' +
+            '<td><span class="result-chip ' + escapeHtml(c.vysledek || '') + '">' + escapeHtml(VYSLEDEK_LABELS[c.vysledek] || c.vysledek || '—') + '</span></td>' +
+            '<td>' + escapeHtml(fmtDate(c.datum_uzavreni)) + '</td>' +
+            '<td class="right"><button type="button" class="btn btn-secondary btn-sm" onclick="reopenCase(\'' + escapeHtml(c.id) + '\')">Znovu otevřít</button></td>' +
+        '</tr>';
+    }).join('');
+}
+
+async function reopenCase(caseId) {
+    const c = findCase(caseId);
+    if (!c) return;
+    // předchozí fáze z posledního 'uzavreno' záznamu (payload.predchozi_faze)
+    let prevFaze = 'nova';
+    const closeActions = state.actions.filter(function (a) { return a.pripad_id === c.id && a.typ === 'uzavreno'; })
+        .sort(function (a, b) { return (b.datum || '').localeCompare(a.datum || ''); });
+    if (closeActions.length > 0) {
+        try {
+            const p = JSON.parse(closeActions[0].payload_json || '{}');
+            if (p.predchozi_faze && FAZE_ORDER.indexOf(p.predchozi_faze) !== -1 && p.predchozi_faze !== 'uzavreno') {
+                prevFaze = p.predchozi_faze;
+            }
+        } catch (e) { /* fallback nova */ }
+    }
+    const snapshot = { faze: c.faze, stav: c.stav, vysledek: c.vysledek, duvod: c.duvod_uzavreni, datum: c.datum_uzavreni };
+    c.faze = prevFaze;
+    c.stav = 'aktivni';
+    c.vysledek = '';
+    c.duvod_uzavreni = '';
+    c.datum_uzavreni = '';
+    try {
+        const ok = await writeCase(c);
+        if (!ok) return;
+    } catch (err) {
+        c.faze = snapshot.faze; c.stav = snapshot.stav; c.vysledek = snapshot.vysledek;
+        c.duvod_uzavreni = snapshot.duvod; c.datum_uzavreni = snapshot.datum;
+        console.error('Reopen error:', err);
+        showToast('Znovuotevření selhalo: ' + err.message, 'error');
+        return;
+    }
+    try {
+        await addAction(c.id, 'znovu_otevreno', 'Případ znovu otevřen (fáze ' + (FAZE_LABELS[prevFaze] || prevFaze) + ')', 'manual');
+    } catch (err) { console.error('Timeline zápis selhal:', err); }
+    renderAll();
+    showToast('Případ „' + (c.nazev || '') + '" znovu otevřen.');
+}
+</script>
+<script>
+// ============================================================
+// DETAIL PŘÍPADU
+// ============================================================
+function openDetail(caseId) {
+    const c = findCase(caseId);
+    if (!c) return;
+    state.detailId = caseId;
+    document.getElementById('d-title').textContent = c.nazev || 'Detail případu';
+    document.getElementById('d-nazev').value = c.nazev || '';
+    document.getElementById('d-klient').value = c.klient || '';
+    document.getElementById('d-ico').value = c.ico || '';
+    document.getElementById('d-zdroj').value = c.zdroj || '';
+    document.getElementById('d-kontakt-jmeno').value = c.kontakt_jmeno || '';
+    document.getElementById('d-kontakt-telefon').value = c.kontakt_telefon || '';
+    document.getElementById('d-kontakt-email').value = c.kontakt_email || '';
+    const castkaEl = document.getElementById('d-castka');
+    castkaEl.value = c.castka ? fmtNum(parseAmount(c.castka)) : '';
+    document.getElementById('d-mena').value = c.mena || 'CZK';
+    document.getElementById('d-ucel').value = c.ucel || '';
+    document.getElementById('d-citah').value = TAH_LABELS[c.ci_tah] ? c.ci_tah : 'ja';
+    document.getElementById('d-dalsi-krok').value = c.dalsi_krok || '';
+    document.getElementById('d-termin').value = c.termin || '';
+    document.getElementById('d-poznamka').value = c.poznamka || '';
+    document.getElementById('d-qa-note').value = '';
+    if (typeof window.syncCustomDropdown === 'function') {
+        window.syncCustomDropdown('d-mena');
+        window.syncCustomDropdown('d-citah');
+    }
+    // nemovitosti
+    const host = document.getElementById('d-nem-rows');
+    host.innerHTML = '';
+    (c.nemovitosti || []).forEach(function (n) { addNemRow(n); });
+    updateLtv();
+    // pauza tlačítko
+    document.getElementById('d-btn-pause').textContent = (c.pozastaveno === '1') ? 'Obnovit' : 'Pozastavit';
+    renderTimeline(c.id);
+    openModal('detailModal');
+}
+
+function addNemRow(n) {
+    n = n || {};
+    const host = document.getElementById('d-nem-rows');
+    const row = document.createElement('div');
+    row.className = 'nem-row';
+    row.innerHTML =
+        '<input type="text" class="input nem-ku" placeholder="Katastrální území">' +
+        '<input type="text" class="input nem-parcela" placeholder="123/45">' +
+        '<input type="text" class="input nem-lv" placeholder="LV">' +
+        '<input type="text" class="input nem-hodnota" placeholder="40 000 000" oninput="formatAmount(this);updateLtv()">' +
+        '<button type="button" class="nem-del" title="Odebrat nemovitost">×</button>';
+    row.querySelector('.nem-ku').value = n.ku || '';
+    row.querySelector('.nem-parcela').value = n.parcela || '';
+    row.querySelector('.nem-lv').value = n.lv || '';
+    row.querySelector('.nem-hodnota').value = n.hodnota ? fmtNum(parseAmount(n.hodnota)) : '';
+    row.querySelector('.nem-del').addEventListener('click', function () {
+        row.remove();
+        updateLtv();
+    });
+    host.appendChild(row);
+}
+
+function collectNemovitosti() {
+    const rows = document.querySelectorAll('#d-nem-rows .nem-row');
+    const out = [];
+    rows.forEach(function (row) {
+        const ku = row.querySelector('.nem-ku').value.trim();
+        const parcela = row.querySelector('.nem-parcela').value.trim();
+        const lv = row.querySelector('.nem-lv').value.trim();
+        const hodnota = parseAmount(row.querySelector('.nem-hodnota').value);
+        if (ku || parcela || lv || hodnota) {
+            out.push({ ku: ku, parcela: parcela, lv: lv, hodnota: hodnota ? String(hodnota) : '' });
+        }
+    });
+    return out;
+}
+
+// LTV = castka / Σ hodnota — jen když obě hodnoty > 0; cs-CZ, 1 des. místo
+function updateLtv() {
+    const el = document.getElementById('d-ltv');
+    const castka = parseAmount(document.getElementById('d-castka').value);
+    let sum = 0;
+    document.querySelectorAll('#d-nem-rows .nem-hodnota').forEach(function (inp) {
+        sum += parseAmount(inp.value);
+    });
+    if (castka > 0 && sum > 0) {
+        const ltv = (castka / sum) * 100;
+        el.innerHTML = 'LTV: <strong>' + ltv.toLocaleString('cs-CZ', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %</strong>';
+    } else {
+        el.innerHTML = '';
+    }
+}
+
+async function saveDetail() {
+    const c = findCase(state.detailId);
+    if (!c) return;
+    const nazev = document.getElementById('d-nazev').value.trim();
+    if (!nazev) {
+        showToast('Název případu je povinný.', 'warn');
+        return;
+    }
+    c.nazev = nazev;
+    c.klient = document.getElementById('d-klient').value.trim();
+    c.ico = document.getElementById('d-ico').value.trim();
+    c.zdroj = document.getElementById('d-zdroj').value.trim();
+    c.kontakt_jmeno = document.getElementById('d-kontakt-jmeno').value.trim();
+    c.kontakt_telefon = document.getElementById('d-kontakt-telefon').value.trim();
+    c.kontakt_email = document.getElementById('d-kontakt-email').value.trim();
+    const castka = parseAmount(document.getElementById('d-castka').value);
+    c.castka = castka ? String(castka) : '';
+    c.mena = document.getElementById('d-mena').value || 'CZK';
+    c.ucel = document.getElementById('d-ucel').value.trim();
+    c.ci_tah = document.getElementById('d-citah').value || 'ja';
+    c.dalsi_krok = document.getElementById('d-dalsi-krok').value.trim();
+    c.termin = document.getElementById('d-termin').value || '';
+    c.poznamka = document.getElementById('d-poznamka').value;
+    c.nemovitosti = collectNemovitosti();
+    try {
+        const ok = await writeCase(c);
+        if (!ok) { closeModal('detailModal'); return; }
+        closeModal('detailModal');
+        renderAll();
+        showToast('Případ uložen.');
+    } catch (err) {
+        console.error('Save detail error:', err);
+        showToast('Uložení selhalo: ' + err.message, 'error');
+    }
+}
+
+function renderTimeline(caseId) {
+    const host = document.getElementById('d-timeline');
+    const items = state.actions.filter(function (a) { return a.pripad_id === caseId; })
+        .sort(function (a, b) { return (b.datum || '').localeCompare(a.datum || ''); });
+    if (items.length === 0) {
+        host.innerHTML = '<li class="tl-empty">Zatím žádné akce.</li>';
+        return;
+    }
+    const ICONS = {
+        manual: '<svg viewBox="0 0 24 24"><path d="M17 3l4 4L8 20l-5 1 1-5z"/></svg>',
+        re: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+        termsheet: '<svg viewBox="0 0 24 24"><path d="M6 2h9l4 4v16H6z"/><path d="M9 10h7M9 14h7"/></svg>',
+        loandoc: '<svg viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v12H3z"/></svg>'
+    };
+    host.innerHTML = items.map(function (a) {
+        const zdroj = ICONS[a.zdroj] ? a.zdroj : 'manual';
+        return '<li class="tl-item">' +
+            '<span class="tl-icon ' + escapeHtml(zdroj) + '" title="' + escapeHtml(a.zdroj || 'manual') + '">' + ICONS[zdroj] + '</span>' +
+            '<div><div class="tl-text">' + escapeHtml(a.popis || a.typ) + '</div>' +
+            '<div class="tl-date">' + escapeHtml(fmtDateTime(a.datum)) + '</div></div>' +
+        '</li>';
+    }).join('');
+}
+
+// ============================================================
+// RYCHLÉ AKCE
+// ============================================================
+const QA_LABELS = {
+    ts_odeslan: 'TS odeslán', ts_vracen: 'TS vrácen', podepsano: 'Podepsáno',
+    vklad_kn: 'Vklad KN podán', vyplaceno: 'Vyplaceno'
+};
+
+async function quickAction(typ) {
+    const c = findCase(state.detailId);
+    if (!c) return;
+    // „Vyplaceno" → rovnou dialog uzavření s předvolbou vyplaceno
+    if (typ === 'vyplaceno') {
+        openCloseModal('vyplaceno');
+        return;
+    }
+    try {
+        await addAction(c.id, typ, QA_LABELS[typ] || typ, 'manual');
+        let changed = false;
+        // nabídka změny tahu
+        if (typ === 'ts_odeslan' && c.ci_tah !== 'klient' &&
+            confirm('TS odeslán — nastavit „čí je tah" na Klient?')) {
+            c.ci_tah = 'klient';
+            changed = true;
+        }
+        if (typ === 'vklad_kn' && c.ci_tah !== 'katastr' &&
+            confirm('Vklad KN podán — nastavit „čí je tah" na Katastr?')) {
+            c.ci_tah = 'katastr';
+            changed = true;
+        }
+        if (changed) {
+            const ok = await writeCase(c);
+            if (!ok) { closeModal('detailModal'); return; }
+            document.getElementById('d-citah').value = c.ci_tah;
+            if (typeof window.syncCustomDropdown === 'function') window.syncCustomDropdown('d-citah');
+        }
+        renderTimeline(c.id);
+        renderAll();
+        showToast('Akce „' + (QA_LABELS[typ] || typ) + '" zapsána.');
+    } catch (err) {
+        console.error('Quick action error:', err);
+        showToast('Akce selhala: ' + err.message, 'error');
+    }
+}
+
+async function quickNote() {
+    const c = findCase(state.detailId);
+    if (!c) return;
+    const input = document.getElementById('d-qa-note');
+    const text = input.value.trim();
+    if (!text) {
+        showToast('Napište text poznámky.', 'warn');
+        return;
+    }
+    try {
+        await addAction(c.id, 'poznamka', text, 'manual');
+        input.value = '';
+        renderTimeline(c.id);
+        showToast('Poznámka zapsána do timeline.');
+    } catch (err) {
+        console.error('Quick note error:', err);
+        showToast('Poznámka selhala: ' + err.message, 'error');
+    }
+}
+
+async function togglePause() {
+    const c = findCase(state.detailId);
+    if (!c) return;
+    const pausing = c.pozastaveno !== '1';
+    c.pozastaveno = pausing ? '1' : '';
+    try {
+        const ok = await writeCase(c);
+        if (!ok) { closeModal('detailModal'); return; }
+    } catch (err) {
+        c.pozastaveno = pausing ? '' : '1';
+        console.error('Pause error:', err);
+        showToast('Změna selhala: ' + err.message, 'error');
+        return;
+    }
+    try {
+        await addAction(c.id, pausing ? 'pozastaveno' : 'obnoveno', pausing ? 'Případ pozastaven' : 'Případ obnoven', 'manual');
+    } catch (err) { console.error('Timeline zápis selhal:', err); }
+    document.getElementById('d-btn-pause').textContent = pausing ? 'Obnovit' : 'Pozastavit';
+    renderTimeline(c.id);
+    renderAll();
+    showToast(pausing ? 'Případ pozastaven.' : 'Případ obnoven.');
+}
+
+// ============================================================
+// UZAVŘENÍ PŘÍPADU
+// ============================================================
+function openCloseModal(preselect) {
+    if (!findCase(state.detailId)) return;
+    const sel = document.getElementById('cl-vysledek');
+    sel.value = preselect || 'vyplaceno';
+    if (typeof window.syncCustomDropdown === 'function') window.syncCustomDropdown('cl-vysledek');
+    document.getElementById('cl-duvod').value = '';
+    openModal('closeModal');
+}
+
+async function confirmCloseCase() {
+    const c = findCase(state.detailId);
+    if (!c) return;
+    const vysledek = document.getElementById('cl-vysledek').value;
+    const duvod = document.getElementById('cl-duvod').value.trim();
+    const snapshot = { faze: c.faze, stav: c.stav, vysledek: c.vysledek, duvod: c.duvod_uzavreni, datum: c.datum_uzavreni };
+    const prevFaze = c.faze;
+    c.faze = 'uzavreno';
+    c.stav = 'uzavreno';
+    c.vysledek = vysledek;
+    c.duvod_uzavreni = duvod;
+    c.datum_uzavreni = todayIso();
+    try {
+        const ok = await writeCase(c);
+        if (!ok) { closeModal('closeModal'); closeModal('detailModal'); return; }
+    } catch (err) {
+        c.faze = snapshot.faze; c.stav = snapshot.stav; c.vysledek = snapshot.vysledek;
+        c.duvod_uzavreni = snapshot.duvod; c.datum_uzavreni = snapshot.datum;
+        console.error('Close case error:', err);
+        showToast('Uzavření selhalo: ' + err.message, 'error');
+        return;
+    }
+    // Case je uzavřen; timeline + Úvěry jsou dodatky — při selhání neměnit stav zpět
+    try {
+        await addAction(c.id, 'uzavreno',
+            'Případ uzavřen — ' + (VYSLEDEK_LABELS[vysledek] || vysledek) + (duvod ? ' (' + duvod + ')' : ''),
+            'manual', { predchozi_faze: prevFaze, vysledek: vysledek });
+        if (vysledek === 'vyplaceno') {
+            await appendUver(c, duvod);
+        }
+    } catch (err) {
+        console.error('Close case follow-up error:', err);
+        showToast('Případ uzavřen, ale zápis do timeline/Úvěrů selhal: ' + err.message, 'warn');
+    }
+    closeModal('closeModal');
+    closeModal('detailModal');
+    renderAll();
+    showToast('Případ uzavřen — ' + (VYSLEDEK_LABELS[vysledek] || vysledek) + '.');
+}
+
+// ============================================================
+// OTEVŘÍT V APPCE (handoff)
+// ============================================================
+function openInApp(appHref) {
+    const c = findCase(state.detailId);
+    if (!c) return;
+    try {
+        if (window.DashboardBridge) {
+            DashboardBridge.setHandoff({
+                caseId: c.id,
+                nazev: c.nazev || '',
+                klient: c.klient || '',
+                ico: c.ico || '',
+                castka: c.castka || '',
+                mena: c.mena || 'CZK',
+                nemovitosti: (c.nemovitosti || []).map(function (n) {
+                    return { ku: n.ku || '', parcela: n.parcela || '', lv: n.lv || '', hodnota: n.hodnota || '' };
+                })
+            });
+        }
+    } catch (e) { /* handoff je best-effort */ }
+    window.open(appHref);
+}
+</script>
+<script>
+// ============================================================
+// NOVÁ POPTÁVKA
+// ============================================================
+let newCasePrefill = null; // { eventId, faze, nemovitost, … } při založení z Doručených
+
+function openNewCaseModal(prefill) {
+    newCasePrefill = prefill || null;
+    const ncNazev = document.getElementById('nc-nazev');
+    ncNazev.dataset.auto = ''; // reset auto-flagu z předchozího otevření modalu
+    ncNazev.value = (prefill && prefill.nazev) || '';
+    document.getElementById('nc-klient').value = (prefill && prefill.klient) || '';
+    document.getElementById('nc-ico').value = (prefill && prefill.ico) || '';
+    document.getElementById('nc-zdroj').value = '';
+    document.getElementById('nc-kontakt-jmeno').value = '';
+    document.getElementById('nc-kontakt-telefon').value = '';
+    document.getElementById('nc-kontakt-email').value = '';
+    const castka = prefill && prefill.castka ? parseAmount(prefill.castka) : 0;
+    document.getElementById('nc-castka').value = castka ? fmtNum(castka) : '';
+    const mena = (prefill && prefill.mena) || 'CZK';
+    document.getElementById('nc-mena').value = ['CZK', 'EUR', 'USD'].indexOf(mena) !== -1 ? mena : 'CZK';
+    if (typeof window.syncCustomDropdown === 'function') window.syncCustomDropdown('nc-mena');
+    document.getElementById('nc-ucel').value = '';
+    document.getElementById('nc-poznamka').value = '';
+    const nem = (prefill && prefill.nemovitost) || {};
+    document.getElementById('nc-nem-ku').value = nem.ku || '';
+    document.getElementById('nc-nem-parcela').value = nem.parcela || '';
+    document.getElementById('nc-nem-lv').value = nem.lv || '';
+    const hodnota = nem.hodnota ? parseAmount(nem.hodnota) : 0;
+    document.getElementById('nc-nem-hodnota').value = hodnota ? fmtNum(hodnota) : '';
+    openModal('newCaseModal');
+}
+
+// Název se předvyplní z klienta, pokud je název prázdný (jediné povinné pole)
+function prefillNazevFromKlient() {
+    const nazevEl = document.getElementById('nc-nazev');
+    if (!nazevEl.value.trim() || nazevEl.dataset.auto === '1') {
+        nazevEl.value = document.getElementById('nc-klient').value;
+        nazevEl.dataset.auto = '1';
+    }
+}
+
+async function createCaseFromModal() {
+    const nazev = document.getElementById('nc-nazev').value.trim();
+    if (!nazev) {
+        showToast('Název případu je povinný.', 'warn');
+        return;
+    }
+    const castka = parseAmount(document.getElementById('nc-castka').value);
+    const fields = {
+        nazev: nazev,
+        klient: document.getElementById('nc-klient').value.trim(),
+        ico: document.getElementById('nc-ico').value.trim(),
+        zdroj: document.getElementById('nc-zdroj').value.trim(),
+        kontakt_jmeno: document.getElementById('nc-kontakt-jmeno').value.trim(),
+        kontakt_telefon: document.getElementById('nc-kontakt-telefon').value.trim(),
+        kontakt_email: document.getElementById('nc-kontakt-email').value.trim(),
+        castka: castka ? String(castka) : '',
+        mena: document.getElementById('nc-mena').value || 'CZK',
+        ucel: document.getElementById('nc-ucel').value.trim(),
+        poznamka: document.getElementById('nc-poznamka').value,
+        faze: (newCasePrefill && newCasePrefill.faze) || 'nova',
+        ci_tah: 'ja',
+        stav: 'aktivni'
+    };
+    const ku = document.getElementById('nc-nem-ku').value.trim();
+    const parcela = document.getElementById('nc-nem-parcela').value.trim();
+    const lv = document.getElementById('nc-nem-lv').value.trim();
+    const hodnota = parseAmount(document.getElementById('nc-nem-hodnota').value);
+    const nems = [];
+    if (ku || parcela || lv || hodnota) {
+        nems.push({ ku: ku, parcela: parcela, lv: lv, hodnota: hodnota ? String(hodnota) : '' });
+    }
+    fields.nemovitosti = nems;
+    const c = newCaseObject(fields);
+    try {
+        await appendCase(c);
+        await addAction(c.id, 'zalozeno', 'Případ založen' + (fields.zdroj ? ' (zdroj: ' + fields.zdroj + ')' : ''), 'manual');
+        // Založení z Doručených → zapsat i původní událost a odebrat ji z fronty
+        if (newCasePrefill && newCasePrefill.eventId) {
+            const ev = inboxEventById(newCasePrefill.eventId);
+            if (ev) {
+                await addAction(c.id, ev.type, eventTitle(ev), ev.source || 'manual', ev.payload || {});
+                if (window.DashboardBridge) DashboardBridge.removeEvents([ev.id]);
+                state.inboxEvents = state.inboxEvents.filter(function (e) { return e.id !== ev.id; });
+            }
+        }
+        document.getElementById('nc-nazev').dataset.auto = '';
+        newCasePrefill = null;
+        closeModal('newCaseModal');
+        renderAll();
+        showToast('Případ „' + c.nazev + '" založen.');
+    } catch (err) {
+        console.error('Create case error:', err);
+        if (c._row) {
+            // Case už je v Sheetu (selhal až doprovodný zápis) — nechat a zobrazit
+            closeModal('newCaseModal');
+            renderAll();
+            showToast('Případ založen, ale část zápisu selhala: ' + err.message, 'warn');
+        } else {
+            showToast('Založení selhalo: ' + err.message, 'error');
+        }
+    }
+}
+
+// ============================================================
+// ARES LOOKUP (Vercel /api/ares — vzor database.html)
+// ============================================================
+async function aresLookupInto(icoInputId, klientInputId) {
+    const ico = document.getElementById(icoInputId).value.trim();
+    if (!ico || !/^\d{1,8}$/.test(ico)) {
+        showToast('IČO musí být 1–8 číslic.', 'warn');
+        return;
+    }
+    try {
+        showToast('Hledám v ARES…');
+        const res = await fetch('/api/ares?ico=' + encodeURIComponent(ico));
+        let data;
+        try {
+            data = await res.json();
+        } catch (e) {
+            showToast('ARES: server vrátil neplatnou odpověď (HTTP ' + res.status + ')', 'error');
+            return;
+        }
+        if (!res.ok) {
+            showToast('ARES: ' + (data.error || ('HTTP ' + res.status)), 'error');
+            return;
+        }
+        if (!data.success || !data.data || data.data.length === 0) {
+            showToast(data.message || 'Subjekt s IČO ' + ico + ' nenalezen.', 'warn');
+            return;
+        }
+        const subj = data.data[0];
+        if (subj.nazev) {
+            document.getElementById(klientInputId).value = subj.nazev;
+            if (klientInputId === 'nc-klient') prefillNazevFromKlient();
+        }
+        showToast('Doplněno z ARES: ' + (subj.nazev || 'subjekt nalezen'));
+    } catch (err) {
+        console.error('ARES error:', err);
+        showToast('ARES selhal: ' + err.message, 'error');
+    }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', function () {
+    initTokenClient();
+    // Zavírání modalů klikem na overlay + Escape
+    document.querySelectorAll('.modal-overlay').forEach(function (ov) {
+        ov.addEventListener('mousedown', function (e) {
+            if (e.target === ov) ov.classList.remove('show');
+        });
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal-overlay.show').forEach(function (ov) {
+                ov.classList.remove('show');
+            });
+        }
+    });
+    // Ručně psaný název už nepřepisovat klientem
+    document.getElementById('nc-nazev').addEventListener('input', function () {
+        this.dataset.auto = '';
+    });
+    if (restoreToken()) {
+        updateGoogleUi(true);
+        bootstrapApp();
+    } else {
+        updateGoogleUi(false);
+    }
+});
+</script>
+</body>
+</html>
+

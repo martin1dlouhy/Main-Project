@@ -1,21 +1,14 @@
-﻿{
+{
   "permissions": {
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [
-      "C:/Users/marti/Documents/claude-workspace",
-      "//c/Users/marti/Documents/claude-workspace"
+      "C:/Users/marti/Documents/claude-workspace"
     ],
     "allow": [
       "Read(C:/Users/marti/.claude/**)",
       "Edit(C:/Users/marti/Documents/claude-workspace/**)",
       "Write(C:/Users/marti/Documents/claude-workspace/**)",
       "Read(C:/Users/marti/Documents/claude-workspace/**)",
-      "Read(//c/Users/marti/.claude/**)",
-      "Edit(//c/Users/marti/Documents/claude-workspace/**)",
-      "Write(//c/Users/marti/Documents/claude-workspace/**)",
-      "Read(//c/Users/marti/Documents/claude-workspace/**)",
-      "Read(//c/Users/marti/.claude/plugins/**)",
-      "Read(//c/Program Files/**)",
       "Bash(xargs grep *)",
       "Bash(node _generate-commands.js)",
       "Bash(where node *)",

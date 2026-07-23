@@ -1617,6 +1617,7 @@
         </a>
       </div>
       <div class="nav-menu nav-center">
+        <div class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></div>
         <div class="nav-item">
           <a class="nav-link">Osobní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
           <div class="dropdown">
@@ -2657,6 +2658,24 @@
             setupEventListeners();
             initAresAutocomplete();
             restoreLoanFolderHandle();
+            applyDashboardHandoff();
+        }
+
+        /* ─── DASHBOARD BRIDGE — handoff (otevřeno z karty případu v Dashboardu) ─── */
+        // One-shot čtení schránky 'dashboard-handoff': zapamatuje si ID případu pro
+        // pozdější emity a předvyplní dlužníka + IČO (jen prázdná pole, nic nepřepisuje).
+        // Bridge nesmí nikdy rozbít appku — vše v try/catch, při chybě no-op.
+        function applyDashboardHandoff() {
+            try {
+                var data = window.DashboardBridge ? DashboardBridge.takeHandoff() : null;
+                if (!data || (!data.caseId && !data.nazev && !data.klient && !data.ico)) return;
+                window.__dashCaseId = data.caseId || null;
+                var borrowerEl = document.getElementById('uvereovany');
+                if (borrowerEl && !borrowerEl.value && data.klient) borrowerEl.value = data.klient;
+                var icoEl = document.getElementById('ico');
+                if (icoEl && !icoEl.value && data.ico) icoEl.value = data.ico;
+                showToast('Propojeno s případem: ' + (data.nazev || data.klient || data.caseId || ''), 'info');
+            } catch (e) { /* no-op */ }
         }
 
         function openDB() {
@@ -4437,6 +4456,7 @@
                 statusEl.textContent = 'Načítám šablony a generuji prompt…';
                 var ready = 0;
                 var totalT = templateIds.length;
+                var okNames = []; // šablony reálně přibalené do ZIPu (pro Dashboard event)
 
                 // Pro každou vybranou šablonu: extrahuj plain text + zavolej preview endpoint
                 // → uloží prompt-pro-AI-[name].txt + originál [name].docx do .zip
@@ -4452,6 +4472,7 @@
 
                     // Originál DOCX do zipu (pro upload do chatu)
                     zip.file(template.name, template.data);
+                    okNames.push(tName);
 
                     // Extract plain text pro prompt
                     var docxZip = await JSZip.loadAsync(template.data);
@@ -4515,6 +4536,16 @@
 
                 statusEl.className = 'manual-chat-status success';
                 statusEl.textContent = '✓ Staženo: ' + zipName + ' (' + Math.round(blob.size / 1024) + ' KB). Pokračuj kliknutím na tlačítko vlevo nebo vpravo.';
+
+                // Dashboard bridge: dokumentace sestavena a stažena (manuální chat ZIP)
+                try {
+                    window.DashboardBridge && DashboardBridge.emit('loandoc', 'dokumentace_vygenerovana', {
+                        caseId: window.__dashCaseId || null,
+                        klient: formData.uvereovany || '',
+                        ico: formData.ico || '',
+                        dokumenty: okNames
+                    });
+                } catch (e) { /* no-op */ }
             } catch (err) {
                 console.error('downloadForManualChat error:', err);
                 statusEl.className = 'manual-chat-status error';
@@ -4862,6 +4893,15 @@
                 }
 
                 finalizeFilledTsImport(report);
+
+                // Dashboard bridge: vyplněný TS se vrátil od klienta → timeline případu
+                try {
+                    window.DashboardBridge && DashboardBridge.emit('loandoc', 'ts_vracen', {
+                        caseId: window.__dashCaseId || null,
+                        klient: (document.getElementById('uvereovany') || {}).value || '',
+                        ico: (document.getElementById('ico') || {}).value || ''
+                    });
+                } catch (e) { /* no-op */ }
             } catch (err) {
                 console.error('importFilledTermSheet error:', err);
                 showToast('Načtení selhalo: ' + (err && err.message || err), 'error');
@@ -5340,6 +5380,15 @@
                             if (ok > 0) {
                                 saveDocumentSet();
                                 saveGeneratedToDrive(formData, withTrackedChanges);
+                                // Dashboard bridge: dokumentace vygenerována přes AI API
+                                try {
+                                    window.DashboardBridge && DashboardBridge.emit('loandoc', 'dokumentace_vygenerovana', {
+                                        caseId: window.__dashCaseId || null,
+                                        klient: formData.uvereovany || '',
+                                        ico: formData.ico || '',
+                                        dokumenty: Object.keys(generatedDocuments)
+                                    });
+                                } catch (e) { /* no-op */ }
                             }
                         }
                     };
@@ -6237,6 +6286,7 @@
   <span>Martin Dlouhý</span>
 </div>
 
+    <script src="dashboard-bridge.js"></script>
     <script src="google-drive-sync.js"></script>
     <script src="design-system/nav.js" defer></script>
 </body>

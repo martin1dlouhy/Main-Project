@@ -130,11 +130,55 @@
 
   /* Apps-list styles live in design-system/apps-list.css (shared with apps.html) */
 
+  /* ===== Dashboard strip — živý mini-přehled pod hero (jen počty, nikdy jména/částky) ===== */
+  .dashboard-strip{background:var(--bg-deep);padding:72px 40px 0}
+  .strip-link{
+    max-width:var(--container);margin:0 auto;
+    display:flex;align-items:center;justify-content:space-between;gap:24px;
+    padding:20px 28px;
+    border:1px solid var(--line);border-radius:var(--r-lg);
+    color:inherit;
+    transition:border-color .25s ease, background .25s ease;
+  }
+  .strip-link:hover{border-color:var(--line-amber);background:var(--amber-tint)}
+  .strip-static{display:flex;align-items:baseline;gap:12px}
+  .strip-word{font-family:var(--font-display);font-weight:400;font-size:19px;letter-spacing:-0.01em;color:var(--text)}
+  .strip-note{font-family:var(--font-display);font-style:italic;font-weight:300;font-size:15px;color:var(--text-mute)}
+  .strip-arrow{color:var(--amber-warm);font-family:var(--font-display);font-size:17px}
+  .strip-stats{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .strip-stat{display:flex;align-items:baseline;gap:9px}
+  .strip-label{font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-mute);font-weight:600}
+  .strip-num{font-family:var(--font-display);font-weight:400;font-size:24px;line-height:1;letter-spacing:-0.01em;color:var(--text)}
+  .strip-num.is-overdue{color:var(--danger)}
+  .strip-sep{color:var(--text-faint)}
+  .strip-cta{
+    display:flex;align-items:center;gap:8px;white-space:nowrap;
+    font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--amber);font-weight:600;
+  }
+  .strip-link:hover .strip-cta{color:var(--amber-warm)}
+
+  /* ===== Dashboard — zvýrazněný app-row nad sekcemi ===== */
+  .app-row-featured{
+    background:var(--amber-tint);
+    border:1px solid var(--line-amber);
+    border-radius:var(--r-lg);
+    padding:26px 24px;
+    margin-bottom:72px;
+  }
+  .app-row-featured:hover{
+    background:var(--amber-tint);
+    border-color:var(--amber);
+    padding-left:24px;padding-right:24px;
+  }
+
   @media (max-width:800px){
     .nav{padding:18px 20px}
     .nav-menu{display:none}
     .hero-text{padding:0 28px}
     .side-meta{display:none}
+    .dashboard-strip{padding:48px 20px 0}
+    .strip-link{flex-wrap:wrap;gap:14px;padding:18px 20px}
   }
 </style>
 </head>
@@ -150,6 +194,7 @@
   </div>
 
   <div class="nav-menu nav-center">
+    <div class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></div>
     <div class="nav-item">
       <a class="nav-link">Osobní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
       <div class="dropdown">
@@ -214,6 +259,17 @@
   <div class="scroll-cue">scroll</div>
 </section>
 
+<!-- ============== DASHBOARD STRIP (živý mini-přehled — jen počty) ============== -->
+<section class="dashboard-strip" data-fade-in>
+  <a href="dashboard.html" class="strip-link" id="dashboardStrip">
+    <span class="strip-static">
+      <span class="strip-word">Dashboard</span>
+      <span class="strip-arrow">→</span>
+      <span class="strip-note">přehled případů</span>
+    </span>
+  </a>
+</section>
+
 <!-- ============== APPS SECTIONS ============== -->
 <section class="apps-wrap">
   <div class="apps-intro" data-fade-in>
@@ -221,6 +277,25 @@
     <h2 class="apps-title">Nástroje <em>na stole</em></h2>
     <p class="apps-lead">Dva okruhy práce. Každý má své místo, svůj rytmus, své výstupy.</p>
   </div>
+
+  <!-- Dashboard — zastřešuje celý web, proto stojí nad sekcemi -->
+  <a href="dashboard.html" class="app-row app-row-featured" data-fade-in>
+    <div class="app-mark">
+      <svg viewBox="0 0 32 32">
+        <rect x="4" y="5" width="24" height="22" rx="2"/>
+        <path d="M12.2 5 V27 M19.8 5 V27"/>
+        <path d="M6.8 9.5 h2.6 M6.8 13.5 h2.6 M6.8 17.5 h2.6"/>
+        <path d="M14.7 9.5 h2.6 M14.7 13.5 h2.6"/>
+        <path d="M22.6 9.5 h2.6"/>
+      </svg>
+    </div>
+    <div class="app-body">
+      <div class="app-name">Dashboard</div>
+      <div class="app-desc">Přehled všech případů — fáze, čí je tah, další kroky.</div>
+    </div>
+    <div class="app-tag">Přehled · Všechny aplikace</div>
+    <div class="app-arrow">→</div>
+  </a>
 
   <!-- Section: Osobní -->
   <div class="apps-section" id="osobni" data-fade-in>
@@ -342,6 +417,77 @@
   </div>
 </section>
 
+<script>
+/* ===== Dashboard strip — živá čísla (Na mně / Čeká se / Po termínu) =====
+   Čte jen počty z Google Sheets po přihlášení (token sdílený s dashboard.html).
+   Nikdy nezobrazuje jména ani částky. Jakákoli chyba → zůstává statický odkaz.
+   Spouští se až po window.load, aby neblokoval curtain reveal. */
+(function () {
+  'use strict';
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function render(mine, waiting, overdue) {
+    var el = document.getElementById('dashboardStrip');
+    if (!el) return;
+    var overdueCls = overdue > 0 ? 'strip-num is-overdue' : 'strip-num';
+    el.innerHTML =
+      '<span class="strip-stats">' +
+        '<span class="strip-stat"><span class="strip-label">Na mně</span><span class="strip-num">' + mine + '</span></span>' +
+        '<span class="strip-sep">·</span>' +
+        '<span class="strip-stat"><span class="strip-label">Čeká se</span><span class="strip-num">' + waiting + '</span></span>' +
+        '<span class="strip-sep">·</span>' +
+        '<span class="strip-stat"><span class="strip-label">Po termínu</span><span class="' + overdueCls + '">' + overdue + '</span></span>' +
+      '</span>' +
+      '<span class="strip-cta">Otevřít Dashboard <span class="strip-arrow">→</span></span>';
+  }
+
+  function initStrip() {
+    try {
+      var token = localStorage.getItem('dashboard-gtoken');
+      var expiry = parseInt(localStorage.getItem('dashboard-gtoken-expiry') || '0', 10);
+      var sheetId = localStorage.getItem('dashboard-sheet-id');
+      if (!token || !sheetId || !expiry || expiry <= Date.now()) return;
+
+      var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      var timer = controller ? setTimeout(function () { try { controller.abort(); } catch (e) {} }, 6000) : null;
+
+      fetch('https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(sheetId) +
+            '/values/' + encodeURIComponent('Pripady!A2:X1000'), {
+        headers: { 'Authorization': 'Bearer ' + token },
+        signal: controller ? controller.signal : undefined
+      })
+      .then(function (r) {
+        if (timer) clearTimeout(timer);
+        if (!r.ok) throw new Error('sheets ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        var rows = (data && data.values) || [];
+        var now = new Date();
+        var today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+        var mine = 0, waiting = 0, overdue = 0;
+        rows.forEach(function (row) {
+          if (!row || !row.length) return;
+          if ((row[18] || '') !== 'aktivni') return;    /* stav — stejná sémantika jako dashboard */
+          if ((row[17] || '') === '1') return;          /* pozastaveno */
+          if ((row[14] || '') === 'ja') { mine++; } else { waiting++; }  /* ci_tah */
+          var termin = row[16] || '';
+          if (termin && termin < today) overdue++;      /* string compare YYYY-MM-DD */
+        });
+        render(mine, waiting, overdue);
+      })
+      .catch(function () { if (timer) clearTimeout(timer); /* tichý fallback — statický odkaz zůstává */ });
+    } catch (e) { /* tichý fallback */ }
+  }
+
+  if (document.readyState === 'complete') {
+    setTimeout(initStrip, 0);
+  } else {
+    window.addEventListener('load', function () { setTimeout(initStrip, 0); });
+  }
+})();
+</script>
 <script src="design-system/nav.js" defer></script>
 </body>
 </html>

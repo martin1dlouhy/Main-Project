@@ -2060,6 +2060,7 @@
     </a>
   </div>
   <div class="nav-menu nav-center">
+    <div class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></div>
     <div class="nav-item">
       <a class="nav-link current">Osobní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
       <div class="dropdown">
@@ -2872,6 +2873,26 @@
         loadState();
         updateStepIndicator();
         renderSavedValuationsPanel(); updateSyncBarVisibility();
+
+        // Dashboard bridge — one-shot handoff (appka otevřená z karty případu na Dashboardu).
+        // Bridge se načítá na konci body, proto čekáme na DOMContentLoaded. Vše defenzivně —
+        // chybějící/rozbitý bridge nesmí nikdy rozbít appku.
+        (function () {
+            function dashTakeHandoff() {
+                try {
+                    var data = window.DashboardBridge ? DashboardBridge.takeHandoff() : null;
+                    if (data) {
+                        window.__dashCaseId = data.caseId || null;
+                        if (data.nazev) showToast('Propojeno s případem: ' + data.nazev);
+                    }
+                } catch (e) { /* no-op — bridge nesmí rozbít appku */ }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', dashTakeHandoff);
+            } else {
+                dashTakeHandoff();
+            }
+        })();
 
         function loadState() {
             const saved = localStorage.getItem('prompt-gen-state');
@@ -4805,6 +4826,22 @@
                 localStorage.setItem('saved-valuations', JSON.stringify(saved));
                 autoBackup();
 
+                // Dashboard bridge — ohlásit uložené ocenění (jediné emit místo pro save flow;
+                // saveAsNew() sem ústí také). Defenzivně — nesmí nikdy rozbít uložení.
+                try {
+                    if (window.DashboardBridge) {
+                        DashboardBridge.emit('re', 'oceneni_ulozeno', {
+                            caseId: window.__dashCaseId || null,
+                            nazev: name,
+                            ku: formData.katastralni_uzemi || null,
+                            parcela: formData.parcelni_cislo || null,
+                            lv: formData.lv || null,
+                            adresa: formData.adresa || null,
+                            hodnota: (avgTrzni != null ? avgTrzni : (avgZastavni != null ? avgZastavni : null))
+                        });
+                    }
+                } catch (e) { /* no-op — bridge nesmí rozbít appku */ }
+
                 closeSaveValuationDialog();
                 showToast(isUpdate ? 'Ocenění aktualizováno' : 'Ocenění uloženo');
             } catch (e) {
@@ -5823,6 +5860,7 @@
   <span>Martin Dlouhý</span>
 </div>
 
+<script src="dashboard-bridge.js"></script>
 <script src="design-system/nav.js" defer></script>
 </body>
 </html>

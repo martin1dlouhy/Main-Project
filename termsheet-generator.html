@@ -1041,6 +1041,7 @@
     </a>
   </div>
   <div class="nav-menu nav-center">
+    <div class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></div>
     <div class="nav-item">
       <a class="nav-link">Osobní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
       <div class="dropdown">
@@ -1532,6 +1533,7 @@
     </div>
 
     <!-- ===== SCRIPTS ===== -->
+    <script src="dashboard-bridge.js"></script>
     <script src="google-drive-sync.js"></script>
     <script>
     /* ================================================
@@ -1610,11 +1612,52 @@
         }
     }
 
+    // ===== DASHBOARD BRIDGE — HANDOFF (předvyplnění z karty případu) =====
+    // Volá se jednou po odemčení PIN (nebo hned, když je session už ověřená).
+    // Předvyplní jen PRÁZDNÁ pole — nikdy nepřepisuje rozpracovaný Term Sheet.
+    function applyDashboardHandoff() {
+        try {
+            var data = window.DashboardBridge ? DashboardBridge.takeHandoff() : null;
+            if (!data) return;
+            window.__dashCaseId = data.caseId || null;
+
+            var borrowerEl = document.getElementById('f-borrower');
+            if (data.klient && borrowerEl && !borrowerEl.value.trim()) {
+                borrowerEl.value = data.klient;
+            }
+            var icoEl = document.getElementById('f-ico');
+            if (data.ico && icoEl && !icoEl.value.trim()) {
+                icoEl.value = data.ico;
+            }
+            var amountEl = document.getElementById('f-amount');
+            if (data.castka && amountEl && !amountEl.value.trim()) {
+                var raw = (typeof data.castka === 'number')
+                    ? String(Math.round(data.castka))
+                    : String(data.castka).replace(/[^\d]/g, '');
+                if (raw) {
+                    amountEl.value = raw;
+                    formatAmount(amountEl); // stejné CZ formátování jako při ručním zadání
+                    // Měna patří k částce — nastavit jen spolu s předvyplněnou částkou
+                    var curEl = document.getElementById('f-currency');
+                    if (curEl && (data.mena === 'CZK' || data.mena === 'EUR') && curEl.value !== data.mena) {
+                        curEl.value = data.mena;
+                        document.getElementById('amount-unit').textContent = data.mena;
+                        document.getElementById('collateral-unit').textContent = data.mena;
+                        syncCustomDropdown(curEl);
+                    }
+                    calcLTV();
+                }
+            }
+            showToast('Propojeno s případem: ' + (data.nazev || data.klient || ''), 'info');
+        } catch (e) { console.warn('Dashboard handoff failed:', e); /* most nesmí shodit app */ }
+    }
+
     // ===== PIN AUTHENTICATION (server-side) =====
     (function initPIN() {
         // Starší sessions nemají ts-token — vynutit nový PIN, jinak by parse-lv vracel 401.
         if (sessionStorage.getItem('ts-auth') === 'true' && sessionStorage.getItem('ts-token')) {
             document.getElementById('pin-overlay').classList.add('hidden');
+            try { applyDashboardHandoff(); } catch (e) {}
             return;
         }
         var digits = document.querySelectorAll('.pin-digit');
@@ -1665,6 +1708,7 @@
                 document.getElementById('pin-overlay').classList.add('hidden');
                 document.getElementById('pin-error').style.display = 'none';
                 digits.forEach(function(d) { d.value = ''; d.disabled = false; });
+                try { applyDashboardHandoff(); } catch (e) {}
             } else {
                 document.getElementById('pin-error').textContent = data.error || 'Nesprávný PIN.';
                 document.getElementById('pin-error').style.display = 'block';
@@ -1954,6 +1998,9 @@
 
     // ===== POPULATE FORM =====
     function populateForm(data) {
+        // Dashboard case binding is per-draft — a loaded TS is a different deal,
+        // events from it must not silently attach to the previously linked case.
+        window.__dashCaseId = null;
         // LV panel is per-case — drop any LV carried over from a previously opened case.
         // (Analysed LVs aren't persisted per case; switching cases must not leak the previous one's LVs.)
         lvFiles = [];
@@ -2044,6 +2091,8 @@
 
     function resetForm() {
         currentEditId = null;
+        // New blank TS = new deal — drop any Dashboard case binding from the handoff.
+        window.__dashCaseId = null;
         document.getElementById('f-borrower').value = '';
         document.getElementById('f-ico').value = '';
         document.getElementById('f-spisova-znacka').value = '';
@@ -2796,6 +2845,32 @@
             if (!saved) {
                 showToast('Staženo: ' + fileName, 'success');
             }
+
+            // Dashboard bridge — nahlásit vygenerovaný TS (defenzivně, nesmí shodit app)
+            try {
+                if (window.DashboardBridge) {
+                    var _lvAll = [];
+                    (lvFiles || []).forEach(function(lf) {
+                        if (lf.results) _lvAll = _lvAll.concat(lf.results);
+                    });
+                    var _lv0 = _lvAll[0] || null;
+                    var _parcely = [];
+                    if (_lv0 && _lv0.parcely && _lv0.parcely.length) {
+                        _parcely = _lv0.parcely.map(function(p) { return p.parcelni_cislo || ''; }).filter(Boolean);
+                    }
+                    DashboardBridge.emit('termsheet', 'ts_vygenerovan', {
+                        caseId: window.__dashCaseId || null,
+                        klient: data.borrower || '',
+                        ico: data.ico || '',
+                        castka: parseAmount(data.amount),
+                        mena: data.currency || 'CZK',
+                        lv: _lv0 ? (_lv0.lv_cislo || null) : null,
+                        ku: _lv0 ? (_lv0.katastralni_uzemi || null) : null,
+                        parcely: _parcely,
+                        nazevTs: (data.borrower || '') + (_lv0 && _lv0.lv_cislo ? ' – LV ' + _lv0.lv_cislo : '')
+                    });
+                }
+            } catch (e) { /* no-op — bridge must never break the app */ }
 
         } catch (e) {
             console.error('Generate error:', e);

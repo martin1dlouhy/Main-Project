@@ -28,6 +28,10 @@
       var link = item.querySelector('.nav-link');
       if (!link) return;
 
+      // Přímý link bez dropdownu (např. Dashboard) — žádné toggle handlery,
+      // klik i Enter musí navigovat nativně na všech zařízeních.
+      if (!item.querySelector('.dropdown')) return;
+
       // Klávesnicová dostupnost: <a> bez href není fokusovatelný — doplnit programově.
       // Desktop hover zůstává beze změny; klávesnice dostává Enter/šipku/Escape.
       if (!link.hasAttribute('href')) {
