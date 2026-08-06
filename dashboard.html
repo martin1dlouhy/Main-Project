@@ -89,8 +89,6 @@
   .case-next .case-date{font-family:var(--font-mono);font-size:11px;color:var(--text-mute)}
   .case-card.dragging{opacity:.4}
   .case-card.drop-target{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-glow)}
-  .case-card.drop-before{box-shadow:0 -3px 0 0 var(--amber)}
-  .case-card.drop-after{box-shadow:0 3px 0 0 var(--amber)}
   .case-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
   .case-foot-arrows{display:flex;gap:4px;flex-shrink:0;margin-left:auto}
   .card-action{font-size:11.5px;font-weight:600;color:var(--amber-warm);background:var(--amber-tint);
@@ -2131,6 +2129,7 @@ function renderCard(c) {
                 escapeHtml(act.label) + '</button>';
     }
     return '<div class="case-card' + (paused ? ' paused' : '') + '" draggable="true"' +
+        ' data-id="' + escapeHtml(c.id) + '"' +
         ' onclick="openDetail(\'' + escapeHtml(c.id) + '\')"' +
         ' ondragstart="cardDragStart(event,\'' + escapeHtml(c.id) + '\')"' +
         ' ondragend="cardDragEnd(event)"' +
@@ -2159,8 +2158,9 @@ function renderCard(c) {
 }
 
 // ── Drag & drop karet ──
-// Stejný sloupec: horní/dolní okraj cílové karty = zařadit PŘED/ZA (ruční pořadí),
-// střed karty = nabídka sloučení. Jiný sloupec: vždy sloučení.
+// Stejný sloupec: tažení přes horní/dolní část cílové karty ŽIVĚ přeskládá sloupec
+// (náhled ještě před puštěním myši); puštění pořadí uloží jedním dávkovým zápisem.
+// Střed cílové karty = nabídka sloučení (amber rámeček). Jiný sloupec: vždy sloučení.
 let dragCaseId = null;
 
 function cardDragStart(e, caseId) {
@@ -2173,14 +2173,16 @@ function cardDragStart(e, caseId) {
 }
 
 function clearDropClasses(el) {
-    el.classList.remove('drop-target', 'drop-before', 'drop-after');
+    el.classList.remove('drop-target');
 }
 
 function cardDragEnd(e) {
     dragCaseId = null;
     e.currentTarget.classList.remove('dragging');
-    document.querySelectorAll('.case-card.drop-target, .case-card.drop-before, .case-card.drop-after')
-        .forEach(clearDropClasses);
+    document.querySelectorAll('.case-card.drop-target').forEach(clearDropClasses);
+    // Po úspěšném dropu je state už zmutovaný → render ukáže nové pořadí;
+    // zrušené tažení (drop mimo) → vrátí kanonické pořadí ze state.
+    renderAll();
 }
 
 // Zóna podle pozice kurzoru na cílové kartě (clientY vůči kartě — offsetY by se
@@ -2197,14 +2199,26 @@ function dragZone(e, targetCase) {
 }
 
 function cardDragOver(e, caseId) {
-    if (!dragCaseId || dragCaseId === caseId) return; // sám na sebe ne
+    if (!dragCaseId) return;
     e.preventDefault(); // povolit drop
     e.dataTransfer.dropEffect = 'move';
+    if (dragCaseId === caseId) return; // nad sebou samým — jen povolit drop
     const zone = dragZone(e, findCase(caseId));
     clearDropClasses(e.currentTarget);
-    if (zone === 'before') e.currentTarget.classList.add('drop-before');
-    else if (zone === 'after') e.currentTarget.classList.add('drop-after');
-    else e.currentTarget.classList.add('drop-target');
+    if (zone === 'merge') {
+        e.currentTarget.classList.add('drop-target');
+        return;
+    }
+    // Živý náhled: taženou kartu rovnou přesunout v DOM před/za cílovou.
+    // (Po přesunu je kurzor nad taženou kartou → dragover se ignoruje → žádné kmitání.)
+    const draggedEl = document.querySelector('.case-card.dragging');
+    if (!draggedEl || draggedEl === e.currentTarget) return;
+    if (draggedEl.parentNode !== e.currentTarget.parentNode) return; // jistota: jen tentýž sloupec
+    if (zone === 'before' && e.currentTarget.previousElementSibling !== draggedEl) {
+        e.currentTarget.parentNode.insertBefore(draggedEl, e.currentTarget);
+    } else if (zone === 'after' && e.currentTarget.nextElementSibling !== draggedEl) {
+        e.currentTarget.parentNode.insertBefore(draggedEl, e.currentTarget.nextElementSibling);
+    }
 }
 
 function cardDragLeave(e) {
@@ -2213,54 +2227,63 @@ function cardDragLeave(e) {
 
 function cardDrop(e, targetId) {
     e.preventDefault();
-    const zone = dragZone(e, findCase(targetId));
     clearDropClasses(e.currentTarget);
     const srcId = dragCaseId;
     dragCaseId = null;
-    if (!srcId || srcId === targetId) return;
+    if (!srcId) return;
+    const zone = (srcId === targetId) ? 'reorder' : dragZone(e, findCase(targetId));
     if (zone === 'merge') {
         mergeCases(srcId, targetId); // uvnitř se ptá potvrzovacím dialogem, pak teprve slučuje
-    } else {
-        reorderCase(srcId, targetId, zone); // řazení se neptá — je okamžité a vratné dalším tahem
+        return;
     }
+    // Puštění v režimu řazení → uložit pořadí sloupce přesně podle živého náhledu
+    persistColumnOrderFromDom(e.currentTarget.closest('.col-body'));
 }
 
-// Ruční přeřazení karty ve sloupci — výsledné pořadí celého sloupce se uloží
-// do sloupce `poradi` (10, 20, 30…), zapisují se jen změněné případy.
-async function reorderCase(srcId, targetId, pos) {
-    const src = findCase(srcId);
-    const tgt = findCase(targetId);
-    if (!src || !tgt || src.faze !== tgt.faze || src.id === tgt.id) return;
-    const column = activeCases()
-        .filter(function (c) { return c.faze === src.faze; })
-        .sort(boardCompare);
-    const list = column.filter(function (c) { return c.id !== src.id; });
-    let idx = -1;
-    for (let i = 0; i < list.length; i++) {
-        if (list[i].id === tgt.id) { idx = i; break; }
-    }
-    if (idx === -1) return;
-    list.splice(pos === 'before' ? idx : idx + 1, 0, src);
+// Uloží ruční pořadí sloupce podle aktuálního DOM náhledu: lokálně hned (žádné
+// překreslení do starého stavu), na server JEDNÍM dávkovým zápisem pouze
+// dotčených buněk `poradi` — žádná čtení (šetří minutové kvóty Sheets API).
+function persistColumnOrderFromDom(colBody) {
+    if (!colBody) return;
+    const ids = Array.from(colBody.querySelectorAll('.case-card'))
+        .map(function (el) { return el.getAttribute('data-id'); });
     const changed = [];
     let n = 10;
-    for (const c of list) {
+    for (const id of ids) {
+        const c = findCase(id);
+        if (!c) continue;
         const v = String(n);
         if ((c.poradi || '') !== v) { c.poradi = v; changed.push(c); }
         n += 10;
     }
-    try {
-        for (const c of changed) {
-            const ok = await writeCase(c);
-            if (!ok) return; // konflikt — writeCase udělal reload + toast
-        }
-    } catch (err) {
-        console.error('Reorder error:', err);
+    if (changed.length === 0) return;
+    sheetsBatchSetPoradi(changed).then(function () {
+        showToast('Pořadí uloženo.');
+    }).catch(function (err) {
+        console.error('Reorder save error:', err);
         showToast('Uložení pořadí selhalo: ' + err.message, 'error');
-        try { await syncData(); renderAll(); } catch (e2) { /* no-op */ }
-        return;
+    });
+}
+
+// Jeden values:batchUpdate — zapisují se JEN buňky `poradi` změněných řádků.
+async function sheetsBatchSetPoradi(changed) {
+    const header = state.headers[TAB_PRIPADY] || PRIPADY_HEADER;
+    const colIdx = header.indexOf('poradi');
+    if (colIdx === -1) {
+        throw new Error('Sloupec poradi v tabulce chybí — obnovte stránku, migrace ho doplní.');
     }
-    renderAll();
-    showToast('Pořadí upraveno.');
+    const col = colLetter(colIdx + 1);
+    const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values:batchUpdate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            valueInputOption: 'RAW',
+            data: changed.map(function (c) {
+                return { range: TAB_PRIPADY + '!' + col + c._row, values: [[String(c.poradi)]] };
+            })
+        })
+    });
+    await checkSheetsResponse(res, 'batchSetPoradi');
 }
 
 async function movePhase(caseId, dir) {
