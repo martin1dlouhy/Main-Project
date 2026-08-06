@@ -87,7 +87,13 @@
     background:var(--warning-tint);color:var(--warning);border:1px solid var(--warning)}
   .case-next{font-size:12px;color:var(--text-soft);margin-top:8px;line-height:1.4}
   .case-next .case-date{font-family:var(--font-mono);font-size:11px;color:var(--text-mute)}
-  .case-foot{display:flex;justify-content:flex-end;gap:4px;margin-top:10px}
+  .case-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
+  .case-foot-arrows{display:flex;gap:4px;flex-shrink:0;margin-left:auto}
+  .card-action{font-size:11.5px;font-weight:600;color:var(--amber-warm);background:var(--amber-tint);
+    border:1px solid var(--line-amber);border-radius:var(--r-xs);padding:5px 10px;cursor:pointer;
+    font-family:inherit;transition:all var(--dur-fast) var(--ease);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .card-action:hover{background:var(--amber);color:#1a1207}
   .arrow-btn{width:26px;height:26px;border-radius:var(--r-xs);border:1px solid var(--line);
     background:transparent;color:var(--text-mute);cursor:pointer;font-size:13px;line-height:1;
     font-family:inherit;transition:all var(--dur) var(--ease)}
@@ -1993,7 +1999,11 @@ function renderBoard() {
     const visible = activeCases().filter(matchesSearch).filter(matchesChip);
     board.innerHTML = cols.map(function (faze) {
         const items = visible.filter(function (c) { return c.faze === faze; })
-            .sort(function (a, b) { return (b.aktualizovano || '').localeCompare(a.aktualizovano || ''); });
+            // Od nejnovějšího po nejstarší podle VZNIKU případu (u importů = datum ocenění)
+            // — stabilní pořadí, karta neskáče po každé změně
+            .sort(function (a, b) {
+                return (b.vytvoreno || b.aktualizovano || '').localeCompare(a.vytvoreno || a.aktualizovano || '');
+            });
         const cards = items.length === 0
             ? '<div class="col-hint">' + escapeHtml(COL_HINTS[faze] || 'Prázdné.') + '</div>'
             : items.map(renderCard).join('');
@@ -2003,6 +2013,35 @@ function renderBoard() {
             '<div class="col-body">' + cards + '</div>' +
         '</div>';
     }).join('');
+}
+
+// Má případ v timeline akci daného typu?
+function caseHasAction(c, typ) {
+    return state.actions.some(function (a) { return a.pripad_id === c.id && a.typ === typ; });
+}
+
+// Kontextová akce karty dle fáze — „co je další klik".
+// kind 'app' = proklik do appky s handoffem; 'quick' = 1klik značka do timeline.
+function cardNextAction(c) {
+    if (c.pozastaveno === '1') return null;
+    switch (c.faze) {
+        case 'nova':
+            return { label: 'Ocenit v R-E', kind: 'app', href: 'real-estate-prompt-generator.html' };
+        case 'oceneni':
+            return { label: 'Vytvořit term sheet', kind: 'app', href: 'termsheet-generator.html' };
+        case 'termsheet':
+            return caseHasAction(c, 'ts_odeslan')
+                ? { label: 'Import vráceného TS', kind: 'app', href: 'loan-documentation.html' }
+                : { label: 'Označit: TS odeslán', kind: 'quick', typ: 'ts_odeslan' };
+        case 'dokumentace':
+            return { label: 'Otevřít Loan Doc', kind: 'app', href: 'loan-documentation.html' };
+        case 'cerpani':
+            if (!caseHasAction(c, 'podepsano')) return { label: 'Označit: Podepsáno', kind: 'quick', typ: 'podepsano' };
+            if (!caseHasAction(c, 'vklad_kn')) return { label: 'Označit: Vklad KN', kind: 'quick', typ: 'vklad_kn' };
+            return { label: 'Vyplaceno…', kind: 'quick', typ: 'vyplaceno' };
+        default:
+            return null;
+    }
 }
 
 function renderCard(c) {
@@ -2015,6 +2054,17 @@ function renderCard(c) {
         next = '<div class="case-next">' + escapeHtml(c.dalsi_krok || '') +
             (c.termin ? ' <span class="case-date">do ' + escapeHtml(fmtDate(c.termin)) + '</span>' : '') + '</div>';
     }
+    const act = cardNextAction(c);
+    let actBtn = '';
+    if (act) {
+        actBtn = act.kind === 'app'
+            ? '<button type="button" class="card-action" title="Otevře appku propojenou s případem"' +
+                ' onclick="event.stopPropagation();openInAppForCase(\'' + escapeHtml(c.id) + '\',\'' + act.href + '\')">' +
+                escapeHtml(act.label) + ' ↗</button>'
+            : '<button type="button" class="card-action"' +
+                ' onclick="event.stopPropagation();quickActionFor(\'' + escapeHtml(c.id) + '\',\'' + act.typ + '\', false)">' +
+                escapeHtml(act.label) + '</button>';
+    }
     return '<div class="case-card' + (paused ? ' paused' : '') + '" onclick="openDetail(\'' + escapeHtml(c.id) + '\')">' +
         '<div class="case-name">' + escapeHtml(c.nazev || '(bez názvu)') + '</div>' +
         (c.klient ? '<div class="case-client">' + escapeHtml(c.klient) + '</div>' : '') +
@@ -2026,10 +2076,13 @@ function renderCard(c) {
         '</div>' +
         next +
         '<div class="case-foot">' +
+            actBtn +
+            '<span class="case-foot-arrows">' +
             '<button type="button" class="arrow-btn" title="Posunout fázi zpět"' + (idx <= 0 ? ' disabled' : '') +
                 ' onclick="event.stopPropagation();movePhase(\'' + escapeHtml(c.id) + '\',-1)">←</button>' +
             '<button type="button" class="arrow-btn" title="Posunout fázi vpřed"' + (idx >= 4 ? ' disabled' : '') +
                 ' onclick="event.stopPropagation();movePhase(\'' + escapeHtml(c.id) + '\',1)">→</button>' +
+            '</span>' +
         '</div>' +
     '</div>';
 }
@@ -2294,10 +2347,16 @@ const QA_LABELS = {
 };
 
 async function quickAction(typ) {
-    const c = findCase(state.detailId);
+    return quickActionFor(state.detailId, typ, true);
+}
+
+// Rychlá akce nad libovolným případem — z detailu (inDetail=true) i přímo z karty.
+async function quickActionFor(caseId, typ, inDetail) {
+    const c = findCase(caseId);
     if (!c) return;
     // „Vyplaceno" → rovnou dialog uzavření s předvolbou vyplaceno
     if (typ === 'vyplaceno') {
+        if (!inDetail) openDetail(c.id); // dialog uzavření pracuje nad otevřeným detailem
         openCloseModal('vyplaceno');
         return;
     }
@@ -2317,11 +2376,13 @@ async function quickAction(typ) {
         }
         if (changed) {
             const ok = await writeCase(c);
-            if (!ok) { closeModal('detailModal'); return; }
-            document.getElementById('d-citah').value = c.ci_tah;
-            if (typeof window.syncCustomDropdown === 'function') window.syncCustomDropdown('d-citah');
+            if (!ok) { if (inDetail) closeModal('detailModal'); return; }
+            if (inDetail) {
+                document.getElementById('d-citah').value = c.ci_tah;
+                if (typeof window.syncCustomDropdown === 'function') window.syncCustomDropdown('d-citah');
+            }
         }
-        renderTimeline(c.id);
+        if (inDetail) renderTimeline(c.id);
         renderAll();
         showToast('Akce „' + (QA_LABELS[typ] || typ) + '" zapsána.');
     } catch (err) {
@@ -2429,7 +2490,12 @@ async function confirmCloseCase() {
 // OTEVŘÍT V APPCE (handoff)
 // ============================================================
 function openInApp(appHref) {
-    const c = findCase(state.detailId);
+    openInAppForCase(state.detailId, appHref);
+}
+
+// Proklik do appky s handoffem — z detailu i přímo z karty (akční tlačítko).
+function openInAppForCase(caseId, appHref) {
+    const c = findCase(caseId);
     if (!c) return;
     try {
         if (window.DashboardBridge) {
