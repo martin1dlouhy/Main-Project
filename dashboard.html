@@ -89,6 +89,8 @@
   .case-next .case-date{font-family:var(--font-mono);font-size:11px;color:var(--text-mute)}
   .case-card.dragging{opacity:.4}
   .case-card.drop-target{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-glow)}
+  .case-card.drop-before{box-shadow:0 -3px 0 0 var(--amber)}
+  .case-card.drop-after{box-shadow:0 3px 0 0 var(--amber)}
   .case-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
   .case-foot-arrows{display:flex;gap:4px;flex-shrink:0;margin-left:auto}
   .card-action{font-size:11.5px;font-weight:600;color:var(--amber-warm);background:var(--amber-tint);
@@ -657,6 +659,18 @@
   </div>
 </div>
 
+<!-- ============== MODAL: Potvrzení (náhrada nativního confirm) ============== -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box" style="max-width:440px">
+    <h3 id="cf-title">Potvrzení</h3>
+    <p id="cf-text" style="font-size:13.5px;color:var(--text-soft);line-height:1.65;margin-bottom:24px;white-space:pre-line"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="cf-cancel">Zrušit</button>
+      <button type="button" class="btn btn-primary" id="cf-ok">Potvrdit</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============== MODAL: Sloučit s případem… ============== -->
 <div class="modal-overlay" id="mergeModal">
   <div class="modal-box">
@@ -707,7 +721,8 @@ const PRIPADY_HEADER = [
     'kontakt_jmeno', 'kontakt_telefon', 'kontakt_email', 'zdroj',
     'castka', 'mena', 'ucel', 'faze', 'ci_tah', 'dalsi_krok', 'termin',
     'pozastaveno', 'stav', 'vysledek', 'duvod_uzavreni', 'datum_uzavreni',
-    'nemovitosti_json', 'poznamka'
+    'nemovitosti_json', 'poznamka',
+    'poradi' // ruční pořadí ve sloupci (drag & drop) — na konci kvůli migraci i widgetu
 ];
 const AKCE_HEADER = ['id', 'pripad_id', 'datum', 'typ', 'popis', 'zdroj', 'payload_json'];
 const UVERY_HEADER = ['id', 'pripad_id', 'klient', 'castka', 'mena', 'datum_vyplaceni', 'poznamka'];
@@ -811,6 +826,33 @@ function showToast(msg, type) {
 function openModal(id) { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
+// Potvrzovací dialog v grafice aplikace (náhrada nativního confirm()).
+// Vrací Promise<boolean>; Enter = potvrdit, Escape = zrušit.
+function appConfirm(text, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+        document.getElementById('cf-title').textContent = opts.title || 'Potvrzení';
+        document.getElementById('cf-text').textContent = text;
+        const ok = document.getElementById('cf-ok');
+        const cancel = document.getElementById('cf-cancel');
+        ok.textContent = opts.okLabel || 'Potvrdit';
+        function done(val) {
+            document.removeEventListener('keydown', onKey, true);
+            closeModal('confirmModal');
+            resolve(val);
+        }
+        function onKey(e) {
+            if (e.key === 'Escape') { e.preventDefault(); done(false); }
+            else if (e.key === 'Enter') { e.preventDefault(); done(true); }
+        }
+        ok.onclick = function () { done(true); };
+        cancel.onclick = function () { done(false); };
+        document.addEventListener('keydown', onKey, true);
+        openModal('confirmModal');
+        ok.focus();
+    });
+}
+
 function rowToObject(row, header) {
     const o = {};
     header.forEach(function (key, i) { o[key] = (row && row[i] != null) ? String(row[i]) : ''; });
@@ -907,14 +949,16 @@ function disconnectGoogle() {
     document.getElementById('btn-new-case').style.display = 'none';
 }
 
-function onGoogleBtn() {
+async function onGoogleBtn() {
     if (state.accessToken) {
         if (state.viaDeviceAuth && window.ProfilendAuth) {
-            if (confirm('Odpojit toto zařízení? Data zůstanou v Google Sheets, jen se odhlásíte a příště zadáte PIN.')) {
+            if (await appConfirm('Odpojit toto zařízení? Data zůstanou v Google Sheets, jen se odhlásíte a příště zadáte PIN.',
+                { title: 'Odpojit zařízení', okLabel: 'Odpojit' })) {
                 try { ProfilendAuth.reset(); } catch (e) { /* no-op */ }
                 location.reload();
             }
-        } else if (confirm('Odpojit Google účet? Data zůstanou v Google Sheets, jen se odhlásíte.')) {
+        } else if (await appConfirm('Odpojit Google účet? Data zůstanou v Google Sheets, jen se odhlásíte.',
+            { title: 'Odpojit Google', okLabel: 'Odpojit' })) {
             disconnectGoogle();
         }
     } else {
@@ -1341,6 +1385,7 @@ function newCaseObject(fields) {
         pozastaveno: '', stav: 'aktivni', vysledek: '',
         duvod_uzavreni: '', datum_uzavreni: '',
         nemovitosti_json: '[]', poznamka: '',
+        poradi: '',
         nemovitosti: []
     }, fields || {});
     return c;
@@ -1427,15 +1472,17 @@ async function applyEventToCase(c, ev, silent) {
     const changes = [];
     if (ev.type === 'oceneni_ulozeno') {
         const evNems = eventNemovitosti(p);
-        evNems.forEach(function (en) {
+        for (const en of evNems) { // for..of kvůli await appConfirm
             const existing = (c.nemovitosti || []).find(function (cn) {
                 return norm(cn.ku) === norm(en.ku) && norm(cn.parcela) === norm(en.parcela) && (norm(cn.ku) || norm(cn.parcela));
             });
             if (existing) {
                 // druhé kolo ocenění — aktualizace hodnoty
                 if (en.hodnota != null && String(en.hodnota) !== '') {
-                    const doUpdate = silent || confirm('Nemovitost ' + (en.ku || '') + ' p.č. ' + (en.parcela || '') +
-                        ' už u případu existuje. Aktualizovat hodnotu na ' + fmtNum(parseAmount(en.hodnota)) + ' CZK?');
+                    const doUpdate = silent ? true : await appConfirm(
+                        'Nemovitost ' + (en.ku || '') + ' p.č. ' + (en.parcela || '') +
+                        ' už u případu existuje. Aktualizovat hodnotu na ' + fmtNum(parseAmount(en.hodnota)) + ' CZK?',
+                        { title: 'Aktualizace hodnoty', okLabel: 'Aktualizovat' });
                     if (doUpdate) {
                         existing.hodnota = String(parseAmount(en.hodnota) || en.hodnota);
                         if (en.lv && !existing.lv) existing.lv = String(en.lv);
@@ -1450,7 +1497,7 @@ async function applyEventToCase(c, ev, silent) {
                 });
                 changes.push('přidána nemovitost');
             }
-        });
+        }
     } else if (ev.type === 'ts_vygenerovan') {
         if (!c.klient && p.klient) { c.klient = String(p.klient); changes.push('doplněn klient'); }
         if (!c.ico && p.ico) { c.ico = String(p.ico); changes.push('doplněno IČO'); }
@@ -1850,8 +1897,11 @@ async function mergeCases(srcId, targetId) {
     const src = findCase(srcId);
     const tgt = findCase(targetId);
     if (!src || !tgt || src.id === tgt.id) return;
-    if (!confirm('Sloučit případ „' + (src.nazev || '') + '" do „' + (tgt.nazev || '') + '"?\n\n' +
-        'Nemovitosti a chybějící údaje se přenesou, případ „' + (src.nazev || '') + '" se archivuje jako Sloučeno.')) return;
+    const okMerge = await appConfirm(
+        'Sloučit případ „' + (src.nazev || '') + '" do „' + (tgt.nazev || '') + '"?\n\n' +
+        'Nemovitosti a chybějící údaje se přenesou, případ „' + (src.nazev || '') + '" se archivuje jako Sloučeno.',
+        { title: 'Sloučit případy', okLabel: 'Sloučit' });
+    if (!okMerge) return;
     try {
         // Nemovitosti: sjednotit (dedupe přes kú+parcelu), chybějící hodnoty doplnit
         (src.nemovitosti || []).forEach(function (sn) {
@@ -2006,11 +2056,7 @@ function renderBoard() {
     const visible = activeCases().filter(matchesSearch).filter(matchesChip);
     board.innerHTML = cols.map(function (faze) {
         const items = visible.filter(function (c) { return c.faze === faze; })
-            // Od nejnovějšího po nejstarší podle VZNIKU případu (u importů = datum ocenění)
-            // — stabilní pořadí, karta neskáče po každé změně
-            .sort(function (a, b) {
-                return (b.vytvoreno || b.aktualizovano || '').localeCompare(a.vytvoreno || a.aktualizovano || '');
-            });
+            .sort(boardCompare);
         const cards = items.length === 0
             ? '<div class="col-hint">' + escapeHtml(COL_HINTS[faze] || 'Prázdné.') + '</div>'
             : items.map(renderCard).join('');
@@ -2020,6 +2066,18 @@ function renderBoard() {
             '<div class="col-body">' + cards + '</div>' +
         '</div>';
     }).join('');
+}
+
+// Pořadí karet ve sloupci: ručně zařazené (sloupec `poradi`, drag & drop) nahoře
+// podle svého pořadí; ostatní pod nimi od nejnovějšího po nejstarší podle VZNIKU
+// případu (u importů = datum ocenění) — stabilní, karta neskáče po každé změně.
+function boardCompare(a, b) {
+    const pa = (a.poradi != null && a.poradi !== '') ? parseFloat(a.poradi) : NaN;
+    const pb = (b.poradi != null && b.poradi !== '') ? parseFloat(b.poradi) : NaN;
+    if (!isNaN(pa) && !isNaN(pb)) return pa - pb;
+    if (!isNaN(pa)) return -1; // ručně zařazené nahoře
+    if (!isNaN(pb)) return 1;
+    return (b.vytvoreno || b.aktualizovano || '').localeCompare(a.vytvoreno || a.aktualizovano || '');
 }
 
 // Má případ v timeline akci daného typu?
@@ -2100,7 +2158,9 @@ function renderCard(c) {
     '</div>';
 }
 
-// ── Drag & drop: přetažení karty na kartu = nabídka sloučení případů ──
+// ── Drag & drop karet ──
+// Stejný sloupec: horní/dolní okraj cílové karty = zařadit PŘED/ZA (ruční pořadí),
+// střed karty = nabídka sloučení. Jiný sloupec: vždy sloučení.
 let dragCaseId = null;
 
 function cardDragStart(e, caseId) {
@@ -2112,32 +2172,95 @@ function cardDragStart(e, caseId) {
     e.currentTarget.classList.add('dragging');
 }
 
+function clearDropClasses(el) {
+    el.classList.remove('drop-target', 'drop-before', 'drop-after');
+}
+
 function cardDragEnd(e) {
     dragCaseId = null;
     e.currentTarget.classList.remove('dragging');
-    document.querySelectorAll('.case-card.drop-target').forEach(function (el) {
-        el.classList.remove('drop-target');
-    });
+    document.querySelectorAll('.case-card.drop-target, .case-card.drop-before, .case-card.drop-after')
+        .forEach(clearDropClasses);
+}
+
+// Zóna podle pozice kurzoru na cílové kartě (clientY vůči kartě — offsetY by se
+// vztahoval k vnitřním elementům karty a zónu by rozbíjel)
+function dragZone(e, targetCase) {
+    const src = findCase(dragCaseId);
+    if (!src || !targetCase || src.faze !== targetCase.faze) return 'merge';
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const h = rect.height || 1;
+    if (y < h * 0.3) return 'before';
+    if (y > h * 0.7) return 'after';
+    return 'merge';
 }
 
 function cardDragOver(e, caseId) {
     if (!dragCaseId || dragCaseId === caseId) return; // sám na sebe ne
     e.preventDefault(); // povolit drop
     e.dataTransfer.dropEffect = 'move';
-    e.currentTarget.classList.add('drop-target');
+    const zone = dragZone(e, findCase(caseId));
+    clearDropClasses(e.currentTarget);
+    if (zone === 'before') e.currentTarget.classList.add('drop-before');
+    else if (zone === 'after') e.currentTarget.classList.add('drop-after');
+    else e.currentTarget.classList.add('drop-target');
 }
 
 function cardDragLeave(e) {
-    e.currentTarget.classList.remove('drop-target');
+    clearDropClasses(e.currentTarget);
 }
 
 function cardDrop(e, targetId) {
     e.preventDefault();
-    e.currentTarget.classList.remove('drop-target');
+    const zone = dragZone(e, findCase(targetId));
+    clearDropClasses(e.currentTarget);
     const srcId = dragCaseId;
     dragCaseId = null;
     if (!srcId || srcId === targetId) return;
-    mergeCases(srcId, targetId); // uvnitř se ptá confirm(), pak teprve slučuje
+    if (zone === 'merge') {
+        mergeCases(srcId, targetId); // uvnitř se ptá potvrzovacím dialogem, pak teprve slučuje
+    } else {
+        reorderCase(srcId, targetId, zone); // řazení se neptá — je okamžité a vratné dalším tahem
+    }
+}
+
+// Ruční přeřazení karty ve sloupci — výsledné pořadí celého sloupce se uloží
+// do sloupce `poradi` (10, 20, 30…), zapisují se jen změněné případy.
+async function reorderCase(srcId, targetId, pos) {
+    const src = findCase(srcId);
+    const tgt = findCase(targetId);
+    if (!src || !tgt || src.faze !== tgt.faze || src.id === tgt.id) return;
+    const column = activeCases()
+        .filter(function (c) { return c.faze === src.faze; })
+        .sort(boardCompare);
+    const list = column.filter(function (c) { return c.id !== src.id; });
+    let idx = -1;
+    for (let i = 0; i < list.length; i++) {
+        if (list[i].id === tgt.id) { idx = i; break; }
+    }
+    if (idx === -1) return;
+    list.splice(pos === 'before' ? idx : idx + 1, 0, src);
+    const changed = [];
+    let n = 10;
+    for (const c of list) {
+        const v = String(n);
+        if ((c.poradi || '') !== v) { c.poradi = v; changed.push(c); }
+        n += 10;
+    }
+    try {
+        for (const c of changed) {
+            const ok = await writeCase(c);
+            if (!ok) return; // konflikt — writeCase udělal reload + toast
+        }
+    } catch (err) {
+        console.error('Reorder error:', err);
+        showToast('Uložení pořadí selhalo: ' + err.message, 'error');
+        try { await syncData(); renderAll(); } catch (e2) { /* no-op */ }
+        return;
+    }
+    renderAll();
+    showToast('Pořadí upraveno.');
 }
 
 async function movePhase(caseId, dir) {
@@ -2418,12 +2541,12 @@ async function quickActionFor(caseId, typ, inDetail) {
         let changed = false;
         // nabídka změny tahu
         if (typ === 'ts_odeslan' && c.ci_tah !== 'klient' &&
-            confirm('TS odeslán — nastavit „čí je tah" na Klient?')) {
+            await appConfirm('TS odeslán — nastavit „čí je tah" na Klient?', { title: 'TS odeslán', okLabel: 'Nastavit' })) {
             c.ci_tah = 'klient';
             changed = true;
         }
         if (typ === 'vklad_kn' && c.ci_tah !== 'katastr' &&
-            confirm('Vklad KN podán — nastavit „čí je tah" na Katastr?')) {
+            await appConfirm('Vklad KN podán — nastavit „čí je tah" na Katastr?', { title: 'Vklad KN', okLabel: 'Nastavit' })) {
             c.ci_tah = 'katastr';
             changed = true;
         }
