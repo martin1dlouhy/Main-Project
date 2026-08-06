@@ -2395,6 +2395,9 @@
     <!-- TOAST CONTAINER -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <!-- ProfilendAuth — jednotné přihlášení (musí být PŘED inline skriptem i google-drive-sync.js) -->
+    <script src="profilend-auth.js"></script>
+
     <script>
         var LOAN_API_BASE = 'https://main-project-production-b048.up.railway.app';
         /* PIN is verified server-side — no client-side secret */
@@ -2555,6 +2558,88 @@
                 }, 3000);
             });
         }
+
+        /* ─── UNLOCK — jednotný device flow (ProfilendAuth, 6místný PIN přes modul) ───
+           Když je modul k dispozici, nahrazuje 4místný PIN gate: skryje #pinOverlay,
+           ensureDevice() (modul si sám ukáže 6místný overlay) → getSessionToken() →
+           naplní STEJNÝ sessionStorage klíč 'ld-token' jako dnešní úspěšný PIN →
+           stávající success cesta (appContainer + initializeApp()).
+           Bez modulu (window.ProfilendAuth undefined) běží 4místný flow beze změny. */
+        (function() {
+            if (!window.ProfilendAuth) return; // fallback: stávající 4místný PIN gate
+
+            function showDeviceUnlockError(msg) {
+                var box = document.getElementById('deviceUnlockError');
+                if (!box) {
+                    box = document.createElement('div');
+                    box.id = 'deviceUnlockError';
+                    box.className = 'pin-overlay';
+                    box.innerHTML =
+                        '<div class="pin-box">' +
+                        '<h2>ProfiLend</h2>' +
+                        '<p id="deviceUnlockErrorMsg"></p>' +
+                        '<button type="button" class="pin-button" id="deviceUnlockRetry">Zkusit znovu</button>' +
+                        '</div>';
+                    document.body.appendChild(box);
+                    document.getElementById('deviceUnlockRetry').addEventListener('click', function() {
+                        box.classList.add('hidden');
+                        startDeviceUnlock();
+                    });
+                }
+                document.getElementById('deviceUnlockErrorMsg').textContent =
+                    msg || 'Přihlášení se nepodařilo — zkontrolujte připojení a zkuste to znovu.';
+                box.classList.remove('hidden');
+            }
+
+            function startDeviceUnlock() {
+                ProfilendAuth.ensureDevice()
+                    .then(function() { return ProfilendAuth.getSessionToken(); })
+                    .then(function(token) {
+                        if (token) {
+                            // Stejné klíče + success cesta jako dnešní úspěšný 4místný PIN
+                            sessionStorage.setItem('ld-token', token);
+                            document.getElementById('pinOverlay').classList.add('hidden');
+                            document.getElementById('appContainer').style.display = '';
+                            // Init v try/catch MIMO auth logiku — chyba inicializace nesmí
+                            // vyvolat auth error obrazovku ani opakovaný init (duplicitní listenery)
+                            try { initializeApp(); } catch (initErr) { console.error('initializeApp:', initErr); }
+                        } else {
+                            showDeviceUnlockError();
+                        }
+                    })
+                    .catch(function() { showDeviceUnlockError(); });
+            }
+
+            try {
+                var ov = document.getElementById('pinOverlay');
+                if (ov) ov.classList.add('hidden'); // modul má vlastní 6místný overlay
+                // .hidden = jen opacity:0 — starý autofocusnutý .pin-digit input by dál
+                // sbíral klávesy a po 4. číslici volal verifyPin (pálí rate-limit pokusy).
+                try {
+                    document.querySelectorAll('#pinOverlay .pin-digit').forEach(function (d) { d.disabled = true; });
+                    if (document.activeElement && document.activeElement.classList &&
+                        document.activeElement.classList.contains('pin-digit')) {
+                        document.activeElement.blur();
+                    }
+                } catch (e) { /* no-op */ }
+                // Start až po DOMContentLoaded — initializeApp() (dashboard handoff,
+                // Drive sync) potřebuje načtené dashboard-bridge.js a google-drive-sync.js
+                // (skripty na konci <body>), stejně jako v původním PIN flow.
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', startDeviceUnlock);
+                } else {
+                    startDeviceUnlock();
+                }
+            } catch (e) {
+                // Degradace: cokoli selže → zpět na stávající 4místný PIN gate
+                try {
+                    var ov2 = document.getElementById('pinOverlay');
+                    if (ov2) ov2.classList.remove('hidden');
+                    // znovu povolit inputy vypnuté v modulové větvi
+                    document.querySelectorAll('#pinOverlay .pin-digit').forEach(function (d) { d.disabled = false; });
+                } catch (e2) { /* no-op */ }
+            }
+        })();
 
         /* ─── VIEW MANAGEMENT ─── */
         function showView(view) {

@@ -21,10 +21,14 @@ window.GDriveSync = (function() {
     'use strict';
 
     const CLIENT_ID = '765274611389-25tev1d2a60v2di4t0jfho7fbpqf8q9c.apps.googleusercontent.com';
-    const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+    // Sheets scope navíc: token se sdílí přes 'gdrive-shared-token' s dashboardem
+    // a database (Sheets API) — užší token by jim ve sdílené cache působil 403.
+    const SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
     const ROOT_FOLDER_NAME = 'ProfiLend Investment Tools';
-    const TOKEN_STORAGE_KEY = 'gdrive_access_token';
-    const TOKEN_EXPIRY_KEY = 'gdrive_token_expiry';
+    // Sdílené klíče pro celý web (stejné používá ProfilendAuth i dashboard) —
+    // nahrazují dřívější per-app klíče 'gdrive_access_token' / 'gdrive_token_expiry'.
+    const TOKEN_STORAGE_KEY = 'gdrive-shared-token';
+    const TOKEN_EXPIRY_KEY = 'gdrive-shared-token-expiry';
 
     let config = {
         appName: '',
@@ -33,6 +37,10 @@ window.GDriveSync = (function() {
     };
     let tokenClient = null;
     let accessToken = null;
+    // Původ aktuálního tokenu: 'railway' (ProfilendAuth) | 'gis' (popup) | null (restore
+    // z cache = neurčitý). Revoke se smí volat JEN u 'gis' — revoke tokenu z Railway
+    // by u Googlu zneplatnil i serverový refresh token pro všechna zařízení.
+    let tokenSource = null;
     let rootFolderId = null;
     let appFolderId = null;
     let initialized = false;
@@ -195,6 +203,7 @@ window.GDriveSync = (function() {
                     return;
                 }
                 accessToken = response.access_token;
+                tokenSource = 'gis';
                 const expiresIn = response.expires_in || 3600;
                 const expiryTime = Date.now() + (expiresIn * 1000) - 60000; // -60s buffer
                 localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
@@ -221,6 +230,31 @@ window.GDriveSync = (function() {
     }
 
     function signIn() {
+        // Nejdřív ProfilendAuth (Railway refresh-token flow, smí ukázat PIN overlay).
+        // Vrátí-li null (server nenastaven), pokračuje se stávajícím GIS popupem.
+        if (window.ProfilendAuth) {
+            try {
+                window.ProfilendAuth.getGoogleToken({ interactive: true }).then((token) => {
+                    if (token) {
+                        // Token do storage uložil ProfilendAuth (sdílené klíče).
+                        accessToken = token;
+                        tokenSource = 'railway';
+                        updateButton();
+                        showToast('Připojeno k Google Drive', 'success');
+                        ensureFolders().then(() => {
+                            if (config.onReady) config.onReady();
+                        }).catch((e) => console.warn('GDriveSync: ensureFolders failed:', e));
+                    } else {
+                        signInWithGis();
+                    }
+                }).catch(() => signInWithGis());
+                return;
+            } catch (e) { /* modul selhal → GIS fallback níže */ }
+        }
+        signInWithGis();
+    }
+
+    function signInWithGis() {
         if (!tokenClient) {
             showToast('Google služby se ještě nenačetly', 'error');
             return;
@@ -229,9 +263,13 @@ window.GDriveSync = (function() {
     }
 
     function signOut() {
-        if (accessToken && window.google && google.accounts && google.accounts.oauth2) {
+        // Revoke JEN u tokenů prokazatelně z GIS popupu této session (tokenSource==='gis').
+        // Token z Railway ani neurčitý token z cache se revokovat NESMÍ — Google by
+        // s ním zneplatnil i serverový refresh token pro všechna zařízení.
+        if (tokenSource === 'gis' && accessToken && window.google && google.accounts && google.accounts.oauth2) {
             google.accounts.oauth2.revoke(accessToken, () => {});
         }
+        tokenSource = null;
         accessToken = null;
         rootFolderId = null;
         appFolderId = null;
@@ -265,6 +303,18 @@ window.GDriveSync = (function() {
             accessToken = null;
             localStorage.removeItem(TOKEN_STORAGE_KEY);
             localStorage.removeItem(TOKEN_EXPIRY_KEY);
+            // Jednou zkusit tiché obnovení přes ProfilendAuth (Railway) a request zopakovat.
+            if (!options._pfRetried && window.ProfilendAuth) {
+                try {
+                    const fresh = await window.ProfilendAuth.getGoogleToken({ interactive: false });
+                    if (fresh) {
+                        accessToken = fresh;
+                        tokenSource = 'railway';
+                        updateButton();
+                        return driveFetch(url, Object.assign({}, options, { _pfRetried: true }));
+                    }
+                } catch (e) { /* tiché obnovení selhalo → stávající chování níže */ }
+            }
             updateButton();
             throw new Error('Token expired — prosím přihlaste se znovu');
         }
@@ -539,8 +589,14 @@ window.GDriveSync = (function() {
         }
 
         try {
-            await loadGisScript();
-            initTokenClient();
+            // GIS setup ve vlastním try — blokovaný accounts.google.com (firemní síť,
+            // adblock) nesmí zastavit Railway větev, která GIS vůbec nepotřebuje.
+            try {
+                await loadGisScript();
+                initTokenClient();
+            } catch (gisErr) {
+                console.warn('GDriveSync: GIS se nenačetlo (Railway flow poběží i tak):', gisErr);
+            }
             const hasToken = restoreTokenFromStorage();
             updateButton();
             if (hasToken) {
@@ -552,6 +608,25 @@ window.GDriveSync = (function() {
                     accessToken = null;
                     localStorage.removeItem(TOKEN_STORAGE_KEY);
                     localStorage.removeItem(TOKEN_EXPIRY_KEY);
+                    updateButton();
+                }
+            } else if (window.ProfilendAuth) {
+                // Tiché připojení přes ProfilendAuth (Railway refresh-token flow).
+                // interactive:false — v osobních appkách se NIKDY neukazuje PIN overlay;
+                // null (server nenastaven / zařízení neregistrované) = zůstane GIS tlačítko.
+                try {
+                    const token = await window.ProfilendAuth.getGoogleToken({ interactive: false });
+                    if (token) {
+                        // Token do storage uložil ProfilendAuth (sdílené klíče).
+                        accessToken = token;
+                        tokenSource = 'railway';
+                        updateButton();
+                        await ensureFolders();
+                        if (config.onReady) config.onReady();
+                    }
+                } catch (e) {
+                    console.warn('GDriveSync: tiché připojení přes ProfilendAuth selhalo:', e);
+                    accessToken = null;
                     updateButton();
                 }
             }

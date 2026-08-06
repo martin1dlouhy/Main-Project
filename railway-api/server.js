@@ -163,7 +163,8 @@ app.post('/api/verify-pin', async function (req, res) {
     }
 
     var pin = req.body && req.body.pin;
-    if (!pin || typeof pin !== 'string' || pin.length !== 4) {
+    // 4–8 číslic: zpětná kompatibilita se starým 4místným PIN i nový 6místný standard
+    if (!pin || typeof pin !== 'string' || !/^\d{4,8}$/.test(pin)) {
         return res.status(400).json({ success: false, error: 'Neplatný PIN.' });
     }
 
@@ -182,6 +183,326 @@ app.post('/api/verify-pin', async function (req, res) {
         return res.status(200).json({ success: true, sessionToken: sessionToken });
     } else {
         return res.status(200).json({ success: false, error: 'Nesprávný PIN.' });
+    }
+});
+
+// =============================================
+// Trvalé přihlášení zařízení (ProfilendAuth)
+// deviceToken = stateless HMAC: exp + '.' + HMAC-SHA256(key=PIN_HASH, msg='device:'+exp)
+// Server nic neukládá — změna PIN_HASH okamžitě zneplatní všechna zařízení.
+// =============================================
+var DEVICE_TOKEN_TTL_MS = 90 * 24 * 3600 * 1000; // 90 dní
+
+// Per-IP exponenciální backoff pro /api/device/register (nad rámec pinAttempts):
+// po každém chybném pokusu nextAllowedAt = now + min(60 s, 2^fails s).
+var deviceBackoff = {}; // { ip: { fails, nextAllowedAt } }
+
+// Globální denní strop chybných pokusů (ochrana proti distribuovanému bruteforce)
+var deviceGlobalFails = { date: '', count: 0 };
+var DEVICE_DAILY_FAIL_CAP = 200;
+
+function cleanupDeviceBackoff() {
+    var now = Date.now();
+    var keys = Object.keys(deviceBackoff);
+    for (var i = 0; i < keys.length; i++) {
+        if (now - deviceBackoff[keys[i]].nextAllowedAt > 10 * 60 * 1000) {
+            delete deviceBackoff[keys[i]];
+        }
+    }
+}
+setInterval(cleanupDeviceBackoff, 30 * 60 * 1000);
+
+function deviceSignature(exp, pinHash) {
+    return crypto.createHmac('sha256', pinHash).update('device:' + exp).digest('hex');
+}
+
+function verifyDeviceToken(t) {
+    try {
+        var pinHash = (process.env.PIN_HASH || '').trim();
+        if (!pinHash || !t || typeof t !== 'string') return false;
+        var dot = t.indexOf('.');
+        if (dot === -1) return false;
+        var expStr = t.slice(0, dot);
+        var sig = t.slice(dot + 1);
+        if (!/^\d+$/.test(expStr)) return false;
+        var exp = parseInt(expStr, 10);
+        if (!exp || exp <= Date.now()) return false;
+        var expected = deviceSignature(expStr, pinHash);
+        // timingSafeEqual vyžaduje stejně dlouhé buffery — délky porovnej předem
+        var sigBuf = Buffer.from(sig, 'utf8');
+        var expBuf = Buffer.from(expected, 'utf8');
+        if (sigBuf.length !== expBuf.length) return false;
+        return crypto.timingSafeEqual(sigBuf, expBuf);
+    } catch (e) {
+        return false;
+    }
+}
+
+// =============================================
+// POST /api/device/register — registrace zařízení PIN kódem
+// Úspěch: deviceToken (90 dní) + sessionToken pro AI endpointy.
+// Brzdy: pinAttempts (5/5 min/IP) + exponenciální backoff + globální denní strop.
+// =============================================
+app.post('/api/device/register', function (req, res) {
+    var pinHash = (process.env.PIN_HASH || '').trim();
+    if (!pinHash) {
+        return res.status(500).json({ success: false, error: 'PIN_HASH is not configured on server.' });
+    }
+
+    var ip = req.ip || req.connection.remoteAddress || 'unknown';
+    var now = Date.now();
+
+    // Globální denní strop chybných pokusů — po překročení 429 pro všechny do půlnoci
+    var today = new Date().toDateString();
+    if (deviceGlobalFails.date !== today) {
+        deviceGlobalFails.date = today;
+        deviceGlobalFails.count = 0;
+    }
+    if (deviceGlobalFails.count >= DEVICE_DAILY_FAIL_CAP) {
+        return res.status(429).json({ success: false, error: 'Denní limit pokusů byl vyčerpán. Zkuste to zítra.' });
+    }
+
+    // Per-IP exponenciální backoff
+    var bo = deviceBackoff[ip];
+    if (bo && bo.nextAllowedAt > now) {
+        var waitSec = Math.ceil((bo.nextAllowedAt - now) / 1000);
+        return res.status(429).json({ success: false, error: 'Příliš mnoho pokusů. Zkuste to za ' + waitSec + ' s.' });
+    }
+
+    // Sdílený okenní limit (stejný mechanismus jako /api/verify-pin: 5 pokusů / 5 minut / IP)
+    if (!pinAttempts[ip]) {
+        pinAttempts[ip] = { count: 0, firstAttempt: now };
+    }
+    var record = pinAttempts[ip];
+    if (now - record.firstAttempt > 5 * 60 * 1000) {
+        record.count = 0;
+        record.firstAttempt = now;
+    }
+    if (record.count >= 5) {
+        var remaining = Math.ceil((5 * 60 * 1000 - (now - record.firstAttempt)) / 1000);
+        return res.status(429).json({ success: false, error: 'Příliš mnoho pokusů. Zkuste to za ' + remaining + ' sekund.' });
+    }
+
+    var pin = req.body && req.body.pin;
+    // 4–8 číslic: 6 je nový standard, rozsah kvůli přechodnému období
+    if (!pin || typeof pin !== 'string' || !/^\d{4,8}$/.test(pin)) {
+        return res.status(400).json({ success: false, error: 'Neplatný PIN.' });
+    }
+
+    record.count++;
+
+    var inputHash = crypto.createHash('sha256').update(pin).digest('hex');
+    var pinOk = inputHash.length === pinHash.length &&
+        crypto.timingSafeEqual(Buffer.from(inputHash), Buffer.from(pinHash));
+
+    if (!pinOk) {
+        var fails = (deviceBackoff[ip] ? deviceBackoff[ip].fails : 0) + 1;
+        deviceBackoff[ip] = { fails: fails, nextAllowedAt: now + Math.min(60, Math.pow(2, fails)) * 1000 };
+        deviceGlobalFails.count++;
+        return res.status(200).json({ success: false, error: 'Nesprávný PIN.' });
+    }
+
+    // Úspěch — reset brzd pro tuto IP
+    delete pinAttempts[ip];
+    delete deviceBackoff[ip];
+
+    var exp = now + DEVICE_TOKEN_TTL_MS;
+    var deviceToken = exp + '.' + deviceSignature(exp, pinHash);
+    var sessionToken = generateSessionToken();
+    sessionTokens[sessionToken] = { ip: ip, createdAt: Date.now() };
+    return res.status(200).json({ success: true, deviceToken: deviceToken, sessionToken: sessionToken });
+});
+
+// =============================================
+// POST /api/device/session — čerstvý sessionToken bez PIN (registrované zařízení)
+// =============================================
+app.post('/api/device/session', function (req, res) {
+    var deviceToken = req.body && req.body.deviceToken;
+    if (!verifyDeviceToken(deviceToken)) {
+        return res.status(401).json({ error: 'Neplatné nebo expirované zařízení. Zadejte PIN znovu.' });
+    }
+    var ip = req.ip || req.connection.remoteAddress || 'unknown';
+    var sessionToken = generateSessionToken();
+    sessionTokens[sessionToken] = { ip: ip, createdAt: Date.now() };
+    return res.status(200).json({ sessionToken: sessionToken });
+});
+
+// =============================================
+// Google OAuth přes Railway — server drží refresh token, klienti dostávají
+// jen krátkodobý access token. Refresh token ani client secret se NIKDY nelogují.
+// =============================================
+var GOOGLE_CLIENT_ID_FALLBACK = '765274611389-25tev1d2a60v2di4t0jfho7fbpqf8q9c.apps.googleusercontent.com';
+var GOOGLE_REDIRECT_URI = 'https://main-project-production-b048.up.railway.app/api/google/callback';
+var GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
+
+// Server-side cache access tokenu — vydává se z cache, dokud zbývá > 5 minut
+var googleTokenCache = { token: null, exp: 0 };
+
+function googleClientId() {
+    return (process.env.GOOGLE_CLIENT_ID || '').trim() || GOOGLE_CLIENT_ID_FALLBACK;
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function googleAuthPage(title, bodyHtml) {
+    return '<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8">' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+        '<title>' + escapeHtml(title) + '</title></head>' +
+        '<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;' +
+        'background:var(--bg-deep,#070910);color:var(--text,#f1ece1);font-family:Inter,\'Segoe UI\',sans-serif;">' +
+        '<div style="max-width:680px;width:92%;background:var(--bg-raised,#11161f);' +
+        'border:1px solid var(--line,rgba(232,223,208,0.1));border-radius:12px;padding:36px 40px;box-sizing:border-box;">' +
+        bodyHtml + '</div></body></html>';
+}
+
+// =============================================
+// POST /api/google/token — čerstvý Google access token pro registrované zařízení
+// 503 not_configured → frontend použije GIS fallback.
+// =============================================
+app.post('/api/google/token', async function (req, res) {
+    var deviceToken = req.body && req.body.deviceToken;
+    if (!verifyDeviceToken(deviceToken)) {
+        return res.status(401).json({ error: 'Neplatné nebo expirované zařízení. Zadejte PIN znovu.' });
+    }
+
+    var clientSecret = (process.env.GOOGLE_CLIENT_SECRET || '').trim();
+    var refreshToken = (process.env.GOOGLE_REFRESH_TOKEN || '').trim();
+    if (!clientSecret || !refreshToken) {
+        return res.status(503).json({ error: 'not_configured' });
+    }
+
+    // Cache: vydávej stejný token, dokud zbývá víc než 5 minut
+    if (googleTokenCache.token && googleTokenCache.exp - Date.now() > 5 * 60 * 1000) {
+        return res.status(200).json({ accessToken: googleTokenCache.token, expiresAt: googleTokenCache.exp });
+    }
+
+    try {
+        var body = new URLSearchParams({
+            client_id: googleClientId(),
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token'
+        });
+        var resp = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        });
+        var data = await resp.json().catch(function () { return {}; });
+
+        if (!resp.ok || !data.access_token) {
+            if (data && data.error === 'invalid_grant') {
+                return res.status(502).json({ error: 'Google přístup byl odvolán — projděte znovu /api/google/setup.' });
+            }
+            return res.status(502).json({
+                error: 'Google token se nepodařilo obnovit' + (data && data.error ? ' (' + data.error + ')' : '') + '.'
+            });
+        }
+
+        var expiresAt = Date.now() + (data.expires_in || 3600) * 1000 - 60000;
+        googleTokenCache.token = data.access_token;
+        googleTokenCache.exp = expiresAt;
+        return res.status(200).json({ accessToken: data.access_token, expiresAt: expiresAt });
+    } catch (e) {
+        return res.status(502).json({ error: 'Google token se nepodařilo obnovit (síťová chyba).' });
+    }
+});
+
+// =============================================
+// GET /api/google/setup?device=… — 302 na Google consent (jednorázový setup)
+// =============================================
+app.get('/api/google/setup', function (req, res) {
+    var deviceToken = req.query && req.query.device;
+    if (!verifyDeviceToken(deviceToken)) {
+        return res.status(401).type('text/plain; charset=utf-8')
+            .send('Neplatné zařízení. Otevřete aplikaci, zadejte PIN a zkuste odkaz znovu.');
+    }
+    var params = new URLSearchParams({
+        client_id: googleClientId(),
+        redirect_uri: GOOGLE_REDIRECT_URI,
+        response_type: 'code',
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: GOOGLE_SCOPE
+    });
+    return res.redirect(302, 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString());
+});
+
+// =============================================
+// GET /api/google/callback?code=… — výměna code za refresh token.
+// Token se JEDNOU zobrazí s návodem (vložit do Railway env), nikam se neukládá ani neloguje.
+// =============================================
+app.get('/api/google/callback', async function (req, res) {
+    res.type('html');
+    var h2Style = 'style="margin:0 0 10px;font-weight:400;font-size:22px;"';
+    var pStyle = 'style="margin:0 0 14px;font-size:14px;line-height:1.6;color:var(--text-mute,rgba(241,236,225,0.65));"';
+
+    if (req.query && req.query.error) {
+        return res.status(400).send(googleAuthPage('Google — chyba',
+            '<h2 ' + h2Style + '>Google vrátil chybu</h2>' +
+            '<p ' + pStyle + '>' + escapeHtml(req.query.error) + '</p>' +
+            '<p ' + pStyle + '>Zavřete tuto stránku a projděte /api/google/setup znovu.</p>'));
+    }
+
+    var code = req.query && req.query.code;
+    if (!code) {
+        return res.status(400).send(googleAuthPage('Google — chyba',
+            '<h2 ' + h2Style + '>Chybí parametr code</h2>' +
+            '<p ' + pStyle + '>Tuto stránku otevírá Google po udělení souhlasu. Začněte přes /api/google/setup.</p>'));
+    }
+
+    var clientSecret = (process.env.GOOGLE_CLIENT_SECRET || '').trim();
+    if (!clientSecret) {
+        return res.status(500).send(googleAuthPage('Google — chybí konfigurace',
+            '<h2 ' + h2Style + '>Chybí GOOGLE_CLIENT_SECRET</h2>' +
+            '<p ' + pStyle + '>Na Railway → Variables přidejte GOOGLE_CLIENT_SECRET (z Google Cloud Console → OAuth client) a projděte setup znovu.</p>'));
+    }
+
+    try {
+        var body = new URLSearchParams({
+            client_id: googleClientId(),
+            client_secret: clientSecret,
+            code: code,
+            grant_type: 'authorization_code',
+            redirect_uri: GOOGLE_REDIRECT_URI
+        });
+        var resp = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        });
+        var data = await resp.json().catch(function () { return {}; });
+
+        if (!resp.ok || data.error) {
+            return res.status(502).send(googleAuthPage('Google — chyba',
+                '<h2 ' + h2Style + '>Výměna kódu se nepovedla</h2>' +
+                '<p ' + pStyle + '>' + escapeHtml((data && (data.error_description || data.error)) || 'Neznámá chyba Google.') + '</p>' +
+                '<p ' + pStyle + '>Projděte /api/google/setup znovu.</p>'));
+        }
+
+        if (!data.refresh_token) {
+            return res.status(502).send(googleAuthPage('Google — chybí refresh token',
+                '<h2 ' + h2Style + '>Google nevrátil refresh token</h2>' +
+                '<p ' + pStyle + '>Odvolejte přístup aplikace na myaccount.google.com/permissions a projděte /api/google/setup znovu (consent musí proběhnout celý).</p>'));
+        }
+
+        return res.status(200).send(googleAuthPage('Google — refresh token',
+            '<h2 ' + h2Style + '>Google připojen — poslední krok</h2>' +
+            '<p ' + pStyle + '>Zkopírujte tento refresh token:</p>' +
+            '<code style="display:block;word-break:break-all;background:var(--bg-input,rgba(232,223,208,0.05));' +
+            'border:1px solid var(--line,rgba(232,223,208,0.12));border-radius:6px;padding:14px 16px;' +
+            'font-size:13px;margin:0 0 18px;color:var(--amber,#e8b97c);">' + escapeHtml(data.refresh_token) + '</code>' +
+            '<ol style="margin:0;padding-left:20px;font-size:14px;line-height:1.9;color:var(--text-mute,rgba(241,236,225,0.65));">' +
+            '<li>Railway → Variables → přidejte <strong>GOOGLE_REFRESH_TOKEN</strong> s touto hodnotou.</li>' +
+            '<li>Redeploy.</li>' +
+            '<li>Zavřete tuto stránku — token se nikde neukládá.</li>' +
+            '</ol>'));
+    } catch (e) {
+        return res.status(502).send(googleAuthPage('Google — chyba',
+            '<h2 ' + h2Style + '>Síťová chyba při výměně kódu</h2>' +
+            '<p ' + pStyle + '>Zkuste /api/google/setup znovu za chvíli.</p>'));
     }
 });
 

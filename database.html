@@ -2355,6 +2355,9 @@
     <span id="foot-version">v2.0 (F2)</span>
 </div>
 
+<!-- ===== ProfiLend Auth (sdílený device flow — 6místný PIN, načítat před inline skripty) ===== -->
+<script src="profilend-auth.js"></script>
+
 <!-- ===== Google Identity Services ===== -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -2389,6 +2392,10 @@ const SHEET_TABS = {
 const TOKEN_KEY = 'db-gtoken';
 const TOKEN_EXPIRY_KEY = 'db-gtoken-expiry';
 const SHEET_ID_KEY = 'db-sheet-id';
+
+// Sdílené klíče Google tokenu pro celý web (plní je profilend-auth.js, tady jen cache)
+const SHARED_GTOKEN_KEY = 'gdrive-shared-token';
+const SHARED_GTOKEN_EXP_KEY = 'gdrive-shared-token-expiry';
 
 // PIN session + Railway session token (pro AI endpointy)
 const PIN_SESSION_KEY = 'db-auth';
@@ -2660,6 +2667,7 @@ const SEGMENTS_SEED = [
 const state = {
     accessToken: null,
     tokenExpiry: 0,
+    tokenSource: null,      // 'gis' | 'shared' (Railway/ProfilendAuth) — řídí revoke při odpojení
     spreadsheetId: null,
     sheetTabIds: {},        // { Contacts: 0, Sources: 1234, ... }
     // Aktuální pořadí sloupců v Sheetu per list (z hlavičkového řádku).
@@ -2710,6 +2718,14 @@ const state = {
     if (!sessionStorage.getItem(DB_TOKEN_KEY)) {
         sessionStorage.removeItem(PIN_SESSION_KEY);
     }
+    // Nový device flow (sdílený 6místný PIN, zařízení ~90 dní) — profilend-auth.js.
+    // Lokální 4místný overlay se skryje; případný PIN dialog ukáže sám modul.
+    if (window.ProfilendAuth) {
+        document.getElementById('pin-overlay').classList.add('hidden');
+        unlockViaDevice();
+        return;
+    }
+    // Fallback bez modulu: stávající 4místný PIN flow.
     const digits = document.querySelectorAll('.pin-digit');
     digits.forEach(function(d, i) {
         d.addEventListener('input', function() {
@@ -2772,14 +2788,77 @@ function checkPIN() {
     });
 }
 
+// ── Device flow přes sdílený modul ProfilendAuth (nahrazuje 4místný PIN) ──
+function unlockViaDevice() {
+    ProfilendAuth.ensureDevice()
+        .then(function () { return ProfilendAuth.getSessionToken(); })
+        .then(function (sessionToken) {
+            if (!sessionToken) {
+                showDeviceUnlockError();
+                return;
+            }
+            sessionStorage.setItem(PIN_SESSION_KEY, 'true');
+            sessionStorage.setItem(DB_TOKEN_KEY, sessionToken);
+            onPinSuccess();
+        })
+        .catch(function (err) {
+            console.error('Device unlock error:', err);
+            showDeviceUnlockError();
+        });
+}
+
+function showDeviceUnlockError() {
+    // Znovu použít PIN overlay jako chybovou obrazovku s tlačítkem „Zkusit znovu"
+    const overlay = document.getElementById('pin-overlay');
+    if (!overlay) return;
+    const err = document.getElementById('pin-error');
+    const btn = overlay.querySelector('.pin-button');
+    const inputs = overlay.querySelector('.pin-input-group');
+    if (inputs) inputs.style.display = 'none';
+    if (err) {
+        err.textContent = 'Přihlášení selhalo — server je nedostupný.';
+        err.style.display = 'block';
+    }
+    if (btn) {
+        btn.textContent = 'Zkusit znovu';
+        btn.onclick = function () {
+            if (err) err.style.display = 'none';
+            overlay.classList.add('hidden');
+            unlockViaDevice();
+        };
+    }
+    overlay.classList.remove('hidden');
+}
+
 function onPinSuccess() {
     // After PIN: try to restore Google token. If absent → show connect overlay.
     restoreToken();
     if (state.accessToken) {
         bootstrapApp();
-    } else {
-        document.getElementById('connect-overlay').classList.add('visible');
+        return;
     }
+    // Tiché připojení přes sdílený Railway token (bez kliknutí).
+    // null = Railway nemá Google nastaveno / zařízení neregistrované
+    //        → stávající GIS „Připojit" overlay (fallback beze změny).
+    if (window.ProfilendAuth) {
+        ProfilendAuth.getGoogleToken({ interactive: false }).then(function (token) {
+            if (token) {
+                state.accessToken = token;
+                state.tokenSource = 'shared';
+                try {
+                    state.tokenExpiry = parseInt(localStorage.getItem(SHARED_GTOKEN_EXP_KEY) || '0', 10) || (Date.now() + 50 * 60000);
+                } catch (e) { state.tokenExpiry = Date.now() + 50 * 60000; }
+                updateGDriveIndicator(true);
+                bootstrapApp();
+            } else {
+                document.getElementById('connect-overlay').classList.add('visible');
+            }
+        }).catch(function () {
+            document.getElementById('connect-overlay').classList.add('visible');
+        });
+        return;
+    }
+    document.getElementById('connect-overlay').classList.add('visible');
 }
 
 // ============================================================
@@ -2808,8 +2887,14 @@ function handleTokenResponse(response) {
     }
     state.accessToken = response.access_token;
     state.tokenExpiry = Date.now() + ((response.expires_in || 3600) * 1000) - 60000;
+    state.tokenSource = 'gis';
     sessionStorage.setItem(TOKEN_KEY, state.accessToken);
     sessionStorage.setItem(TOKEN_EXPIRY_KEY, String(state.tokenExpiry));
+    // Cache i do sdílených klíčů — jednotný Google token pro celý web
+    try {
+        localStorage.setItem(SHARED_GTOKEN_KEY, state.accessToken);
+        localStorage.setItem(SHARED_GTOKEN_EXP_KEY, String(state.tokenExpiry));
+    } catch (e) { /* no-op */ }
     document.getElementById('connect-overlay').classList.remove('visible');
     updateGDriveIndicator(true);
     bootstrapApp();
@@ -2821,11 +2906,24 @@ function restoreToken() {
     if (t && exp > Date.now()) {
         state.accessToken = t;
         state.tokenExpiry = exp;
+        state.tokenSource = 'gis';
         updateGDriveIndicator(true);
         return true;
     }
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
+    // Fallback: sdílený token pro celý web (cache modulu profilend-auth.js)
+    try {
+        const st = localStorage.getItem(SHARED_GTOKEN_KEY);
+        const sexp = parseInt(localStorage.getItem(SHARED_GTOKEN_EXP_KEY) || '0', 10);
+        if (st && sexp > Date.now() + 60000) {
+            state.accessToken = st;
+            state.tokenExpiry = sexp;
+            state.tokenSource = 'shared';
+            updateGDriveIndicator(true);
+            return true;
+        }
+    } catch (e) { /* no-op */ }
     return false;
 }
 
@@ -2841,16 +2939,23 @@ function connectGoogle() {
 }
 
 function disconnectGoogle() {
-    if (state.accessToken && window.google && google.accounts && google.accounts.oauth2) {
+    // Revoke jen pro token získaný přes GIS — sdílený token z Railway nerevokovat
+    // (revoke access tokenu by zneplatnil i serverový refresh token pro celý web).
+    if (state.accessToken && state.tokenSource !== 'shared' && window.google && google.accounts && google.accounts.oauth2) {
         google.accounts.oauth2.revoke(state.accessToken, () => {});
     }
     state.accessToken = null;
     state.tokenExpiry = 0;
+    state.tokenSource = null;
     state.spreadsheetId = null;
     state.contacts = [];
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(TOKEN_EXPIRY_KEY);
     sessionStorage.removeItem(SHEET_ID_KEY);
+    try {
+        localStorage.removeItem(SHARED_GTOKEN_KEY);
+        localStorage.removeItem(SHARED_GTOKEN_EXP_KEY);
+    } catch (e) { /* no-op */ }
     updateGDriveIndicator(false);
     document.getElementById('connect-overlay').classList.add('visible');
     renderAll();
@@ -2885,12 +2990,47 @@ function updateGDriveIndicator(connected) {
 // ============================================================
 // GOOGLE DRIVE / SHEETS API
 // ============================================================
+// Tiché obnovení Google tokenu přes sdílený modul (Railway refresh-token flow).
+// Vrací nový token, nebo null (modul chybí / server nenastaven / stejný token).
+async function trySilentTokenRefresh() {
+    if (!window.ProfilendAuth) return null;
+    try {
+        const stale = state.accessToken;
+        // Zahodit lokální cache stejného (neplatného) tokenu — jinak by ho modul vrátil znovu
+        try {
+            if (stale && localStorage.getItem(SHARED_GTOKEN_KEY) === stale) {
+                localStorage.removeItem(SHARED_GTOKEN_KEY);
+                localStorage.removeItem(SHARED_GTOKEN_EXP_KEY);
+            }
+        } catch (e) { /* no-op */ }
+        const fresh = await ProfilendAuth.getGoogleToken({ interactive: false });
+        if (!fresh || fresh === stale) return null;
+        state.accessToken = fresh;
+        state.tokenSource = 'shared';
+        try {
+            state.tokenExpiry = parseInt(localStorage.getItem(SHARED_GTOKEN_EXP_KEY) || '0', 10) || (Date.now() + 50 * 60000);
+        } catch (e) { state.tokenExpiry = Date.now() + 50 * 60000; }
+        return fresh;
+    } catch (e) {
+        return null;
+    }
+}
+
 async function gfetch(url, options = {}) {
     if (!state.accessToken) throw new Error('Not authenticated');
     const headers = Object.assign({
         'Authorization': 'Bearer ' + state.accessToken
     }, options.headers || {});
-    const res = await fetch(url, Object.assign({}, options, { headers }));
+    let res = await fetch(url, Object.assign({}, options, { headers }));
+    if (res.status === 401) {
+        // Jednou zkusit tiché obnovení sdíleného tokenu přes ProfilendAuth,
+        // teprve pak stávající odhlášení.
+        const fresh = await trySilentTokenRefresh();
+        if (fresh) {
+            headers['Authorization'] = 'Bearer ' + fresh;
+            res = await fetch(url, Object.assign({}, options, { headers }));
+        }
+    }
     if (res.status === 401) {
         state.accessToken = null;
         sessionStorage.removeItem(TOKEN_KEY);

@@ -419,13 +419,62 @@
 
 <script>
 /* ===== Dashboard strip — živá čísla (Na mně / Čeká se / Po termínu) =====
-   Čte jen počty z Google Sheets po přihlášení (token sdílený s dashboard.html).
+   Čte jen počty z Google Sheets po přihlášení (sdílený token 'gdrive-shared-token',
+   plní ho profilend-auth.js / dashboard). Když cache chybí, ale zařízení je
+   registrované ('profilend-device-token'), token se tiše obnoví přímým fetch na
+   Railway — bez modulu, bez overlay (na homepage se PIN nikdy neukazuje).
    Nikdy nezobrazuje jména ani částky. Jakákoli chyba → zůstává statický odkaz.
    Spouští se až po window.load, aby neblokoval curtain reveal. */
 (function () {
   'use strict';
 
+  var RAILWAY = 'https://main-project-production-b048.up.railway.app';
+
   function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  /* Sdílený Google token: cache → tiché obnovení přes deviceToken → null */
+  function getSharedToken() {
+    try {
+      var token = localStorage.getItem('gdrive-shared-token');
+      var expiry = parseInt(localStorage.getItem('gdrive-shared-token-expiry') || '0', 10);
+      if (token && expiry > Date.now()) return Promise.resolve(token);
+
+      var device = localStorage.getItem('profilend-device-token');
+      if (!device) return Promise.resolve(null);
+      var devExp = parseInt(device.split('.')[0], 10);
+      if (!devExp || devExp <= Date.now()) return Promise.resolve(null);
+
+      return fetch(RAILWAY + '/api/google/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceToken: device })
+      })
+      .then(function (r) {
+        if (r.status === 401) {
+          // Zařízení zneplatněno (změna PINu) — smazat i mrtvou token cache
+          // (stejný úklid jako clearDevice v profilend-auth.js)
+          try {
+            localStorage.removeItem('profilend-device-token');
+            localStorage.removeItem('gdrive-shared-token');
+            localStorage.removeItem('gdrive-shared-token-expiry');
+          } catch (e) { /* no-op */ }
+          return null;
+        }
+        return r.ok ? r.json() : null;
+      })
+      .then(function (data) {
+        if (data && data.accessToken) {
+          try {
+            localStorage.setItem('gdrive-shared-token', data.accessToken);
+            localStorage.setItem('gdrive-shared-token-expiry', String(data.expiresAt || (Date.now() + 50 * 60000)));
+          } catch (e) { /* no-op */ }
+          return data.accessToken;
+        }
+        return null;
+      })
+      .catch(function () { return null; });
+    } catch (e) { return Promise.resolve(null); }
+  }
 
   function render(mine, waiting, overdue) {
     var el = document.getElementById('dashboardStrip');
@@ -442,13 +491,8 @@
       '<span class="strip-cta">Otevřít Dashboard <span class="strip-arrow">→</span></span>';
   }
 
-  function initStrip() {
+  function loadCounts(token, sheetId) {
     try {
-      var token = localStorage.getItem('dashboard-gtoken');
-      var expiry = parseInt(localStorage.getItem('dashboard-gtoken-expiry') || '0', 10);
-      var sheetId = localStorage.getItem('dashboard-sheet-id');
-      if (!token || !sheetId || !expiry || expiry <= Date.now()) return;
-
       var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
       var timer = controller ? setTimeout(function () { try { controller.abort(); } catch (e) {} }, 6000) : null;
 
@@ -478,6 +522,17 @@
         render(mine, waiting, overdue);
       })
       .catch(function () { if (timer) clearTimeout(timer); /* tichý fallback — statický odkaz zůstává */ });
+    } catch (e) { /* tichý fallback */ }
+  }
+
+  function initStrip() {
+    try {
+      var sheetId = localStorage.getItem('dashboard-sheet-id');
+      if (!sheetId) return;
+      getSharedToken().then(function (token) {
+        if (!token) return; /* bez tokenu → statický odkaz */
+        loadCounts(token, sheetId);
+      }).catch(function () { /* tichý fallback */ });
     } catch (e) { /* tichý fallback */ }
   }
 

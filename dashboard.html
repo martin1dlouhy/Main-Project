@@ -111,6 +111,7 @@
   .connect-panel h3{font-family:var(--font-display);font-weight:300;font-size:26px;
     letter-spacing:-0.02em;color:var(--text);margin-bottom:10px}
   .connect-panel p{font-size:13.5px;color:var(--text-mute);margin-bottom:24px;line-height:1.6}
+  .connect-panel .connect-note{font-size:12px;opacity:.75;margin:16px 0 0}
 
   /* ===== Modals ===== */
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(7,9,16,0.85);
@@ -294,6 +295,8 @@
     <h3>Připojte Google účet</h3>
     <p>Případy se ukládají do Google Sheets na vašem Drive — přihlášení ke Google je jediná brána k datům.</p>
     <button type="button" class="btn btn-primary btn-lg" onclick="connectGoogle()">Připojit Google</button>
+    <p class="connect-note" id="connect-note" style="display:none">Automatické přihlášení teď není dostupné — připojení je ruční.</p>
+    <a class="btn btn-secondary" id="setup-link" style="display:none;margin-top:14px" target="_blank" rel="noopener">Nastavit trvalé přihlášení (jednorázově)</a>
   </div>
 
   <!-- Board view (po připojení) -->
@@ -666,6 +669,7 @@
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="design-system/nav.js" defer></script>
+<script src="profilend-auth.js"></script>
 <script src="dashboard-bridge.js"></script>
 <script>
 // ============================================================
@@ -685,8 +689,9 @@ const TAB_AKCE = 'Akce';
 const TAB_UVERY = 'Uvery';
 
 // localStorage (ne sessionStorage — homepage widget klíče čte)
-const TOKEN_KEY = 'dashboard-gtoken';
-const TOKEN_EXPIRY_KEY = 'dashboard-gtoken-expiry';
+// Sdílené klíče pro celý web — plní je i profilend-auth.js
+const TOKEN_KEY = 'gdrive-shared-token';
+const TOKEN_EXPIRY_KEY = 'gdrive-shared-token-expiry';
 const SHEET_ID_KEY = 'dashboard-sheet-id';
 
 const PRIPADY_HEADER = [
@@ -723,6 +728,7 @@ const EVENT_FAZE = {
 const state = {
     accessToken: null,
     tokenExpiry: 0,
+    viaDeviceAuth: false, // token přišel z ProfilendAuth (Railway) — odpojení = reset zařízení
     spreadsheetId: null,
     sheetTabIds: {},
     headers: { Pripady: PRIPADY_HEADER.slice(), Akce: AKCE_HEADER.slice(), Uvery: UVERY_HEADER.slice() },
@@ -838,6 +844,7 @@ function handleTokenResponse(response) {
         showToast('Přihlášení selhalo: ' + (response.error_description || response.error), 'error');
         return;
     }
+    state.viaDeviceAuth = false; // token přišel z GIS, ne z Railway
     state.accessToken = response.access_token;
     state.tokenExpiry = Date.now() + ((response.expires_in || 3600) * 1000) - 60000;
     localStorage.setItem(TOKEN_KEY, state.accessToken);
@@ -869,7 +876,12 @@ function connectGoogle() {
 }
 
 function disconnectGoogle() {
-    if (state.accessToken && window.google && google.accounts && google.accounts.oauth2) {
+    // Revoke jen u čistě GIS tokenů — na zařízení s registrovaným device tokenem
+    // token téměř jistě pochází z Railway a jeho revoke by u Googlu zneplatnil
+    // i serverový refresh token pro všechna zařízení.
+    let deviceRegistered = false;
+    try { deviceRegistered = !!localStorage.getItem('profilend-device-token'); } catch (e) { /* no-op */ }
+    if (!deviceRegistered && state.accessToken && window.google && google.accounts && google.accounts.oauth2) {
         google.accounts.oauth2.revoke(state.accessToken, function () {});
     }
     state.accessToken = null;
@@ -889,7 +901,12 @@ function disconnectGoogle() {
 
 function onGoogleBtn() {
     if (state.accessToken) {
-        if (confirm('Odpojit Google účet? Data zůstanou v Google Sheets, jen se odhlásíte.')) {
+        if (state.viaDeviceAuth && window.ProfilendAuth) {
+            if (confirm('Odpojit toto zařízení? Data zůstanou v Google Sheets, jen se odhlásíte a příště zadáte PIN.')) {
+                try { ProfilendAuth.reset(); } catch (e) { /* no-op */ }
+                location.reload();
+            }
+        } else if (confirm('Odpojit Google účet? Data zůstanou v Google Sheets, jen se odhlásíte.')) {
             disconnectGoogle();
         }
     } else {
@@ -912,13 +929,28 @@ function updateGoogleUi(connected) {
 // ============================================================
 // GOOGLE DRIVE / SHEETS API (vzor database.html)
 // ============================================================
-async function gfetch(url, options = {}) {
+async function gfetch(url, options = {}, isRetry) {
     if (!state.accessToken) throw new Error('Nepřihlášeno ke Google');
     const headers = Object.assign({
         'Authorization': 'Bearer ' + state.accessToken
     }, options.headers || {});
     const res = await fetch(url, Object.assign({}, options, { headers }));
     if (res.status === 401) {
+        // Jednou zkusit tiché obnovení tokenu přes ProfilendAuth (trvalé přihlášení)
+        if (!isRetry && window.ProfilendAuth) {
+            try {
+                localStorage.removeItem(TOKEN_KEY);
+                localStorage.removeItem(TOKEN_EXPIRY_KEY);
+                const fresh = await ProfilendAuth.getGoogleToken({ interactive: false });
+                if (fresh) {
+                    state.viaDeviceAuth = true;
+                    state.accessToken = fresh;
+                    state.tokenExpiry = parseInt(localStorage.getItem(TOKEN_EXPIRY_KEY) || '0', 10) || (Date.now() + 50 * 60000);
+                    updateGoogleUi(true);
+                    return gfetch(url, options, true);
+                }
+            } catch (e) { /* tiché obnovení selhalo → stávající odhlášení níže */ }
+        }
         state.accessToken = null;
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(TOKEN_EXPIRY_KEY);
@@ -2564,8 +2596,60 @@ async function aresLookupInto(icoInputId, klientInputId) {
 // ============================================================
 // INIT
 // ============================================================
-document.addEventListener('DOMContentLoaded', function () {
+
+// Trvalé přihlášení: PIN zařízení → Google token z Railway (ProfilendAuth).
+// Když modul chybí nebo server nemá Google nastavený, degraduje na stávající GIS flow.
+function startAuth() {
+    if (!window.ProfilendAuth) { startGisFlow(false); return; }
+    try {
+        ProfilendAuth.ensureDevice()
+            .then(function (device) {
+                // null = uživatel dal Zrušit → rovnou GIS fallback (žádný druhý overlay);
+                // s registrovaným zařízením stačí neinteraktivní token (overlay netřeba)
+                if (!device) return null;
+                return ProfilendAuth.getGoogleToken({ interactive: false });
+            })
+            .then(function (token) {
+                if (token) {
+                    state.viaDeviceAuth = true;
+                    state.accessToken = token;
+                    state.tokenExpiry = parseInt(localStorage.getItem(TOKEN_EXPIRY_KEY) || '0', 10) || (Date.now() + 50 * 60000);
+                    updateGoogleUi(true);
+                    bootstrapApp();
+                } else {
+                    startGisFlow(true); // Railway nemá Google nastavený → ruční připojení
+                }
+            })
+            .catch(function () { startGisFlow(true); });
+    } catch (e) { startGisFlow(false); }
+}
+
+// Stávající GIS cesta (fallback) — showNote zobrazí vysvětlení v connect-panelu
+function startGisFlow(showNote) {
+    if (showNote) {
+        const note = document.getElementById('connect-note');
+        if (note) note.style.display = '';
+        // Odkaz na jednorázový setup trvalého přihlášení (nese deviceToken tohoto
+        // registrovaného zařízení — server ho vyžaduje jako bránu k /setup)
+        try {
+            const su = document.getElementById('setup-link');
+            if (su && window.ProfilendAuth && ProfilendAuth.isDeviceRegistered()) {
+                su.href = ProfilendAuth.RAILWAY + '/api/google/setup?device=' +
+                    encodeURIComponent(ProfilendAuth.getDeviceToken());
+                su.style.display = '';
+            }
+        } catch (e) { /* no-op */ }
+    }
     initTokenClient();
+    if (restoreToken()) {
+        updateGoogleUi(true);
+        bootstrapApp();
+    } else {
+        updateGoogleUi(false);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
     // Zavírání modalů klikem na overlay + Escape
     document.querySelectorAll('.modal-overlay').forEach(function (ov) {
         ov.addEventListener('mousedown', function (e) {
@@ -2583,12 +2667,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('nc-nazev').addEventListener('input', function () {
         this.dataset.auto = '';
     });
-    if (restoreToken()) {
-        updateGoogleUi(true);
-        bootstrapApp();
-    } else {
-        updateGoogleUi(false);
-    }
+    startAuth();
 });
 </script>
 </body>
