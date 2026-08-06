@@ -87,8 +87,13 @@
     background:var(--warning-tint);color:var(--warning);border:1px solid var(--warning)}
   .case-next{font-size:12px;color:var(--text-soft);margin-top:8px;line-height:1.4}
   .case-next .case-date{font-family:var(--font-mono);font-size:11px;color:var(--text-mute)}
-  .case-card.dragging{opacity:.4}
+  .case-card{cursor:grab}
+  .case-card.drag-source{opacity:.3}
   .case-card.drop-target{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-glow)}
+  .drag-ghost{position:fixed;left:0;top:0;z-index:300;pointer-events:none;margin:0;
+    box-shadow:var(--shadow-xl);border-color:var(--line-amber);opacity:.97}
+  body.drag-active{user-select:none;cursor:grabbing}
+  body.drag-active .case-card{cursor:grabbing}
   .case-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
   .case-foot-arrows{display:flex;gap:4px;flex-shrink:0;margin-left:auto}
   .card-action{font-size:11.5px;font-weight:600;color:var(--amber-warm);background:var(--amber-tint);
@@ -2128,14 +2133,10 @@ function renderCard(c) {
                 ' onclick="event.stopPropagation();quickActionFor(\'' + escapeHtml(c.id) + '\',\'' + act.typ + '\', false)">' +
                 escapeHtml(act.label) + '</button>';
     }
-    return '<div class="case-card' + (paused ? ' paused' : '') + '" draggable="true"' +
+    return '<div class="case-card' + (paused ? ' paused' : '') + '"' +
         ' data-id="' + escapeHtml(c.id) + '"' +
         ' onclick="openDetail(\'' + escapeHtml(c.id) + '\')"' +
-        ' ondragstart="cardDragStart(event,\'' + escapeHtml(c.id) + '\')"' +
-        ' ondragend="cardDragEnd(event)"' +
-        ' ondragover="cardDragOver(event,\'' + escapeHtml(c.id) + '\')"' +
-        ' ondragleave="cardDragLeave(event)"' +
-        ' ondrop="cardDrop(event,\'' + escapeHtml(c.id) + '\')">' +
+        ' onpointerdown="cardPointerDown(event,\'' + escapeHtml(c.id) + '\')">' +
         '<div class="case-name">' + escapeHtml(c.nazev || '(bez názvu)') + '</div>' +
         (c.klient ? '<div class="case-client">' + escapeHtml(c.klient) + '</div>' : '') +
         (amount ? '<div class="case-amount">' + escapeHtml(amount) + '</div>' : '') +
@@ -2157,87 +2158,162 @@ function renderCard(c) {
     '</div>';
 }
 
-// ── Drag & drop karet ──
-// Stejný sloupec: tažení přes horní/dolní část cílové karty ŽIVĚ přeskládá sloupec
-// (náhled ještě před puštěním myši); puštění pořadí uloží jedním dávkovým zápisem.
-// Střed cílové karty = nabídka sloučení (amber rámeček). Jiný sloupec: vždy sloučení.
-let dragCaseId = null;
+// ── Plynulé tažení karet (vlastní pointer-based drag, žádné HTML5 DnD) ──
+// Karta jede 1:1 pod kurzorem jako „ghost", původní karta dělá ztlumenou mezeru,
+// ostatní karty uhýbají FLIP animací. Stejný sloupec: horní/dolní část cílové
+// karty = zařadit, střed = sloučení (amber rámeček). Jiný sloupec: vždy sloučení.
+// Puštění uloží pořadí jedním dávkovým zápisem (persistColumnOrderFromDom).
+let drag = null; // { id, srcEl, ghost, started, startX, startY, offsetX, offsetY, mergeTargetId }
 
-function cardDragStart(e, caseId) {
-    dragCaseId = caseId;
-    try {
-        e.dataTransfer.setData('text/plain', caseId);
-        e.dataTransfer.effectAllowed = 'move';
-    } catch (err) { /* no-op */ }
-    e.currentTarget.classList.add('dragging');
+function cardPointerDown(e, caseId) {
+    if (e.button !== 0 || e.pointerType === 'touch') return; // dotyk = scroll, ne drag
+    if (e.target.closest('button')) return; // tlačítka na kartě fungují normálně
+    const el = e.currentTarget;
+    drag = {
+        id: caseId, srcEl: el, ghost: null, started: false,
+        startX: e.clientX, startY: e.clientY,
+        offsetX: 0, offsetY: 0, mergeTargetId: null
+    };
+    try { el.setPointerCapture(e.pointerId); } catch (err) { /* syntetické eventy */ }
+    el.addEventListener('pointermove', cardPointerMove);
+    el.addEventListener('pointerup', cardPointerUp);
+    el.addEventListener('pointercancel', cardPointerCancel);
 }
 
-function clearDropClasses(el) {
-    el.classList.remove('drop-target');
+function dragStartVisuals(e) {
+    const el = drag.srcEl;
+    const rect = el.getBoundingClientRect();
+    drag.offsetX = e.clientX - rect.left;
+    drag.offsetY = e.clientY - rect.top;
+    const ghost = el.cloneNode(true);
+    ghost.classList.add('drag-ghost');
+    ghost.style.width = rect.width + 'px';
+    document.body.appendChild(ghost);
+    drag.ghost = ghost;
+    el.classList.add('drag-source');
+    document.body.classList.add('drag-active');
+    drag.started = true;
+    positionGhost(e);
 }
 
-function cardDragEnd(e) {
-    dragCaseId = null;
-    e.currentTarget.classList.remove('dragging');
-    document.querySelectorAll('.case-card.drop-target').forEach(clearDropClasses);
-    // Po úspěšném dropu je state už zmutovaný → render ukáže nové pořadí;
-    // zrušené tažení (drop mimo) → vrátí kanonické pořadí ze state.
+function positionGhost(e) {
+    drag.ghost.style.transform = 'translate(' + (e.clientX - drag.offsetX) + 'px,' +
+        (e.clientY - drag.offsetY) + 'px) rotate(1.5deg)';
+}
+
+// FLIP: plynulá animace karet při přeskládání (spočítat pozice před/po, dorovnat transformem)
+function flipMove(colBody, moveFn) {
+    const cards = Array.from(colBody.querySelectorAll('.case-card'));
+    const first = new Map();
+    cards.forEach(function (el) { first.set(el, el.getBoundingClientRect().top); });
+    moveFn();
+    cards.forEach(function (el) {
+        const delta = first.get(el) - el.getBoundingClientRect().top;
+        if (!delta) return;
+        el.style.transition = 'none';
+        el.style.transform = 'translateY(' + delta + 'px)';
+    });
+    requestAnimationFrame(function () {
+        cards.forEach(function (el) {
+            el.style.transition = 'transform 160ms ease';
+            el.style.transform = '';
+        });
+        setTimeout(function () {
+            cards.forEach(function (el) { el.style.transition = ''; });
+        }, 200);
+    });
+}
+
+function cardPointerMove(e) {
+    if (!drag) return;
+    if (!drag.started) {
+        // práh 6 px odliší klik (detail) od tažení
+        if (Math.abs(e.clientX - drag.startX) + Math.abs(e.clientY - drag.startY) < 6) return;
+        dragStartVisuals(e);
+    }
+    e.preventDefault();
+    positionGhost(e);
+    // Hit-test pod kurzorem (ghost má pointer-events:none, nepřekáží)
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const targetCard = under ? under.closest('.case-card') : null;
+    // zrušit starý merge highlight, pokud kurzor odjel jinam
+    const prevHl = document.querySelector('.case-card.drop-target');
+    if (prevHl && prevHl !== targetCard) prevHl.classList.remove('drop-target');
+    drag.mergeTargetId = null;
+    if (!targetCard || targetCard === drag.srcEl || targetCard.classList.contains('drag-ghost')) return;
+    const targetId = targetCard.getAttribute('data-id');
+    const src = findCase(drag.id);
+    const tgt = findCase(targetId);
+    if (!src || !tgt) return;
+    const rect = targetCard.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const h = rect.height || 1;
+    if (src.faze !== tgt.faze || (y >= h * 0.3 && y <= h * 0.7)) {
+        // jiný sloupec kdekoli, stejný sloupec střed → nabídka sloučení
+        targetCard.classList.add('drop-target');
+        drag.mergeTargetId = targetId;
+        return;
+    }
+    targetCard.classList.remove('drop-target');
+    // řadicí zóna → plynule uhnout: mezera (zdrojová karta) se přesune před/za cíl
+    const parent = targetCard.parentNode;
+    if (parent !== drag.srcEl.parentNode) return; // jistota: jen tentýž sloupec
+    if (y < h * 0.3 && targetCard.previousElementSibling !== drag.srcEl) {
+        flipMove(parent, function () { parent.insertBefore(drag.srcEl, targetCard); });
+    } else if (y > h * 0.7 && targetCard.nextElementSibling !== drag.srcEl) {
+        flipMove(parent, function () { parent.insertBefore(drag.srcEl, targetCard.nextElementSibling); });
+    }
+}
+
+function cardPointerUp(e) {
+    const d = drag;
+    cleanupDragListeners();
+    drag = null;
+    if (!d) return;
+    if (!d.started) return; // byl to klik — normální onclick otevře detail
+    endDragVisuals(d);
+    suppressNextClick(); // po skutečném tažení nesmí proběhnout click → detail
+    const hl = document.querySelector('.case-card.drop-target');
+    if (hl) hl.classList.remove('drop-target');
+    if (d.mergeTargetId) {
+        renderAll(); // vrátit případné řadicí posuny náhledu
+        mergeCases(d.id, d.mergeTargetId); // ptá se potvrzovacím dialogem
+        return;
+    }
+    // uložit pořadí dle náhledu (mutace state + 1 dávkový zápis), pak kanonický render
+    persistColumnOrderFromDom(d.srcEl.parentNode);
     renderAll();
 }
 
-// Zóna podle pozice kurzoru na cílové kartě (clientY vůči kartě — offsetY by se
-// vztahoval k vnitřním elementům karty a zónu by rozbíjel)
-function dragZone(e, targetCase) {
-    const src = findCase(dragCaseId);
-    if (!src || !targetCase || src.faze !== targetCase.faze) return 'merge';
-    const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const h = rect.height || 1;
-    if (y < h * 0.3) return 'before';
-    if (y > h * 0.7) return 'after';
-    return 'merge';
-}
-
-function cardDragOver(e, caseId) {
-    if (!dragCaseId) return;
-    e.preventDefault(); // povolit drop
-    e.dataTransfer.dropEffect = 'move';
-    if (dragCaseId === caseId) return; // nad sebou samým — jen povolit drop
-    const zone = dragZone(e, findCase(caseId));
-    clearDropClasses(e.currentTarget);
-    if (zone === 'merge') {
-        e.currentTarget.classList.add('drop-target');
-        return;
-    }
-    // Živý náhled: taženou kartu rovnou přesunout v DOM před/za cílovou.
-    // (Po přesunu je kurzor nad taženou kartou → dragover se ignoruje → žádné kmitání.)
-    const draggedEl = document.querySelector('.case-card.dragging');
-    if (!draggedEl || draggedEl === e.currentTarget) return;
-    if (draggedEl.parentNode !== e.currentTarget.parentNode) return; // jistota: jen tentýž sloupec
-    if (zone === 'before' && e.currentTarget.previousElementSibling !== draggedEl) {
-        e.currentTarget.parentNode.insertBefore(draggedEl, e.currentTarget);
-    } else if (zone === 'after' && e.currentTarget.nextElementSibling !== draggedEl) {
-        e.currentTarget.parentNode.insertBefore(draggedEl, e.currentTarget.nextElementSibling);
+function cardPointerCancel() {
+    const d = drag;
+    cleanupDragListeners();
+    drag = null;
+    if (d && d.started) {
+        endDragVisuals(d);
+        renderAll();
     }
 }
 
-function cardDragLeave(e) {
-    clearDropClasses(e.currentTarget);
+function cleanupDragListeners() {
+    if (!drag) return;
+    const el = drag.srcEl;
+    el.removeEventListener('pointermove', cardPointerMove);
+    el.removeEventListener('pointerup', cardPointerUp);
+    el.removeEventListener('pointercancel', cardPointerCancel);
 }
 
-function cardDrop(e, targetId) {
-    e.preventDefault();
-    clearDropClasses(e.currentTarget);
-    const srcId = dragCaseId;
-    dragCaseId = null;
-    if (!srcId) return;
-    const zone = (srcId === targetId) ? 'reorder' : dragZone(e, findCase(targetId));
-    if (zone === 'merge') {
-        mergeCases(srcId, targetId); // uvnitř se ptá potvrzovacím dialogem, pak teprve slučuje
-        return;
-    }
-    // Puštění v režimu řazení → uložit pořadí sloupce přesně podle živého náhledu
-    persistColumnOrderFromDom(e.currentTarget.closest('.col-body'));
+function endDragVisuals(d) {
+    if (d.ghost && d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
+    d.srcEl.classList.remove('drag-source');
+    document.body.classList.remove('drag-active');
+}
+
+function suppressNextClick() {
+    document.addEventListener('click', function blocker(ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+    }, { capture: true, once: true });
 }
 
 // Uloží ruční pořadí sloupce podle aktuálního DOM náhledu: lokálně hned (žádné
