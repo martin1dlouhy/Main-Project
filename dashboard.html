@@ -87,6 +87,8 @@
     background:var(--warning-tint);color:var(--warning);border:1px solid var(--warning)}
   .case-next{font-size:12px;color:var(--text-soft);margin-top:8px;line-height:1.4}
   .case-next .case-date{font-family:var(--font-mono);font-size:11px;color:var(--text-mute)}
+  .case-card.dragging{opacity:.4}
+  .case-card.drop-target{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-glow)}
   .case-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
   .case-foot-arrows{display:flex;gap:4px;flex-shrink:0;margin-left:auto}
   .card-action{font-size:11.5px;font-weight:600;color:var(--amber-warm);background:var(--amber-tint);
@@ -1840,7 +1842,12 @@ function renderMergeList() {
 }
 
 async function confirmMergeInto(targetId) {
-    const src = findCase(state.detailId);
+    return mergeCases(state.detailId, targetId);
+}
+
+// Sloučení dvou případů — z detailu (modal) i drag & dropem karty na kartu.
+async function mergeCases(srcId, targetId) {
+    const src = findCase(srcId);
     const tgt = findCase(targetId);
     if (!src || !tgt || src.id === tgt.id) return;
     if (!confirm('Sloučit případ „' + (src.nazev || '') + '" do „' + (tgt.nazev || '') + '"?\n\n' +
@@ -2065,7 +2072,13 @@ function renderCard(c) {
                 ' onclick="event.stopPropagation();quickActionFor(\'' + escapeHtml(c.id) + '\',\'' + act.typ + '\', false)">' +
                 escapeHtml(act.label) + '</button>';
     }
-    return '<div class="case-card' + (paused ? ' paused' : '') + '" onclick="openDetail(\'' + escapeHtml(c.id) + '\')">' +
+    return '<div class="case-card' + (paused ? ' paused' : '') + '" draggable="true"' +
+        ' onclick="openDetail(\'' + escapeHtml(c.id) + '\')"' +
+        ' ondragstart="cardDragStart(event,\'' + escapeHtml(c.id) + '\')"' +
+        ' ondragend="cardDragEnd(event)"' +
+        ' ondragover="cardDragOver(event,\'' + escapeHtml(c.id) + '\')"' +
+        ' ondragleave="cardDragLeave(event)"' +
+        ' ondrop="cardDrop(event,\'' + escapeHtml(c.id) + '\')">' +
         '<div class="case-name">' + escapeHtml(c.nazev || '(bez názvu)') + '</div>' +
         (c.klient ? '<div class="case-client">' + escapeHtml(c.klient) + '</div>' : '') +
         (amount ? '<div class="case-amount">' + escapeHtml(amount) + '</div>' : '') +
@@ -2085,6 +2098,46 @@ function renderCard(c) {
             '</span>' +
         '</div>' +
     '</div>';
+}
+
+// ── Drag & drop: přetažení karty na kartu = nabídka sloučení případů ──
+let dragCaseId = null;
+
+function cardDragStart(e, caseId) {
+    dragCaseId = caseId;
+    try {
+        e.dataTransfer.setData('text/plain', caseId);
+        e.dataTransfer.effectAllowed = 'move';
+    } catch (err) { /* no-op */ }
+    e.currentTarget.classList.add('dragging');
+}
+
+function cardDragEnd(e) {
+    dragCaseId = null;
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.case-card.drop-target').forEach(function (el) {
+        el.classList.remove('drop-target');
+    });
+}
+
+function cardDragOver(e, caseId) {
+    if (!dragCaseId || dragCaseId === caseId) return; // sám na sebe ne
+    e.preventDefault(); // povolit drop
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drop-target');
+}
+
+function cardDragLeave(e) {
+    e.currentTarget.classList.remove('drop-target');
+}
+
+function cardDrop(e, targetId) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drop-target');
+    const srcId = dragCaseId;
+    dragCaseId = null;
+    if (!srcId || srcId === targetId) return;
+    mergeCases(srcId, targetId); // uvnitř se ptá confirm(), pak teprve slučuje
 }
 
 async function movePhase(caseId, dir) {
