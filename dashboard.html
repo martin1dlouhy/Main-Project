@@ -337,6 +337,10 @@
     <!-- Board tools -->
     <div class="board-tools">
       <input type="text" class="input board-search" id="board-search" placeholder="Hledat — název, klient, IČO…" oninput="onSearch()">
+      <div class="segmented" id="sort-toggle" title="Řazení karet ve sloupcích">
+        <button type="button" data-sort="vlastni" onclick="setSortMode('vlastni')">Vlastní pořadí</button>
+        <button type="button" data-sort="nejnovejsi" onclick="setSortMode('nejnovejsi')">Nejnovější</button>
+      </div>
       <div class="spacer"></div>
       <button type="button" class="btn btn-ghost btn-sm" onclick="reloadData()">Načíst znovu</button>
       <button type="button" class="btn btn-secondary btn-sm" id="btn-archive" onclick="toggleArchive()">Uzavřené <span id="archive-count"></span></button>
@@ -2071,16 +2075,37 @@ function renderBoard() {
     }).join('');
 }
 
-// Pořadí karet ve sloupci: ručně zařazené (sloupec `poradi`, drag & drop) nahoře
-// podle svého pořadí; ostatní pod nimi od nejnovějšího po nejstarší podle VZNIKU
-// případu (u importů = datum ocenění) — stabilní, karta neskáče po každé změně.
+// Režim řazení boardu — přepínač v liště, volba se pamatuje v prohlížeči.
+// 'vlastni'   = ručně zařazené (drag & drop) nahoře, ostatní pod nimi dle vzniku
+// 'nejnovejsi' = čistě podle data vzniku případu (nové vždy nahoře), poradi se ignoruje
+let sortMode = (function () {
+    try { return localStorage.getItem('dashboard-sort') === 'nejnovejsi' ? 'nejnovejsi' : 'vlastni'; }
+    catch (e) { return 'vlastni'; }
+})();
+
+function setSortMode(mode) {
+    sortMode = mode === 'nejnovejsi' ? 'nejnovejsi' : 'vlastni';
+    try { localStorage.setItem('dashboard-sort', sortMode); } catch (e) { /* no-op */ }
+    syncSortToggle();
+    renderAll();
+}
+
+function syncSortToggle() {
+    document.querySelectorAll('#sort-toggle button').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-sort') === sortMode);
+    });
+}
+syncSortToggle(); // markup je výš, skript běží až po něm
+
 function boardCompare(a, b) {
+    const dateCmp = (b.vytvoreno || b.aktualizovano || '').localeCompare(a.vytvoreno || a.aktualizovano || '');
+    if (sortMode === 'nejnovejsi') return dateCmp;
     const pa = (a.poradi != null && a.poradi !== '') ? parseFloat(a.poradi) : NaN;
     const pb = (b.poradi != null && b.poradi !== '') ? parseFloat(b.poradi) : NaN;
     if (!isNaN(pa) && !isNaN(pb)) return pa - pb;
     if (!isNaN(pa)) return -1; // ručně zařazené nahoře
     if (!isNaN(pb)) return 1;
-    return (b.vytvoreno || b.aktualizovano || '').localeCompare(a.vytvoreno || a.aktualizovano || '');
+    return dateCmp;
 }
 
 // Má případ v timeline akci daného typu?
@@ -2255,6 +2280,9 @@ function cardPointerMove(e) {
         return;
     }
     targetCard.classList.remove('drop-target');
+    // Ruční řazení má smysl jen v režimu „Vlastní pořadí" — v „Nejnovější" by se
+    // karty po puštění stejně srovnaly podle data (jen sloučení zůstává aktivní)
+    if (sortMode !== 'vlastni') return;
     // řadicí zóna → plynule uhnout: mezera (zdrojová karta) se přesune před/za cíl
     const parent = targetCard.parentNode;
     if (parent !== drag.srcEl.parentNode) return; // jistota: jen tentýž sloupec
@@ -2281,7 +2309,7 @@ function cardPointerUp(e) {
         return;
     }
     // uložit pořadí dle náhledu (mutace state + 1 dávkový zápis), pak kanonický render
-    persistColumnOrderFromDom(d.srcEl.parentNode);
+    if (sortMode === 'vlastni') persistColumnOrderFromDom(d.srcEl.parentNode);
     renderAll();
 }
 
