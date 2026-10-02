@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Úvěrová dokumentace | ProfiLend</title>
+    <title>Úvěrová dokumentace | Investment Tools</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="design-system/tokens.css">
@@ -1595,7 +1595,7 @@
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 </svg>
             </div>
-            <h2>ProfiLend</h2>
+            <h2>Investment Tools</h2>
             <p>Úvěrová dokumentace — zadejte PIN</p>
             <div class="pin-input-group">
                 <input type="password" class="pin-digit" maxlength="1" data-pin="0" inputmode="numeric" autofocus>
@@ -1627,7 +1627,7 @@
           </div>
         </div>
         <div class="nav-item">
-          <a class="nav-link current">ProfiLend <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+          <a class="nav-link current">Private Credit <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
           <div class="dropdown">
             <a class="dd-item" href="termsheet-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span><div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy &amp; export</div></div></a>
             <a class="dd-item" href="loan-documentation.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M6 10 V30 H22"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg></span><div><div class="dd-title">Úvěrová dokumentace</div><div class="dd-meta">AI generování</div></div></a>
@@ -1645,7 +1645,7 @@
       <div class="crumbs">
         <a href="index.html">Domů</a>
         <span class="sep">/</span>
-        <a href="apps.html#profilend">ProfiLend</a>
+        <a href="apps.html#private-credit">Private Credit</a>
         <span class="sep">/</span>
         <span class="current">Úvěrová dokumentace</span>
       </div>
@@ -1653,7 +1653,7 @@
 
     <div class="app-head">
       <div class="app-head-left">
-        <div class="eyebrow">ProfiLend · Dokumentace</div>
+        <div class="eyebrow">Private Credit · Dokumentace</div>
         <h1 class="app-title">Úvěrová <em>dokumentace</em></h1>
         <p class="app-sub">Generování úvěrových a zástavních smluv ze šablon na Google Drive pomocí Claude AI. Mapování dat z LV, validace tranší, export DOCX.</p>
       </div>
@@ -1668,7 +1668,7 @@
                     <div>
                         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.25rem;">
                             <h1 class="app-title">Úvěrová dokumentace</h1>
-                            <span class="profilend-badge">ProfiLend</span>
+                            <span class="profilend-badge">Private Credit</span>
                         </div>
                         <p class="app-subtitle">Generování smluvní dokumentace z Word šablon</p>
                     </div>
@@ -2576,7 +2576,7 @@
                     box.className = 'pin-overlay';
                     box.innerHTML =
                         '<div class="pin-box">' +
-                        '<h2>ProfiLend</h2>' +
+                        '<h2>Investment Tools</h2>' +
                         '<p id="deviceUnlockErrorMsg"></p>' +
                         '<button type="button" class="pin-button" id="deviceUnlockRetry">Zkusit znovu</button>' +
                         '</div>';
@@ -4118,7 +4118,7 @@
             if (all.length === 0) {
                 var driveOn = window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected();
                 var hint = driveOn
-                    ? 'Hledáno v Google Drive (ProfiLend Investment Tools/Term Sheet Generator/termsheets.json) i v lokálním prohlížeči.'
+                    ? 'Hledáno v Google Drive (Investment Tools/Term Sheet Generator/termsheets.json) i v lokálním prohlížeči.'
                     : 'Tip: připojte Google Drive vpravo dole — termsheety se synchronizují z Term Sheet Generátoru.';
                 listEl.innerHTML = '<p style="color: var(--text-secondary); padding: 20px; text-align: center;">Žádné uložené term sheety<br><span style="font-size:12px;color:var(--text-mute);">' + hint + '</span></p>';
                 return;
@@ -4328,10 +4328,12 @@
         // jinak Martin v náhledu uvidí staré pravidla a zmýlí se. Pass 2 dodatečná
         // sekce zde NENÍ (přidá se až při Pass 2 volání, ne v náhledu Pass 1).
         function buildSystemPromptPreview(templateName) {
-            return 'Jsi právní asistent ProfiLend specializovaný na vyplňování smluvní dokumentace pro úvěrové dealy.\n\n' +
+            return 'Jsi právní asistent Spolumajitelé Private Credit a.s. specializovaný na vyplňování smluvní dokumentace pro úvěrové dealy.\n\n' +
                 '=== KONTEXT (PLATÍ PRO KAŽDÝ TYP ŠABLONY) ===\n' +
-                'ProfiLend pracuje se sadou šablon: úvěrová smlouva, zástavní smlouva (k nemovitostem / podílům / akciím), plná moc k přímému prodeji, vinkulace pojistného plnění, notářský zápis, směnka, dohoda o úhradě nákladů ocenění a další.\n\n' +
-                'KAŽDÁ ŠABLONA (BEZ VÝJIMKY) JE PŘEDVYPLNĚNÁ KONKRÉTNÍMI ÚDAJI Z PŘEDCHOZÍHO DEALU. Šablony se v ProfiLendu znovupoužívají tak, že se vezme dokument z minulé smlouvy a přepíší se v něm konkrétní hodnoty na nového klienta a nový deal. To znamená:\n' +
+                'Spolumajitelé Private Credit pracuje se sadou šablon: úvěrová smlouva, zástavní smlouva (k nemovitostem / podílům / akciím), plná moc k přímému prodeji, vinkulace pojistného plnění, notářský zápis, směnka, dohoda o úhradě nákladů ocenění a další.\n\n' +
+                '=== VĚŘITEL (POSKYTOVATEL ÚVĚRU) ===\n' +
+                'Věřitelem je vždy Spolumajitelé Private Credit a.s., Pařížská 68/9, Josefov, 110 00 Praha 1 (IČO, spisová značka, účet a podepisující osoba: použij hodnoty z DATA; pokud v DATA chybí, vlož [DOPLNIT]). Pokud šablona uvádí jako věřitele, poskytovatele, zástavního věřitele nebo zmocněnce jiný subjekt (jiný název, IČO, sídlo, účet, podepisující osobu, kontakt), je to údaj z minulého dealu — NAHRAĎ ho údaji věřitele výše na všech místech dokumentu.\n\n' +
+                'KAŽDÁ ŠABLONA (BEZ VÝJIMKY) JE PŘEDVYPLNĚNÁ KONKRÉTNÍMI ÚDAJI Z PŘEDCHOZÍHO DEALU. Šablony se znovupoužívají tak, že se vezme dokument z minulé smlouvy a přepíší se v něm konkrétní hodnoty na nového klienta a nový deal. To znamená:\n' +
                 '- Najdeš v šabloně KONKRÉTNÍ jméno minulého klienta (např. "AGRI PARTNERS Nezamyslice s.r.o.", "QED FACILITY s.r.o.", "TSI Consulting s.r.o.") — to NENÍ legal text, je to data k nahrazení.\n' +
                 '- Najdeš tam KONKRÉTNÍ IČO, sídlo, spisovou značku, jméno jednatele — to NENÍ legal text, je to data k nahrazení.\n' +
                 '- Najdeš tam KONKRÉTNÍ částku, úrokovou sazbu, datum, čísla LV, čísla účtů, banku — to vše JE data, ne legal text.\n' +
@@ -4485,7 +4487,7 @@
                     // Plain text šablony zde NENÍ — ChatGPT.com/Claude.ai dostane šablonu
                     // jako .docx file attachment v konverzaci (Martin upload), který je
                     // úplnější než plain text extrakt.
-                    manualEl.value = 'ÚKOL: Mám historickou šablonu úvěrové smlouvy ProfiLend (' + templateName + ') připojenou jako .docx FILE ATTACHMENT v této konverzaci. Otevři ji přes python-docx (Document(uploaded_file_path)) a pracuj přímo s tím .docx. NEČEKEJ na to že ti šablonu pošlu jako text v chatu, je v attachmentu. Předvyplněná údaji z minulého dealu. Uprav pro nového klienta dle DAT NÍŽE.\n\n' +
+                    manualEl.value = 'ÚKOL: Mám historickou šablonu úvěrové smlouvy (' + templateName + ') připojenou jako .docx FILE ATTACHMENT v této konverzaci. Otevři ji přes python-docx (Document(uploaded_file_path)) a pracuj přímo s tím .docx. NEČEKEJ na to že ti šablonu pošlu jako text v chatu, je v attachmentu. Předvyplněná údaji z minulého dealu. Uprav pro nového klienta dle DAT NÍŽE.\n\n' +
                         '⚠ TŘI ABSOLUTNÍ PRAVIDLA:\n' +
                         '1. FORMÁTOVÁNÍ 100% ZACHOVAT (minule jsi rozbila fonty Aptos→Calibri, uživatel hodiny opravoval — to NESMÍ se opakovat).\n' +
                         '2. DOKUMENT JDE ROVNOU KLIENTOVI (žádné historické zbytky, smysluplný jako celek).\n' +
@@ -4599,7 +4601,7 @@
                         // Fallback: lokální build krátké manuální varianty (bez plain textu šablony).
                         var sysLocal = buildSystemPromptPreview(template.name);
                         var dataLocal = buildDataDescriptionPreview(formData);
-                        var manualLocal = 'ÚKOL: Mám historickou šablonu úvěrové smlouvy ProfiLend (' + template.name + ') připojenou jako .docx FILE ATTACHMENT v této konverzaci. Otevři ji přes python-docx, pracuj přímo s tím .docx. NEČEKEJ na text v chatu, je v attachmentu.\n\n' +
+                        var manualLocal = 'ÚKOL: Mám historickou šablonu úvěrové smlouvy (' + template.name + ') připojenou jako .docx FILE ATTACHMENT v této konverzaci. Otevři ji přes python-docx, pracuj přímo s tím .docx. NEČEKEJ na text v chatu, je v attachmentu.\n\n' +
                             '⚠ TŘI PRAVIDLA: 1) FORMÁTOVÁNÍ 100% ZACHOVAT (modifikuj run.text uvnitř existujících runs, NIKDY doc.add_paragraph). 2) Dokument jde rovnou klientovi. 3) Vrať .docx jako file attachment.\n\n' +
                             'POSTUP: A) nahradit údaje z DATA; B) smazat irrelevantní (přílohy LV co klient nemá, čísla řízení V-XXXX, staré banky, klauzule ručitele/vinkulace); C) přeformulovat klauzule (čerpání, poplatky); D) update křížové odkazy.\n\n' +
                             dataLocal;
@@ -5671,7 +5673,7 @@
         async function applyReplacementsWithTracking(originalXml, replacements) {
             var xml = originalXml;
             var date = new Date().toISOString();
-            var author = 'ProfiLend Investment Tools';
+            var author = 'Investment Tools';
             var id = 0;
             var yieldFn = function() { return new Promise(function(r) { setTimeout(r, 0); }); };
 

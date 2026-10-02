@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Term Sheet Generátor | ProfiLend</title>
+    <title>Term Sheet Generátor | Investment Tools</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="design-system/tokens.css">
@@ -1019,7 +1019,7 @@
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
             </div>
-            <h2>ProfiLend</h2>
+            <h2>Investment Tools</h2>
             <p>Zadejte PIN pro přístup k Term Sheet Generátoru</p>
             <div class="pin-input-group">
                 <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" data-index="0" autofocus>
@@ -1051,7 +1051,7 @@
       </div>
     </div>
     <div class="nav-item">
-      <a class="nav-link current">ProfiLend <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <a class="nav-link current">Private Credit <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
       <div class="dropdown">
         <a class="dd-item" href="termsheet-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span><div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy &amp; export</div></div></a>
         <a class="dd-item" href="loan-documentation.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M6 10 V30 H22"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg></span><div><div class="dd-title">Úvěrová dokumentace</div><div class="dd-meta">AI generování</div></div></a>
@@ -1067,7 +1067,7 @@
   <div class="crumbs">
     <a href="index.html">Domů</a>
     <span class="sep">/</span>
-    <a href="apps.html#profilend">ProfiLend</a>
+    <a href="apps.html#private-credit">Private Credit</a>
     <span class="sep">/</span>
     <span class="current">Term Sheet Generátor</span>
   </div>
@@ -1075,9 +1075,9 @@
 
 <div class="app-head">
   <div class="app-head-left">
-    <div class="eyebrow">ProfiLend · Dokumenty</div>
+    <div class="eyebrow">Private Credit · Dokumenty</div>
     <h1 class="app-title">Term Sheet <em>Generátor</em></h1>
-    <p class="app-sub">Tvorba a správa Term Sheetů pro klienty ProfiLend. PIN ochrana, automatický LTV, tranše, export do Word a PDF.</p>
+    <p class="app-sub">Tvorba a správa Term Sheetů pro klienty Spolumajitelé Private Credit. PIN ochrana, automatický LTV, tranše, export do Word a PDF.</p>
   </div>
 </div>
 
@@ -1091,7 +1091,7 @@
                     <div>
                         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.25rem;">
                             <h1 class="app-title">Term Sheet Generátor</h1>
-                            <span class="profilend-badge">ProfiLend</span>
+                            <span class="profilend-badge">Private Credit</span>
                         </div>
                         <p class="app-subtitle">Vytváření a správa Term Sheetů pro klienty</p>
                     </div>
@@ -1101,7 +1101,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                         <span id="folder-status-text">Připojit složku</span>
                     </button>
-                    <button class="btn btn-outline" onclick="document.getElementById('gdrive-template-input').click()" id="btn-upload-template" title="Nahrát DOCX šablonu na Google Drive (ProfiLend Investment Tools/Šablony/Term Sheet Generator)">
+                    <button class="btn btn-outline" onclick="document.getElementById('gdrive-template-input').click()" id="btn-upload-template" title="Nahrát DOCX šablonu na Google Drive (Investment Tools/Šablony/Term Sheet Generator)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         <span id="gdrive-template-status">Nahrát šablonu na Drive</span>
                     </button>
@@ -1466,7 +1466,7 @@
 
                     <div class="warning-banner">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <p><strong>Upozornění:</strong> Finální schválení financování závisí na interním ocenění nemovitosti ze strany ProfiLend. Uvedené podmínky jsou předběžné a mohou být upraveny na základě výsledků ocenění.</p>
+                        <p><strong>Upozornění:</strong> Finální schválení financování závisí na interním ocenění nemovitosti ze strany Spolumajitelé Private Credit a.s. Uvedené podmínky jsou předběžné a mohou být upraveny na základě výsledků ocenění.</p>
                     </div>
                 </div>
 
@@ -1518,7 +1518,7 @@
                     <ul>
                         <li><a href="index.html">Domů</a></li>
                         <li><a href="apps.html#osobni">Osobní</a></li>
-                        <li><a href="apps.html#profilend">ProfiLend</a></li>
+                        <li><a href="apps.html#private-credit">Private Credit</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">
@@ -1538,7 +1538,7 @@
     <script src="google-drive-sync.js"></script>
     <script>
     /* ================================================
-       TERM SHEET GENERATOR — ProfiLend
+       TERM SHEET GENERATOR — Investment Tools
        ================================================ */
 
     // ===== CONFIG =====
@@ -2482,15 +2482,15 @@
 
         var xml = '<w:p><w:pPr><w:spacing w:before="360" w:after="0"/></w:pPr><w:r><w:t></w:t></w:r></w:p>';
 
-        // Zvýrazněná výzva — stejný vizuální jazyk jako box Upozornění (ProfiLend modrá)
+        // Zvýrazněná výzva — stejný vizuální jazyk jako box Upozornění (barva značky)
         xml += '<w:p><w:pPr><w:pBdr>' +
-               '<w:top w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
-               '<w:left w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
-               '<w:bottom w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
-               '<w:right w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
+               '<w:top w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
+               '<w:left w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
+               '<w:bottom w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
+               '<w:right w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
                '</w:pBdr><w:shd w:val="clear" w:fill="E8F8FD"/>' +
                '<w:spacing w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
-               '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="22"/><w:color w:val="07B7ED"/></w:rPr>' +
+               '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="22"/><w:color w:val="2F4741"/></w:rPr>' +
                '<w:t xml:space="preserve">V případě odsouhlasení Term Sheetu prosíme o vyplnění údajů níže. </w:t></w:r>' +
                '<w:r><w:rPr>' + CAL + '<w:sz w:val="20"/><w:color w:val="555555"/></w:rPr>' +
                '<w:t>Vyplněný dokument nám prosím zašlete zpět.</w:t></w:r></w:p>';
@@ -2613,21 +2613,21 @@
             xml += buildClientDataBlockXml(data);
         }
 
-        // Upozornění — vždy na konci, ProfiLend barva #07B7ED
+        // Upozornění — vždy na konci, barva značky #2F4741
         xml += '<w:p><w:pPr><w:spacing w:before="400" w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
                '<w:r><w:t></w:t></w:r></w:p>';
         xml += '<w:p><w:pPr><w:pBdr>' +
-               '<w:top w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
-               '<w:left w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
-               '<w:bottom w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
-               '<w:right w:val="single" w:sz="6" w:space="8" w:color="07B7ED"/>' +
+               '<w:top w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
+               '<w:left w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
+               '<w:bottom w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
+               '<w:right w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
                '</w:pBdr>' +
                '<w:shd w:val="clear" w:fill="E8F8FD"/>' +
                '<w:spacing w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
-               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/><w:color w:val="07B7ED"/></w:rPr>' +
+               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/><w:color w:val="2F4741"/></w:rPr>' +
                '<w:t xml:space="preserve">Upozorn\u011bn\u00ed: </w:t></w:r>' +
                '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/><w:color w:val="555555"/></w:rPr>' +
-               '<w:t>Fin\u00e1ln\u00ed schv\u00e1len\u00ed financov\u00e1n\u00ed z\u00e1vis\u00ed na intern\u00edm ocen\u011bn\u00ed nemovitosti ze strany ProfiLend. Uveden\u00e9 podm\u00ednky jsou p\u0159edb\u011b\u017en\u00e9 a mohou b\u00fdt upraveny na z\u00e1klad\u011b v\u00fdsledk\u016f ocen\u011bn\u00ed.</w:t></w:r></w:p>';
+               '<w:t>Fin\u00e1ln\u00ed schv\u00e1len\u00ed financov\u00e1n\u00ed z\u00e1vis\u00ed na intern\u00edm ocen\u011bn\u00ed nemovitosti ze strany Spolumajitel\u00e9 Private Credit a.s. Uveden\u00e9 podm\u00ednky jsou p\u0159edb\u011b\u017en\u00e9 a mohou b\u00fdt upraveny na z\u00e1klad\u011b v\u00fdsledk\u016f ocen\u011bn\u00ed.</w:t></w:r></w:p>';
 
         return xml;
     }
@@ -2756,15 +2756,15 @@
                 children.push(new D.Paragraph({ children: [], spacing: { before: 360 } }));
                 children.push(new D.Paragraph({
                     children: [
-                        new D.TextRun({ text: 'V případě odsouhlasení Term Sheetu prosíme o vyplnění údajů níže. ', bold: true, size: 22, font: 'Calibri', color: '07B7ED' }),
+                        new D.TextRun({ text: 'V případě odsouhlasení Term Sheetu prosíme o vyplnění údajů níže. ', bold: true, size: 22, font: 'Calibri', color: '2F4741' }),
                         new D.TextRun({ text: 'Vyplněný dokument nám prosím zašlete zpět.', size: 20, font: 'Calibri', color: '555555' })
                     ],
                     shading: { type: D.ShadingType.CLEAR, fill: 'E8F8FD' },
                     border: {
-                        top: { style: D.BorderStyle.SINGLE, size: 6, color: '07B7ED', space: 8 },
-                        bottom: { style: D.BorderStyle.SINGLE, size: 6, color: '07B7ED', space: 8 },
-                        left: { style: D.BorderStyle.SINGLE, size: 6, color: '07B7ED', space: 8 },
-                        right: { style: D.BorderStyle.SINGLE, size: 6, color: '07B7ED', space: 8 }
+                        top: { style: D.BorderStyle.SINGLE, size: 6, color: '2F4741', space: 8 },
+                        bottom: { style: D.BorderStyle.SINGLE, size: 6, color: '2F4741', space: 8 },
+                        left: { style: D.BorderStyle.SINGLE, size: 6, color: '2F4741', space: 8 },
+                        right: { style: D.BorderStyle.SINGLE, size: 6, color: '2F4741', space: 8 }
                     },
                     spacing: { after: 120 }
                 }));
@@ -2812,7 +2812,7 @@
             children.push(new D.Paragraph({
                 children: [
                     new D.TextRun({ text: 'Upozorn\u011bn\u00ed: ', bold: true, size: 20, font: 'Calibri', italics: true }),
-                    new D.TextRun({ text: 'Fin\u00e1ln\u00ed schv\u00e1len\u00ed financov\u00e1n\u00ed z\u00e1vis\u00ed na intern\u00edm ocen\u011bn\u00ed nemovitosti ze strany ProfiLend. Uveden\u00e9 podm\u00ednky jsou p\u0159edb\u011b\u017en\u00e9 a mohou b\u00fdt upraveny na z\u00e1klad\u011b v\u00fdsledk\u016f ocen\u011bn\u00ed.', size: 20, font: 'Calibri', italics: true })
+                    new D.TextRun({ text: 'Fin\u00e1ln\u00ed schv\u00e1len\u00ed financov\u00e1n\u00ed z\u00e1vis\u00ed na intern\u00edm ocen\u011bn\u00ed nemovitosti ze strany Spolumajitel\u00e9 Private Credit a.s. Uveden\u00e9 podm\u00ednky jsou p\u0159edb\u011b\u017en\u00e9 a mohou b\u00fdt upraveny na z\u00e1klad\u011b v\u00fdsledk\u016f ocen\u011bn\u00ed.', size: 20, font: 'Calibri', italics: true })
                 ],
                 spacing: { before: 200 },
             }));
@@ -2971,7 +2971,7 @@
             return null;
         }
 
-        // 1) Prefer Google Drive template (ProfiLend Investment Tools / Šablony / Term Sheet Generator / Šablona - Term sheet.docx)
+        // 1) Prefer Google Drive template (Investment Tools / Šablony / Term Sheet Generator / Šablona - Term sheet.docx)
         if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
             try {
                 var driveBuf = await GDriveSync.loadSharedBinary('Šablony/Term Sheet Generator/' + TEMPLATE_FILENAME);

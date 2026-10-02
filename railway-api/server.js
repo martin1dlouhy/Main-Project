@@ -854,10 +854,12 @@ function formatCzAmount(num) {
 function buildLoanDocSystemPrompt(templateName, passNumber, mode) {
     mode = mode || 'api';
 
-    var sharedHead = 'Jsi právní asistent ProfiLend specializovaný na vyplňování smluvní dokumentace pro úvěrové dealy.\n\n' +
+    var sharedHead = 'Jsi právní asistent Spolumajitelé Private Credit a.s. specializovaný na vyplňování smluvní dokumentace pro úvěrové dealy.\n\n' +
         '=== KONTEXT (PLATÍ PRO KAŽDÝ TYP ŠABLONY) ===\n' +
-        'ProfiLend pracuje se sadou šablon: úvěrová smlouva, zástavní smlouva (k nemovitostem / podílům / akciím), plná moc k přímému prodeji, vinkulace pojistného plnění, notářský zápis, směnka, dohoda o úhradě nákladů ocenění a další.\n\n' +
-        'KAŽDÁ ŠABLONA (BEZ VÝJIMKY) JE PŘEDVYPLNĚNÁ KONKRÉTNÍMI ÚDAJI Z PŘEDCHOZÍHO DEALU. Šablony se v ProfiLendu znovupoužívají tak, že se vezme dokument z minulé smlouvy a přepíší se v něm konkrétní hodnoty na nového klienta a nový deal. To znamená:\n' +
+        'Spolumajitelé Private Credit pracuje se sadou šablon: úvěrová smlouva, zástavní smlouva (k nemovitostem / podílům / akciím), plná moc k přímému prodeji, vinkulace pojistného plnění, notářský zápis, směnka, dohoda o úhradě nákladů ocenění a další.\n\n' +
+        '=== VĚŘITEL (POSKYTOVATEL ÚVĚRU) ===\n' +
+        'Věřitelem je vždy Spolumajitelé Private Credit a.s., Pařížská 68/9, Josefov, 110 00 Praha 1 (IČO, spisová značka, účet a podepisující osoba: použij hodnoty z DATA; pokud v DATA chybí, vlož [DOPLNIT]). Pokud šablona uvádí jako věřitele, poskytovatele, zástavního věřitele nebo zmocněnce jiný subjekt (jiný název, IČO, sídlo, účet, podepisující osobu, kontakt), je to údaj z minulého dealu — NAHRAĎ ho údaji věřitele výše na všech místech dokumentu.\n\n' +
+        'KAŽDÁ ŠABLONA (BEZ VÝJIMKY) JE PŘEDVYPLNĚNÁ KONKRÉTNÍMI ÚDAJI Z PŘEDCHOZÍHO DEALU. Šablony se znovupoužívají tak, že se vezme dokument z minulé smlouvy a přepíší se v něm konkrétní hodnoty na nového klienta a nový deal. To znamená:\n' +
         '- Najdeš v šabloně KONKRÉTNÍ jméno minulého klienta (např. "AGRI PARTNERS Nezamyslice s.r.o.", "QED FACILITY s.r.o.", "TSI Consulting s.r.o.") — to NENÍ legal text, je to data k nahrazení.\n' +
         '- Najdeš tam KONKRÉTNÍ IČO, sídlo, spisovou značku, jméno jednatele — to NENÍ legal text, je to data k nahrazení.\n' +
         '- Najdeš tam KONKRÉTNÍ částku ("5.000.000 Kč"), úrokovou sazbu ("9,5 % p.a."), datum ("27.04.2029"), čísla LV ("LV 303"), čísla účtů ("123-456789/0100"), banku ("Komerční Banka, a.s.") — to vše JE data, ne legal text.\n' +
@@ -1174,7 +1176,7 @@ function buildLoanDocUserContent(templateName, dataDescription, previousReplacem
 // (formátování, struktura, tabulky) než plain text extrakt. Plain text
 // duplikoval obsah a zbytečně nafukoval prompt o 30-50 KB.
 function buildLoanDocManualUserContent(templateName, dataDescription, templateText) {
-    return 'ÚKOL: Mám historickou šablonu úvěrové smlouvy ProfiLend (' + (templateName || 'smlouva') + ') připojenou jako .docx FILE ATTACHMENT v této konverzaci. Otevři ho přes python-docx (Document(uploaded_file_path)) a pracuj přímo s tím .docx — formátování, struktura, runy. NEČEKEJ na to že ti šablonu pošlu jako text v chatu, je v attachmentu. Šablona je předvyplněná údaji z minulého dealu (jména, IČO, LV, čísla řízení, banky atd.). Uprav ji pro nového klienta dle DAT NÍŽE.\n\n' +
+    return 'ÚKOL: Mám historickou šablonu úvěrové smlouvy (' + (templateName || 'smlouva') + ') připojenou jako .docx FILE ATTACHMENT v této konverzaci. Otevři ho přes python-docx (Document(uploaded_file_path)) a pracuj přímo s tím .docx — formátování, struktura, runy. NEČEKEJ na to že ti šablonu pošlu jako text v chatu, je v attachmentu. Šablona je předvyplněná údaji z minulého dealu (jména, IČO, LV, čísla řízení, banky atd.). Uprav ji pro nového klienta dle DAT NÍŽE.\n\n' +
         '⚠ TŘI ABSOLUTNÍ PRAVIDLA (DODRŽ VŠECHNA):\n\n' +
         '1. FORMÁTOVÁNÍ ZACHOVAT 100%. Minule jsi vrátila dokument se změněnými fonty (Aptos→Calibri default) a uživatel musel hodiny ručně opravovat ve Wordu. To NESMÍ stát znovu. Pokud si nejsi 100% jistá nějakým formátováním, NESAHAJ na něj.\n\n' +
         '2. DOKUMENT JDE ROVNOU KLIENTOVI. Žádné historické zbytky, žádné odkazy na smazané přílohy, smlouva musí dávat smysl jako celek.\n\n' +
@@ -1485,11 +1487,11 @@ function normalizeImageRequest(body) {
         brandPreset: {
             schemaVersion: 1,
             slug: 'legacy',
-            displayName: 'ProfiLend',
+            displayName: 'Spolumajitelé Private Credit',
             identity: {
-                shortDescription: 'Czech B2B private debt — secured real estate loans',
+                shortDescription: 'Czech B2B private credit — business loans secured by real estate',
                 colors: dna.colors || {},
-                typography: { primaryFont: 'DM Sans', fallback: 'Inter, sans-serif' }
+                typography: { primaryFont: 'Inter Tight', fallback: 'Inter, sans-serif' }
             },
             voice: { tone: '', bannedWords: [], approvedCTAs: [] },
             visual: {
@@ -1523,12 +1525,12 @@ function buildBrandContext(brandPreset, brief) {
         qualityChecklist: Array.isArray(visual.qualityChecklist) ? visual.qualityChecklist : (visual.qualityChecklist ? [visual.qualityChecklist] : []),
         layoutTemplates: visual.layoutTemplates || {},
         colors: {
-            primary: colors.primary || colors.navy || '#0C2340',
-            accent: colors.accent || colors.teal || '#00B4D8',
-            background: colors.background || colors.gray || colors.white || '#F0F4F8',
+            primary: colors.primary || colors.navy || '#2F4741',
+            accent: colors.accent || colors.teal || '#D7AD5B',
+            background: colors.background || colors.gray || colors.white || '#F5F6F7',
             muted: colors.muted || '#94A3B8'
         },
-        typography: identity.typography || { primaryFont: 'DM Sans', fallback: 'Inter, sans-serif' },
+        typography: identity.typography || { primaryFont: 'Inter Tight', fallback: 'Inter, sans-serif' },
         brief: brief || {}
     };
 }
@@ -1572,7 +1574,7 @@ function buildImageUserPrompt(ctx) {
     parts.push('EXACT COLORS: primary ' + ctx.colors.primary + ' (headings, dark surfaces), accent ' + ctx.colors.accent +
         ' (CTAs, lines, highlights), background ' + ctx.colors.background + ', muted text ' + ctx.colors.muted +
         '. Do not introduce other colors.');
-    parts.push('TYPOGRAPHY: Use ' + (ctx.typography.primaryFont || 'DM Sans') + ' or ' + (ctx.typography.fallback || 'Inter, sans-serif') +
+    parts.push('TYPOGRAPHY: Use ' + (ctx.typography.primaryFont || 'Inter Tight') + ' or ' + (ctx.typography.fallback || 'Inter, sans-serif') +
         ' only. Maximum 2 font weights (bold for headlines, regular for body).');
     if (ctx.tone) parts.push('VISUAL MOOD: ' + trim(ctx.tone, 200) + '.');
     if (ctx.bannedWords.length > 0) {
@@ -1853,7 +1855,7 @@ app.post('/api/marketing/generate', async function (req, res) {
     // Reference posts from Google Drive (for style consistency)
     var referencePosts = Array.isArray(body.referencePosts) ? body.referencePosts.slice(0, 5) : [];
     var brandId = typeof body.brandId === 'string' ? body.brandId : 'profilend';
-    var brandName = typeof body.brandName === 'string' ? body.brandName : 'ProfiLend';
+    var brandName = typeof body.brandName === 'string' ? body.brandName : 'Spolumajitelé Private Credit';
     // Custom settings from frontend (user-configured in Nastavení)
     var customSystemPrompt = typeof body.customSystemPrompt === 'string' ? body.customSystemPrompt.trim() : '';
     var customBannedWords = Array.isArray(body.customBannedWords) ? body.customBannedWords : [];
@@ -1899,8 +1901,8 @@ app.post('/api/marketing/generate', async function (req, res) {
     if (brandColors && Object.keys(brandColors).length > 0) {
         knowledgeBase += 'FIREMNÍ BARVY: ';
         var colorParts = [];
-        if (brandColors.navy) colorParts.push('Navy ' + brandColors.navy);
-        if (brandColors.teal) colorParts.push('Teal ' + brandColors.teal);
+        if (brandColors.navy) colorParts.push('Primary ' + brandColors.navy);
+        if (brandColors.teal) colorParts.push('Accent ' + brandColors.teal);
         if (brandColors.white) colorParts.push('White ' + brandColors.white);
         if (brandColors.gray) colorParts.push('Gray ' + brandColors.gray);
         if (brandColors.primary) colorParts.push('Primary ' + brandColors.primary);
@@ -2113,8 +2115,8 @@ app.post('/api/marketing/generate', async function (req, res) {
                     }
                     
                     // Exact colors
-                    var nc = brandColors.navy || '#0B1F4D';
-                    var tc = brandColors.teal || '#26C9E5';
+                    var nc = brandColors.navy || '#2F4741';
+                    var tc = brandColors.teal || '#D7AD5B';
                     var gc = brandColors.gray || '#F5F6F7';
                     promptParts.push('EXACT COLORS: Navy ' + nc + ' for headings and dark backgrounds. Turquoise ' + tc + ' for accents, CTA buttons, icons, lines. Light background ' + gc + ' to #FAFAFA. CTA gradient #2BB9D5 to #63D9DB. Secondary text #5A5A5A to #6A6A6A. White #FFFFFF for cards and text on dark backgrounds.');
                     
@@ -2134,7 +2136,7 @@ app.post('/api/marketing/generate', async function (req, res) {
                     
                     // Format
                     var format = imageSettings.format || '1:1';
-                    promptParts.push('Format: ' + format + '. Modern sans-serif typography. Clean scannable layout. Generous whitespace. Rounded cards with subtle shadows. Thin turquoise accent lines. Simple linear icons.');
+                    promptParts.push('Format: ' + format + '. Modern sans-serif typography. Clean scannable layout. Generous whitespace. Rounded cards with subtle shadows. Thin gold accent lines. Simple linear icons.');
                     
                     imgPrompt = promptParts.join('\n\n');
                 }
@@ -2189,10 +2191,10 @@ app.post('/api/marketing/generate', async function (req, res) {
 
 function buildServerImagePrompt(visualType, people, scene, mood, format, theme, variationIdx) {
     var typeMap = {
-        'typ1': 'clean minimalist banner design with headline text area, subtle geometric corner elements in turquoise, ',
+        'typ1': 'clean minimalist banner design with headline text area, subtle geometric corner elements in gold, ',
         'typ2': 'structured infographic layout with timeline, numbered cards, connecting lines, ',
-        'typ3': 'educational single-concept card with turquoise accent stripe at top, centered typography, ',
-        'typ4': 'myth vs reality split layout with turquoise vertical stripe dividing two zones, ',
+        'typ3': 'educational single-concept card with gold accent stripe at top, centered typography, ',
+        'typ4': 'myth vs reality split layout with gold vertical stripe dividing two zones, ',
         'typ5a': 'professional photograph with clean text strip at bottom, ',
         'typ5b': 'full-bleed photograph with headline overlay in bottom corner, semi-transparent dark gradient, '
     };
@@ -2227,7 +2229,7 @@ function buildServerImagePrompt(visualType, people, scene, mood, format, theme, 
         (peopleMap[people] || '') +
         (sceneMap[scene] || '') +
         (moodMap[mood] || '') +
-        'Color palette: turquoise #00B4D8, navy #1A2B4A, white, light gray. ' +
+        'Color palette: gold #D7AD5B, dark green #2F4741, white, light gray. ' +
         'Format: ' + format + '. ' +
         'Sans-serif typography, clean modern design. ' +
         'No stock photo clichés, no neon colors. ' +
@@ -2426,8 +2428,8 @@ app.post('/api/database/build-prompt', function (req, res) {
 });
 
 function buildAIDiscoveryPrompt(mode, ctx) {
-    var header = 'Jsi expert na vyhledávání B2B kontaktů a zdrojů v České republice pro investiční firmu ProfiLend ' +
-        '(HNWI debt financing, úvěry 10–250M CZK proti komerčním nemovitostem v ČR).';
+    var header = 'Jsi expert na vyhledávání B2B kontaktů a zdrojů v České republice pro společnost Spolumajitelé Private Credit a.s. ' +
+        '(podnikatelské úvěry 3–100 mil. Kč pro právnické osoby se sídlem v ČR, zajištěné nemovitostmi v ČR).';
 
     var manualInstr = ctx.manual
         ? '\n\nJAK VRÁTIT ODPOVĚĎ (důležité pro strojové zpracování):\n' +

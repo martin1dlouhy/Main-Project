@@ -14,7 +14,8 @@
  *   const files = await GDriveSync.listFiles();
  *
  * All files are saved under:
- *   Google Drive / ProfiLend Investment Tools / {appName} /
+ *   Google Drive / Investment Tools / {appName} /
+ *   (dřívější název kořenové složky se dál najde — viz LEGACY_ROOT_FOLDER_NAME)
  */
 
 window.GDriveSync = (function() {
@@ -24,7 +25,9 @@ window.GDriveSync = (function() {
     // Sheets scope navíc: token se sdílí přes 'gdrive-shared-token' s dashboardem
     // a database (Sheets API) — užší token by jim ve sdílené cache působil 403.
     const SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
-    const ROOT_FOLDER_NAME = 'ProfiLend Investment Tools';
+    const ROOT_FOLDER_NAME = 'Investment Tools';
+    // Dřívější název kořenové složky — hledá se, dokud ji Martin na Drive nepřejmenuje
+    const LEGACY_ROOT_FOLDER_NAME = 'ProfiLend Investment Tools';
     // Sdílené klíče pro celý web (stejné používá ProfilendAuth i dashboard) —
     // nahrazují dřívější per-app klíče 'gdrive_access_token' / 'gdrive_token_expiry'.
     const TOKEN_STORAGE_KEY = 'gdrive-shared-token';
@@ -355,6 +358,9 @@ window.GDriveSync = (function() {
 
     async function ensureFolders() {
         rootFolderId = await findFolder(ROOT_FOLDER_NAME, null);
+        if (!rootFolderId) {
+            rootFolderId = await findFolder(LEGACY_ROOT_FOLDER_NAME, null);
+        }
         if (!rootFolderId) {
             rootFolderId = await createFolder(ROOT_FOLDER_NAME, null);
         }

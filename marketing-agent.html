@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marketing Agent | ProfiLend</title>
+    <title>Marketing Agent | Investment Tools</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="design-system/tokens.css">
@@ -1072,7 +1072,7 @@
 
         /* ===================== MOCKUP PREVIEW ===================== */
         .mockup {
-            background: linear-gradient(135deg, #1A2B4A 0%, #0F1A2E 100%);
+            background: linear-gradient(135deg, #2F4741 0%, #1E2F2A 100%);
             border-radius: 12px;
             padding: 2rem;
             color: white;
@@ -1099,7 +1099,7 @@
         .mockup-header {
             font-size: 20px;
             font-weight: 700;
-            color: #00B4D8;
+            color: #D7AD5B;
             margin-bottom: 1rem;
             position: relative;
             z-index: 1;
@@ -1727,9 +1727,9 @@
                         </a>
                     </div>
                     <div class="nav-item">
-                        <a href="apps.html#profilend" class="nav-link active">
+                        <a href="apps.html#private-credit" class="nav-link active">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                            ProfiLend
+                            Private Credit
                         </a>
                     </div>
                 </div>
@@ -1773,7 +1773,7 @@
       </div>
     </div>
     <div class="nav-item">
-      <a class="nav-link current">ProfiLend <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <a class="nav-link current">Private Credit <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
       <div class="dropdown">
         <a class="dd-item" href="termsheet-generator.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span><div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy &amp; export</div></div></a>
         <a class="dd-item" href="loan-documentation.html"><span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M6 10 V30 H22"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg></span><div><div class="dd-title">Úvěrová dokumentace</div><div class="dd-meta">AI generování</div></div></a>
@@ -1789,7 +1789,7 @@
   <div class="crumbs">
     <a href="index.html">Domů</a>
     <span class="sep">/</span>
-    <a href="apps.html#profilend">ProfiLend</a>
+    <a href="apps.html#private-credit">Private Credit</a>
     <span class="sep">/</span>
     <span class="current">Marketing Agent</span>
   </div>
@@ -1797,9 +1797,9 @@
 
 <div class="app-head">
   <div class="app-head-left">
-    <div class="eyebrow">ProfiLend · Marketing</div>
+    <div class="eyebrow">Private Credit · Marketing</div>
     <h1 class="app-title">Marketing <em>Agent</em></h1>
-    <p class="app-sub">AI generování příspěvků pro sociální sítě podle ProfiLend brand guide. Brand Studio, batch tvorba, generování obrázků, GDrive sync.</p>
+    <p class="app-sub">AI generování příspěvků pro sociální sítě podle brand guide značky. Brand Studio, batch tvorba, generování obrázků, GDrive sync.</p>
   </div>
 </div>
 
@@ -1871,9 +1871,9 @@
                             <div class="form-group">
                                 <label class="form-label required">Brand / Profil</label>
                                 <div class="custom-dropdown" data-name="brandProfile" id="brandDropdown">
-                                    <div class="custom-dropdown-trigger" data-value="profilend">ProfiLend</div>
+                                    <div class="custom-dropdown-trigger" data-value="profilend">Spolumajitelé Private Credit</div>
                                     <div class="custom-dropdown-menu" id="brandDropdownMenu">
-                                        <div class="custom-dropdown-option selected" data-value="profilend">ProfiLend</div>
+                                        <div class="custom-dropdown-option selected" data-value="profilend">Spolumajitelé Private Credit</div>
                                     </div>
                                 </div>
                             </div>
@@ -2202,7 +2202,7 @@
                     <!-- Settings Tabs -->
                     <div class="settings-tabs">
                         <button class="settings-tab active" data-settings-tab="ai">AI Nastavení</button>
-                        <button class="settings-tab" data-settings-tab="profilend">ProfiLend Brand</button>
+                        <button class="settings-tab" data-settings-tab="profilend">Značka</button>
                     </div>
 
                     <!-- TAB: AI Nastavení -->
@@ -2222,7 +2222,7 @@
                         <div class="setting-card-editable">
                             <h4>AI System Prompt</h4>
                             <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 0.75rem;">Hlavní instrukce pro AI při generování příspěvků. Tento text se posílá jako systémový prompt.</p>
-                            <textarea class="setting-textarea" id="settingSystemPrompt" style="min-height: 180px;" placeholder="Zadejte instrukce pro AI...">Jsi zkušený marketingový specialista pro ProfiLend — nebankovní financování zajištěné nemovitostmi v ČR. Generuješ příspěvky na sociální sítě podle nastavení kanálu, cílové skupiny a tónu komunikace. Vždy dodržuj brand voice: věcný, sebevědomý, lidský, přímý, expertní. Nikdy nepoužívej zakázaná slova.</textarea>
+                            <textarea class="setting-textarea" id="settingSystemPrompt" style="min-height: 180px;" placeholder="Zadejte instrukce pro AI...">Jsi zkušený marketingový specialista pro Spolumajitelé Private Credit — podnikatelské úvěry 3–100 mil. Kč pro právnické osoby se sídlem v ČR, zajištěné nemovitostmi v ČR. Generuješ příspěvky na sociální sítě podle nastavení kanálu, cílové skupiny a tónu komunikace. Vždy dodržuj brand voice: věcný, sebevědomý, lidský, přímý, expertní. Klientům vykej. Nikdy nepoužívej zakázaná slova.</textarea>
                         </div>
 
                         <!-- Tone Tags -->
@@ -2269,7 +2269,7 @@
                             <h4>CTA knihovna</h4>
                             <div id="ctaList">
                                 <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
-                                    <input type="text" class="cta-item-text" value="Zjistit více na ProfiLend.cz" style="flex: 1; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit; font-size: 13px;">
+                                    <input type="text" class="cta-item-text" value="Zjistit více na našem webu" style="flex: 1; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit; font-size: 13px;">
                                     <button onclick="this.parentElement.remove()" style="padding: 0.5rem; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;">×</button>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
@@ -2281,7 +2281,7 @@
                                     <button onclick="this.parentElement.remove()" style="padding: 0.5rem; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;">×</button>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
-                                    <input type="text" class="cta-item-text" value="Začněte s ProfiLend dnes" style="flex: 1; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit; font-size: 13px;">
+                                    <input type="text" class="cta-item-text" value="Získat nabídku" style="flex: 1; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-surface); color: var(--text-primary); font-family: inherit; font-size: 13px;">
                                     <button onclick="this.parentElement.remove()" style="padding: 0.5rem; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 16px;">×</button>
                                 </div>
                             </div>
@@ -2318,13 +2318,13 @@
 
                     </div><!-- /settingsTab-ai -->
 
-                    <!-- TAB: ProfiLend Brand -->
+                    <!-- TAB: Značka -->
                     <div class="settings-tab-content" id="settingsTab-profilend">
                         <div style="display: flex; flex-direction: column; gap: 1.25rem;">
 
                             <div class="setting-card-editable" style="display: flex; align-items: center; justify-content: space-between;">
                                 <div>
-                                    <h4>ProfiLend Brand Preset</h4>
+                                    <h4>Brand preset</h4>
                                     <p style="font-size: 12px; color: var(--text-secondary); margin-top: 0.25rem;">Vlastní styl a reference se automaticky zapracují do každého image promptu</p>
                                 </div>
                                 <span class="preset-indicator active" id="brandPresetStatus">● Aktivní</span>
@@ -2333,18 +2333,18 @@
                             <div class="setting-card-editable">
                                 <h4>Vizuální styl — hlavní popis</h4>
                                 <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 0.75rem;">Detailní popis vizuálního stylu pro image prompt.</p>
-                                <textarea class="style-desc-textarea" id="brandStyleMain" rows="5">Čistý, moderní korporátní design. Dominantní barvy: navy (#0C2340) a teal (#00B4D8). Bílé pozadí nebo jemně šedé (#F0F4F8). Infografický styl s číslovanými kroky (1, 2, 3, 4) v tealových kruzích. Velkorysý bílý prostor. Sans-serif typografie (DM Sans / Inter). Žádné stock fotky, žádné neonové barvy. Profesionální fintech estetika.</textarea>
+                                <textarea class="style-desc-textarea" id="brandStyleMain" rows="5">Čistý, moderní korporátní design. Dominantní barvy: tmavě zelená (#2F4741) a zlatá (#D7AD5B). Bílé pozadí nebo jemně šedé (#F5F6F7). Infografický styl s číslovanými kroky (1, 2, 3, 4) ve zlatých kruzích. Velkorysý bílý prostor. Typografie Inter Tight, titulky Playfair Display. Žádné stock fotky, žádné neonové barvy. Profesionální fintech estetika.</textarea>
                             </div>
 
                             <div class="setting-card-editable">
                                 <h4>Preferované layouty</h4>
                                 <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 0.75rem;">Popisy layoutů pro každou šablonu — zapracují se do AI promptu.</p>
                                 <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">A — Procesní infografika</label><textarea class="style-desc-textarea" id="layoutDescA" rows="3">Číslované kroky (1-4) vertikálně. Každý krok má tealový kruh, tučný nadpis, krátký popis. Světle šedé pozadí. CTA tlačítko dole.</textarea></div>
+                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">A — Procesní infografika</label><textarea class="style-desc-textarea" id="layoutDescA" rows="3">Číslované kroky (1-4) vertikálně. Každý krok má zlatý kruh, tučný nadpis, krátký popis. Světle šedé pozadí. CTA tlačítko dole.</textarea></div>
                                     <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">B — Mýtus vs. Realita</label><textarea class="style-desc-textarea" id="layoutDescB" rows="3">Nahoře červený X s mýtem, dole zelený check s faktem. Bílé pozadí. Tučná sans-serif typografie.</textarea></div>
-                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">C — Srovnání</label><textarea class="style-desc-textarea" id="layoutDescC" rows="3">Dva sloupce s tealovým dělítkem. Každý má ikonu a body. Bílé pozadí se šedým panelem.</textarea></div>
-                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">D — Headline banner</label><textarea class="style-desc-textarea" id="layoutDescD" rows="3">Velký statement (max 8 slov). Navy/bílé pozadí. Tealové akcentní linie. CTA tlačítko.</textarea></div>
-                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">E — Foto s overlayem</label><textarea class="style-desc-textarea" id="layoutDescE" rows="3">Fotografie (35-50% průhlednost) s tmavým gradientem. Bílý headline. Datové body v tealových boxech.</textarea></div>
+                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">C — Srovnání</label><textarea class="style-desc-textarea" id="layoutDescC" rows="3">Dva sloupce se zlatým dělítkem. Každý má ikonu a body. Bílé pozadí se šedým panelem.</textarea></div>
+                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">D — Headline banner</label><textarea class="style-desc-textarea" id="layoutDescD" rows="3">Velký statement (max 8 slov). Tmavě zelené/bílé pozadí. Zlaté akcentní linie. CTA tlačítko.</textarea></div>
+                                    <div><label style="font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:0.35rem;">E — Foto s overlayem</label><textarea class="style-desc-textarea" id="layoutDescE" rows="3">Fotografie (35-50% průhlednost) s tmavým gradientem. Bílý headline. Datové body ve zlatých boxech.</textarea></div>
                                 </div>
                             </div>
 
@@ -2361,10 +2361,10 @@
                                 <h4>Brand barvy</h4>
                                 <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 0.75rem;">Automaticky se vkládají do image promptu.</p>
                                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;">
-                                    <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorNavy" value="#0C2340" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Navy</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorNavyHex">#0C2340</div></div></div>
-                                    <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorTeal" value="#00B4D8" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Teal</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorTealHex">#00B4D8</div></div></div>
+                                    <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorNavy" value="#2F4741" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Zelená</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorNavyHex">#2F4741</div></div></div>
+                                    <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorTeal" value="#D7AD5B" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Zlatá</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorTealHex">#D7AD5B</div></div></div>
                                     <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorWhite" value="#FFFFFF" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Bílá</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorWhiteHex">#FFFFFF</div></div></div>
-                                    <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorGray" value="#F0F4F8" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Sv. šedá</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorGrayHex">#F0F4F8</div></div></div>
+                                    <div style="display:flex;align-items:center;gap:0.5rem;"><input type="color" id="brandColorGray" value="#F5F6F7" style="width:36px;height:36px;border:1.5px solid var(--border-color);border-radius:8px;padding:2px;cursor:pointer;"><div><div style="font-size:12px;font-weight:600;">Sv. šedá</div><div style="font-size:11px;color:var(--text-secondary);" id="brandColorGrayHex">#F5F6F7</div></div></div>
                                 </div>
                             </div>
                         </div>
@@ -2383,7 +2383,7 @@
                     <div class="form-column" style="grid-column: 1;">
                         <!-- Logo Upload Section -->
                         <div class="form-section">
-                            <h3>Logo ProfiLend</h3>
+                            <h3>Logo značky</h3>
                             <p style="font-size:12px;color:var(--text-secondary);margin-bottom:1rem;">Nahrajte transparentní PNG logo. Logo se automaticky přidá na generované obrázky.</p>
 
                             <!-- Logo preview area -->
@@ -2429,10 +2429,10 @@
                         <div class="form-section">
                             <h3>Firemní barvy</h3>
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-                                <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Navy Dark</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#0C2340;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#0C2340</span></div></div>
-                                <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Teal</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#00B4D8;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#00B4D8</span></div></div>
+                                <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Zelená</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#2F4741;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#2F4741</span></div></div>
+                                <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Zlatá</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#D7AD5B;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#D7AD5B</span></div></div>
                                 <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Bílá</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#FFFFFF;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#FFFFFF</span></div></div>
-                                <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Světle šedá</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#F0F4F8;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#F0F4F8</span></div></div>
+                                <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:0.5rem;">Světle šedá</label><div style="display:flex;gap:0.5rem;align-items:center;"><div style="width:32px;height:32px;border-radius:8px;background:#F5F6F7;border:1px solid var(--border-color);"></div><span style="font-size:12px;color:var(--text-secondary);">#F5F6F7</span></div></div>
                             </div>
                         </div>
                     </div>
@@ -2547,24 +2547,24 @@
             return new Blob([u], { type: mime });
         }
 
-        // ================== PROFILEND BRAND PRESETS (Google Drive) ==================
+        // ================== BRAND PRESETS (Google Drive) ==================
         var brandPresets = {
             styleMain: '', layoutDescA: '', layoutDescB: '', layoutDescC: '', layoutDescD: '', layoutDescE: '',
-            colors: { navy: '#0B1F4D', teal: '#26C9E5', white: '#FFFFFF', gray: '#F5F6F7' },
+            colors: { navy: '#2F4741', teal: '#D7AD5B', white: '#FFFFFF', gray: '#F5F6F7' },
             igScreenshots: [], igScreenshotCount: 0
         };
         
         // ================== BRAND DNA DEFAULTS ==================
-        // Extracted from ProfiLend Brand DNA document (ChatGPT analysis of 5 IG reference posts)
+        // Brand DNA Spolumajitelé Private Credit (paleta a písma podle logomanuálu)
         var BRAND_DNA_DEFAULTS = {
-            styleMain: "Vizualy pro ProfiLend maji pusobit jako komunikace seriozni financni instituce zamerene na firmy, developery a investory. Celkovy dojem musi byt profesionalni, sebevedomy, vecny, lidsky a stabilni. Komunikace nesmi pripominat spotrebitelske pujcky, slevove bannery ani retailovou reklamu. Hlavni barevny zaklad tvori tmava navy (#0B1F4D, pripadne #081A4E pro tmave hero layouty) a tyrkysova az cyan jako akcent (#26C9E5, #2BB9D5, #53D6E0). Svetle layouty maji stat na off-white nebo velmi svetle sede (#F5F6F7, #F7F7F8, #FAFAFA). Text musi byt vzdy vysoce citelny: navy na svetlem pozadi, bily na tmavem pozadi a stredni seda pro sekundarni vysvetlujici text. Typografie ma byt moderni sans-serif, s jasnou hierarchii: kratke a silne headline, semibold ci bold mezititulky a usporny body text. Layout musi byt cisty a dobre skenovatelny behem nekolika vterin. Funguji zaoblene karty, tenke akcentni linky, checklisty, timeline, jednoduche linearni ikony a CTA tlacitka s velkym radiem. Pri pouziti fotografie je nutne pracovat s tmavym overlayem tam, kde pres fotografii vede text. Pozadi muze nest jemny grid, polygonalni formy nebo svetelne body, ale jen jako podpurny prvek. Nikdy se nesmi pouzivat kriklave slevove prvky, cervena urgence, 3D efekty, lacine stock klise ani preplacany layout.",
-            layoutDescA: "Pouzivej vertikalni nebo ctvercovy layout s titulkem nahore vlevo a logem idealne nahore vpravo. Hlavni obsah stav na 3-5 krocich, ktere jsou pod sebou ve forme bilych zaoblenych karet propojenych tenkou tyrkysovou linkou. Kazdy krok ma cislo, jednoduchou linearni ikonu a kratke vysvetleni. Pozadi svetle (#F5F6F7 az #FAFAFA), karty bile se subtilnim stinem. Nadpis a klicova slova v navy, akcenty v tyrkysove. CTA tlacitko dej dolu. Text v jednom kroku drz kratky: nadpis 3-10 slov, doprovodna veta max 8-14 slov. Horni pravy roh nech volny pokud je tam logo.",
-            layoutDescB: "Pracuj se dvema jasne oddelenymi bloky: mytus a realita. Mohou byt pod sebou nebo vedle sebe. Mytus muze mit neutralnejsi pozadi a symbol krizku, realita ma mit silnejsi navy nebo bilou kartu s tyrkysovymi check prvky. Nepouzivej lacinou cervenozelenou logiku. Typografie musi byt kratka a primocara, s vysokym kontrastem a dostatkem mista kolem textu. Kazda strana ma mit jeden vyrok a jedno kratke vysvetleni. CTA je volitelne. Text drz v rozsahu priblizne 12-20 slov na blok.",
-            layoutDescC: "Vytvor vyvazeny dvousloupcovy layout pro porovnani dvou moznosti, konceptu nebo pristupu. Nahore dej headline, pod nej dva stejne siroke sloupce oddelene tenkou linkou nebo dostatecnym whitespace. Kazdy sloupec muze obsahovat nadpis, ikonu a 3-6 kratkych bodu. Funguje bile nebo svetle sede pozadi s bilymi kartami. Nadpisy v navy, podpurny text ve stredni sede, ikony a zvyrazneni v tyrkysove. CTA muze byt dole na stred nebo dole vlevo. Nepreplnuj ani jednu stranu; vizualni vaha obou sloupcu musi byt vyrovnana.",
-            layoutDescD: "Pouzivej minimalisticky layout, kde hlavni roli hraje jedna silna veta nebo dvojradkovy claim. Headline umisti do horni poloviny, nejlepe vlevo, a dej mu vyraznou velikost. Pod nej patri kratka tyrkysova akcentni linka a jedna kratka vysvetlujici veta nebo dva usporne radky. Logo muze byt nahore vpravo nebo nize v ramci kompozice, ale vzdy s dostatecnou ochrannou zonou. CTA dej nize, idealne vlevo nebo na stred. Headline by mel mit maximalne 8-12 slov, podpurny text 15-25 slov. Vhodne jsou jemne polygonalni nebo linearni elementy v rohu, nikdy ne dominantni ozdoby.",
-            layoutDescE: "Pouzij realistickou fotografii profesionala, kancelarske budovy nebo relevantniho byznysoveho prostredi. Textova cast musi byt umistena v zone s tmavym overlayem, aby byla bila typografie perfektne citelna. Subjekt fotografie idealne stoji vpravo, zatimco vlevo je headline, benefity a CTA. Headline ma byt kratky a silny, pod nim 2-4 strucne benefity s linearnimi tyrkysovymi ikonami. CTA tlacitko ma mit velke zaobleni a silny kontrast. Nepouzivej fotografie s generickym usmevem bez relevance, rusne pozadi pod textem ani text pres oblicej.",
-            antiPatterns: "Zakazane jsou cervene nebo oranzove urgentni slevove barvy a veskerou estetika spotrebitelskych pujcek. Nepouzivat neonove barvy, efektni 3D tlacitka, plasticke ikonky nebo prehnane glow efekty. Nepouzivat vice nesouvisejicich fontu; drzet jednu sans-serif rodinu. Vyhnout se stock foto klise typu potreseni rukou, klice od domu v dlani, prasatko, padajici bankovky. Nepouzivat preplacany layout s prilis mnoha boxy, ikonami nebo textem. Nepokladat text prilis blizko k okrajum ani pres vizualne rusne casti fotografie. Nepouzivat slaby kontrast typu seda na sede. Nepouzivat agresivni prodejni copy ve stylu BEST DEAL, 100% GARANCE, LIMITOVANA NABIDKA.",
-            qualityChecklist: "1. Pouziva vizual jen firemni paletu navy, tyrkysova, bila, svetle seda? 2. Je headline kratky, jasny a vizualne dominantni? 3. Je typografie jednotna, bezpatkova a dobre citelna? 4. Je layout cisty a srozumitelny behem nekolika sekund? 5. Jsou karty, ikony a delici prvky presne zarovnane? 6. Je CTA dostatecne viditelne, ale ne kriklave? 7. Je kolem textu, CTA a loga dostatek volneho prostoru? 8. Je pouzita fotografie duveryhodna a ne klisovita? 9. Jsou ikony jednoduche, linearni a stylove jednotne? 10. Pusobi vysledek jako komunikace pro firmy a investory, ne jako retailova pujcka?"
+            styleMain: "Vizualy pro Spolumajitele Private Credit maji pusobit jako komunikace seriozni financni instituce zamerene na firmy, developery a investory. Celkovy dojem musi byt profesionalni, sebevedomy, vecny, lidsky a stabilni. Komunikace nesmi pripominat spotrebitelske pujcky, slevove bannery ani retailovou reklamu. Hlavni barevny zaklad tvori tmave zelena (#2F4741) a zlata jako akcent (#D7AD5B), doplnkove bila a cerna. Svetle layouty maji stat na off-white nebo velmi svetle sede (#F5F6F7, #F7F7F8, #FAFAFA). Text musi byt vzdy vysoce citelny: tmave zelena na svetlem pozadi, bily na tmavem pozadi a stredni seda pro sekundarni vysvetlujici text. Typografie: Inter Tight pro text, Playfair Display pro titulky, s jasnou hierarchii: kratke a silne headline, semibold ci bold mezititulky a usporny body text. Layout musi byt cisty a dobre skenovatelny behem nekolika vterin. Funguji zaoblene karty, tenke akcentni linky, checklisty, timeline, jednoduche linearni ikony a CTA tlacitka s velkym radiem. Pri pouziti fotografie je nutne pracovat s tmavym overlayem tam, kde pres fotografii vede text. Pozadi muze nest jemny grid, polygonalni formy nebo svetelne body, ale jen jako podpurny prvek. Nikdy se nesmi pouzivat kriklave slevove prvky, cervena urgence, 3D efekty, lacine stock klise ani preplacany layout.",
+            layoutDescA: "Pouzivej vertikalni nebo ctvercovy layout s titulkem nahore vlevo a logem idealne nahore vpravo. Hlavni obsah stav na 3-5 krocich, ktere jsou pod sebou ve forme bilych zaoblenych karet propojenych tenkou zlatou linkou. Kazdy krok ma cislo, jednoduchou linearni ikonu a kratke vysvetleni. Pozadi svetle (#F5F6F7 az #FAFAFA), karty bile se subtilnim stinem. Nadpis a klicova slova v tmave zelene, akcenty ve zlate. CTA tlacitko dej dolu. Text v jednom kroku drz kratky: nadpis 3-10 slov, doprovodna veta max 8-14 slov. Horni pravy roh nech volny pokud je tam logo.",
+            layoutDescB: "Pracuj se dvema jasne oddelenymi bloky: mytus a realita. Mohou byt pod sebou nebo vedle sebe. Mytus muze mit neutralnejsi pozadi a symbol krizku, realita ma mit silnejsi tmave zelenou nebo bilou kartu se zlatymi check prvky. Nepouzivej lacinou cervenozelenou logiku. Typografie musi byt kratka a primocara, s vysokym kontrastem a dostatkem mista kolem textu. Kazda strana ma mit jeden vyrok a jedno kratke vysvetleni. CTA je volitelne. Text drz v rozsahu priblizne 12-20 slov na blok.",
+            layoutDescC: "Vytvor vyvazeny dvousloupcovy layout pro porovnani dvou moznosti, konceptu nebo pristupu. Nahore dej headline, pod nej dva stejne siroke sloupce oddelene tenkou linkou nebo dostatecnym whitespace. Kazdy sloupec muze obsahovat nadpis, ikonu a 3-6 kratkych bodu. Funguje bile nebo svetle sede pozadi s bilymi kartami. Nadpisy v tmave zelene, podpurny text ve stredni sede, ikony a zvyrazneni ve zlate. CTA muze byt dole na stred nebo dole vlevo. Nepreplnuj ani jednu stranu; vizualni vaha obou sloupcu musi byt vyrovnana.",
+            layoutDescD: "Pouzivej minimalisticky layout, kde hlavni roli hraje jedna silna veta nebo dvojradkovy claim. Headline umisti do horni poloviny, nejlepe vlevo, a dej mu vyraznou velikost. Pod nej patri kratka zlata akcentni linka a jedna kratka vysvetlujici veta nebo dva usporne radky. Logo muze byt nahore vpravo nebo nize v ramci kompozice, ale vzdy s dostatecnou ochrannou zonou. CTA dej nize, idealne vlevo nebo na stred. Headline by mel mit maximalne 8-12 slov, podpurny text 15-25 slov. Vhodne jsou jemne polygonalni nebo linearni elementy v rohu, nikdy ne dominantni ozdoby.",
+            layoutDescE: "Pouzij realistickou fotografii profesionala, kancelarske budovy nebo relevantniho byznysoveho prostredi. Textova cast musi byt umistena v zone s tmavym overlayem, aby byla bila typografie perfektne citelna. Subjekt fotografie idealne stoji vpravo, zatimco vlevo je headline, benefity a CTA. Headline ma byt kratky a silny, pod nim 2-4 strucne benefity s linearnimi zlatymi ikonami. CTA tlacitko ma mit velke zaobleni a silny kontrast. Nepouzivej fotografie s generickym usmevem bez relevance, rusne pozadi pod textem ani text pres oblicej.",
+            antiPatterns: "Zakazane jsou cervene nebo oranzove urgentni slevove barvy a veskerou estetika spotrebitelskych pujcek. Nepouzivat neonove barvy, efektni 3D tlacitka, plasticke ikonky nebo prehnane glow efekty. Nepouzivat vice nesouvisejicich fontu; drzet Inter Tight pro text a Playfair Display pro titulky. Vyhnout se stock foto klise typu potreseni rukou, klice od domu v dlani, prasatko, padajici bankovky. Nepouzivat preplacany layout s prilis mnoha boxy, ikonami nebo textem. Nepokladat text prilis blizko k okrajum ani pres vizualne rusne casti fotografie. Nepouzivat slaby kontrast typu seda na sede. Nepouzivat agresivni prodejni copy ve stylu BEST DEAL, 100% GARANCE, LIMITOVANA NABIDKA.",
+            qualityChecklist: "1. Pouziva vizual jen firemni paletu tmave zelena, zlata, bila, svetle seda? 2. Je headline kratky, jasny a vizualne dominantni? 3. Je typografie jednotna (Inter Tight, titulky Playfair Display) a dobre citelna? 4. Je layout cisty a srozumitelny behem nekolika sekund? 5. Jsou karty, ikony a delici prvky presne zarovnane? 6. Je CTA dostatecne viditelne, ale ne kriklave? 7. Je kolem textu, CTA a loga dostatek volneho prostoru? 8. Je pouzita fotografie duveryhodna a ne klisovita? 9. Jsou ikony jednoduche, linearni a stylove jednotne? 10. Pusobi vysledek jako komunikace pro firmy a investory, ne jako retailova pujcka?"
         };
 
         var _bpTimer = null;
@@ -2665,8 +2665,8 @@
             if(ms)parts.push('BRAND STYLE REFERENCE: '+ms);
             var lid='layoutDesc'+templateKey.replace('template',''),le=document.getElementById(lid),ld=(le&&le.value.trim())||brandPresets[lid]||'';
             if(ld)parts.push('LAYOUT DETAILS: '+ld);
-            var nv=(brandPresets.colors&&brandPresets.colors.navy)||'#0C2340',tl=(brandPresets.colors&&brandPresets.colors.teal)||'#00B4D8',wh=(brandPresets.colors&&brandPresets.colors.white)||'#FFFFFF',gr=(brandPresets.colors&&brandPresets.colors.gray)||'#F0F4F8';
-            parts.push('STRICT color palette: teal '+tl+' (accents, CTA), navy '+nv+' (headings), white '+wh+' (backgrounds), gray '+gr+' (section bg). Red #E53935 myth only. Green #43A047 reality only. No other colors.');
+            var nv=(brandPresets.colors&&brandPresets.colors.navy)||'#2F4741',tl=(brandPresets.colors&&brandPresets.colors.teal)||'#D7AD5B',wh=(brandPresets.colors&&brandPresets.colors.white)||'#FFFFFF',gr=(brandPresets.colors&&brandPresets.colors.gray)||'#F5F6F7';
+            parts.push('STRICT color palette: gold '+tl+' (accents, CTA), dark green '+nv+' (headings), white '+wh+' (backgrounds), gray '+gr+' (section bg). Red #E53935 myth only. Green #43A047 reality only. No other colors.');
             return parts.join(' ');
         }
 
@@ -2845,7 +2845,7 @@
                             var bgColorMap = {
                                 'dark': 'rgba(0,0,0,' + opacity + ')',
                                 'light': 'rgba(255,255,255,' + opacity + ')',
-                                'brand': 'rgba(12,35,64,' + opacity + ')'
+                                'brand': 'rgba(47,71,65,' + opacity + ')'
                             };
                             ctx.fillStyle = bgColorMap[brandLogo.bgColor] || bgColorMap['dark'];
                             ctx.beginPath();
@@ -3051,7 +3051,7 @@
         }
 
         function deleteBrand(brandId) {
-            if (brandId === 'profilend') { showToast('Výchozí brand ProfiLend nelze smazat', 'error'); return; }
+            if (brandId === 'profilend') { showToast('Výchozí brand nelze smazat', 'error'); return; }
             if ( !brandProfiles[brandId]) return;
             var name = brandProfiles[brandId].name;
             delete brandProfiles[brandId];
@@ -3188,22 +3188,22 @@
             const themeBank = {
                 product: {
                     awareness: [
-                        'Jak ProfiLend zrychluje financování nemovitostí na 48 hodin',
-                        'Portfolio 1,3 mld. Kč — proč developeři volí ProfiLend',
-                        'LTV až 70 % — jak získat maximum z hodnoty nemovitosti',
-                        'Transparentní financování bez skrytých poplatků'
+                        'Indikativní nabídka do 48 hodin — jak to děláme',
+                        'Podnikatelské úvěry 3–100 mil. Kč zajištěné nemovitostí',
+                        'LTV standardně do 70 % — co to znamená pro váš projekt',
+                        'Sazbu a poplatky znáte předem — žádná překvapení'
                     ],
                     leads: [
-                        'Potřebujete financování 10–250 mil. Kč? Takhle to funguje',
+                        'Potřebujete financování 3–100 mil. Kč? Takhle to funguje',
                         'Proč s námi váš projekt získá financování rychleji',
-                        'Case: Developer získal 85 mil. Kč za 5 pracovních dní',
-                        '3 kroky k rychlému schválení financování nemovitosti'
+                        'Od poptávky k čerpání obvykle za 14 dní',
+                        '3 kroky k indikativní nabídce'
                     ],
                     trust: [
-                        'Jak hodnotíme rizika — náš přístup k LTV a zajištění',
+                        'Jak posuzujeme projekt, zástavu a zdroj splacení',
                         'Proč pracujeme výhradně s právnickými osobami',
-                        'Náš investiční výbor: jak rozhodujeme o financování',
-                        'Transparentnost jako základ — co všechno uvádíme v nabídce'
+                        'Za námi stojí investiční skupina Spolumajitelé',
+                        'Co všechno uvádíme v nabídce financování'
                     ],
                     educate: [
                         'Co je LTV a proč je klíčový parametr vašeho financování',
@@ -3218,42 +3218,42 @@
                         'Quiz: Víte, kolik stojí pozdní financování projektu?'
                     ],
                     partners: [
-                        'Partnerský program ProfiLend — jak vydělat na zprostředkování',
-                        'Proč makléři doporučují ProfiLend svým klientům',
-                        'Spolupráce s finančními poradci — náš model provizí',
-                        'Připojte se k síti 50+ partnerů ProfiLend'
+                        'Spolupráce s partnery — jak nám doporučit klienta',
+                        'Proč partneři doporučují financování zajištěné nemovitostí',
+                        'Odměna partnera je součástí poplatku — klient neplatí navíc',
+                        'Rychlá odpověď pro vás i vašeho klienta'
                     ]
                 },
                 case: {
                     awareness: [
-                        'Jak developer financoval rezidenční projekt za 120 mil. Kč',
-                        'Z nuly k hotovému projektu za 14 měsíců díky ProfiLend',
-                        'Reálný příběh: Refinancování hotelu v centru Prahy'
+                        'Modelový případ: akvizice nemovitosti s tlakem na termín',
+                        'Modelový případ: uvolnění kapitálu z nemovitosti pro rozvoj firmy',
+                        'Modelový případ: refinancování a konsolidace úvěrů'
                     ],
                     leads: [
-                        'Tento developer ušetřil 3 měsíce čekání na banku',
-                        'Když banka řekne ne — příběh úspěšného přefinancování',
+                        'Když banka nestíhá termín transakce — jak postupovat',
+                        'Když banka řekne ne — možnosti refinancování',
                         'Jak získat financování na akvizici komerční nemovitosti'
                     ],
                     trust: [
-                        'Klient roku: proč se k nám vracejí developeři',
-                        'Transparentní spolupráce — ohlédnutí za společným projektem',
-                        'Z prvního hovoru k výplatě za 48 hodin — skutečný případ'
+                        'Jak vypadá spolupráce od první zprávy k čerpání',
+                        'Transparentní podmínky v praxi — co obsahuje nabídka',
+                        'Modelový případ: od poptávky k čerpání za 14 dní'
                     ],
                     educate: [
                         'Lekce z praxe: 5 chyb, kterým se vyhnout při financování',
-                        'Jak vypadá proces financování krok za krokem (reálný případ)',
-                        'Případovka: Proč splatnost 20 let dávala smysl u tohoto projektu'
+                        'Jak vypadá proces financování krok za krokem',
+                        'Pouze úroky, nebo anuita? Jak vybrat model splácení'
                     ],
                     engagement: [
                         'Co byste udělali vy? Dilema financování projektu',
-                        'Hádejte: Kolik trvalo schválení tohoto financování?',
+                        'Hádejte: Kolik trvá cesta od poptávky k čerpání?',
                         'Před a po: transformace objektu díky správnému financování'
                     ],
                     partners: [
-                        'Jak makléř Jan K. doporučil ProfiLend a klient získal 45 mil.',
-                        'Partnerská spolupráce v praxi — příběh poradce a developera',
-                        'Zprostředkováno partnerem: financování logistického parku'
+                        'Modelový případ: partner doporučí klienta na akvizici',
+                        'Partnerská spolupráce v praxi — jak probíhá',
+                        'Modelový případ: financování logistického areálu přes partnera'
                     ]
                 },
                 education: {
@@ -3264,7 +3264,7 @@
                     ],
                     leads: [
                         'Checklist: Je váš projekt připraven na financování?',
-                        'Kalkulačka: Kolik stojí financování vašeho projektu?',
+                        'Kalkulačka: Kolik budete měsíčně splácet?',
                         'Průvodce: Jak vybrat správný typ financování'
                     ],
                     trust: [
@@ -3276,7 +3276,7 @@
                         'Jak funguje zástavní právo k nemovitosti',
                         'Co je bridge loan a kdy ho využít',
                         'DSCR vs. LTV — dva klíčové parametry financování',
-                        'Jak se počítá úroková sazba u development financování'
+                        'Jak se stanovuje úroková sazba u úvěru zajištěného nemovitostí'
                     ],
                     engagement: [
                         'Mýtus nebo fakt? Otestujte své znalosti o financování',
@@ -3284,41 +3284,41 @@
                         'AMA: Zeptejte se nás na cokoliv o financování nemovitostí'
                     ],
                     partners: [
-                        'Edukace pro partnery: Jak představit ProfiLend klientovi',
+                        'Edukace pro partnery: Jak představit naše financování klientovi',
                         'Webinář: Možnosti financování nemovitostí 2026',
                         'FAQ pro partnery — nejčastější dotazy klientů'
                     ]
                 },
                 brand: {
                     awareness: [
-                        'Proč jsme založili ProfiLend — náš příběh',
-                        'ProfiLend v číslech: portfolio, klienti, úspěšnost',
-                        'Za oponou: Náš investiční tým a jeho zkušenosti'
+                        'Proč vznikla Spolumajitelé Private Credit — náš příběh',
+                        'Investiční skupina Spolumajitelé v číslech',
+                        'Za oponou: kdo za financováním stojí'
                     ],
                     leads: [
-                        'Proč si vybrat ProfiLend? 5 důvodů od skutečných klientů',
-                        'Srovnání: ProfiLend vs. tradiční bankovní financování',
-                        'Kde končí banka, začíná ProfiLend'
+                        'Proč si vybrat Spolumajitelé Private Credit? 5 důvodů',
+                        'Srovnání: náš přístup vs. tradiční bankovní financování',
+                        'Kde končí banka, začínáme my'
                     ],
                     trust: [
-                        'Naše hodnoty: transparentnost, rychlost, odbornost',
-                        'Členství v AČSS — co to znamená pro klienty',
-                        'Jak chráníme zájmy investorů i dlužníků'
+                        'Naše hodnoty: profesionalita, flexibilita, individuální přístup',
+                        'Podmínky víte předem — jak to myslíme',
+                        'Jak chráníme zájmy klientů i partnerů'
                     ],
                     educate: [
-                        'Jak funguje ProfiLend — celý proces ve 3 minutách',
-                        'Kdo je typický klient ProfiLend?',
-                        'FAQ: 10 nejčastějších otázek o ProfiLend'
+                        'Jak naše financování funguje — celý proces ve 3 minutách',
+                        'Kdo je typický klient Spolumajitelé Private Credit?',
+                        'FAQ: nejčastější otázky o našem financování'
                     ],
                     engagement: [
                         'Co je pro vás nejdůležitější u poskytovatele financování?',
-                        'Za scénou: Jeden den v ProfiLend',
-                        'Oslavte s námi — ProfiLend milestone: 1,3 mld. Kč!'
+                        'Za scénou: jak posuzujeme poptávku',
+                        'Skupina Spolumajitelé věnuje 10 % zisku na dobročinné účely'
                     ],
                     partners: [
-                        'Staňte se partnerem ProfiLend — co vám nabízíme',
-                        'Partner spotlight: Příběhy našich nejúspěšnějších partnerů',
-                        'Partnerský event: Setkání ProfiLend Partners 2026'
+                        'Staňte se partnerem Spolumajitelé Private Credit — co nabízíme',
+                        'Partner spotlight: jak spolupracujeme s partnery',
+                        'Setkání partnerů Spolumajitelé Private Credit 2026'
                     ]
                 }
             };
@@ -3573,11 +3573,11 @@
 
         function generateTextPost(channel, targetAudience, contentPillar, postType, theme, tone, emojiLevel, hashtagLevel, variationIndex) {
             const factsClean = [
-                'Portfolio ProfiLend přesáhlo 1,3 mld. Kč',
-                'Financování do 48 hodin',
-                'LTV až 70% hodnoty nemovitosti',
-                'Transparentní podmínky bez skrytých poplatků',
-                'Desítky úspěšných projektů realizováno'
+                'Podnikatelské úvěry 3–100 mil. Kč zajištěné nemovitostí',
+                'Indikativní nabídka do 48 hodin od kompletních podkladů',
+                'LTV standardně do 70 % hodnoty nemovitosti',
+                'Sazbu, poplatky a podmínky splácení znáte předem',
+                'Součást investiční skupiny Spolumajitelé'
             ];
 
             const emojiMap = {
@@ -3588,10 +3588,10 @@
             const em = emojiMap[emojiLevel] || emojiMap['few'];
 
             const ctas = [
-                'Zjistit více na ProfiLend.cz',
+                'Zjistit více na našem webu',
                 'Chcete vědět více? Napište nám',
-                'Naplánujte si konzultaci zdarma',
-                'Začněte s ProfiLend dnes',
+                'Získat nabídku',
+                'Představte nám projekt',
                 'Domluvte si nezávaznou konzultaci'
             ];
 
@@ -3604,7 +3604,7 @@
             // Hashtags based on channel and setting
             let hashtags = '';
             if (hashtagLevel !== 'none') {
-                const allTags = ['#ProfiLend', '#Financování', '#RealEstate', '#Investice', '#FinTech', '#Nemovitosti', '#Úvěr', '#BusinessFinance'];
+                const allTags = ['#Spolumajitele', '#PrivateCredit', '#Financování', '#RealEstate', '#Investice', '#Nemovitosti', '#Úvěr', '#BusinessFinance'];
                 const tagCount = hashtagLevel === 'few' ? 4 : 7;
                 // Shuffle deterministically based on variation
                 const shuffled = [...allTags].sort(() => 0.5 - Math.random());
@@ -3616,21 +3616,21 @@
             if (channel === 'instagram') {
                 post += `${em.rocket}${theme}\n\n`;
                 post += `${fact}\n\n`;
-                post += `ProfiLend je tvůj partner pro financování nemovitostí. Důvěra a rychlost v každém kroku.\n\n`;
+                post += `Spolumajitelé Private Credit je váš partner pro financování zajištěné nemovitostí. Rychle, férově a na míru.\n\n`;
                 post += cta + hashtags;
             } else if (channel === 'linkedin') {
                 post += `${theme}\n\n`;
                 post += `V oblasti financování nemovitostí se stále více firem obrací na moderní řešení.\n${fact}\n\n`;
-                post += `ProfiLend nabízí:\n`;
+                post += `Spolumajitelé Private Credit nabízí:\n`;
                 post += `${em.check} Transparentní podmínky\n`;
                 post += `${em.check} Rychlé schválení\n`;
                 post += `${em.check} Odborný tým\n\n`;
                 post += cta + hashtags;
             } else if (channel === 'facebook') {
                 post += `${em.wave}${theme}\n\n`;
-                post += `Přemýšlíte o financování vašeho projektu? ProfiLend má řešení!\n\n`;
+                post += `Přemýšlíte o financování vašeho projektu? Představte nám ho.\n\n`;
                 post += `${fact}\n\n`;
-                post += `S ProfiLend můžete počítat na:\n`;
+                post += `Co od nás můžete čekat:\n`;
                 post += `${em.bullet} Rychlý proces\n`;
                 post += `${em.bullet} Konkurenční podmínky\n`;
                 post += `${em.bullet} Spolehlivého partnera\n\n`;
@@ -3639,7 +3639,7 @@
                 post += `${theme}\n\n`;
                 post += `V tomto videu se podíváme na:\n\n`;
                 post += `${fact}\n\n`;
-                post += `ProfiLend vám pomůže dosáhnout vašich cílů v real estate financování.\n\n`;
+                post += `Spolumajitelé Private Credit vám pomůže s financováním vašich nemovitostních záměrů.\n\n`;
                 post += cta + hashtags;
             }
 
@@ -3655,11 +3655,11 @@
             const theme = document.getElementById('theme').value;
 
             const typeMap = {
-                'templateA': 'Clean infographic layout with numbered steps (1, 2, 3, 4) arranged vertically. Each step has a turquoise circle with number, bold sans-serif title, and short description on the right. Light gray (#F0F4F8) background. Generous white space between steps. Thin connecting lines between steps. Space for logo in top-right corner. Rounded turquoise CTA button at bottom. Modern clean corporate infographic style. ',
+                'templateA': 'Clean infographic layout with numbered steps (1, 2, 3, 4) arranged vertically. Each step has a gold circle with number, bold sans-serif title, and short description on the right. Light gray (#F5F6F7) background. Generous white space between steps. Thin connecting lines between steps. Space for logo in top-right corner. Rounded gold CTA button at bottom. Modern clean corporate infographic style. ',
                 'templateB': 'Myth vs Reality split layout. Top section: red X icon with "MYTUS" label and myth statement in bold. Bottom section: green checkmark icon with "REALITA" label and fact statement. White background, clean separation between sections. Space for logo at bottom. Professional financial services aesthetic. Sans-serif bold typography. Minimal decorative elements. ',
-                'templateC': 'Two-column comparison layout with thin turquoise vertical divider in center. Left column and right column each have an icon at top and bullet-point list below. Each column has its own heading. Clean white background with subtle gray section backgrounds. Professional corporate comparison infographic. Space for logo. ',
-                'templateD': 'Bold headline banner design on clean white or navy (#0C2340) background. One large statement (max 8 words) as the main visual element, bold sans-serif typography. Small subtitle underneath. Turquoise accent elements (thin lines, geometric shapes). CTA button at bottom. Minimal and impactful. Space for logo in corner. ',
-                'templateE': 'Professional photograph background (35-50% opacity) with dark gradient overlay from bottom. White bold headline text overlaid on the gradient area. Key data points (LTV, rate, timeline) in small turquoise accent boxes. Clean modern composition. Space for logo in corner. '
+                'templateC': 'Two-column comparison layout with thin gold vertical divider in center. Left column and right column each have an icon at top and bullet-point list below. Each column has its own heading. Clean white background with subtle gray section backgrounds. Professional corporate comparison infographic. Space for logo. ',
+                'templateD': 'Bold headline banner design on clean white or dark green (#2F4741) background. One large statement (max 8 words) as the main visual element, bold sans-serif typography. Small subtitle underneath. Turquoise accent elements (thin lines, geometric shapes). CTA button at bottom. Minimal and impactful. Space for logo in corner. ',
+                'templateE': 'Professional photograph background (35-50% opacity) with dark gradient overlay from bottom. White bold headline text overlaid on the gradient area. Key data points (LTV, rate, timeline) in small gold accent boxes. Clean modern composition. Space for logo in corner. '
             };
 
             const peopleMap = {
@@ -3699,9 +3699,9 @@
             prompt += moodMap[mood] || '';
             prompt += getBrandStylePrompt(visualType) + ' ';
             prompt += `Format: ${format}. `;
-            prompt += `Sans-serif typography similar to DM Sans or Inter. Bold headings, clean modern design, high contrast text readable on mobile. Maximum 2 font sizes per design. `;
+            prompt += `Typography in the style of Inter Tight (text) and Playfair Display (headlines). Bold headings, clean modern design, high contrast text readable on mobile. Maximum 2 font sizes per design. `;
             prompt += `NEVER include any logo or brand text — logo will be added as overlay. No stock photo clichés, no neon colors, no excessive gradients, no decorative fonts, no 3D icons. `;
-            prompt += `ProfiLend brand: Czech B2B financial services, real estate-secured loans. Professional, trustworthy, modern aesthetic. `;
+            prompt += `Spolumajitelé Private Credit brand: Czech B2B private credit, business loans secured by real estate. Professional, trustworthy, modern aesthetic. `;
             prompt += `Topic/context: "${theme}". Focus on clarity, white space, and visual hierarchy. Minimal decorative elements. `;
             prompt += variations[variationIndex % variations.length];
 
@@ -3948,7 +3948,7 @@
             if (!container || !container.dataset.base64) return;
             var link = document.createElement('a');
             link.href = 'data:image/png;base64,' + container.dataset.base64;
-            link.download = 'profilend-post-' + (idx + 1) + '.png';
+            link.download = 'spolumajitele-post-' + (idx + 1) + '.png';
             link.click();
         }
 
@@ -3996,7 +3996,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `ProfiLend_${channel}_${today}_${generatedPosts.length}x.txt`;
+            a.download = `Spolumajitele_${channel}_${today}_${generatedPosts.length}x.txt`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -4044,19 +4044,19 @@
         var DEFAULT_BRANDS = {
             'profilend': {
                 id: 'profilend',
-                name: 'ProfiLend',
-                systemPrompt: 'Jsi zkušený marketingový specialista pro ProfiLend — nebankovní financování zajištěné nemovitostmi v ČR. Generuješ příspěvky na sociální sítě podle nastavení kanálu, cílové skupiny a tónu komunikace. Vždy dodržuj brand voice: věcný, sebevědomý, lidský, přímý, expertní. Nikdy nepoužívej zakázaná slova.',
+                name: 'Spolumajitelé Private Credit',
+                systemPrompt: 'Jsi zkušený marketingový specialista pro Spolumajitelé Private Credit — podnikatelské úvěry 3–100 mil. Kč pro právnické osoby se sídlem v ČR, zajištěné nemovitostmi v ČR. Generuješ příspěvky na sociální sítě podle nastavení kanálu, cílové skupiny a tónu komunikace. Vždy dodržuj brand voice: věcný, sebevědomý, lidský, přímý, expertní. Klientům vykej. Nikdy nepoužívej zakázaná slova.',
                 tone: ['Věcný', 'Sebevědomý', 'Lidský', 'Přímý', 'Expertní'],
                 audiences: [
                     { name: 'Jednatelé a vlastníci', desc: 'Vlastníci a manažeři SME s dlouhodobou vizí' },
                     { name: 'Developeři a investoři', desc: 'Profesionálové v real estate se zkušeností' },
                     { name: 'CFO / Finance manažeři', desc: 'Finančníci odpovídající za alokaci kapitálu' },
-                    { name: 'Makléři a poradci', desc: 'Profesionálové s přístupem k NWI klientům' }
+                    { name: 'Makléři a poradci', desc: 'Profesionálové s přístupem k majitelům firem a investorům' }
                 ],
                 contentPillars: { 'Produkt a proces': 30, 'Případovka / scénář': 25, 'Edukace': 25, 'Značka a důvěra': 20 },
                 bannedWords: ['Revoluční', 'Garantujeme zisk', 'Jednoduše bohatnout', 'Zlatá příležitost', 'Poslední šance', 'Bez rizika', 'Dokonalý systém', 'Tajný vzorec', 'Okamžité výsledky', 'Super trik', 'Zázračné řešení', 'Nejlepší investice'],
-                ctas: ['Zjistit více na ProfiLend.cz', 'Chcete vědět více? Napište nám', 'Naplánujte si konzultaci zdarma', 'Začněte s ProfiLend dnes', 'Využijte výhod transparentního financování'],
-                colors: { primary: '#00B4D8', secondary: '#1A2B4A', white: '#FFFFFF', lightGray: '#F0F0F0' }
+                ctas: ['Zjistit více na našem webu', 'Chcete vědět více? Napište nám', 'Získat nabídku', 'Představte nám projekt', 'Domluvte si nezávaznou konzultaci'],
+                colors: { primary: '#2F4741', secondary: '#D7AD5B', white: '#FFFFFF', lightGray: '#F5F6F7' }
             }
         };
 
@@ -4547,8 +4547,8 @@
                     shortDescription: '',
                     audienceShort: '',
                     logo: { dataUrl: null, position: 'top-right', sizePercent: 15, paddingPercent: 5, shadow: true, background: false, bgOpacity: 60, bgColor: 'dark' },
-                    colors: { primary: '#0C2340', accent: '#00B4D8', background: '#F0F4F8', muted: '#94A3B8' },
-                    typography: { primaryFont: 'DM Sans', fallback: 'Inter, sans-serif' }
+                    colors: { primary: '#2F4741', accent: '#D7AD5B', background: '#F5F6F7', muted: '#94A3B8' },
+                    typography: { primaryFont: 'Inter Tight', fallback: 'Inter, sans-serif' }
                 },
                 voice: {
                     tone: DEFAULT_TONE,
@@ -4741,7 +4741,7 @@
             console.log('[BPv2] Running legacy → v2 migration…');
 
             // Read legacy data sources (in-memory variables loaded by older init code)
-            var legacyProfiles = (typeof brandProfiles === 'object' && brandProfiles) ? brandProfiles : { profilend: { id: 'profilend', name: 'ProfiLend' } };
+            var legacyProfiles = (typeof brandProfiles === 'object' && brandProfiles) ? brandProfiles : { profilend: { id: 'profilend', name: 'Spolumajitelé Private Credit' } };
             var legacyDNA = (typeof brandPresets === 'object' && brandPresets) ? brandPresets : null;
             var legacyDNADefaults = (typeof BRAND_DNA_DEFAULTS === 'object' && BRAND_DNA_DEFAULTS) ? BRAND_DNA_DEFAULTS : {};
             var legacyLogo = (typeof brandLogo === 'object' && brandLogo) ? brandLogo : null;
@@ -4774,7 +4774,7 @@
                 if (Array.isArray(prof.bannedWords) && prof.bannedWords.length > 0) preset.voice.bannedWords = prof.bannedWords.slice();
                 if (Array.isArray(prof.ctas) && prof.ctas.length > 0) preset.voice.approvedCTAs = prof.ctas.slice();
                 if (Array.isArray(prof.tone) && prof.tone.length > 0) preset.voice.tone = prof.tone.join(', ');
-                // Visual — only ProfiLend gets the legacy DNA (it was global)
+                // Visual — only the default brand gets the legacy DNA (it was global)
                 if (slug === 'profilend' && legacyDNA) {
                     preset.visual.styleMain = legacyDNA.styleMain || legacyDNADefaults.styleMain || '';
                     preset.visual.antiPatterns = legacyDNADefaults.antiPatterns || '';
@@ -5332,7 +5332,7 @@
             populateBrandSwitcherTopnav();
         }
         async function bsDeleteBrand(slug) {
-            if (slug === 'profilend') { if (typeof showToast === 'function') showToast('ProfiLend nelze smazat.', 'error'); return; }
+            if (slug === 'profilend') { if (typeof showToast === 'function') showToast('Výchozí brand nelze smazat.', 'error'); return; }
             if (!confirm('Opravdu smazat brand "' + (brandPresetsV2[slug].displayName||slug) + '"?')) return;
             delete brandPresetsV2[slug];
             try { localStorage.removeItem(BRAND_PRESETS_LOCAL_PREFIX + slug); } catch(e) {}
@@ -5467,7 +5467,7 @@
             <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
                 <button class="logo-bg-color-btn active" data-color="dark" style="width:28px; height:28px; border-radius:6px; background:#000; border:2px solid var(--border-color); cursor:pointer;" title="Tmavý"></button>
                 <button class="logo-bg-color-btn" data-color="light" style="width:28px; height:28px; border-radius:6px; background:#fff; border:2px solid var(--border-color); cursor:pointer;" title="Světlý"></button>
-                <button class="logo-bg-color-btn" data-color="brand" style="width:28px; height:28px; border-radius:6px; background:#0C2340; border:2px solid var(--border-color); cursor:pointer;" title="Brand navy"></button>
+                <button class="logo-bg-color-btn" data-color="brand" style="width:28px; height:28px; border-radius:6px; background:#2F4741; border:2px solid var(--border-color); cursor:pointer;" title="Barva značky"></button>
             </div>
         </div>
     </div>

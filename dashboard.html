@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard | Investment Tools</title>
-<meta name="description" content="Řídicí věž ProfiLend — přehled všech případů, fází a dalších kroků napříč aplikacemi Investment Tools.">
+<meta name="description" content="Řídicí věž úvěrových případů — přehled všech případů, fází a dalších kroků napříč aplikacemi Investment Tools.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="design-system/tokens.css">
@@ -250,7 +250,7 @@
       </div>
     </div>
     <div class="nav-item">
-      <a class="nav-link">ProfiLend <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <a class="nav-link">Private Credit <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
       <div class="dropdown">
         <a class="dd-item" href="termsheet-generator.html">
           <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span>
@@ -710,9 +710,12 @@ const GOOGLE_SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets'
 ].join(' ');
 
-const ROOT_FOLDER_NAME = 'ProfiLend Investment Tools';
+const ROOT_FOLDER_NAME = 'Investment Tools';
+// Dřívější název složky na Google Drive — hledá se, dokud ji Martin nepřejmenuje
+const LEGACY_ROOT_FOLDER_NAME = 'ProfiLend Investment Tools';
 const APP_FOLDER_NAME = 'Dashboard';
-const SHEET_TITLE = 'ProfiLend Dashboard';
+const SHEET_TITLE = 'Investment Tools Dashboard';
+const LEGACY_SHEET_TITLE = 'ProfiLend Dashboard';
 const TAB_PRIPADY = 'Pripady';
 const TAB_AKCE = 'Akce';
 const TAB_UVERY = 'Uvery';
@@ -1068,6 +1071,7 @@ async function driveFindFile(name, parentId) {
 
 async function ensureFolders() {
     let rootId = await driveFindFolder(ROOT_FOLDER_NAME, null);
+    if (!rootId) rootId = await driveFindFolder(LEGACY_ROOT_FOLDER_NAME, null);
     if (!rootId) rootId = await driveCreateFolder(ROOT_FOLDER_NAME, null);
     let appId = await driveFindFolder(APP_FOLDER_NAME, rootId);
     if (!appId) appId = await driveCreateFolder(APP_FOLDER_NAME, rootId);
@@ -1098,7 +1102,7 @@ async function ensureSpreadsheet() {
     }
 
     const appFolderId = await ensureFolders();
-    const existing = await driveFindFile(SHEET_TITLE, appFolderId);
+    const existing = (await driveFindFile(SHEET_TITLE, appFolderId)) || (await driveFindFile(LEGACY_SHEET_TITLE, appFolderId));
     if (existing) {
         state.spreadsheetId = existing.id;
         localStorage.setItem(SHEET_ID_KEY, existing.id);
@@ -1129,7 +1133,7 @@ async function ensureSpreadsheet() {
     });
     localStorage.setItem(SHEET_ID_KEY, state.spreadsheetId);
 
-    // Přesun do složky ProfiLend Investment Tools/Dashboard
+    // Přesun do složky Investment Tools/Dashboard
     await gfetch(
         'https://www.googleapis.com/drive/v3/files/' + state.spreadsheetId +
         '?addParents=' + appFolderId + '&removeParents=root&fields=id,parents',
@@ -1674,7 +1678,7 @@ async function inboxIgnore(evId) {
 // AUTOMATICKÉ NAČTENÍ OCENĚNÍ Z R-E GENERÁTORU (Drive + prohlížeč)
 // ============================================================
 // Běží samo po připojení a při každém obnovení dat — žádné tlačítko.
-// Dva zdroje (jen čtení): Google Drive 'ProfiLend Investment Tools/
+// Dva zdroje (jen čtení): Google Drive 'Investment Tools/
 // R-E Prompt Generator/valuations.json' (R-E ho synchronizuje; stejný OAuth
 // klient → náš token na soubor vidí) + localStorage 'saved-valuations'
 // (tento prohlížeč). Nová ocenění se objeví v Doručených k založení/připojení.
@@ -1682,7 +1686,7 @@ async function inboxIgnore(evId) {
 // a znovu se nenabídnou — platí napříč zařízeními.
 async function loadREValuationsFromDrive() {
     if (!state.accessToken) return [];
-    const rootId = await driveFindFolder('ProfiLend Investment Tools', null);
+    const rootId = (await driveFindFolder(ROOT_FOLDER_NAME, null)) || (await driveFindFolder(LEGACY_ROOT_FOLDER_NAME, null));
     if (!rootId) return [];
     const appId = await driveFindFolder('R-E Prompt Generator', rootId);
     if (!appId) return [];

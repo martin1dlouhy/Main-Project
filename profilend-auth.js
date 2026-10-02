@@ -89,7 +89,7 @@
         ov.innerHTML =
             '<div id="pf-auth-box">' +
             '<div id="pf-auth-logo"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' +
-            '<h2>ProfiLend</h2>' +
+            '<h2>Investment Tools</h2>' +
             '<p>Zadejte 6místný PIN — zařízení si zapamatujeme na 90 dní.</p>' +
             '<div id="pf-auth-digits"></div>' +
             '<div id="pf-auth-err"></div>' +

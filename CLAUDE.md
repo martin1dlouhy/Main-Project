@@ -6,70 +6,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Public-facing GitHub repo `martin1dlouhy/Main-Project`, deployed at https://main-five-alpha.vercel.app. A collection of vanilla HTML investment tools (debt calc, real estate prompt generator, S&P 500 breakdown, portfolio dashboards) and ProfiLend internal apps (Term Sheet, Loan Doc generator, Marketing Agent). Each app is one large, self-contained `.html` file with inline `<style>` and `<script>` — they share only `styles.css` (tokens + nav/footer) and `script.js` (theme toggle).
+**Martin's personal web of tools.** GitHub repo `martin1dlouhy/Main-Project`, deployed at https://main-five-alpha.vercel.app. Vanilla HTML apps, each one large self-contained `.html` file with inline `<style>` and `<script>`:
 
-**Resist refactoring shared modules out of these files.** Self-containment is intentional — apps must remain copy-pasteable as standalone pages. 2–5k line files are normal here.
+- **Osobní:** `debt-calculator.html`, `real-estate-prompt-generator.html`, `sp500-calculator.html`
+- **Private Credit** (lending tools Martin uses for Spolumajitelé Private Credit a.s. until its own internal app exists): `termsheet-generator.html`, `loan-documentation.html`, `marketing-agent.html`, `database.html`
+- **Dashboard:** `dashboard.html` (case pipeline on Google Sheets, events from the other apps via `dashboard-bridge.js`)
+- Landing `index.html`, catalogue `apps.html`
+
+Martin does not want the name of his former company anywhere visible on this web (since 2 Oct 2026). Lender in documents and AI prompts = Spolumajitelé Private Credit a.s. Business facts come from `../SPM - Private Credit/` (introduction + website texts).
+
+**Resist refactoring shared modules out of these files.** Self-containment is intentional. 2–7k line files are normal here.
+
+## Shared modules
+
+- `design-system/` — `tokens.css` (editorial dark palette, amber accent, Fraunces + Inter + JetBrains Mono, 1440 px container, legacy DayNight aliases), `app-shell.css` (nav, buttons, inputs, custom dropdown, tables, info-notes, toast), `apps-list.css` (index + apps only), `nav.js` (nav dropdowns, custom dropdown widget: `convertSelectsToDropdowns(selector)`, `syncCustomDropdown(id)`). Rules in skill `web-app-builder`.
+- `profilend-auth.js` — unified 6-digit PIN → device token (~90 days) → Google token + AI session token. **Internal identifiers keep the legacy name on purpose** (file name, `window.ProfilendAuth`, `localStorage` keys `profilend-device-token`, `profilend-session-token`); renaming them would log out every device.
+- `google-drive-sync.js` — `GDriveSync` (save/load/list on Drive). Root folder `Investment Tools`; the legacy root folder name is still looked up as a fallback (`LEGACY_ROOT_FOLDER_NAME`) until Martin renames the folder on Drive. Same fallback in `dashboard.html` and `database.html`.
+- `dashboard-bridge.js` — localStorage event bus between apps and the Dashboard.
+
+Other intentional legacy identifiers: IndexedDB `ProfiLendTermSheets`, CSS class `.profilend-badge`, Marketing Agent brand slug `profilend` and Drive path `brand-assets/profilend/` (stored user data depends on them).
 
 ## Commands
 
 No build, no lint, no test framework. Frontend is static HTML/CSS/JS served as-is.
 
-**Run Railway backend locally** (the only thing with a runtime):
+**Local preview:** `.claude/launch.json` config `static` (port 3000, `.claude/serve.ps1`).
+
+**Run Railway backend locally:**
 ```
 cd railway-api && npm install && npm start
 ```
-Listens on `PORT` env (default 3001). Required env vars depend on which endpoints you exercise:
-- `ANTHROPIC_API_KEY` — `/api/parse-lv`, `/api/generate-loan-doc`
-- `OPENAI_API_KEY` — `/api/marketing/generate`, `/api/marketing/generate-image`
-- `GEMINI_API_KEY` — fallbacks
-- `PIN_HASH` — SHA-256 of the 4-digit PIN for `/api/verify-pin` (Term Sheet gate)
+Listens on `PORT` env (default 3001). Env vars: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `PIN_HASH`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN` (optional `GOOGLE_CLIENT_ID`).
 
-**Serve frontend locally:** any static server pointed at the project root. The frontend talks to Vercel functions in production and to the Railway server (hardcoded URLs in each HTML file). To point at local Railway during dev, edit the `RAILWAY_API` constant inside the HTML file you're testing.
-
-**Deploy:** push to `main` on `martin1dlouhy/Main-Project`; Vercel auto-builds in ~30s. Railway auto-deploys its own repo on push to `railway-api/`. Prepare commands for Martin to run — never push automatically.
-
-```
-git add . && git commit -m "Fix: ..." && git push origin main
-```
+**Deploy:** push to `main` on `martin1dlouhy/Main-Project`; Vercel auto-builds in ~30 s, Railway redeploys `railway-api/`. Prepare commands for Martin — never push automatically. `.vercelignore` keeps `_archiv/` and all `*.md` off the public web.
 
 ## Architecture: dual backend (the why)
 
-Vercel serverless functions cap at 60s. Anything that needs longer or holds long-lived secrets goes to Railway Express. The split is **not** "frontend vs. backend logic" — it's "fast/stateless on Vercel, long/secret-heavy on Railway":
+Vercel serverless functions cap at 60 s. Long-running or secret-heavy work goes to Railway Express:
 
 | Vercel (`api/*.js`) | Railway (`railway-api/server.js`) |
 |---|---|
-| `sp500.js` — Cheerio scrape, 24h cache | `/api/verify-pin` — PIN gate (rate-limited 5/5min/IP) |
+| `sp500.js` — Cheerio scrape, 24h cache | `/api/verify-pin`, `/api/device/*`, `/api/google/*` — PIN, device tokens, Google refresh-token flow |
 | `parse-lv.js` — Claude LV parser, 60s max | `/api/parse-lv` — same parser, no timeout |
-| `ares.js` — ARES company lookup, 15s | `/api/generate-loan-doc` — Claude DOCX template fill |
-|  | `/api/marketing/generate` — OpenAI text gen |
-|  | `/api/marketing/generate-image` — gpt-image-1.5 / DALL-E |
+| `ares.js` — ARES company lookup, 15s | `/api/generate-loan-doc` (+ `/preview`) — Claude/OpenAI DOCX template fill |
+|  | `/api/marketing/generate`, `/generate-image` — OpenAI text + images |
+|  | `/api/database/find-contacts`, `/build-prompt` — AI contact discovery |
 
-`vercel.json` declares per-function `maxDuration` — when adding a new Vercel function that needs more than 10s, add it to `vercel.json` or it'll be killed at default.
+The loan-doc system prompt exists twice: `buildLoanDocSystemPrompt` in `server.js` and the preview copy `buildSystemPromptPreview` in `loan-documentation.html`. Keep them identical.
 
-**CORS gotcha:** Railway uses a strict allowlist in `server.js` (`allowedOrigins`). Adding a new frontend host (preview deploy, custom domain) requires editing that array and redeploying — `*` is not configured.
-
-## Theme system (DayNight)
-
-`script.js` toggles class `.carbon` on both `<html>` and `<body>`, persisted to `localStorage` key `daynight-theme` (`"snow"` = light, `"carbon"` = dark). All colors come from CSS variables in `styles.css` — never hardcode hex in components, always `var(--accent)` etc. Full token reference in [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md). Adding a new app: copy [APP-TEMPLATE.html](APP-TEMPLATE.html) and leave `.top-nav`, `.footer`, and theme-toggle markup untouched.
-
-## Frontend libraries (loaded via CDN per-app)
-
-`jspdf`, `xlsx` / `xlsx-js-style`, `FileSaver.js`, `Chart.js 4.4.1`, `pizzip` / `jszip`, `pdf.js`. Don't introduce npm-side bundling — each HTML file pulls the libraries it needs from a CDN.
+**CORS gotcha:** strict allowlist `allowedOrigins` in `server.js`; `*` is not configured.
 
 ## Storage in apps (read-only from tooling)
 
-Several apps persist user data in browser storage. **Never write test data here from tooling — real client data lives in production.** Notable keys:
-- `daynight-theme` — theme pref (every app)
-- Real Estate Prompt Generator — uses both `localStorage` and IndexedDB; also writes to user-granted directories via File System Access API (acts as OneDrive sync replacement).
-- Term Sheet & Loan Documentation — saved drafts in `localStorage`.
+Real user data lives in the browser and on Google Drive / Sheets. **Never write test data from tooling.** Notable: R-E `saved-valuations` + IndexedDB `re-prompt-backup`; Term Sheet IndexedDB `ProfiLendTermSheets`; Loan Doc IndexedDB `loanDocDB`; Marketing Agent `brand-preset-<slug>` + IndexedDB `MarketingAgentDB`; Dashboard `dashboard-sheet-id`, `dashboard-sort`; shared Google token `gdrive-shared-token`.
 
 ## Testing this code
 
-There's no automated suite. The Kritik skill auto-runs after every change — walk the full user flow (load → input → calc → export → theme toggle in both modes → mobile width) for the affected app before declaring done. UI changes need a manual browser check; "the diff looks right" isn't enough.
+No automated suite. Kritik walkthrough after every change: load → input → calc → export for the affected app, check the browser console, check mobile width. "The diff looks right" isn't enough.
 
-## Reference docs in this repo
+## Reference
 
-- [INVESTMENT-TOOLS-OVERVIEW.md](INVESTMENT-TOOLS-OVERVIEW.md) — full per-app breakdown (line counts, features, status). Read this before touching an unfamiliar app.
-- [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) — color tokens, spacing, components.
-- [APP-TEMPLATE.html](APP-TEMPLATE.html) — boilerplate for new apps.
-- [default-ai-prompt.md](default-ai-prompt.md) — master Claude prompt for the Real Estate valuator.
+- [default-ai-prompt.md](default-ai-prompt.md) — master prompt for the Real Estate valuator.
+- [APP-TEMPLATE.html](APP-TEMPLATE.html), [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) — legacy DayNight; for new apps follow skill `web-app-builder` instead.
+- `_archiv/` — outdated project overviews and design handoff, kept for history only.

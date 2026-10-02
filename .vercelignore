@@ -1,0 +1,4 @@
+# Soubory, které se nenasazují na web (Vercel)
+# Archiv a interní dokumentace nemají být veřejně dostupné
+_archiv
+*.md
