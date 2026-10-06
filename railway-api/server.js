@@ -49,8 +49,8 @@ var MARKETING_CONFIG = {
 
 // CORS — allow Vercel production + localhost
 var allowedOrigins = [
-    'https://investment-tools-md.vercel.app',
-    'https://main-five-alpha.vercel.app', // původní adresa — ponechat do převodu dat, pak lze odebrat
+    'https://main-five-alpha.vercel.app',
+    'https://investment-tools-md.vercel.app', // alias ve Vercelu (nepoužívá se, web zůstal na main-five-alpha)
     'http://localhost:3000',
     'http://localhost:8080',
     'http://127.0.0.1:3000',

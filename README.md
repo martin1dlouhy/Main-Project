@@ -73,7 +73,7 @@ Vercel automaticky detekuje změny na GitHubu a deployuje:
 
 1. **Push na GitHub** → Změny nahrány
 2. **Vercel detekuje** → Spustí build (~30 sekund)
-3. **Live na webu** → https://investment-tools-md.vercel.app
+3. **Live na webu** → https://main-five-alpha.vercel.app
 
 ## ✅ Kontrola po nasazení
 
