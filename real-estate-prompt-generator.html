@@ -4615,21 +4615,10 @@
             return (n / 1e6).toLocaleString('cs-CZ', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
         }
 
-        function reviewLtv(raw) {
-            const m = String(raw || '').match(/\d+(?:[.,]\d+)?/);
-            return m ? m[0].replace('.', ',') + ' %' : '—';
-        }
-
         // AI občas píše verzálkami („VHODNÁ") — do e-mailu malými písmeny
         function reviewSoften(s) {
             const t = String(s || '').trim();
             return t && t === t.toUpperCase() ? t.toLowerCase() : t;
-        }
-
-        // Stejná klasifikace jako odznak hodnocení v renderAISummary
-        function reviewIsSuitable(hodnoceni) {
-            const h = String(hodnoceni || '').toLowerCase();
-            return h.includes('vhodn') && !h.includes('nevhodn') && !h.includes('podmín');
         }
 
         // Údaje z kroku 4 v pořadí formuláře (stejná podmínka pro nájemné jako populateDetailForm)
@@ -4657,19 +4646,15 @@
             const rows = withData.filter(s => emailIncluded[s] !== false).map(s => ({ label: aiLabels[s], d: aiParsedData[s] }));
             const excluded = withData.filter(s => emailIncluded[s] === false).map(s => aiLabels[s]);
 
-            // Průměry a rozdíl jen ze zahrnutých AI (stejný výpočet jako finální shrnutí v kroku 6)
+            // Průměr a rozdíl jen ze zahrnutých AI (stejný výpočet jako finální shrnutí v kroku 6)
             const trzni = rows.map(r => r.d.trzniHodnota).filter(v => v);
-            const zastavni = rows.map(r => r.d.zastavniHodnota).filter(v => v);
-            const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
             let summary = '';
-            let spreadPct = null;
             if (trzni.length >= 2) {
-                const avgTrzni = avg(trzni);
+                const avgTrzni = trzni.reduce((a, b) => a + b, 0) / trzni.length;
                 const minTrzni = Math.min(...trzni);
                 const maxTrzni = Math.max(...trzni);
-                spreadPct = Math.round((maxTrzni - minTrzni) / avgTrzni * 100);
-                summary = 'Průměr: tržní ' + reviewMilNum(avgTrzni) + ' mil. Kč' +
-                    (zastavni.length ? ', zástavní ' + reviewMilNum(avg(zastavni)) + ' mil. Kč' : '') +
+                const spreadPct = Math.round((maxTrzni - minTrzni) / avgTrzni * 100);
+                summary = 'Průměrná tržní hodnota ' + reviewMilNum(avgTrzni) + ' mil. Kč' +
                     ' · rozpětí ' + reviewMilNum(minTrzni) + '–' + reviewMilNum(maxTrzni) + ' mil. Kč' +
                     ' · rozdíl mezi AI ' + spreadPct + ' %';
             }
@@ -4686,37 +4671,11 @@
             }));
             const topRisks = risks.slice(0, 4);
 
-            // Kontrola: ✓ v pořádku / ⚠ upozornění
-            const checks = [];
-            if (rows.length === 1) {
-                checks.push({ ok: false, text: 'Ocenění jen z jedné AI (' + rows[0].label + ')' });
-            } else if (spreadPct !== null) {
-                if (spreadPct <= 15) checks.push({ ok: true, text: 'Shoda AI – rozdíl ' + spreadPct + ' %' });
-                else if (spreadPct <= 30) checks.push({ ok: false, text: 'Rozdíl mezi AI ' + spreadPct + ' % – střední shoda' });
-                else checks.push({ ok: false, text: 'Rozdíl mezi AI ' + spreadPct + ' % – doporučuji znalecký posudek' });
-            }
-            const notSuitable = rows.filter(r => !reviewIsSuitable(r.d.hodnoceni));
-            if (notSuitable.length === 0) {
-                const who = rows.length === 1 ? rows[0].label : (rows.length === 2 ? 'obou AI' : 'všech AI');
-                checks.push({ ok: true, text: 'Zástava vhodná podle ' + who });
-            } else {
-                checks.push({ ok: false, text: 'Zástava: ' + notSuitable.map(r => r.label + ' – ' + (r.d.hodnoceni ? reviewSoften(r.d.hodnoceni) : 'bez hodnocení')).join('; ') });
-            }
-            checks.push(selectedInputs.includes('lv')
-                ? { ok: true, text: 'LV k dispozici' }
-                : { ok: false, text: 'LV není k dispozici' });
-            checks.push(selectedInputs.includes('znalecky_posudek')
-                ? { ok: true, text: 'Znalecký posudek k dispozici' }
-                : { ok: false, text: 'Znalecký posudek není k dispozici' });
-            const checkLines = checks.map(c => (c.ok ? '✓ ' : '⚠ ') + c.text);
-
             const intro = 'Prosím o prověření případu, podklady posílám v příloze.';
             const propertyLines = [config.name].concat(reviewPropertyFacts(config).map(f => f.label + ': ' + f.value));
             if (purposeLabels[loanPurpose]) propertyLines.push('Účel financování: ' + purposeLabels[loanPurpose]);
             const aiCells = r => [
                 reviewMilNum(r.d.trzniHodnota) + ' mil. Kč',
-                reviewMilNum(r.d.zastavniHodnota) + ' mil. Kč',
-                reviewLtv(r.d.ltv),
                 reviewSoften(r.d.hodnoceni) || '—'
             ];
             const afterTable = [summary, excluded.length ? 'Nezahrnuto: ' + excluded.join(', ') : ''].filter(Boolean);
@@ -4725,11 +4684,10 @@
             const textParts = [intro, '', 'Případ', caseName, '', 'Nemovitost'].concat(propertyLines, ['', 'Ocenění AI']);
             rows.forEach(r => {
                 const c = aiCells(r);
-                textParts.push(r.label + ': tržní ' + c[0] + ', zástavní ' + c[1] + ', max. LTV ' + c[2] + ', zástava ' + c[3]);
+                textParts.push(r.label + ': tržní hodnota ' + c[0] + ', hodnocení zástavy: ' + c[1]);
             });
             textParts.push(...afterTable);
             if (topRisks.length) textParts.push('', 'Rizika podle AI', ...topRisks.map(t => '– ' + t));
-            textParts.push('', 'Kontrola', ...checkLines);
             // Víceřádkové poznámky z formuláře mají LF — sjednotit na CRLF
             const text = textParts.join('\r\n').replace(/\r?\n/g, '\r\n') + '\r\n';
 
@@ -4741,10 +4699,10 @@
             const font = 'font-family:Calibri,Arial,sans-serif;font-size:11pt;';
             const lines = arr => '<p style="margin:0;' + font + '">' + arr.map(escBr).join('<br>') + '</p>';
             const section = (title, bodyHtml) => '<p style="margin:12pt 0 2pt 0;font-weight:bold;' + font + '">' + title + '</p>' + bodyHtml;
-            const aligns = ['left', 'right', 'right', 'right', 'left'];
+            const aligns = ['left', 'right', 'left'];
             const cellStyle = (i, bold) => 'padding:2pt 12pt 2pt 0;border-bottom:1px solid #d9d9d9;vertical-align:top;text-align:' + aligns[i] + ';font-weight:' + (bold ? 'bold' : 'normal') + ';' + font;
             let table = '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr>' +
-                ['AI', 'Tržní hodnota', 'Zástavní hodnota', 'Max. LTV', 'Zástava'].map((h, i) => '<th style="' + cellStyle(i, true) + '">' + h + '</th>').join('') +
+                ['AI', 'Tržní hodnota', 'Hodnocení zástavy'].map((h, i) => '<th style="' + cellStyle(i, true) + '">' + h + '</th>').join('') +
                 '</tr>';
             rows.forEach(r => {
                 table += '<tr>' + [r.label].concat(aiCells(r)).map((v, i) => '<td style="' + cellStyle(i, false) + '">' + esc(v) + '</td>').join('') + '</tr>';
@@ -4757,7 +4715,6 @@
                 section('Nemovitost', lines(propertyLines)) +
                 section('Ocenění AI', table + tableNote) +
                 (topRisks.length ? section('Rizika podle AI', lines(topRisks.map(t => '– ' + t))) : '') +
-                section('Kontrola', lines(checkLines)) +
                 '</body></html>';
 
             return { subject: 'Prověření: ' + caseName, html: html, text: text };
