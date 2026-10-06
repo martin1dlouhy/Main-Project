@@ -5692,27 +5692,6 @@
             btn.querySelector('span').textContent = isExpanded ? 'Sbalit' : 'Rozbalit';
         }
 
-        // Theme toggle (for nav bar)
-        function setTheme(t) {
-            if (t === 'carbon') {
-                document.documentElement.classList.add('carbon');
-                document.body.classList.add('carbon');
-                localStorage.setItem('daynight-theme', 'carbon');
-            } else {
-                document.documentElement.classList.remove('carbon');
-                document.body.classList.remove('carbon');
-                localStorage.setItem('daynight-theme', 'snow');
-            }
-            document.querySelectorAll('.theme-btn-snow').forEach(b => b.classList.toggle('active', t === 'snow'));
-            document.querySelectorAll('.theme-btn-carbon').forEach(b => b.classList.toggle('active', t === 'carbon'));
-        }
-
-        // Initialize theme toggle buttons
-        (function() {
-            const t = localStorage.getItem('daynight-theme') === 'carbon' ? 'carbon' : 'snow';
-            setTheme(t);
-        })();
-
         // Auto-save form on input
         document.addEventListener('change', () => {
             if (currentStep === 3) {

@@ -24,7 +24,7 @@ Martin does not want the name of his former company anywhere visible on this web
 - `google-drive-sync.js` — `GDriveSync` (save/load/list on Drive). Root folder `Investment Tools`; the legacy root folder name is still looked up as a fallback (`LEGACY_ROOT_FOLDER_NAME`) until Martin renames the folder on Drive. Same fallback in `dashboard.html` and `database.html`.
 - `dashboard-bridge.js` — localStorage event bus between apps and the Dashboard.
 
-Other intentional legacy identifiers: IndexedDB `ProfiLendTermSheets`, CSS class `.profilend-badge`, Marketing Agent brand slug `profilend` and Drive path `brand-assets/profilend/` (stored user data depends on them).
+Other intentional legacy identifiers: IndexedDB `ProfiLendTermSheets`, CSS class `.profilend-badge`, Marketing Agent brand slug `profilend` and Drive path `brand-assets/profilend/`, Dashboard `LEGACY_SHEET_TITLE` (fallback lookup of the old Google Sheet name, same idea as `LEGACY_ROOT_FOLDER_NAME`) — stored user data depends on them.
 
 ## Commands
 

@@ -132,16 +132,6 @@
             gap: 1rem;
         }
 
-        .theme-toggle {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.375rem;
-            background: var(--bg-surface);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
         /* Brand switcher in topnav — sladěno s web-app-builder Custom Select (bod 7+9) */
         .brand-switcher-topnav {
             margin-right: 0.75rem;
@@ -170,37 +160,6 @@
             border-color: var(--accent);
             box-shadow: 0 0 0 3px var(--accent-glow);
             background-color: var(--bg-primary);
-        }
-
-        .theme-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            border-radius: 6px;
-            color: var(--text-secondary);
-            transition: all 0.2s;
-        }
-
-        .theme-btn:hover {
-            color: var(--text-primary);
-        }
-
-        .theme-btn.active,
-        .theme-btn-snow.active,
-        .theme-btn-carbon.active {
-            background: var(--bg-primary);
-            color: var(--accent);
-            box-shadow: var(--shadow);
-        }
-
-        .theme-btn svg {
-            width: 18px;
-            height: 18px;
         }
 
         /* ===================== MAIN LAYOUT ===================== */
@@ -1738,18 +1697,6 @@
                 <select id="brandSwitcherTopnav" title="Aktivní brand"
                     onchange="setActiveBrandV2(this.value)"
                     class="brand-switcher-topnav"></select>
-                <div class="theme-toggle">
-                    <button class="theme-btn theme-btn-snow active" onclick="setTheme('snow')" title="Light Mode">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                        </svg>
-                    </button>
-                    <button class="theme-btn theme-btn-carbon" onclick="setTheme('carbon')" title="Dark Mode">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                        </svg>
-                    </button>
-                </div>
             </div>
         </div>
     </nav>
@@ -4463,34 +4410,15 @@
         };
     </script>
     <script>
-        function setTheme(theme) {
-            if (theme === 'carbon') {
-                document.documentElement.classList.add('carbon');
-                document.body.classList.add('carbon');
-            } else {
-                document.documentElement.classList.remove('carbon');
-                document.body.classList.remove('carbon');
-            }
-            localStorage.setItem('daynight-theme', theme);
-            updateThemeButtons(theme);
-        }
-        function updateThemeButtons(theme) {
-            document.querySelectorAll('.theme-btn').forEach(function(btn) { btn.classList.remove('active'); });
-            if (theme === 'carbon') {
-                var cb = document.querySelector('.theme-btn-carbon');
-                if (cb) cb.classList.add('active');
-            } else {
-                var sb = document.querySelector('.theme-btn-snow');
-                if (sb) sb.classList.add('active');
-            }
-        }
-        (function initTheme() {
-            var t = localStorage.getItem('daynight-theme') || 'snow';
-            if (t === 'carbon') {
-                document.documentElement.classList.add('carbon');
-                document.body.classList.add('carbon');
-            }
-            updateThemeButtons(t);
+        // Theme toggle removed (editorial = dark only). Read-only: keep legacy `.carbon`
+        // class for users who had it stored, so the html.carbon sidebar tweaks stay as before.
+        (function applyLegacyCarbonClass() {
+            try {
+                if (localStorage.getItem('daynight-theme') === 'carbon') {
+                    document.documentElement.classList.add('carbon');
+                    document.body.classList.add('carbon');
+                }
+            } catch (e) { /* no-op */ }
         })();
 
         // ============================================================
