@@ -2922,6 +2922,16 @@
                     if (data) {
                         window.__dashCaseId = data.caseId || null;
                         if (data.nazev) showToast('Propojeno s případem: ' + data.nazev);
+                        // Karta „Poslat k prověření" předává uložené ocenění → otevřít ho rovnou (krok 6)
+                        if (data.valuationId != null) {
+                            let found = false;
+                            try {
+                                const saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                                found = saved.some(v => v.id === data.valuationId);
+                            } catch (e) { /* ignore */ }
+                            if (found) loadSavedValuation(data.valuationId);
+                            else showToast('Ocenění v tomto prohlížeči není — otevřete ho ze seznamu uložených');
+                        }
                     }
                 } catch (e) { /* no-op — bridge nesmí rozbít appku */ }
             }
@@ -4802,6 +4812,22 @@
             link.remove();
             setTimeout(() => URL.revokeObjectURL(url), 10000);
             showToast('Koncept e-mailu stažen – otevřete ho kliknutím ve stahování');
+
+            // Dashboard bridge — případ se na Dashboardu přesune do fáze Prověření.
+            // Defenzivně — bridge nesmí nikdy rozbít appku.
+            try {
+                if (window.DashboardBridge) {
+                    DashboardBridge.emit('re', 'proverovani_odeslano', {
+                        caseId: window.__dashCaseId || null,
+                        valuationId: editingId,
+                        nazev: caseName,
+                        ku: formData.katastralni_uzemi || null,
+                        parcela: formData.parcelni_cislo || null,
+                        lv: formData.lv || null,
+                        adresa: formData.adresa || null
+                    });
+                }
+            } catch (e) { /* no-op — bridge nesmí rozbít appku */ }
         }
 
         // Export srovnávací tabulky + AI shrnutí jako PNG (současný theme, scale 2 pro retina kvalitu)

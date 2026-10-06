@@ -23,22 +23,26 @@
   .gbtn.on .gdot{background:var(--success);box-shadow:0 0 8px var(--success)}
   .gbtn.on{color:var(--text-soft)}
 
-  /* ===== Panel „Dnes" ===== */
-  .today-panel{display:flex;gap:10px;align-items:stretch;margin:4px 0 22px;flex-wrap:wrap}
-  .today-chip{display:inline-flex;align-items:center;gap:12px;padding:12px 18px;
-    background:var(--bg-raised);border:1px solid var(--line-faint);border-radius:var(--r-md);
-    cursor:pointer;transition:all var(--dur) var(--ease);font-size:12.5px;color:var(--text-soft);
-    font-family:inherit}
-  .today-chip .chip-num{font-family:var(--font-display);font-weight:300;font-size:24px;
+  /* ===== Filtry „Dnes" — kompaktně v liště nástrojů ===== */
+  .today-panel{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .today-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;
+    background:var(--bg-raised);border:1px solid var(--line-faint);border-radius:var(--r-sm);
+    cursor:pointer;transition:all var(--dur) var(--ease);font-size:12px;color:var(--text-soft);
+    font-family:inherit;white-space:nowrap}
+  .today-chip .chip-num{font-family:var(--font-mono);font-weight:500;font-size:13px;
     line-height:1;color:var(--text);font-variant-numeric:tabular-nums}
   .today-chip:hover{border-color:var(--line-strong)}
   .today-chip.active{border-color:var(--amber);background:var(--amber-tint);color:var(--amber-warm)}
   .today-chip.active .chip-num{color:var(--amber-warm)}
   .today-chip.overdue-hot .chip-num{color:var(--danger)}
   .today-chip.active.overdue-hot .chip-num{color:var(--amber-warm)}
+  /* Doručené — jantarově, ať nezapadne, i když je panel sbalený */
+  .today-chip.inbox-chip{border-color:var(--line-amber);color:var(--amber-warm)}
+  .today-chip.inbox-chip .chip-num{color:var(--amber-warm)}
+  .today-chip.inbox-chip.active{background:var(--amber-tint);border-color:var(--amber)}
 
   /* ===== Doručené (inbox) ===== */
-  .inbox{margin:0 0 24px;border:1px solid var(--line-amber);background:var(--bg-raised);
+  .inbox{margin:0 0 18px;border:1px solid var(--line-amber);background:var(--bg-raised);
     border-radius:var(--r-lg);overflow:hidden}
   .inbox-head{padding:12px 18px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
     color:var(--amber);font-weight:600;border-bottom:1px solid var(--line-faint)}
@@ -51,8 +55,8 @@
   .btn-sm{padding:7px 12px;font-size:12px}
 
   /* ===== Board tools ===== */
-  .board-tools{display:flex;gap:12px;align-items:center;margin:0 0 16px;flex-wrap:wrap}
-  .board-search{flex:1;min-width:220px;max-width:360px}
+  .board-tools{display:flex;gap:10px;align-items:center;margin:0 0 16px;flex-wrap:wrap}
+  .board-search{flex:0 1 300px;min-width:240px}
   .board-tools .spacer{flex:1}
 
   /* ===== Kanban board ===== */
@@ -65,28 +69,27 @@
   .col-title{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
     color:var(--text-mute);font-weight:600}
   .col-count{font-family:var(--font-mono);font-size:11px;color:var(--text-faint)}
-  .col-body{padding:10px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .col-body{padding:10px;display:flex;flex-direction:column;gap:8px;flex:1}
   .col-hint{font-size:12px;color:var(--text-faint);font-style:italic;padding:16px 8px;text-align:center}
 
   .case-card{background:var(--bg-raised);border:1px solid var(--line-faint);
-    border-radius:var(--r-md);padding:12px 14px;cursor:pointer;
+    border-radius:var(--r-md);padding:11px 13px;cursor:pointer;
     transition:all var(--dur) var(--ease)}
   .case-card:hover{border-color:var(--line-amber);background:var(--bg-elevated)}
   .case-card.paused{opacity:.5}
   .case-name{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.3}
   .case-client{font-size:12px;color:var(--text-mute);margin-top:2px}
-  .case-amount{font-family:var(--font-mono);font-size:12.5px;color:var(--amber-warm);
-    margin-top:8px;font-variant-numeric:tabular-nums}
-  .case-chips{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}
-  .tah-chip{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:3px 9px;
-    border-radius:999px;border:1px solid var(--line);color:var(--text-soft);background:var(--bg-input)}
-  .tah-chip.ja{border-color:var(--amber);color:var(--amber-warm);background:var(--amber-tint)}
-  .badge-overdue{font-size:10px;letter-spacing:0.05em;padding:3px 9px;border-radius:999px;
-    background:var(--danger-tint);color:var(--danger);border:1px solid var(--danger)}
-  .badge-paused{font-size:10px;letter-spacing:0.05em;padding:3px 9px;border-radius:999px;
+  .badge-paused{font-size:10px;letter-spacing:0.05em;padding:2px 8px;border-radius:999px;
     background:var(--warning-tint);color:var(--warning);border:1px solid var(--warning)}
   .case-next{font-size:12px;color:var(--text-soft);margin-top:8px;line-height:1.4}
   .case-next .case-date{font-family:var(--font-mono);font-size:11px;color:var(--text-mute)}
+  .case-next .case-date.overdue{color:var(--danger)}
+  /* Jeden řádek údajů: částka · čí tah · počet nemovitostí · pozastaveno */
+  .case-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;
+    font-size:11.5px;color:var(--text-mute)}
+  .case-meta .sep{color:var(--text-faint)}
+  .case-meta .amt{font-family:var(--font-mono);color:var(--text-soft);font-variant-numeric:tabular-nums}
+  .case-meta .tah.ja{color:var(--amber-warm);font-weight:600}
   .case-card{cursor:grab}
   .case-card.drag-source{opacity:.3}
   .case-card.drop-target{border-color:var(--amber);box-shadow:0 0 0 2px var(--amber-glow)}
@@ -101,6 +104,16 @@
     font-family:inherit;transition:all var(--dur-fast) var(--ease);white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis;min-width:0}
   .card-action:hover{background:var(--amber);color:#1a1207}
+  /* Výrazné tlačítko jen když je tah na mně — ostatní karty mají akci jako nenápadný odkaz */
+  .card-action.subtle{background:transparent;border-color:transparent;color:var(--text-mute);
+    font-weight:500;padding-left:0}
+  .card-action.subtle:hover{background:transparent;color:var(--amber-warm)}
+  /* Šipky fází se na počítači ukážou až po najetí na kartu (místo zůstává — karta neposkakuje);
+     na dotykových zařízeních jsou vidět vždy */
+  @media (hover:hover){
+    .case-foot-arrows{opacity:0;transition:opacity var(--dur-fast) var(--ease)}
+    .case-card:hover .case-foot-arrows,.case-card:focus-within .case-foot-arrows{opacity:1}
+  }
   .arrow-btn{width:26px;height:26px;border-radius:var(--r-xs);border:1px solid var(--line);
     background:transparent;color:var(--text-mute);cursor:pointer;font-size:13px;line-height:1;
     font-family:inherit;transition:all var(--dur) var(--ease)}
@@ -293,7 +306,6 @@
   <div class="app-head-left">
     <div class="eyebrow">Přehled · Pipeline</div>
     <h1 class="app-title">Dashboard <em>případů</em></h1>
-    <p class="app-sub">Všechny poptávky na jednom místě — v jaké jsou fázi, čí je tah a co je další krok.</p>
   </div>
   <div class="app-actions">
     <button type="button" class="btn btn-primary" id="btn-new-case" onclick="openNewCaseModal()" style="display:none">Nová poptávka</button>
@@ -315,28 +327,24 @@
   <!-- Board view (po připojení) -->
   <div id="app-view" style="display:none">
 
-    <!-- Panel „Dnes" -->
-    <div class="today-panel" id="today-panel">
-      <button type="button" class="today-chip" id="chip-namne" onclick="toggleChip('namne')">
-        <span class="chip-num" id="cnt-namne">0</span> Na mně
-      </button>
-      <button type="button" class="today-chip" id="chip-ceka" onclick="toggleChip('ceka')">
-        <span class="chip-num" id="cnt-ceka">0</span> Čeká se
-      </button>
-      <button type="button" class="today-chip" id="chip-potermin" onclick="toggleChip('potermin')">
-        <span class="chip-num" id="cnt-potermin">0</span> Po termínu
-      </button>
-    </div>
-
-    <!-- Doručené -->
-    <div class="inbox" id="inbox" style="display:none">
-      <div class="inbox-head">Doručené — události z aplikací</div>
-      <div id="inbox-list"></div>
-    </div>
-
-    <!-- Board tools -->
+    <!-- Jedna lišta: hledání, filtry „Dnes", Doručené, řazení, archiv -->
     <div class="board-tools">
-      <input type="text" class="input board-search" id="board-search" placeholder="Hledat — název, klient, IČO…" oninput="onSearch()">
+      <input type="text" class="input board-search" id="board-search" placeholder="Hledat název, klienta, IČO…" oninput="onSearch()">
+      <div class="today-panel" id="today-panel">
+        <button type="button" class="today-chip" id="chip-namne" onclick="toggleChip('namne')">
+          <span class="chip-num" id="cnt-namne">0</span> Na mně
+        </button>
+        <button type="button" class="today-chip" id="chip-ceka" onclick="toggleChip('ceka')">
+          <span class="chip-num" id="cnt-ceka">0</span> Čeká se
+        </button>
+        <button type="button" class="today-chip" id="chip-potermin" onclick="toggleChip('potermin')">
+          <span class="chip-num" id="cnt-potermin">0</span> Po termínu
+        </button>
+        <button type="button" class="today-chip inbox-chip" id="chip-inbox" onclick="toggleInbox()" style="display:none" aria-expanded="false">
+          <span class="chip-num" id="cnt-inbox">0</span> Doručené
+        </button>
+      </div>
+      <div class="spacer"></div>
       <div class="segmented" id="sort-toggle" title="Řazení karet ve sloupcích">
         <button type="button" data-sort="vlastni" onclick="setSortMode('vlastni')">Vlastní pořadí</button>
         <button type="button" data-sort="nejnovejsi" onclick="setSortMode('nejnovejsi')">Nejnovější</button>
@@ -344,6 +352,12 @@
       <div class="spacer"></div>
       <button type="button" class="btn btn-ghost btn-sm" onclick="reloadData()">Načíst znovu</button>
       <button type="button" class="btn btn-secondary btn-sm" id="btn-archive" onclick="toggleArchive()">Uzavřené <span id="archive-count"></span></button>
+    </div>
+
+    <!-- Doručené — sbalené, otevírá se tlačítkem v liště -->
+    <div class="inbox" id="inbox" style="display:none">
+      <div class="inbox-head">Doručené — události z aplikací</div>
+      <div id="inbox-list"></div>
     </div>
 
     <!-- Kanban board -->
@@ -534,6 +548,7 @@
           <ul class="dropdown-menu" role="listbox">
             <li class="dropdown-option selected" data-value="ja" role="option">Já</li>
             <li class="dropdown-option" data-value="klient" role="option">Klient</li>
+            <li class="dropdown-option" data-value="proverovatel" role="option">Prověřovatel</li>
             <li class="dropdown-option" data-value="banka" role="option">Banka</li>
             <li class="dropdown-option" data-value="odhadce" role="option">Odhadce</li>
             <li class="dropdown-option" data-value="notar" role="option">Notář</li>
@@ -545,6 +560,7 @@
         <select id="d-citah" hidden>
           <option value="ja" selected>Já</option>
           <option value="klient">Klient</option>
+          <option value="proverovatel">Prověřovatel</option>
           <option value="banka">Banka</option>
           <option value="odhadce">Odhadce</option>
           <option value="notar">Notář</option>
@@ -582,6 +598,8 @@
     <div class="dsec">
       <div class="dsec-title">Rychlé akce</div>
       <div class="qa-row">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="quickAction('provereno')">Prověřeno</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="quickAction('provereni_vraceno')">Vráceno z prověření</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="quickAction('ts_odeslan')">TS odeslán</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="quickAction('ts_vracen')">TS vrácen</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="quickAction('podepsano')">Podepsáno</button>
@@ -597,7 +615,7 @@
     <div class="dsec">
       <div class="dsec-title">Otevřít v aplikaci</div>
       <div class="qa-row">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="openInApp('real-estate-prompt-generator.html')">R-E Generator</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="d-btn-re" onclick="openInApp('real-estate-prompt-generator.html')" title="Nové ocenění v R-E se připojí k tomuto případu">Ocenit nemovitost (R-E)</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="openInApp('termsheet-generator.html')">Term Sheet</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="openInApp('loan-documentation.html')">Loan Doc</button>
       </div>
@@ -737,19 +755,26 @@ const PRIPADY_HEADER = [
 const AKCE_HEADER = ['id', 'pripad_id', 'datum', 'typ', 'popis', 'zdroj', 'payload_json'];
 const UVERY_HEADER = ['id', 'pripad_id', 'klient', 'castka', 'mena', 'datum_vyplaceni', 'poznamka'];
 
-const FAZE_ORDER = ['nova', 'oceneni', 'termsheet', 'dokumentace', 'cerpani', 'uzavreno'];
+const FAZE_ORDER = ['nova', 'oceneni', 'provereni', 'termsheet', 'dokumentace', 'cerpani', 'uzavreno'];
 const FAZE_LABELS = {
-    nova: 'Nová', oceneni: 'Ocenění', termsheet: 'Term Sheet',
+    nova: 'Nová', oceneni: 'Ocenění', provereni: 'Prověření', termsheet: 'Term Sheet',
     dokumentace: 'Dokumentace', cerpani: 'Podpis & čerpání', uzavreno: 'Uzavřeno'
 };
+// Sloupce nástěnky. Kód 'nova' zůstává kvůli zpětné kompatibilitě (ručně založená poptávka),
+// ale zobrazuje se ve sloupci Ocenění — prvním krokem je vždy ocenění nemovitosti.
+const BOARD_COLS = ['oceneni', 'provereni', 'termsheet', 'dokumentace', 'cerpani'];
+function boardColOf(faze) {
+    return faze === 'nova' ? 'oceneni' : faze;
+}
 const TAH_LABELS = {
-    ja: 'Já', klient: 'Klient', banka: 'Banka', odhadce: 'Odhadce',
+    ja: 'Já', klient: 'Klient', proverovatel: 'Prověřovatel', banka: 'Banka', odhadce: 'Odhadce',
     notar: 'Notář', katastr: 'Katastr', pravnik: 'Právník', jine: 'Jiné'
 };
 const VYSLEDEK_LABELS = { vyplaceno: 'Vyplaceno', zamitnuto: 'Zamítnuto', ztraceno: 'Ztraceno', slouceno: 'Sloučeno' };
 // Mapa: typ události → navržená fáze (posun JEN dopředu)
 const EVENT_FAZE = {
     oceneni_ulozeno: 'oceneni',
+    proverovani_odeslano: 'provereni',
     ts_vygenerovan: 'termsheet',
     ts_vracen: 'dokumentace',
     dokumentace_vygenerovana: 'dokumentace'
@@ -768,6 +793,7 @@ const state = {
     cases: [],           // objekty dle PRIPADY_HEADER + _row (1-based vč. headeru) + _base (aktualizovano při načtení) + nemovitosti []
     actions: [],         // objekty dle AKCE_HEADER
     inboxEvents: [],     // události z fronty bez caseId / bez matche
+    inboxOpen: false,    // panel Doručené je sbalený, otevírá se tlačítkem v liště
     chipFilter: null,    // null | 'namne' | 'ceka' | 'potermin'
     search: '',
     archiveVisible: false,
@@ -1423,6 +1449,8 @@ function eventTitle(ev) {
     switch (ev.type) {
         case 'oceneni_ulozeno':
             return 'Ocenění uloženo — ' + (p.nazev || nem || 'bez názvu');
+        case 'proverovani_odeslano':
+            return 'Odesláno k prověření — ' + (p.nazev || nem || 'bez názvu');
         case 'ts_vygenerovan':
             return 'Term sheet vygenerován — ' + (p.klient || nem || 'bez klienta');
         case 'ts_vracen':
@@ -1531,6 +1559,12 @@ async function applyEventToCase(c, ev, silent) {
     } else if (ev.type === 'ts_vracen') {
         if (!c.klient && p.klient) { c.klient = String(p.klient); changes.push('doplněn klient'); }
         if (!c.ico && p.ico) { c.ico = String(p.ico); changes.push('doplněno IČO'); }
+    } else if (ev.type === 'proverovani_odeslano') {
+        // Čeká se na druhého společníka (čtyři oči); starý termín by jinak hlásil „po termínu"
+        c.ci_tah = 'proverovatel';
+        c.dalsi_krok = 'Čeká na prověření';
+        c.termin = '';
+        changes.push('odesláno k prověření');
     }
     // dokumentace_vygenerovana → jen Akce záznam (+ případný posun fáze níže)
 
@@ -1559,7 +1593,14 @@ async function processQueue() {
     let createdCount = 0;
     for (const ev of events) {
         const caseId = ev.payload && ev.payload.caseId;
-        const c = caseId ? findCase(caseId) : null;
+        // Párování: caseId (i přes sloučení) → valuationId (opakované uložení stejného ocenění
+        // nesmí založit duplicitní případ) → u ocenění automatika níže
+        let c = caseId ? resolveActiveCase(findCase(caseId)) : null;
+        if (!c && ev.payload && ev.payload.valuationId != null) c = findCaseByValuationId(ev.payload.valuationId);
+        if (!c && ev.type === 'proverovani_odeslano') {
+            const cands = matchCandidates(ev);
+            if (cands.length === 1) c = cands[0];
+        }
         if (c && c.stav === 'aktivni') {
             try {
                 const res = await applyEventToCase(c, ev, true);
@@ -1603,6 +1644,11 @@ async function processQueue() {
 // (fáze Ocenění, název = název ocenění); 2+ kandidátů → nejednoznačné,
 // rozhodne Martin v Doručených.
 async function autoProcessValuationEvent(ev) {
+    const known = findCaseByValuationId(ev.payload && ev.payload.valuationId);
+    if (known) {
+        const res = await applyEventToCase(known, ev, true);
+        return res === null ? 'inbox' : 'attached';
+    }
     const cands = matchCandidates(ev);
     if (cands.length > 1) return 'inbox';
     if (cands.length === 1) {
@@ -1802,6 +1848,9 @@ function inboxNewCase(evId) {
     if (ev.type === 'oceneni_ulozeno') {
         prefill.nazev = p.nazev || '';
         prefill.faze = 'oceneni';
+    } else if (ev.type === 'proverovani_odeslano') {
+        prefill.nazev = p.nazev || '';
+        prefill.faze = 'provereni';
     } else if (ev.type === 'ts_vygenerovan') {
         const lv = p.lv || ((eventNemovitosti(p)[0] || {}).lv || '');
         prefill.nazev = p.nazevTs || ((p.klient || '') + (lv ? ' – LV ' + lv : ''));
@@ -2023,12 +2072,24 @@ function matchesChip(c) {
     return true;
 }
 
+// Doručené: tlačítko s počtem v liště; panel jen když ho Martin otevře
+function toggleInbox() {
+    state.inboxOpen = !state.inboxOpen;
+    renderInbox();
+}
+
 function renderInbox() {
     const inbox = document.getElementById('inbox');
     const list = document.getElementById('inbox-list');
-    if (state.inboxEvents.length === 0) {
+    const chip = document.getElementById('chip-inbox');
+    const count = state.inboxEvents.length;
+    document.getElementById('cnt-inbox').textContent = count;
+    chip.style.display = count > 0 ? '' : 'none';
+    chip.classList.toggle('active', state.inboxOpen && count > 0);
+    chip.setAttribute('aria-expanded', state.inboxOpen && count > 0 ? 'true' : 'false');
+    if (count === 0 || !state.inboxOpen) {
         inbox.style.display = 'none';
-        list.innerHTML = '';
+        if (count === 0) list.innerHTML = '';
         return;
     }
     inbox.style.display = '';
@@ -2054,8 +2115,8 @@ function renderInbox() {
 }
 
 const COL_HINTS = {
-    nova: 'Žádná nová poptávka — založte ji tlačítkem „Nová poptávka".',
-    oceneni: 'Nic se právě neoceňuje.',
+    oceneni: 'Nic se právě neoceňuje — případ vznikne sám uložením ocenění v R-E.',
+    provereni: 'Nic nečeká na prověření.',
     termsheet: 'Žádný term sheet v běhu.',
     dokumentace: 'Žádná dokumentace v přípravě.',
     cerpani: 'Nic nečeká na podpis ani čerpání.'
@@ -2063,10 +2124,9 @@ const COL_HINTS = {
 
 function renderBoard() {
     const board = document.getElementById('board');
-    const cols = FAZE_ORDER.slice(0, 5);
     const visible = activeCases().filter(matchesSearch).filter(matchesChip);
-    board.innerHTML = cols.map(function (faze) {
-        const items = visible.filter(function (c) { return c.faze === faze; })
+    board.innerHTML = BOARD_COLS.map(function (faze) {
+        const items = visible.filter(function (c) { return boardColOf(c.faze) === faze; })
             .sort(boardCompare);
         const cards = items.length === 0
             ? '<div class="col-hint">' + escapeHtml(COL_HINTS[faze] || 'Prázdné.') + '</div>'
@@ -2117,19 +2177,87 @@ function caseHasAction(c, typ) {
     return state.actions.some(function (a) { return a.pripad_id === c.id && a.typ === typ; });
 }
 
+function actionPayload(a) {
+    try { return JSON.parse(a.payload_json || '{}') || {}; } catch (e) { return {}; }
+}
+
+// Případ + všechny případy do něj sloučené (víc nemovitostí = jeden případ)
+function caseFamilyIds(c) {
+    const ids = [c.id];
+    for (let i = 0; i < ids.length && i < 50; i++) {
+        state.actions.forEach(function (a) {
+            if (a.pripad_id !== ids[i] || a.typ !== 'slouceno') return;
+            const src = actionPayload(a).zdrojovyCaseId;
+            if (src && ids.indexOf(src) === -1) ids.push(src);
+        });
+    }
+    return ids;
+}
+
+// Poslední uložené ocenění z R-E v historii případu (i sloučených) — pro proklik „Poslat k prověření"
+function caseValuationId(c) {
+    const ids = caseFamilyIds(c);
+    let best = null;
+    state.actions.forEach(function (a) {
+        if (ids.indexOf(a.pripad_id) === -1) return;
+        if (a.typ !== 'oceneni_ulozeno' && a.typ !== 'proverovani_odeslano') return;
+        const vid = actionPayload(a).valuationId;
+        if (vid == null || vid === '') return;
+        if (!best || (a.datum || '') > (best.datum || '')) best = { datum: a.datum, vid: vid };
+    });
+    return best ? best.vid : null;
+}
+
+// Sloučený (archivovaný) případ → aktivní případ, do kterého byl sloučen
+function resolveActiveCase(c) {
+    for (let hops = 0; c && c.stav !== 'aktivni' && c.vysledek === 'slouceno' && hops < 10; hops++) {
+        const m = state.actions.find(function (a) {
+            return a.pripad_id === c.id && a.typ === 'slouceno' && actionPayload(a).cilovyCaseId;
+        });
+        c = m ? findCase(actionPayload(m).cilovyCaseId) : null;
+    }
+    return c && c.stav === 'aktivni' ? c : null;
+}
+
+// Aktivní případ, v jehož historii je dané ocenění z R-E (brání duplicitám při opakovaném uložení)
+function findCaseByValuationId(vid) {
+    if (vid == null || vid === '') return null;
+    const marker = '"valuationId":' + JSON.stringify(vid);
+    const hits = state.actions.filter(function (a) {
+        return a.pripad_id && (a.payload_json || '').indexOf(marker) !== -1;
+    });
+    for (const a of hits) {
+        const c = resolveActiveCase(findCase(a.pripad_id));
+        if (c) return c;
+    }
+    return null;
+}
+
 // Kontextová akce karty dle fáze — „co je další klik".
 // kind 'app' = proklik do appky s handoffem; 'quick' = 1klik značka do timeline.
 function cardNextAction(c) {
     if (c.pozastaveno === '1') return null;
     switch (c.faze) {
         case 'nova':
-            return { label: 'Ocenit v R-E', kind: 'app', href: 'real-estate-prompt-generator.html' };
         case 'oceneni':
-            return { label: 'Vytvořit term sheet', kind: 'app', href: 'termsheet-generator.html' };
-        case 'termsheet':
+            return caseValuationId(c) != null
+                ? { label: 'Poslat k prověření', kind: 'app', href: 'real-estate-prompt-generator.html', withValuation: true }
+                : { label: 'Ocenit v R-E', kind: 'app', href: 'real-estate-prompt-generator.html' };
+        case 'provereni':
+            return { label: 'Prověřeno', kind: 'quick', typ: 'provereno' };
+        case 'termsheet': {
+            // TS mohl vzniknout i u případu, který byl později sloučen do tohoto
+            const fam = caseFamilyIds(c);
+            const hasTs = state.actions.some(function (a) {
+                return a.typ === 'ts_vygenerovan' && fam.indexOf(a.pripad_id) !== -1;
+            });
+            if (!hasTs) {
+                return { label: 'Vytvořit term sheet', kind: 'app', href: 'termsheet-generator.html' };
+            }
             return caseHasAction(c, 'ts_odeslan')
                 ? { label: 'Import vráceného TS', kind: 'app', href: 'loan-documentation.html' }
                 : { label: 'Označit: TS odeslán', kind: 'quick', typ: 'ts_odeslan' };
+        }
         case 'dokumentace':
             return { label: 'Otevřít Loan Doc', kind: 'app', href: 'loan-documentation.html' };
         case 'cerpani':
@@ -2144,21 +2272,36 @@ function cardNextAction(c) {
 function renderCard(c) {
     const overdue = isOverdue(c);
     const paused = c.pozastaveno === '1';
-    const idx = FAZE_ORDER.indexOf(c.faze);
+    const mine = c.ci_tah === 'ja' && !paused;
+    const idx = BOARD_COLS.indexOf(boardColOf(c.faze));
     const amount = c.castka ? fmtNum(parseAmount(c.castka)) + ' ' + (c.mena || 'CZK') : '';
-    let next = '';
-    if (c.dalsi_krok || c.termin) {
-        next = '<div class="case-next">' + escapeHtml(c.dalsi_krok || '') +
-            (c.termin ? ' <span class="case-date">do ' + escapeHtml(fmtDate(c.termin)) + '</span>' : '') + '</div>';
-    }
+    // Klient jen když už není v názvu (název bývá „RD Černošice – Klient A"); právní forma se ignoruje
+    const clientCore = norm(c.klient).replace(/[,\s]*(spol\.?\s*s\s*r\.?\s*o\.?|s\.?\s*r\.?\s*o\.?|a\.?\s*s\.?|k\.?\s*s\.?|v\.?\s*o\.?\s*s\.?)$/, '').trim();
+    const showClient = !!c.klient && (clientCore.length < 3 || norm(c.nazev).indexOf(clientCore) === -1);
+    const nemCount = (c.nemovitosti || []).length;
+    const meta = [];
+    if (amount) meta.push('<span class="amt">' + escapeHtml(amount) + '</span>');
+    meta.push('<span class="tah' + (c.ci_tah === 'ja' ? ' ja' : '') + '">' + escapeHtml(TAH_LABELS[c.ci_tah] || c.ci_tah || '—') + '</span>');
+    if (nemCount > 1) meta.push('<span>' + nemCount + (nemCount < 5 ? ' nemovitosti' : ' nemovitostí') + '</span>');
     const act = cardNextAction(c);
+    // Další krok nevypisovat, když říká totéž co akční tlačítko (termín zůstává)
+    const krok = (act && norm(c.dalsi_krok) === norm(act.label)) ? '' : (c.dalsi_krok || '');
+    let next = '';
+    if (krok || c.termin) {
+        const date = !c.termin ? ''
+            : (overdue && !paused
+                ? ' <span class="case-date overdue">po termínu (' + escapeHtml(fmtDate(c.termin)) + ')</span>'
+                : ' <span class="case-date">do ' + escapeHtml(fmtDate(c.termin)) + '</span>');
+        next = '<div class="case-next">' + escapeHtml(krok) + date + '</div>';
+    }
+    const actCls = 'card-action' + (mine ? '' : ' subtle');
     let actBtn = '';
     if (act) {
         actBtn = act.kind === 'app'
-            ? '<button type="button" class="card-action" title="Otevře appku propojenou s případem"' +
-                ' onclick="event.stopPropagation();openInAppForCase(\'' + escapeHtml(c.id) + '\',\'' + act.href + '\')">' +
+            ? '<button type="button" class="' + actCls + '" title="Otevře appku propojenou s případem"' +
+                ' onclick="event.stopPropagation();openInAppForCase(\'' + escapeHtml(c.id) + '\',\'' + act.href + '\'' + (act.withValuation ? ',true' : '') + ')">' +
                 escapeHtml(act.label) + ' ↗</button>'
-            : '<button type="button" class="card-action"' +
+            : '<button type="button" class="' + actCls + '"' +
                 ' onclick="event.stopPropagation();quickActionFor(\'' + escapeHtml(c.id) + '\',\'' + act.typ + '\', false)">' +
                 escapeHtml(act.label) + '</button>';
     }
@@ -2167,11 +2310,8 @@ function renderCard(c) {
         ' onclick="openDetail(\'' + escapeHtml(c.id) + '\')"' +
         ' onpointerdown="cardPointerDown(event,\'' + escapeHtml(c.id) + '\')">' +
         '<div class="case-name">' + escapeHtml(c.nazev || '(bez názvu)') + '</div>' +
-        (c.klient ? '<div class="case-client">' + escapeHtml(c.klient) + '</div>' : '') +
-        (amount ? '<div class="case-amount">' + escapeHtml(amount) + '</div>' : '') +
-        '<div class="case-chips">' +
-            '<span class="tah-chip' + (c.ci_tah === 'ja' ? ' ja' : '') + '">' + escapeHtml(TAH_LABELS[c.ci_tah] || c.ci_tah || '—') + '</span>' +
-            (overdue && !paused ? '<span class="badge-overdue">Po termínu</span>' : '') +
+        (showClient ? '<div class="case-client">' + escapeHtml(c.klient) + '</div>' : '') +
+        '<div class="case-meta">' + meta.join('<span class="sep">·</span>') +
             (paused ? '<span class="badge-paused">Pozastaveno</span>' : '') +
         '</div>' +
         next +
@@ -2180,7 +2320,7 @@ function renderCard(c) {
             '<span class="case-foot-arrows">' +
             '<button type="button" class="arrow-btn" title="Posunout fázi zpět"' + (idx <= 0 ? ' disabled' : '') +
                 ' onclick="event.stopPropagation();movePhase(\'' + escapeHtml(c.id) + '\',-1)">←</button>' +
-            '<button type="button" class="arrow-btn" title="Posunout fázi vpřed"' + (idx >= 4 ? ' disabled' : '') +
+            '<button type="button" class="arrow-btn" title="Posunout fázi vpřed"' + (idx >= BOARD_COLS.length - 1 ? ' disabled' : '') +
                 ' onclick="event.stopPropagation();movePhase(\'' + escapeHtml(c.id) + '\',1)">→</button>' +
             '</span>' +
         '</div>' +
@@ -2277,7 +2417,7 @@ function cardPointerMove(e) {
     const rect = targetCard.getBoundingClientRect();
     const y = e.clientY - rect.top;
     const h = rect.height || 1;
-    if (src.faze !== tgt.faze || (y >= h * 0.3 && y <= h * 0.7)) {
+    if (boardColOf(src.faze) !== boardColOf(tgt.faze) || (y >= h * 0.3 && y <= h * 0.7)) {
         // jiný sloupec kdekoli, stejný sloupec střed → nabídka sloučení
         targetCard.classList.add('drop-target');
         drag.mergeTargetId = targetId;
@@ -2397,11 +2537,12 @@ async function sheetsBatchSetPoradi(changed) {
 async function movePhase(caseId, dir) {
     const c = findCase(caseId);
     if (!c) return;
-    const idx = FAZE_ORDER.indexOf(c.faze);
+    // Šipky pracují se sloupci nástěnky ('nova' patří do sloupce Ocenění)
+    const idx = BOARD_COLS.indexOf(boardColOf(c.faze));
     const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx > 4) return;
+    if (idx === -1 || newIdx < 0 || newIdx > BOARD_COLS.length - 1) return;
     const old = c.faze;
-    c.faze = FAZE_ORDER[newIdx];
+    c.faze = BOARD_COLS[newIdx];
     try {
         const ok = await writeCase(c);
         if (!ok) return; // writeCase udělal reload + toast
@@ -2526,6 +2667,9 @@ function openDetail(caseId) {
     host.innerHTML = '';
     (c.nemovitosti || []).forEach(function (n) { addNemRow(n); });
     updateLtv();
+    // Víc nemovitostí = jeden případ: další ocenění z R-E se připojí k tomuto případu
+    document.getElementById('d-btn-re').textContent = caseValuationId(c) != null
+        ? 'Ocenit další nemovitost (R-E)' : 'Ocenit nemovitost (R-E)';
     // pauza tlačítko
     document.getElementById('d-btn-pause').textContent = (c.pozastaveno === '1') ? 'Obnovit' : 'Pozastavit';
     renderTimeline(c.id);
@@ -2649,6 +2793,7 @@ function renderTimeline(caseId) {
 // RYCHLÉ AKCE
 // ============================================================
 const QA_LABELS = {
+    provereno: 'Prověřeno', provereni_vraceno: 'Vráceno z prověření',
     ts_odeslan: 'TS odeslán', ts_vracen: 'TS vrácen', podepsano: 'Podepsáno',
     vklad_kn: 'Vklad KN podán', vyplaceno: 'Vyplaceno'
 };
@@ -2657,10 +2802,57 @@ async function quickAction(typ) {
     return quickActionFor(state.detailId, typ, true);
 }
 
+// Výsledek prověření (čtyři oči): Prověřeno → Term Sheet, Vráceno → zpět do Ocenění.
+// Zapisuje Martin podle e-mailové odpovědi prověřovatele.
+async function reviewDecision(c, typ, inDetail) {
+    const approve = typ === 'provereno';
+    const okConfirm = await appConfirm(
+        approve ? 'Prověřovatel souhlasí? Případ se posune do Term Sheetu.'
+                : 'Vrátit případ z prověření zpět do Ocenění k doplnění?',
+        { title: QA_LABELS[typ], okLabel: approve ? 'Prověřeno' : 'Vrátit' });
+    if (!okConfirm) return;
+    const snapshot = { faze: c.faze, ci_tah: c.ci_tah, dalsi_krok: c.dalsi_krok, termin: c.termin };
+    let oldFaze = null;
+    // Tah, další krok a termín se přepíšou jen při skutečném přechodu (případ dál v procesu nechat být)
+    let resetStep = false;
+    if (approve) {
+        resetStep = FAZE_ORDER.indexOf(c.faze) < FAZE_ORDER.indexOf('termsheet');
+        oldFaze = maybeAdvanceFaze(c, 'termsheet');
+        if (resetStep) c.dalsi_krok = ''; // co dál, řekne akce na kartě („Vytvořit term sheet")
+    } else {
+        resetStep = true;
+        if (c.faze === 'provereni') { oldFaze = c.faze; c.faze = 'oceneni'; }
+        c.dalsi_krok = 'Doplnit podle prověření';
+    }
+    if (resetStep) {
+        c.ci_tah = 'ja';
+        c.termin = '';
+    }
+    try {
+        const ok = await writeCase(c);
+        if (!ok) { if (inDetail) closeModal('detailModal'); return; }
+    } catch (err) {
+        Object.assign(c, snapshot);
+        console.error('Review decision error:', err);
+        showToast('Akce selhala: ' + err.message, 'error');
+        return;
+    }
+    try {
+        await addAction(c.id, typ, QA_LABELS[typ], 'manual');
+        if (oldFaze) {
+            await addAction(c.id, 'faze_zmena', 'Fáze: ' + (FAZE_LABELS[oldFaze] || oldFaze) + ' → ' + (FAZE_LABELS[c.faze] || c.faze), 'manual');
+        }
+    } catch (err) { console.error('Timeline zápis selhal:', err); }
+    if (inDetail) openDetail(c.id); // obnovit pole detailu (tah, další krok, termín)
+    renderAll();
+    showToast(approve ? 'Prověřeno — případ je v Term Sheetu.' : 'Vráceno z prověření — případ je v Ocenění.');
+}
+
 // Rychlá akce nad libovolným případem — z detailu (inDetail=true) i přímo z karty.
 async function quickActionFor(caseId, typ, inDetail) {
     const c = findCase(caseId);
     if (!c) return;
+    if (typ === 'provereno' || typ === 'provereni_vraceno') return reviewDecision(c, typ, inDetail);
     // „Vyplaceno" → rovnou dialog uzavření s předvolbou vyplaceno
     if (typ === 'vyplaceno') {
         if (!inDetail) openDetail(c.id); // dialog uzavření pracuje nad otevřeným detailem
@@ -2801,12 +2993,13 @@ function openInApp(appHref) {
 }
 
 // Proklik do appky s handoffem — z detailu i přímo z karty (akční tlačítko).
-function openInAppForCase(caseId, appHref) {
+// withValuation=true (karta „Poslat k prověření") předá i valuationId → R-E otevře uložené ocenění.
+function openInAppForCase(caseId, appHref, withValuation) {
     const c = findCase(caseId);
     if (!c) return;
     try {
         if (window.DashboardBridge) {
-            DashboardBridge.setHandoff({
+            const handoff = {
                 caseId: c.id,
                 nazev: c.nazev || '',
                 klient: c.klient || '',
@@ -2816,7 +3009,12 @@ function openInAppForCase(caseId, appHref) {
                 nemovitosti: (c.nemovitosti || []).map(function (n) {
                     return { ku: n.ku || '', parcela: n.parcela || '', lv: n.lv || '', hodnota: n.hodnota || '' };
                 })
-            });
+            };
+            if (withValuation) {
+                const vid = caseValuationId(c);
+                if (vid != null) handoff.valuationId = vid;
+            }
+            DashboardBridge.setHandoff(handoff);
         }
     } catch (e) { /* handoff je best-effort */ }
     window.open(appHref);
