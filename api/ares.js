@@ -10,7 +10,7 @@ function createTimeout(ms) {
 
 module.exports = async function handler(req, res) {
     // CORS headers
-    var allowedOrigins = ['https://main-five-alpha.vercel.app', 'http://localhost:3000'];
+    var allowedOrigins = ['https://investment-tools-md.vercel.app', 'https://main-five-alpha.vercel.app', 'http://localhost:3000'];
     var origin = req.headers.origin || '';
     if (allowedOrigins.indexOf(origin) !== -1) {
         res.setHeader('Access-Control-Allow-Origin', origin);

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**Martin's personal web of tools.** GitHub repo `martin1dlouhy/Main-Project`, deployed at https://main-five-alpha.vercel.app. Vanilla HTML apps, each one large self-contained `.html` file with inline `<style>` and `<script>`:
+**Martin's personal web of tools.** GitHub repo `martin1dlouhy/Main-Project`, deployed at https://investment-tools-md.vercel.app. Vanilla HTML apps, each one large self-contained `.html` file with inline `<style>` and `<script>`:
 
 - **Osobní:** `debt-calculator.html`, `real-estate-prompt-generator.html`, `sp500-calculator.html`
 - **Private Credit** (lending tools Martin uses for Spolumajitelé Private Credit a.s. until its own internal app exists): `termsheet-generator.html`, `loan-documentation.html`, `marketing-agent.html`, `database.html`
@@ -54,7 +54,15 @@ Vercel serverless functions cap at 60 s. Long-running or secret-heavy work goes 
 
 The loan-doc system prompt exists twice: `buildLoanDocSystemPrompt` in `server.js` and the preview copy `buildSystemPromptPreview` in `loan-documentation.html`. Keep them identical.
 
-**CORS gotcha:** strict allowlist `allowedOrigins` in `server.js`; `*` is not configured.
+**CORS gotcha:** strict allowlist `allowedOrigins` in `server.js`; `*` is not configured. Production domain is `investment-tools-md.vercel.app` (since 6 Oct 2026); the original `main-five-alpha.vercel.app` still serves the same deployment and stays in the allowlists (`server.js`, `api/ares.js`, `api/parse-lv.js`) until browser data is migrated. A new frontend origin must be added in all three places, and in Google Cloud Console → OAuth client → Authorized JavaScript origins (GIS fallback login).
+
+## Access gate (whole site behind the PIN, since Oct 2026)
+
+- `proxy.mjs` (Vercel Routing Middleware, wired via `vercel.json` → `proxy.entrypoint`; `.mjs` because the rest of the project is CommonJS) guards `/`, every `*.html` and every `/api/*` except `/login.html` and `/api/login`. Without a valid cookie: pages → 302 `/login.html?next=…`, API → 401 JSON. Shared CSS/JS/images stay public (no data, app logic is inline in the HTML).
+- Cookie `it_auth` = Railway `deviceToken` (`exp.HMAC-SHA256(key=PIN_HASH, 'device:'+exp)`, 90 days), set by `api/login.js`: `{deviceToken}` from `localStorage` (already registered device, no PIN) or `{pin}` → forwarded to Railway `/api/device/register` (rate limits + global daily fail cap live there). On success `login.html` stores the tokens under the `profilend-auth.js` keys, so Drive/AI don't ask again.
+- **`PIN_HASH` must be identical on Railway and on Vercel** (Production + Preview). Changing the PIN = new hash on both → every device and cookie is logged out. Hash helper: `claude-workspace/outputs/2026-10-06_novy-pin-hash.ps1`.
+- `railway-api` is in `.vercelignore` (backend source must not be served by Vercel). Marketing endpoints on Railway require the session token (`X-Database-Token`) like the other AI endpoints.
+- Test gate changes on a preview branch first; production rollback = Vercel → Deployments → Instant Rollback.
 
 ## Storage in apps (read-only from tooling)
 

@@ -2,3 +2,5 @@
 # Archiv a interní dokumentace nemají být veřejně dostupné
 _archiv
 *.md
+# Kód serveru Railway (vč. AI promptů) — Railway nasazuje z GitHubu, na webu nemá co dělat
+railway-api

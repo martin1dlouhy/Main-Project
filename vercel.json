@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "proxy": {
+    "entrypoint": "proxy.mjs"
+  },
   "functions": {
     "api/parse-lv.js": {
       "maxDuration": 60

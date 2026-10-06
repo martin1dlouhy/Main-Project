@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Přihlášení | Investment Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="design-system/tokens.css">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%;background:var(--bg-deep);color:var(--text);font-family:var(--font-body)}
+  body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px 16px}
+  .box{width:100%;max-width:400px;background:var(--bg-raised);border:1px solid var(--line-faint);
+    border-radius:var(--r-lg);padding:40px 28px 32px;text-align:center;box-shadow:var(--shadow-lg)}
+  .logo{width:56px;height:56px;margin:0 auto 20px;border-radius:14px;display:flex;align-items:center;
+    justify-content:center;background:linear-gradient(145deg,var(--amber-warm),var(--amber));
+    box-shadow:0 0 32px var(--amber-glow),0 4px 16px rgba(0,0,0,0.4)}
+  .logo svg{width:26px;height:26px;stroke:#1a1207;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  h1{font-family:var(--font-display);font-weight:300;font-size:26px;letter-spacing:-0.01em;margin-bottom:8px}
+  .sub{color:var(--text-mute);font-size:14px;margin-bottom:24px;min-height:20px}
+  .digits{display:flex;gap:8px;justify-content:center;margin-bottom:12px}
+  .digit{width:46px;height:56px;text-align:center;font-family:var(--font-mono);font-size:22px;color:var(--text);
+    background:var(--bg-input);border:1px solid var(--line);border-radius:var(--r-sm);outline:none;
+    transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+  .digit:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-glow)}
+  .err{min-height:20px;color:var(--danger);font-size:13px;margin-bottom:10px;line-height:1.4}
+  .btn{width:100%;padding:12px 24px;background:var(--amber);color:#1a1207;border:none;border-radius:var(--r-sm);
+    font-family:var(--font-body);font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px var(--amber-glow);
+    transition:background var(--dur) var(--ease)}
+  .btn:hover{background:var(--amber-warm)}
+  .btn:disabled{opacity:.6;cursor:default}
+  .hidden{visibility:hidden}
+  @media (max-width:400px){.digits{gap:6px}.digit{width:40px;height:50px;font-size:20px}}
+</style>
+</head>
+<body>
+<main class="box">
+  <div class="logo" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+  </div>
+  <h1>Investment Tools</h1>
+  <p class="sub" id="sub">Zadejte PIN</p>
+  <form id="form" autocomplete="off" novalidate>
+    <div class="digits">
+      <input class="digit" type="password" inputmode="numeric" maxlength="1" aria-label="Číslice 1">
+      <input class="digit" type="password" inputmode="numeric" maxlength="1" aria-label="Číslice 2">
+      <input class="digit" type="password" inputmode="numeric" maxlength="1" aria-label="Číslice 3">
+      <input class="digit" type="password" inputmode="numeric" maxlength="1" aria-label="Číslice 4">
+      <input class="digit" type="password" inputmode="numeric" maxlength="1" aria-label="Číslice 5">
+      <input class="digit" type="password" inputmode="numeric" maxlength="1" aria-label="Číslice 6">
+    </div>
+    <div class="err" id="err" role="alert"></div>
+    <button type="submit" class="btn" id="btn">Přihlásit</button>
+  </form>
+  <noscript><p class="err">Pro přihlášení zapněte JavaScript.</p></noscript>
+</main>
+<script>
+// Přihlášení do zámku webu (proxy.mjs). Klíče úložiště jsou stejné jako v profilend-auth.js,
+// takže po přihlášení se Google Drive ani AI funkce na PIN znovu neptají.
+(function () {
+    'use strict';
+    var DEVICE_KEY = 'profilend-device-token';
+    var SESSION_KEY = 'profilend-session-token';
+
+    // Návrat jen na stránku tohoto webu (ochrana proti přesměrování na cizí adresu)
+    var next = new URLSearchParams(location.search).get('next') || '/';
+    if (next.charAt(0) !== '/' || next.charAt(1) === '/' || next.charAt(1) === '\\' || next.indexOf('/login.html') === 0) {
+        next = '/';
+    }
+
+    var form = document.getElementById('form');
+    var sub = document.getElementById('sub');
+    var err = document.getElementById('err');
+    var btn = document.getElementById('btn');
+    var digits = Array.prototype.slice.call(document.querySelectorAll('.digit'));
+    var busy = false;
+
+    function go() { location.replace(next); }
+
+    function resetDigits() {
+        digits.forEach(function (d) { d.value = ''; });
+        digits[0].focus();
+    }
+
+    function post(body) {
+        return fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(body)
+        }).then(function (r) {
+            return r.json().catch(function () { return {}; })
+                .then(function (d) { return { ok: r.ok, status: r.status, data: d || {} }; });
+        });
+    }
+
+    function submitPin() {
+        if (busy) return;
+        var pin = digits.map(function (d) { return d.value; }).join('');
+        if (!/^\d{6}$/.test(pin)) { err.textContent = 'Zadejte všech 6 číslic.'; return; }
+        busy = true;
+        btn.disabled = true;
+        err.textContent = '';
+        post({ pin: pin }).then(function (res) {
+            if (res.ok && res.data.ok) {
+                try { if (res.data.deviceToken) localStorage.setItem(DEVICE_KEY, res.data.deviceToken); } catch (e) { /* no-op */ }
+                try { if (res.data.sessionToken) sessionStorage.setItem(SESSION_KEY, res.data.sessionToken); } catch (e) { /* no-op */ }
+                go();
+                return;
+            }
+            err.textContent = res.data.error || 'Přihlášení se nepodařilo.';
+            resetDigits();
+        }).catch(function () {
+            err.textContent = 'Server neodpovídá. Zkontrolujte připojení a zkuste to znovu.';
+            resetDigits();
+        }).then(function () {
+            busy = false;
+            btn.disabled = false;
+        });
+    }
+
+    digits.forEach(function (d, i) {
+        d.addEventListener('input', function () {
+            d.value = d.value.replace(/\D/g, '').slice(-1);
+            if (d.value && i < digits.length - 1) digits[i + 1].focus();
+            if (digits.every(function (x) { return x.value; })) submitPin();
+        });
+        d.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace' && !d.value && i > 0) {
+                digits[i - 1].value = '';
+                digits[i - 1].focus();
+            }
+        });
+        d.addEventListener('paste', function (e) {
+            var text = ((e.clipboardData || window.clipboardData).getData('text') || '').replace(/\D/g, '').slice(0, 6);
+            if (!text) return;
+            e.preventDefault();
+            text.split('').forEach(function (ch, k) { if (digits[k]) digits[k].value = ch; });
+            digits[Math.min(text.length, digits.length - 1)].focus();
+            if (text.length === 6) submitPin();
+        });
+    });
+    form.addEventListener('submit', function (e) { e.preventDefault(); submitPin(); });
+
+    // Zařízení přihlášené už dřív (token z profilend-auth) → dovnitř bez PINu
+    var stored = null;
+    try { stored = localStorage.getItem(DEVICE_KEY); } catch (e) { /* no-op */ }
+    var exp = stored ? parseInt(stored.split('.')[0], 10) : 0;
+    if (stored && exp > Date.now()) {
+        sub.textContent = 'Ověřuji zařízení…';
+        form.classList.add('hidden');
+        post({ deviceToken: stored }).then(function (res) {
+            if (res.ok && res.data.ok) { go(); return; }
+            sub.textContent = 'Zadejte PIN';
+            form.classList.remove('hidden');
+            if (res.status >= 500 && res.data.error) err.textContent = res.data.error;
+            digits[0].focus();
+        }).catch(function () {
+            sub.textContent = 'Zadejte PIN';
+            form.classList.remove('hidden');
+            digits[0].focus();
+        });
+    } else {
+        digits[0].focus();
+    }
+})();
+</script>
+</body>
+</html>

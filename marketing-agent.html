@@ -3347,6 +3347,17 @@
         // ================== API CONFIG ==================
         const API_BASE = 'https://main-project-production-b048.up.railway.app';
 
+        // Marketing API na Railway vyžaduje přihlášení (PIN zařízení) — relace z ProfilendAuth
+        // v hlavičce X-Database-Token (stejně jako Úvěrová dokumentace a Database)
+        async function marketingFetch(url, body) {
+            const headers = { 'Content-Type': 'application/json' };
+            try {
+                const token = window.ProfilendAuth ? await ProfilendAuth.getSessionToken() : null;
+                if (token) headers['X-Database-Token'] = token;
+            } catch (e) { /* bez relace odpoví server 401 se srozumitelnou hláškou */ }
+            return fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(body) });
+        }
+
         // ================== POST GENERATION (BATCH) ==================
         async function generateBatch() {
             const theme = document.getElementById('theme').value;
@@ -3467,11 +3478,7 @@
                         return;
                     }
                 } else {
-                    const response = await fetch(`${API_BASE}/api/marketing/generate`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(requestBody)
-                    });
+                    const response = await marketingFetch(`${API_BASE}/api/marketing/generate`, requestBody);
                     if (!response.ok && response.headers.get('content-type') && response.headers.get('content-type').indexOf('json') === -1) {
                         throw new Error('Server nedostupný (HTTP ' + response.status + ')');
                     }
@@ -3848,11 +3855,7 @@
                         return;
                     }
                 } else {
-                    var response = await fetch(API_BASE + '/api/marketing/generate-image', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(requestBody)
-                    });
+                    var response = await marketingFetch(API_BASE + '/api/marketing/generate-image', requestBody);
                     if (!response.ok && response.headers.get('content-type') && response.headers.get('content-type').indexOf('json') === -1) {
                         throw new Error('Server nedostupný (HTTP ' + response.status + ')');
                     }
@@ -5060,11 +5063,7 @@
                     onCancel: function() { reject(new Error('cancelled')); },
                     onConfirm: async function() {
                         try {
-                            var resp = await fetch(opts.url, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(opts.body)
-                            });
+                            var resp = await marketingFetch(opts.url, opts.body);
                             var data = await resp.json();
                             // Log
                             appendToPromptLog({

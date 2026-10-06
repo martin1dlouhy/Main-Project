@@ -49,7 +49,8 @@ var MARKETING_CONFIG = {
 
 // CORS — allow Vercel production + localhost
 var allowedOrigins = [
-    'https://main-five-alpha.vercel.app',
+    'https://investment-tools-md.vercel.app',
+    'https://main-five-alpha.vercel.app', // původní adresa — ponechat do převodu dat, pak lze odebrat
     'http://localhost:3000',
     'http://localhost:8080',
     'http://127.0.0.1:3000',
@@ -1443,6 +1444,9 @@ try { OpenAI = require('openai'); } catch(e) { console.warn('openai package not 
 
 // Debug endpoint - list available Gemini models
 app.get('/api/marketing/models', async function (req, res) {
+    if (!verifyDatabaseToken(req)) {
+        return res.status(401).json({ error: 'Neplatná relace. Obnovte stránku a zadejte PIN.' });
+    }
     var geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey) {
         return res.status(500).json({ error: 'GEMINI_API_KEY is not set.' });
@@ -1675,6 +1679,9 @@ function marketingRateLimited(req, res) {
 // Supports both legacy flat body and v2 { brandPreset, brief, options } body.
 // =============================================
 app.post('/api/marketing/generate-image', async function (req, res) {
+    if (!verifyDatabaseToken(req)) {
+        return res.status(401).json({ success: false, error: 'Neplatná relace. Obnovte stránku a zadejte PIN.' });
+    }
     if (marketingRateLimited(req, res)) return;
     var openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) {
@@ -1803,6 +1810,9 @@ app.post('/api/marketing/generate-image', async function (req, res) {
 });
 
 app.post('/api/marketing/generate', async function (req, res) {
+    if (!verifyDatabaseToken(req)) {
+        return res.status(401).json({ success: false, error: 'Neplatná relace. Obnovte stránku a zadejte PIN.' });
+    }
     if (marketingRateLimited(req, res)) return;
     var openaiKey = process.env.OPENAI_API_KEY;
     if (!openaiKey) {

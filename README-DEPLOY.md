@@ -31,7 +31,7 @@ git push origin main
 ### 2. Vercel automaticky deployuje
 - Vercel detekuje změny na GitHubu
 - Spustí automatický build
-- Za ~30-60 sekund budou změny live na https://main-five-alpha.vercel.app
+- Za ~30-60 sekund budou změny live na https://investment-tools-md.vercel.app
 
 ### 3. Kontrola po deployi
 ✅ Zkontrolujte:
