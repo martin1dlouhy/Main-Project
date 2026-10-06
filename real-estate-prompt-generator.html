@@ -1220,6 +1220,21 @@
             color: var(--text-secondary);
         }
 
+        /* E-mail k prověření — zaškrtávátko „Do e-mailu" na kartě AI (jen u AI s daty) */
+        .email-include {
+            display: flex;
+            align-items: center;
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--text-soft);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .email-include[hidden] {
+            display: none;
+        }
+
         /* Comparison Table */
         .comparison-table-wrapper {
             background: var(--bg-surface);
@@ -2470,6 +2485,10 @@
                         <label>Zástavní hodnota (Kč)</label>
                         <input type="number" id="manualZastavniChatGPT" placeholder="např. 6560000" oninput="updateComparisonTable()">
                     </div>
+                    <label class="email-include" id="emailIncludeChatGPT" hidden>
+                        <input type="checkbox" class="compare-checkbox" checked onchange="setEmailInclude('chatgpt', this.checked)">
+                        Do e-mailu k prověření
+                    </label>
                 </div>
                 <div class="ai-source-card">
                     <h3>Claude</h3>
@@ -2485,6 +2504,10 @@
                         <label>Zástavní hodnota (Kč)</label>
                         <input type="number" id="manualZastavniClaude" placeholder="např. 6560000" oninput="updateComparisonTable()">
                     </div>
+                    <label class="email-include" id="emailIncludeClaude" hidden>
+                        <input type="checkbox" class="compare-checkbox" checked onchange="setEmailInclude('claude', this.checked)">
+                        Do e-mailu k prověření
+                    </label>
                 </div>
                 <div class="ai-source-card">
                     <h3>Gemini</h3>
@@ -2500,6 +2523,10 @@
                         <label>Zástavní hodnota (Kč)</label>
                         <input type="number" id="manualZastavniGemini" placeholder="např. 6560000" oninput="updateComparisonTable()">
                     </div>
+                    <label class="email-include" id="emailIncludeGemini" hidden>
+                        <input type="checkbox" class="compare-checkbox" checked onchange="setEmailInclude('gemini', this.checked)">
+                        Do e-mailu k prověření
+                    </label>
                 </div>
             </div>
 
@@ -2527,6 +2554,13 @@
                         <path d="M8 8v4" stroke-width="1.5" stroke-linecap="round"/>
                     </svg>
                     Uložit ocenění
+                </button>
+                <button class="btn btn-primary" onclick="createReviewEmail()" id="btnReviewEmail">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px;">
+                        <rect x="2" y="3.5" width="12" height="9" rx="1" stroke-width="1.5"/>
+                        <path d="M2.5 4.5L8 9l5.5-4.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    E-mail k prověření
                 </button>
                 <button class="btn btn-primary" onclick="exportComparisonMD()">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-right: 6px;">
@@ -2640,6 +2674,9 @@
             claude: null,
             gemini: null
         };
+        // Výběr AI do e-mailu k prověření (zaškrtávátka „Do e-mailu" v kroku 6) — jen v paměti,
+        // nemění aiParsedData, srovnávací tabulku ani uložené ocenění
+        let emailIncluded = { chatgpt: true, claude: true, gemini: true };
 
         const propertyConfigs = {
             land: {
@@ -4182,6 +4219,8 @@
                 }
             }
 
+            updateEmailIncludeToggles();
+
             // Check if we have at least one source
             const hasData = sources.some(s => aiParsedData[s]);
             const wrapper = document.getElementById('comparisonTableWrapper');
@@ -4533,6 +4572,279 @@
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
                 .replace(/^-|-$/g, '');
+        }
+
+        // ============================================================
+        // E-MAIL K PROVĚŘENÍ
+        // Spec: claude-workspace/specs/2026-10-06-re-email-k-provereni-design.md
+        // Jedno kliknutí → stažený koncept .eml s hlavičkou X-Unsent → klasický Outlook ho otevře
+        // jako novou neodeslanou zprávu (mailto: by u Martina otevřel nový Outlook, který nepoužívá).
+        // Adresu a přílohy doplní Martin v Outlooku. Nic nového se neukládá.
+        // ============================================================
+
+        function setEmailInclude(source, checked) {
+            emailIncluded[source] = !!checked;
+        }
+
+        // Zaškrtávátko „Do e-mailu k prověření" je vidět jen u AI s daty (parsovanými i ručními)
+        function updateEmailIncludeToggles() {
+            const toggleIds = { chatgpt: 'emailIncludeChatGPT', claude: 'emailIncludeClaude', gemini: 'emailIncludeGemini' };
+            Object.keys(toggleIds).forEach(src => {
+                const label = document.getElementById(toggleIds[src]);
+                if (!label) return;
+                label.hidden = !aiParsedData[src];
+                const checkbox = label.querySelector('input');
+                if (checkbox) checkbox.checked = emailIncluded[src] !== false;
+            });
+        }
+
+        // Název případu = název uloženého ocenění (identifikace případu v e-mailu)
+        function getSavedValuationName() {
+            if (!editingId) return null;
+            try {
+                const saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                const item = saved.find(v => v.id === editingId);
+                return item && item.name ? String(item.name).trim() : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Částky v mil. Kč na 1 desetinné místo (procenta se v e-mailu zaokrouhlují na celá)
+        function reviewMilNum(n) {
+            return (n / 1e6).toLocaleString('cs-CZ', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        }
+
+        function reviewLtv(raw) {
+            const m = String(raw || '').match(/\d+(?:[.,]\d+)?/);
+            return m ? m[0].replace('.', ',') + ' %' : '—';
+        }
+
+        // AI občas píše verzálkami („VHODNÁ") — do e-mailu malými písmeny
+        function reviewSoften(s) {
+            const t = String(s || '').trim();
+            return t && t === t.toUpperCase() ? t.toLowerCase() : t;
+        }
+
+        // Stejná klasifikace jako odznak hodnocení v renderAISummary
+        function reviewIsSuitable(hodnoceni) {
+            const h = String(hodnoceni || '').toLowerCase();
+            return h.includes('vhodn') && !h.includes('nevhodn') && !h.includes('podmín');
+        }
+
+        // Údaje z kroku 4 v pořadí formuláře (stejná podmínka pro nájemné jako populateDetailForm)
+        function reviewPropertyFacts(config) {
+            const facts = [];
+            for (const [fieldId, field] of Object.entries(config.fields)) {
+                if (fieldId === 'najemne' && !selectedInputs.includes('najemni_smlouva') && !selectedInputs.includes('najemni_smlouvy')) continue;
+                const raw = formData[fieldId];
+                if (raw == null || String(raw).trim() === '') continue;
+                let value = String(raw).trim();
+                const num = Number(value);
+                // Částky s mezerami po tisících; roky a malá čísla beze změny (rok 2015, ne „2 015")
+                if (field.type === 'number' && !isNaN(num) && num >= 10000) value = num.toLocaleString('cs-CZ');
+                facts.push({ label: field.label.replace(/\s+-\s+pokud.*$/i, ''), value: value });
+            }
+            return facts;
+        }
+
+        // Obsah e-mailu: předmět + HTML (Calibri 11 pro Outlook) + čistý text
+        function buildReviewEmail(caseName) {
+            const config = propertyConfigs[propertyType] || { name: propertyType || '', fields: {} };
+            const aiLabels = { chatgpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini' };
+            const purposeLabels = { general: 'bezúčelový', refinancing: 'refinancování', acquisition: 'akvizice' };
+            const withData = ['chatgpt', 'claude', 'gemini'].filter(s => aiParsedData[s]);
+            const rows = withData.filter(s => emailIncluded[s] !== false).map(s => ({ label: aiLabels[s], d: aiParsedData[s] }));
+            const excluded = withData.filter(s => emailIncluded[s] === false).map(s => aiLabels[s]);
+
+            // Průměry a rozdíl jen ze zahrnutých AI (stejný výpočet jako finální shrnutí v kroku 6)
+            const trzni = rows.map(r => r.d.trzniHodnota).filter(v => v);
+            const zastavni = rows.map(r => r.d.zastavniHodnota).filter(v => v);
+            const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+            let summary = '';
+            let spreadPct = null;
+            if (trzni.length >= 2) {
+                const avgTrzni = avg(trzni);
+                const minTrzni = Math.min(...trzni);
+                const maxTrzni = Math.max(...trzni);
+                spreadPct = Math.round((maxTrzni - minTrzni) / avgTrzni * 100);
+                summary = 'Průměr: tržní ' + reviewMilNum(avgTrzni) + ' mil. Kč' +
+                    (zastavni.length ? ', zástavní ' + reviewMilNum(avg(zastavni)) + ' mil. Kč' : '') +
+                    ' · rozpětí ' + reviewMilNum(minTrzni) + '–' + reviewMilNum(maxTrzni) + ' mil. Kč' +
+                    ' · rozdíl mezi AI ' + spreadPct + ' %';
+            }
+
+            // Rizika ze zahrnutých AI: nejdřív hlavní, pak sekundární, bez duplicit, nejvýš 4
+            const risks = [];
+            const seenRisks = new Set();
+            ['riziko1', 'riziko2'].forEach(key => rows.forEach(r => {
+                const riskText = String(r.d[key] || '').trim();
+                const norm = riskText.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+                if (!norm || seenRisks.has(norm)) return;
+                seenRisks.add(norm);
+                risks.push(riskText);
+            }));
+            const topRisks = risks.slice(0, 4);
+
+            // Kontrola: ✓ v pořádku / ⚠ upozornění
+            const checks = [];
+            if (rows.length === 1) {
+                checks.push({ ok: false, text: 'Ocenění jen z jedné AI (' + rows[0].label + ')' });
+            } else if (spreadPct !== null) {
+                if (spreadPct <= 15) checks.push({ ok: true, text: 'Shoda AI – rozdíl ' + spreadPct + ' %' });
+                else if (spreadPct <= 30) checks.push({ ok: false, text: 'Rozdíl mezi AI ' + spreadPct + ' % – střední shoda' });
+                else checks.push({ ok: false, text: 'Rozdíl mezi AI ' + spreadPct + ' % – doporučuji znalecký posudek' });
+            }
+            const notSuitable = rows.filter(r => !reviewIsSuitable(r.d.hodnoceni));
+            if (notSuitable.length === 0) {
+                const who = rows.length === 1 ? rows[0].label : (rows.length === 2 ? 'obou AI' : 'všech AI');
+                checks.push({ ok: true, text: 'Zástava vhodná podle ' + who });
+            } else {
+                checks.push({ ok: false, text: 'Zástava: ' + notSuitable.map(r => r.label + ' – ' + (r.d.hodnoceni ? reviewSoften(r.d.hodnoceni) : 'bez hodnocení')).join('; ') });
+            }
+            checks.push(selectedInputs.includes('lv')
+                ? { ok: true, text: 'LV k dispozici' }
+                : { ok: false, text: 'LV není k dispozici' });
+            checks.push(selectedInputs.includes('znalecky_posudek')
+                ? { ok: true, text: 'Znalecký posudek k dispozici' }
+                : { ok: false, text: 'Znalecký posudek není k dispozici' });
+            const checkLines = checks.map(c => (c.ok ? '✓ ' : '⚠ ') + c.text);
+
+            const intro = 'Prosím o prověření případu, podklady posílám v příloze.';
+            const propertyLines = [config.name].concat(reviewPropertyFacts(config).map(f => f.label + ': ' + f.value));
+            if (purposeLabels[loanPurpose]) propertyLines.push('Účel financování: ' + purposeLabels[loanPurpose]);
+            const aiCells = r => [
+                reviewMilNum(r.d.trzniHodnota) + ' mil. Kč',
+                reviewMilNum(r.d.zastavniHodnota) + ' mil. Kč',
+                reviewLtv(r.d.ltv),
+                reviewSoften(r.d.hodnoceni) || '—'
+            ];
+            const afterTable = [summary, excluded.length ? 'Nezahrnuto: ' + excluded.join(', ') : ''].filter(Boolean);
+
+            // --- Čistý text (záloha pro poštovní programy bez HTML) ---
+            const textParts = [intro, '', 'Případ', caseName, '', 'Nemovitost'].concat(propertyLines, ['', 'Ocenění AI']);
+            rows.forEach(r => {
+                const c = aiCells(r);
+                textParts.push(r.label + ': tržní ' + c[0] + ', zástavní ' + c[1] + ', max. LTV ' + c[2] + ', zástava ' + c[3]);
+            });
+            textParts.push(...afterTable);
+            if (topRisks.length) textParts.push('', 'Rizika podle AI', ...topRisks.map(t => '– ' + t));
+            textParts.push('', 'Kontrola', ...checkLines);
+            // Víceřádkové poznámky z formuláře mají LF — sjednotit na CRLF
+            const text = textParts.join('\r\n').replace(/\r?\n/g, '\r\n') + '\r\n';
+
+            // --- HTML pro Outlook ---
+            // E-mail není součást aplikace: CSS proměnné design systému poštovní programy neznají,
+            // proto inline styly (Calibri 11, neutrální šedá linka tabulky).
+            const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const escBr = s => esc(s).replace(/\r?\n/g, '<br>');
+            const font = 'font-family:Calibri,Arial,sans-serif;font-size:11pt;';
+            const lines = arr => '<p style="margin:0;' + font + '">' + arr.map(escBr).join('<br>') + '</p>';
+            const section = (title, bodyHtml) => '<p style="margin:12pt 0 2pt 0;font-weight:bold;' + font + '">' + title + '</p>' + bodyHtml;
+            const aligns = ['left', 'right', 'right', 'right', 'left'];
+            const cellStyle = (i, bold) => 'padding:2pt 12pt 2pt 0;border-bottom:1px solid #d9d9d9;vertical-align:top;text-align:' + aligns[i] + ';font-weight:' + (bold ? 'bold' : 'normal') + ';' + font;
+            let table = '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr>' +
+                ['AI', 'Tržní hodnota', 'Zástavní hodnota', 'Max. LTV', 'Zástava'].map((h, i) => '<th style="' + cellStyle(i, true) + '">' + h + '</th>').join('') +
+                '</tr>';
+            rows.forEach(r => {
+                table += '<tr>' + [r.label].concat(aiCells(r)).map((v, i) => '<td style="' + cellStyle(i, false) + '">' + esc(v) + '</td>').join('') + '</tr>';
+            });
+            table += '</table>';
+            const tableNote = afterTable.length ? '<p style="margin:4pt 0 0 0;' + font + '">' + afterTable.map(esc).join('<br>') + '</p>' : '';
+            const html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="' + font + '">' +
+                lines([intro]) +
+                section('Případ', lines([caseName])) +
+                section('Nemovitost', lines(propertyLines)) +
+                section('Ocenění AI', table + tableNote) +
+                (topRisks.length ? section('Rizika podle AI', lines(topRisks.map(t => '– ' + t))) : '') +
+                section('Kontrola', lines(checkLines)) +
+                '</body></html>';
+
+            return { subject: 'Prověření: ' + caseName, html: html, text: text };
+        }
+
+        // UTF-8 → base64 (po blocích, ať dlouhý text nepřetíží apply)
+        function reviewB64(str) {
+            const bytes = new TextEncoder().encode(str);
+            let bin = '';
+            for (let i = 0; i < bytes.length; i += 0x8000) {
+                bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+            }
+            return btoa(bin);
+        }
+
+        // Předmět s diakritikou jako UTF-8 encoded-words (RFC 2047): max. 42 bajtů na slovo, ať se řádek
+        // „Subject: " vejde do 78 znaků; vícebajtové znaky se nedělí
+        function reviewEncodeHeader(str) {
+            const encoder = new TextEncoder();
+            const words = [];
+            let chunk = '';
+            for (const ch of str) {
+                if (chunk && encoder.encode(chunk + ch).length > 42) {
+                    words.push(chunk);
+                    chunk = '';
+                }
+                chunk += ch;
+            }
+            if (chunk) words.push(chunk);
+            return words.map(w => '=?UTF-8?B?' + reviewB64(w) + '?=').join('\r\n ');
+        }
+
+        function buildReviewEml(subject, html, text) {
+            const boundary = '=_review_' + Date.now().toString(36);
+            const wrap = b64 => (b64.match(/.{1,76}/g) || []).join('\r\n');
+            return [
+                'X-Unsent: 1', // Outlook otevře soubor jako neodeslaný koncept
+                'Subject: ' + reviewEncodeHeader(subject),
+                'MIME-Version: 1.0',
+                'Content-Type: multipart/alternative; boundary="' + boundary + '"',
+                '',
+                '--' + boundary,
+                'Content-Type: text/plain; charset="UTF-8"',
+                'Content-Transfer-Encoding: base64',
+                '',
+                wrap(reviewB64(text)),
+                '--' + boundary,
+                'Content-Type: text/html; charset="UTF-8"',
+                'Content-Transfer-Encoding: base64',
+                '',
+                wrap(reviewB64(html)),
+                '--' + boundary + '--',
+                ''
+            ].join('\r\n');
+        }
+
+        function createReviewEmail() {
+            const withData = ['chatgpt', 'claude', 'gemini'].filter(s => aiParsedData[s]);
+            if (withData.length === 0) {
+                showToast('Nejprve vložte alespoň jeden AI výstup');
+                return;
+            }
+            if (!withData.some(s => emailIncluded[s] !== false)) {
+                showToast('Zaškrtněte aspoň jedno ocenění „Do e-mailu k prověření“');
+                return;
+            }
+            const caseName = getSavedValuationName();
+            if (!caseName) {
+                showToast('Nejprve ocenění uložte a pojmenujte – název se použije v e-mailu');
+                openSaveValuationDialog();
+                return;
+            }
+
+            const mail = buildReviewEmail(caseName);
+            const eml = buildReviewEml(mail.subject, mail.html, mail.text);
+            const now = new Date();
+            const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            const namePart = (sanitizeFilenamePart(caseName) || 'pripad').slice(0, 60).replace(/-+$/, '');
+            const url = URL.createObjectURL(new Blob([eml], { type: 'message/rfc822' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'provereni-' + namePart + '-' + dateStr + '.eml';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+            showToast('Koncept e-mailu stažen – otevřete ho kliknutím ve stahování');
         }
 
         // Export srovnávací tabulky + AI shrnutí jako PNG (současný theme, scale 2 pro retina kvalitu)
@@ -5263,6 +5575,7 @@
             }
 
             // Always re-parse from textareas to ensure consistent state & statuses
+            emailIncluded = { chatgpt: true, claude: true, gemini: true };
             aiParsedData = { chatgpt: null, claude: null, gemini: null };
             parseAIOutput('chatgpt');
             parseAIOutput('claude');
@@ -5624,6 +5937,8 @@
             visitedSteps = [1];
             aiParsedData = { chatgpt: null, claude: null, gemini: null };
             editingId = null; // fresh case → save dialog vyrobí nový záznam, ne update
+            emailIncluded = { chatgpt: true, claude: true, gemini: true };
+            updateEmailIncludeToggles();
             const step6Textareas = document.querySelectorAll('#step6 textarea');
             step6Textareas.forEach(ta => ta.value = '');
             document.getElementById('comparisonTableWrapper').style.display = 'none';
