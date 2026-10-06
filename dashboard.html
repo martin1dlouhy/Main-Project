@@ -71,6 +71,11 @@
   .col-count{font-family:var(--font-mono);font-size:11px;color:var(--text-faint)}
   .col-body{padding:10px;display:flex;flex-direction:column;gap:8px;flex:1}
   .col-hint{font-size:12px;color:var(--text-faint);font-style:italic;padding:16px 8px;text-align:center}
+  /* Sbalené starší případy ve sloupci Ocenění */
+  .col-more{width:100%;padding:9px 12px;background:transparent;border:1px dashed var(--line);
+    border-radius:var(--r-md);color:var(--text-mute);font-family:inherit;font-size:12px;cursor:pointer;
+    transition:all var(--dur) var(--ease)}
+  .col-more:hover{border-color:var(--line-amber);color:var(--amber-warm)}
 
   .case-card{background:var(--bg-raised);border:1px solid var(--line-faint);
     border-radius:var(--r-md);padding:11px 13px;cursor:pointer;
@@ -794,6 +799,7 @@ const state = {
     actions: [],         // objekty dle AKCE_HEADER
     inboxEvents: [],     // události z fronty bez caseId / bez matche
     inboxOpen: false,    // panel Doručené je sbalený, otevírá se tlačítkem v liště
+    olderOpen: false,    // sloupec Ocenění: rozbalené „Starší" případy
     chipFilter: null,    // null | 'namne' | 'ceka' | 'potermin'
     search: '',
     archiveVisible: false,
@@ -2122,19 +2128,39 @@ const COL_HINTS = {
     cerpani: 'Nic nečeká na podpis ani čerpání.'
 };
 
+// Sloupec Ocenění se plní každým uloženým oceněním — ukázat jen prvních N, starší sbalit.
+// Při hledání a u filtru „Po termínu" se ukazuje vše (hledaný ani zpožděný případ nesmí být schovaný);
+// „Na mně" / „Čeká se" jsou široké pohledy, tam sbalení platí dál.
+const OCENENI_VISIBLE = 10;
+
+function toggleOlder() {
+    state.olderOpen = !state.olderOpen;
+    renderBoard();
+}
+
 function renderBoard() {
     const board = document.getElementById('board');
     const visible = activeCases().filter(matchesSearch).filter(matchesChip);
+    const filtering = !!(norm(state.search) || state.chipFilter === 'potermin');
     board.innerHTML = BOARD_COLS.map(function (faze) {
         const items = visible.filter(function (c) { return boardColOf(c.faze) === faze; })
             .sort(boardCompare);
-        const cards = items.length === 0
+        const collapsible = faze === 'oceneni' && !filtering && items.length > OCENENI_VISIBLE;
+        const shown = collapsible && !state.olderOpen ? items.slice(0, OCENENI_VISIBLE) : items;
+        const hidden = collapsible && !state.olderOpen ? items.slice(OCENENI_VISIBLE) : [];
+        let cards = items.length === 0
             ? '<div class="col-hint">' + escapeHtml(COL_HINTS[faze] || 'Prázdné.') + '</div>'
-            : items.map(renderCard).join('');
+            : shown.map(renderCard).join('');
+        if (collapsible) {
+            cards += '<button type="button" class="col-more" onclick="toggleOlder()" aria-expanded="' + (state.olderOpen ? 'true' : 'false') + '">' +
+                (state.olderOpen ? 'Skrýt starší ▴' : 'Starší (' + (items.length - OCENENI_VISIBLE) + ') ▾') + '</button>';
+        }
+        // Skryté karty si sloupec pamatuje kvůli ručnímu řazení (persistColumnOrderFromDom)
+        const hiddenAttr = hidden.length ? ' data-hidden-ids="' + escapeHtml(hidden.map(function (c) { return c.id; }).join(',')) + '"' : '';
         return '<div class="col">' +
             '<div class="col-head"><span class="col-title">' + escapeHtml(FAZE_LABELS[faze]) + '</span>' +
             '<span class="col-count">' + items.length + '</span></div>' +
-            '<div class="col-body">' + cards + '</div>' +
+            '<div class="col-body"' + hiddenAttr + '>' + cards + '</div>' +
         '</div>';
     }).join('');
 }
@@ -2495,6 +2521,9 @@ function persistColumnOrderFromDom(colBody) {
     if (!colBody) return;
     const ids = Array.from(colBody.querySelectorAll('.case-card'))
         .map(function (el) { return el.getAttribute('data-id'); });
+    // Sbalené „Starší" karty zůstávají za viditelnými (jinak by se jim pořadí pomíchalo)
+    const hiddenIds = colBody.getAttribute('data-hidden-ids');
+    if (hiddenIds) hiddenIds.split(',').forEach(function (id) { if (id && ids.indexOf(id) === -1) ids.push(id); });
     const changed = [];
     let n = 10;
     for (const id of ids) {
