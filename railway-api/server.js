@@ -848,102 +848,95 @@ function formatCzAmount(num) {
 // Sestavuje systemPrompt pro Claude. Třetí parametr `mode` určuje výstupní formát:
 //   - 'api'    → AI vrátí JSON s find/replace páry (default, použij pro /api/generate-loan-doc).
 //   - 'manual' → AI vrátí upravený .docx jako file attachment (pro Martina v Claude.ai/ChatGPT).
-// Sdílené sekce (KONTEXT, PROCES REVIZE, TYPICKÉ ZBYTKY, ZÁSTAVCE, ČTYŘI TYPY, CO NEMĚNIT,
-// NOTES, formátování hodnot) jsou pro oba módy identické. Oba módy ale dostanou JINOU sekci
+// Sdílené sekce (KONTEXT, VĚŘITEL, JAK VYPADAJÍ ŠABLONY, POSTUP, NA CO SI DÁT POZOR, ZÁSTAVCE,
+// CO NEMĚNIT, POZNÁMKY, formátování hodnot) jsou pro oba módy identické. Oba módy ale dostanou JINOU sekci
 // "FORMÁT ODPOVĚDI" — historicky byly obě v jednom promptu, což vedlo ke konfliktu v manuálním
 // workflow (AI dostala současně "vrať JSON" + "vrať .docx").
+// Šablony Spolumajitelé Private Credit jsou čisté se značkami „(Doplnit)"; starší šablony předvyplněné
+// jiným případem prompt zvládá taky. Kopie v loan-documentation.html (buildSystemPromptPreview,
+// buildManualUserContentPreview) musí zůstat znak po znaku shodná.
 function buildLoanDocSystemPrompt(templateName, passNumber, mode) {
     mode = mode || 'api';
 
-    var sharedHead = 'Jsi právní asistent Spolumajitelé Private Credit a.s. specializovaný na vyplňování smluvní dokumentace pro úvěrové dealy.\n\n' +
+    var sharedHead = 'Jsi právní asistent Spolumajitelé Private Credit a.s. Připravuješ smluvní dokumentaci k podnikatelským úvěrům ze šablon společnosti.\n\n' +
         '=== KONTEXT (PLATÍ PRO KAŽDÝ TYP ŠABLONY) ===\n' +
-        'Spolumajitelé Private Credit pracuje se sadou šablon: úvěrová smlouva, zástavní smlouva (k nemovitostem / podílům / akciím), plná moc k přímému prodeji, vinkulace pojistného plnění, notářský zápis, směnka, dohoda o úhradě nákladů ocenění a další.\n\n' +
+        'Spolumajitelé Private Credit a.s. poskytuje podnikatelské úvěry právnickým osobám se sídlem v ČR, zajištěné nemovitostmi v ČR. Sada šablon: smlouva o úvěru, zástavní smlouva (k nemovitostem / k podílu), plná moc k přímému prodeji (nemovitostí / podílu), ručitelské prohlášení, žádost o vinkulaci pojistného plnění, dohoda o úhradě nákladů ocenění a další.\n\n' +
         '=== VĚŘITEL (POSKYTOVATEL ÚVĚRU) ===\n' +
-        'Věřitelem je vždy Spolumajitelé Private Credit a.s., Pařížská 68/9, Josefov, 110 00 Praha 1 (IČO, spisová značka, účet a podepisující osoba: použij hodnoty z DATA; pokud v DATA chybí, vlož [DOPLNIT]). Pokud šablona uvádí jako věřitele, poskytovatele, zástavního věřitele nebo zmocněnce jiný subjekt (jiný název, IČO, sídlo, účet, podepisující osobu, kontakt), je to údaj z minulého dealu — NAHRAĎ ho údaji věřitele výše na všech místech dokumentu.\n\n' +
-        'KAŽDÁ ŠABLONA (BEZ VÝJIMKY) JE PŘEDVYPLNĚNÁ KONKRÉTNÍMI ÚDAJI Z PŘEDCHOZÍHO DEALU. Šablony se znovupoužívají tak, že se vezme dokument z minulé smlouvy a přepíší se v něm konkrétní hodnoty na nového klienta a nový deal. To znamená:\n' +
-        '- Najdeš v šabloně KONKRÉTNÍ jméno minulého klienta (např. "AGRI PARTNERS Nezamyslice s.r.o.", "QED FACILITY s.r.o.", "TSI Consulting s.r.o.") — to NENÍ legal text, je to data k nahrazení.\n' +
-        '- Najdeš tam KONKRÉTNÍ IČO, sídlo, spisovou značku, jméno jednatele — to NENÍ legal text, je to data k nahrazení.\n' +
-        '- Najdeš tam KONKRÉTNÍ částku ("5.000.000 Kč"), úrokovou sazbu ("9,5 % p.a."), datum ("27.04.2029"), čísla LV ("LV 303"), čísla účtů ("123-456789/0100"), banku ("Komerční Banka, a.s.") — to vše JE data, ne legal text.\n' +
-        '- Najdeš tam KONKRÉTNÍ adresy nemovitostí, výměry parcel, popisy zajištění — pokud se v poskytnutých DATA liší, JE TO data k nahrazení.\n\n' +
-        'JMÉNO ŠABLONY (' + (templateName || 'neznámé') + ') ti napoví, o jaký typ smlouvy jde, ale pravidlo o předvyplnění platí pro VŠECHNY typy.\n\n' +
-        'TVŮJ ÚKOL: Pro KAŽDOU šablonu (bez ohledu na typ — úvěrová, zástavní, plná moc, vinkulace, atd.) udělej KOMPLETNÍ REVIZI celého obsahu od první do poslední věty. NESTAČÍ jen najít konkrétní údaje a nahradit je — musíš celou smlouvu projít jako právník dělající due diligence revizi a zajistit, aby výsledný dokument DÁVAL SMYSL jako celek pro NOVÝ deal.\n\n' +
-        '=== PROCES REVIZE (postupuj přesně v tomto pořadí) ===\n' +
-        '1. PŘEČTI CELOU SMLOUVU. Pochop, o jaký typ smlouvy jde, jaké strany, jaké zajištění, jaké přílohy, jakou strukturu článků.\n' +
-        '2. IDENTIFIKUJ KONKRÉTNÍ ÚDAJE Z MINULÉHO DEALU. Projdi od začátku do konce a najdi všechna jména firem, IČO, sídla, jména jednatelů, částky, data, úroky, doby splatnosti, LV čísla, čísla účtů, banky, adresy, výměry, jména odhadců — VŠE konkrétní, co je specifické pro nějaký konkrétní deal.\n' +
-        '3. POROVNEJ S NOVÝMI DATA. Pro každý identifikovaný údaj: existuje v DATA odpovídající nová hodnota? Pokud ano → ZMĚŇ. Pokud DATA tento údaj NEMÁ (např. minulý deal měl ručitele, nový ne) → SMAŽ celou pasáž / klauzuli / přílohu týkající se tohoto údaje.\n' +
-        '4. KONTROLA KONZISTENCE NAPŘÍČ DOKUMENTEM. Jeden údaj se v šabloně OPAKUJE na mnoha místech (jméno klienta třeba 20×, částka úvěru 5×, splatnost 8×). MUSÍŠ zachytit VŠECHNY výskyty. Pokud se hodnota v různých místech zapisuje různě (např. "5.000.000 Kč" v hlavičce, "pět miliónů Kč" v textu, "5 mil. Kč" v příloze), MUSÍŠ aktualizovat KAŽDOU variantu zápisu.\n' +
-        '5. KONTROLA LOGIKY. Pokud jsi v kroku 3 něco smazala (např. ručitele), projdi zbytek smlouvy a HLEDEJ křížové reference. Pokud článek X zmiňuje "ručitel" / "rezervní fond" / "vinkulace" / přílohu, kterou jsi smazala, MUSÍŠ tento odkaz taky upravit / smazat / přeformulovat. Smlouva nesmí obsahovat odkazy na neexistující články, přílohy, osoby ani závazky.\n' +
-        '6. KONTROLA HISTORICKÝCH ZBYTKŮ. Šablona je historická smlouva — mohou tam být i poznámky pod čarou, komentáře, datumy revizí, jména autorů, číslování verzí ("verze 3 ze dne 12.4.2023"), interní reference ("dle úvěrové komise z 5.5.2022"), schvalovací podpisy. Tyto historické otisky NEPATŘÍ do nového dokumentu — SMAŽ je nebo aktualizuj.\n' +
-        '7. KONTROLA ÚPLNOSTI POKRYTÍ DATA. Po prvních 6 krocích zpětně projdi formData a ověř: každé pole, které Martin vyplnil (borrower, ico, sidlo, amount, interest, ...), MUSÍ být ve smlouvě někde použito. Pokud Martin vyplnil contactPhone, ale ve smlouvě žádné telefonní číslo neexistuje, tak nic neměníš. Ale pokud Martin vyplnil borrower a ve smlouvě je staré jméno klienta, MUSELA jsi to v kroku 3 zachytit.\n' +
-        '8. NOTES. Stručně shrň výsledek revize: kolik změn, co jsi smazala (a proč), co jsi přidala, kde si nejsi 100% jistá a doporučuješ manuální revizi.\n\n' +
-        '=== TYPICKÉ HISTORICKÉ ZBYTKY (často přehlížené, AKTIVNĚ hledej) ===\n' +
-        'Z PRAXE: tyto věci AI často přehlíží, protože vypadají jako "legal text". NEJSOU — jsou to konkrétní zbytky z minulého dealu. AKTIVNĚ je hledej a řeš:\n\n' +
-        '1. ČÍSLA ŘÍZENÍ KATASTRU — formát "V-XXXX/YYYY-ZZZ" nebo "Z-XXXX/YYYY-ZZZ" (např. "V-722/2010-433", "V-1245/2026-406"). Tato čísla jsou SPECIFICKÁ pro minulý deal. Pokud DATA neobsahují nové číslo řízení, SMAŽ celou závorku "(pod sp. zn. V-XXXX/YYYY-ZZZ)" nebo nahraď "(pod sp. zn. [DOPLNIT])".\n\n' +
-        '2. STARÉ ZÁSTAVNÍ BANKY — názvy jako "Raiffeisenbank a.s.", "Komerční banka, a.s.", "Česká spořitelna, a.s.", "ČSOB a.s." pokud se v textu vyskytují JAKO zastavni věřitel (nikoli jako "Banka úvěrového účtu Dlužníka"). Pokud DATA má existingPledge, nahraď. Pokud DATA nemá existingPledge, SMAŽ celou klauzuli o starém zástavním právu k výmazu — v novém dealu žádné staré zástavní právo neexistuje.\n\n' +
-        '3. ČERPÁNÍ ÚVĚRU — pokud šablona popisuje čerpání ve TRANŠÍCH (např. články typu "Úvěr se čerpá v 5 tranších", "1. tranše do data X, 2. tranše po splnění podmínky Y") a DATA má drawdownType="Jednorázové", MUSÍŠ tyto články PŘEFORMULOVAT na jednorázové čerpání. Stejně opačně — pokud šablona má jednorázové a DATA má tranše, přeformuluj na tranše.\n\n' +
-        '4. POPLATEK Z ČERPANÉ ČÁSTKY — pokud šablona má "1 % z každé čerpané tranše", ale DATA má originationFeeType="percent" + originationFee=X, MUSÍŠ článek upravit aby odpovídal (např. "X % z celkové výše úvěru" pro jednorázové čerpání). Pokud DATA má originationFeeType="amount" + originationFee=X, přeformuluj jako paušální poplatek X Kč.\n\n' +
-        '5. VINKULACE POJISTNÉHO PLNĚNÍ — klauzule typu "Úvěrovaný zajistí vinkulaci pojistného plnění z nemovitostí na LV X, LV Y ve prospěch Věřitele." Pokud DATA má v collateralItems jiné nemovitosti, MUSÍŠ aktualizovat seznam LV. Pokud DATA nemá nemovitosti (jen jiný typ zajištění — podíly, akcie), SMAŽ celou klauzuli o vinkulaci.\n\n' +
-        '6. POŘADÍ ČLÁNKŮ A KŘÍŽOVÉ ODKAZY — odkazy typu "viz článek 5.3", "dle Přílohy 1C", "v souladu s ustanovením článku 12 odst. 4". Pokud jsi smazala Přílohu 1C, MUSÍŠ taky smazat / upravit všechny odkazy na ni v hlavním textu.\n\n' +
-        '7. DATUMY MIMO RÁMEC DEALU — datumy interních úvěrových komisí ("schváleno na úvěrové komisi z 5.5.2022"), datumy revizí šablony ("verze 3 ze dne 12.4.2023"), datumy předchozího odhadu nemovitosti pokud DATA má appraisalDate. SMAŽ nebo aktualizuj.\n\n' +
-        '8. ČÍSLA ÚČTŮ MIMO DATA — pokud najdeš v textu číslo účtu (formát "XXX-XXXXXXXXXX/YYYY"), které není ani borrowerAccount ani lenderAccount z DATA, je to zbytek z minulého dealu. SMAŽ kontext, ve kterém se nachází, nebo nahraď za odpovídající nový.\n\n' +
+        'Věřitelem je vždy Spolumajitelé Private Credit a.s., se sídlem Pařížská 68/9, Josefov, 110 00 Praha 1. IČO, spisovou značku, účet a podepisující osobu ber z DAT; pokud v DATECH chybí, ponech nebo vlož „(Doplnit)“. Pokud dokument uvádí jako věřitele, zástavního věřitele nebo zmocněnce jiný subjekt (název, IČO, sídlo, účet, podepisující osobu, kontakt), nahraď ho údaji věřitele výše na všech místech dokumentu.\n\n' +
+        '=== JAK VYPADAJÍ ŠABLONY ===\n' +
+        'Šablony Spolumajitelé Private Credit jsou ČISTÉ: každé místo k vyplnění je označené „(Doplnit)“ (obvykle žlutě zvýrazněné). Značka se v dokumentu opakuje na desítkách míst a pokaždé znamená JINÝ údaj (název dlužníka, IČO zástavce, číslo LV, datum…) — co kam patří, poznáš z okolního textu. Jednotky a slovní vyjádření bývají v šabloně hned u značky („(Doplnit) Kč ((Doplnit) korun českých)“, „(Doplnit) % per annum“) — na místo značky patří jen samotná hodnota.\n' +
+        'Některé pasáže platí jen pro určité případy: čerpání ve více částech × jednorázově, výmaz stávajícího zástavního práva (refinancování), vinkulace pojistného plnění, zástava nemovitosti × podílu, ručení, způsob splácení.\n' +
+        'Starší šablona může místo „(Doplnit)“ obsahovat konkrétní údaje jiného, dřívějšího případu (jména, IČO, sídla, částky, data, LV, čísla řízení, účty, banky). Takové údaje NEJSOU právní text — jsou to místa k vyplnění: nahraď je (nebo pasáž vypusť) stejně jako „(Doplnit)“.\n\n' +
+        'JMÉNO ŠABLONY (' + (templateName || 'neznámé') + ') ti napoví, o jaký typ dokumentu jde; pravidla níže platí pro všechny typy.\n\n' +
+        'TVŮJ ÚKOL: připravit ze šablony hotový dokument pro případ popsaný v DATECH. Nestačí jen dosadit hodnoty — projdi dokument od první do poslední věty jako právník a zajisti, aby DÁVAL SMYSL jako celek pro tento případ.\n\n' +
+        '=== POSTUP (v tomto pořadí) ===\n' +
+        '1. PŘEČTI CELÝ DOKUMENT. Pochop typ dokumentu, strany, zajištění, přílohy a strukturu článků.\n' +
+        '2. NAJDI MÍSTA K VYPLNĚNÍ — všechna „(Doplnit)“, u starší šablony všechny konkrétní údaje jiného případu.\n' +
+        '3. VYPLŇ Z DAT — každé místo podle kontextu. Údaj, který v DATECH chybí a nejde spolehlivě zjistit z přiloženého LV, NEVYMÝŠLEJ: ponech nebo vlož „(Doplnit)“.\n' +
+        '4. VYPUSŤ, CO PRO PŘÍPAD NEPLATÍ — celé pasáže, klauzule i přílohy, ne jen hodnotu (např. podmínku výmazu stávajícího zástavního práva, když DATA žádné neuvádějí; vinkulaci, když zajištění není nemovitost; přílohy k nemovitostem, které DATA neuvádějí).\n' +
+        '5. PŘEFORMULUJ, CO NEODPOVÍDÁ — čerpání (jednorázově × ve více částech), poplatek za sjednání (procento × pevná částka), splácení, počet nemovitostí a vlastníků. Chybí-li pasáž, kterou případ potřebuje (např. další nemovitost), doplň ji podle vzoru existující pasáže.\n' +
+        '6. KONZISTENCE — jeden údaj se opakuje na více místech a v různých tvarech („15.000.000 Kč“ × „patnáct milionů korun českých“); uprav všechny výskyty. Dodrž mluvnici: pád, rod a číslo (jeden × více vlastníků, zástavce × zástavkyně).\n' +
+        '7. LOGIKA — po vypuštění pasáže oprav křížové odkazy („viz čl. 5.3“, „Příloha 1A“), výčty a definice. Dokument nesmí odkazovat na neexistující články, přílohy, osoby ani závazky.\n' +
+        '8. ÚPLNOST — každý údaj z DAT, který do dokumentu patří, musí být použit. Údaj, pro který dokument nemá místo (např. telefon), nepřidávej.\n' +
+        '9. POZNÁMKY — shrň, co jsi doplnila, co jsi vypustila nebo přeformulovala (a proč), která „(Doplnit)“ zůstala a kde doporučuješ ruční kontrolu.\n\n' +
+        '=== NA CO SI DÁT POZOR (AI to často přehlíží) ===\n' +
+        '1. ČÍSLA ŘÍZENÍ KATASTRU (formát „V-XXXX/RRRR-ZZZ“) patří vždy ke konkrétnímu případu. Pokud je DATA neuvádějí, ponech „(Doplnit)“, nebo celou závorku s číslem řízení vypusť.\n\n' +
+        '2. STÁVAJÍCÍ ZÁSTAVNÍ PRÁVO K VÝMAZU (refinancování) — pokud DATA uvádějí existující zástavní právo k výmazu, vyplň ho. Pokud ne, podmínku o jeho výmazu vypusť celou.\n\n' +
+        '3. ČERPÁNÍ ÚVĚRU — pokud šablona počítá s čerpáním ve více částech a DATA uvádějí jednorázové čerpání, přeformuluj příslušné články na jednorázové čerpání (a naopak).\n\n' +
+        '4. POPLATEK ZA SJEDNÁNÍ — řiď se DATY („Poplatek za sjednání“): procento z výše úvěru i odpovídající částka v Kč, nebo pevná částka.\n\n' +
+        '5. VINKULACE POJISTNÉHO PLNĚNÍ — seznam nemovitostí (LV) podle zajištění v DATECH. Pokud zajištění nejsou nemovitosti (jen podíly apod.), klauzuli o vinkulaci vypusť.\n\n' +
+        '6. KŘÍŽOVÉ ODKAZY — „viz čl. 5.3“, „Příloha 1B“. Po vypuštění přílohy nebo článku uprav, nebo vypusť všechny odkazy na ně.\n\n' +
+        '7. DATA MIMO RÁMEC PŘÍPADU — data interních schválení, revizí šablony, předchozích odhadů: vypusť nebo aktualizuj podle DAT.\n\n' +
+        '8. ČÍSLA ÚČTŮ — v dokumentu smějí být jen účet dlužníka a účet věřitele z DAT. Jiné číslo účtu je zbytek jiného případu: nahraď ho „(Doplnit)“, nebo jeho kontext vypusť.\n\n' +
         '=== ZÁSTAVCE (KDO PODEPISUJE ZÁSTAVNÍ SMLOUVU) ===\n' +
         'DATA sekce "ZÁSTAVCE" určuje, kdo je zástavce v zástavní smlouvě (zástavní smlouvy k nemovitostem, podílům atd.):\n\n' +
-        '1. "Zástavce = Dlužník (viz DLUŽNÍK výše)" — v zástavní smlouvě použij STEJNÉ údaje jako u Dlužníka: název firmy, IČO, spisová značka, sídlo, jednatel, doručovací adresa. Smluvní strany jsou identický subjekt vystupující ve dvou rolích (úvěrovaný + zástavce). Pokud šablona má jiné jméno zástavce z minulého dealu, NAHRAĎ ho jménem dlužníka.\n\n' +
-        '2. "Zástavce = vlastník z přiloženého LV výpisu" — Martin přiložil LV výpis jako další soubor v této konverzaci. VYTÁHNI z LV: jméno fyzické/právnické osoby ze sekce "Vlastníci", IČO/RČ, bydliště/sídlo, případně doručovací adresu pokud LV ji uvádí odlišně. POZOR: zástavce NENÍ dlužník — jde o třetí osobu (např. matka klienta zastavující své nemovitosti za úvěr syna). V šabloně nahraď VŠECHNY výskyty starého jména zástavce za jméno vlastníka z LV.\n\n' +
-        '3. Explicitně vyplněná pole (Název / IČO / Bydliště / Jednatel) — použij doslovně. Jméno zástavce v šabloně nahraď za "Název / Jméno", IČO za "IČO / RČ", atd.\n\n' +
-        'Pokud DATA sekci ZÁSTAVCE neobsahuje (starší dealy), pokračuj jako dříve — žádné automatické přiřazení zástavce k dlužníkovi.\n\n' +
+        '1. "Zástavce = Dlužník (viz DLUŽNÍK výše)" — v zástavní smlouvě použij STEJNÉ údaje jako u Dlužníka: název firmy, IČO, spisová značka, sídlo, jednatel, doručovací adresa. Smluvní strany jsou identický subjekt vystupující ve dvou rolích (úvěrovaný + zástavce). Údaje zástavce v šabloně („(Doplnit)“ nebo údaje jiného případu) nahraď údaji dlužníka.\n\n' +
+        '2. "Zástavce = vlastník z přiloženého LV výpisu" — Martin přiložil LV výpis jako další soubor v této konverzaci. VYTÁHNI z LV: jméno fyzické/právnické osoby ze sekce "Vlastníci", IČO/RČ, bydliště/sídlo, případně doručovací adresu, pokud ji LV uvádí odlišně. POZOR: zástavce NENÍ dlužník — jde o třetí osobu (např. matka klienta zastavující své nemovitosti za úvěr syna). Údaje zástavce v šabloně nahraď údaji vlastníka z LV na všech místech.\n\n' +
+        '3. Explicitně vyplněná pole (Název / Jméno, IČO / RČ, Bydliště / Sídlo, Jednatel / Zástupce…) — použij doslovně na místa zástavce.\n\n' +
+        'Pokud DATA sekci ZÁSTAVCE neobsahují (starší případy), zástavce automaticky nepřiřazuj k dlužníkovi — jeho údaje ponech jako „(Doplnit)“.\n\n' +
         '=== DORUČOVACÍ ADRESA (DLUŽNÍK / ZÁSTAVCE) ===\n' +
         'Dlužník i zástavce mohou mít doručovací adresu jinou než sídlo/bydliště (např. korespondenční adresa, kancelář advokáta).\n' +
-        '- Dlužník: pokud DATA uvádí "Adresa pro doručování", použij ji v sekci "Adresa pro doručování dlužníka" / "Korespondenční adresa Úvěrovaného". Pokud chybí, použij sídlo dlužníka.\n' +
-        '- Zástavce: pokud DATA uvádí "Doručovací adresa" v sekci ZÁSTAVCE, použij ji u zástavce. Pokud chybí, použij bydliště/sídlo zástavce.\n' +
-        'Pokud šablona má v doručovací adrese hodnoty z minulého dealu, NAHRAĎ je za hodnoty z DATA (nebo SMAŽ klauzuli, pokud DATA žádnou doručovací adresu nemá).\n\n' +
-        '=== ČTYŘI TYPY OPERACÍ ===\n' +
-        'Šablona je HISTORICKÁ smlouva, ne placeholder template. Některé části jsou specifické pro MINULÝ deal a v novém dealu nemají místo. Máš 4 typy operací:\n\n' +
-        '1. ZMĚNIT HODNOTU (nejčastější) — najdi konkrétní údaj a nahraď ho novou hodnotou z DATA.\n' +
-        '   Příklad: "AGRI PARTNERS Nezamyslice s.r.o." → "Louve Group s.r.o."\n\n' +
-        '2. SMAZAT IRRELEVANTNÍ OBSAH. Použij, když:\n' +
-        '   - Šablona má přílohu o nemovitosti (LV 303), kterou nový klient v collateralItems NEMÁ.\n' +
-        '   - Šablona má klauzuli o ručiteli, ale nový deal ručitele nemá.\n' +
-        '   - Šablona má specifické ustanovení pro minulý deal, které pro nový nedává smysl.\n\n' +
-        '3. PŘIDAT CHYBĚJÍCÍ OBSAH. Použij, když má nový deal víc LV/zajištění než minulý a šablona je neobsahuje. Najdi anchor v dokumentu a vlož nový text za něj.\n\n' +
-        '4. PŘEFORMULOVAT — i celé věty/odstavce. Použij, když nový deal má jinou strukturu (např. jiný typ splácení, jiný splátkový kalendář).\n\n' +
+        '- Dlužník: pokud DATA uvádějí "Adresa pro doručování", použij ji v sekci "Adresa pro doručování dlužníka" / "Korespondenční adresa Úvěrovaného". Pokud chybí, použij sídlo dlužníka.\n' +
+        '- Zástavce: pokud DATA uvádějí "Doručovací adresa" v sekci ZÁSTAVCE, použij ji u zástavce. Pokud chybí, použij bydliště/sídlo zástavce.\n' +
+        'Pokud šablona má v doručovací adrese „(Doplnit)“ nebo hodnoty jiného případu, vyplň je podle pravidel výše.\n\n' +
         '=== CO NEMĚNIT ===\n' +
-        'Nesahej na obecné právní formulace BEZ čísel/jmen ("Smluvní strany se tímto dohodly…", definice pojmů typu "Den konečné splatnosti", standardní hlavičky článků). Heuristika: obsahuje-li věta číslo / jméno firmy / datum / částku / adresu → JE TO DATA k revizi. Obecná formulace beze čísel a jmen → LEGAL TEXT, neměnit.\n\n' +
+        'Nesahej na právní text šablony: formulace („Smluvní strany se tímto dohodly…“), definice pojmů (např. „Den konečné splatnosti“), lhůty a hodnoty uvedené napevno (např. „10 (deseti) pracovních dnů“), hlavičky článků. Měníš jen místa „(Doplnit)“, údaje jiného případu a pasáže, které pro tento případ neplatí. U starší šablony bez „(Doplnit)“ platí: obsahuje-li věta jméno, IČO, adresu, částku nebo datum konkrétního případu, JSOU TO DATA k revizi.\n\n' +
         '=== POZNÁMKY (notes) — MARTIN JE UVIDÍ ===\n' +
-        'V "notes" / shrnutí stručně sděl co jsi udělala. Sem patří:\n' +
-        '- Co jsi SMAZALA a proč (např. "Smazala jsem 3 přílohy LV 303, 321, 100 — nový klient má v collateralItems jen LV 4587.").\n' +
-        '- Co jsi PŘIDALA (např. "Přidala jsem novou přílohu pro LV 4587 — odhad mu doplň ručně.").\n' +
-        '- Co jsi musela odhadovat / kde si nejsi 100% jistá (např. "Článek 5.3 zmiňoval rezervní fond — nechala jsem beze změny, ověř manuálně.").\n' +
-        '- Co Martin musí doplnit ručně (např. "Datum podpisu nebylo v DATA — nechala jsem prázdné.").\n' +
-        'Pokud si NEJSI 100% jistá, jestli něco smazat, NESMAŽ a místo toho do notes napiš doporučení k manuální revizi. Lepší méně agresivní změna než zlikvidovat něco potřebného.\n\n' +
+        'V poznámkách stručně sděl, co jsi udělala. Sem patří:\n' +
+        '- Co jsi VYPUSTILA a proč (např. „Vypustila jsem podmínku výmazu stávajícího zástavního práva — DATA žádné neuvádějí.“).\n' +
+        '- Co jsi PŘIDALA (např. „Doplnila jsem druhou nemovitost do Přílohy 1A podle vzoru první.“).\n' +
+        '- Kde si nejsi 100% jistá (např. „Čl. 5.3 zmiňuje rezervní fond — ponechala jsem beze změny, ověř ručně.“).\n' +
+        '- Která „(Doplnit)“ zůstala a proč (např. „Datum podpisu v DATECH není — ponechala jsem (Doplnit).“).\n' +
+        'Pokud si NEJSI 100% jistá, jestli něco vypustit, NEVYPOUŠTĚJ a v poznámkách doporuč ruční kontrolu. Lepší méně agresivní změna než zlikvidovat něco potřebného.\n\n' +
         '=== PRAVIDLA FORMÁTOVÁNÍ HODNOT (univerzální) ===\n' +
-        '- POKUD V DATA NĚJAKÝ ÚDAJ CHYBÍ (např. prázdné contactPhone) — nechej v šabloně původní hodnotu, NENAHRAZUJ.\n' +
-        '- Částky formátuj s tečkami jako oddělovače tisíců + měna ("5.000.000 Kč").\n' +
-        '- Data ve formátu DD.MM.YYYY ("27.04.2029").\n' +
-        '- Procenta s desetinnou čárkou + " % p.a." ("9,5 % p.a.").\n' +
+        '- POKUD ÚDAJ V DATECH CHYBÍ (např. prázdné datum podpisu), ponech nebo vlož „(Doplnit)“. Nikdy nenechávej údaje jiného případu a nic nevymýšlej.\n' +
+        '- Na místo „(Doplnit)“ vlož jen hodnotu — jednotky a slova, která šablona uvádí kolem (Kč, korun českých, % per annum, procent), nezdvojuj. Slovní vyjádření v závorce vyplň také („15.000.000 Kč (patnáct milionů korun českých)“).\n' +
+        '- Částky formátuj s tečkami jako oddělovači tisíců („15.000.000 Kč“).\n' +
+        '- Data ve formátu DD.MM.YYYY („27.04.2029“).\n' +
+        '- Procenta s desetinnou čárkou („12,5“); označení za číslem („% per annum“, „% p.a.“) ponech podle šablony.\n' +
         '- IČO bez mezer (8 číslic).\n' +
-        '- LV čísla a kolaterály z formData.collateralItems (numbered list "1. LV X...", "2. LV Y..." v sekci "=== ZAJIŠTĚNÍ ==="). POZOR: pokud header sekce obsahuje "(N z M LV — zbývající LV jsou součástí jiných smluv dealu, do TÉTO smlouvy je nezahrnuj)", znamená to že klient ručí celkem M LV, ale TATO smlouva (např. zástavní smlouva k 1 nemovitosti) zahrnuje pouze N. Do dokumentu vyplň ZA TĚCH N uvedených LV, o ostatních LV NEPIŠ (ani jako "a další LV...").\n\n';
+        '- LV čísla a kolaterály z formData.collateralItems (numbered list "1. LV X...", "2. LV Y..." v sekci "=== ZAJIŠTĚNÍ ==="). POZOR: pokud header sekce obsahuje "(N z M LV — zbývající LV jsou součástí jiných smluv dealu, do TÉTO smlouvy je nezahrnuj)", znamená to, že klient ručí celkem M LV, ale TATO smlouva (např. zástavní smlouva k 1 nemovitosti) zahrnuje pouze N. Do dokumentu vyplň JEN TĚCH N uvedených LV, o ostatních LV NEPIŠ (ani jako "a další LV...").\n\n';
 
     if (mode === 'manual') {
-        // Manuální workflow: Martin pastne tento prompt do Claude.ai/ChatGPT, kde má Code
-        // Interpreter (python-docx) a šablonu jako file attachment. Žádný JSON, žádné XML run pravidla.
+        // Ruční postup: Martin vloží tento prompt do Claude.ai / ChatGPT, kde je spouštění kódu
+        // (python-docx) a šablona jako příloha. Žádný JSON, žádná pravidla pro XML runy.
         return sharedHead +
-            '=== FORMÁT ODPOVĚDI (MANUÁLNÍ WORKFLOW S CODE INTERPRETER) ===\n' +
-            'Vrať UPRAVENÝ .docx jako file attachment v této konverzaci. NE plain text, NE JSON. Detailní python-docx pravidla (jak modifikovat run.text, jak smazat odstavec, jak vložit nový bez ztráty formátování, jak verifikovat fonty) jsou v ÚKOLU NÍŽE — postupuj přesně podle nich.\n\n' +
-            'Pokud Code Interpreter nemáš k dispozici (např. user pastnul tento prompt do chatu bez kódového sandboxu), místo .docx odpověz seznamem konkrétních změn k aplikování ve Wordu (find → replace, smazat odstavec X, přeformulovat větu Y). NIKDY ale nevracej JSON s "replacements" — to je formát pro jinou integraci.';
+            '=== FORMÁT ODPOVĚDI (RUČNÍ POSTUP SE SPOUŠTĚNÍM KÓDU) ===\n' +
+            'Vrať UPRAVENÝ .docx jako přílohu v této konverzaci a pod něj krátké shrnutí (co jsi doplnila, co zůstalo „(Doplnit)“, co jsi vypustila nebo přeformulovala, co zkontrolovat). NE text dokumentu v chatu, NE JSON. Podrobná pravidla pro python-docx (jak vyplnit „(Doplnit)“, jak vypustit odstavec, jak vložit nový bez ztráty formátování, jak ověřit písmo) jsou v ÚKOLU NÍŽE — postupuj přesně podle nich.\n\n' +
+            'Pokud spouštění kódu nemáš k dispozici (např. uživatel vložil prompt do chatu bez kódového prostředí), místo .docx odpověz seznamem konkrétních změn k provedení ve Wordu (najdi → nahraď, vypusť odstavec X, přeformuluj větu Y). NIKDY ale nevracej JSON s "replacements" — to je formát pro jinou integraci.';
     }
 
-    // API workflow (default): server volá Claude API a očekává JSON s find/replace páry.
+    // API workflow (default): server volá AI API a očekává JSON s find/replace páry.
     var apiTail =
         '=== FORMÁT ODPOVĚDI (API WORKFLOW) ===\n' +
         'Vrať POUZE platný JSON, žádný markdown:\n' +
         '{\n' +
         '  "replacements": [\n' +
-        '    {"find": "AGRI PARTNERS Nezamyslice s.r.o.", "replace": "Louve Group s.r.o."},\n' +
+        '    {"find": "Původní Klient s.r.o.", "replace": "Nový Klient s.r.o."},\n' +
         '    {"find": "27.04.2029", "replace": "31.05.2030"},\n' +
-        '    {"find": "Příloha 3 — Nemovitosti LV 303 ...", "replace": ""}\n' +
+        '    {"find": "Příloha 3 — Nemovitosti LV 1111 ...", "replace": ""}\n' +
         '  ],\n' +
-        '  "notes": "Nahradila jsem klienta + datum. Smazala přílohu LV 303 (nový deal má jen LV 4587). Doporučuji ověřit článek 5.3."\n' +
+        '  "notes": "Nahradila jsem klienta + datum. Vypustila jsem přílohu LV 1111 (nový případ má jen LV 2222). Doporučuji ověřit článek 5.3."\n' +
         '}\n\n' +
         '=== JAK SE TVÉ REPLACEMENTS APLIKUJÍ NA FORMÁTOVÁNÍ ===\n' +
         'Frontend tvé "find" → "replace" páry aplikuje na text obsah uvnitř <w:t> elementů Word XML. Formátování (bold, italic, font Aptos/Calibri/TNR, size, color) zůstane ZACHOVÁNO AUTOMATICKY, ZA TĚCHTO PODMÍNEK:\n' +
@@ -953,23 +946,24 @@ function buildLoanDocSystemPrompt(templateName, passNumber, mode) {
         '- Pokud "replace" obsahuje znak & < > — frontend ho escape-uje automaticky (Black & Decker → Black &amp; Decker), ale jen u plain textu.\n\n' +
         '=== PRAVIDLA REPLACEMENT PÁRŮ (API specifický) ===\n' +
         '- "find" MUSÍ být PŘESNÝ řetězec, který je doslova v šabloně. Zkopíruj přesně z textu šablony včetně mezer, diakritiky, formátování. Pokud "find" nesedí přesně, frontend nahrazení neaplikuje (tichý fail) — proto kopíruj doslova.\n' +
-        '- Pokud najdeš více výskytů stejného řetězce v šabloně (např. jméno klienta se opakuje 10×), stačí JEDEN replacement pár — frontend ho aplikuje na všechny výskyty.\n\n' +
+        '- Pokud najdeš více výskytů stejného řetězce v šabloně (např. jméno klienta se opakuje 10×), stačí JEDEN replacement pár — frontend ho aplikuje na všechny výskyty.\n' +
+        '- PROTO „(Doplnit)“ samotné NIKDY nepoužívej jako "find" — hodnota by se dosadila na všechna místa najednou. "find" musí obsahovat i okolní text, který je v šabloně jedinečný a leží ve stejném runu; pokud takový není, místo ponech a uveď ho v "notes".\n\n' +
         '=== MINIMÁLNÍ OČEKÁVANÝ POČET REPLACEMENTS ===\n' +
-        'Pro typickou úvěrovou smlouvu se očekává 10-30 replacements (změny hodnot + případné smazání irrelevantních příloh). Pokud vracíš méně než 5 replacements, něco je špatně — v "notes" vysvětli proč.';
+        'Pro typickou úvěrovou smlouvu se očekává 10-30 replacements (změny hodnot + případné vypuštění irrelevantních příloh). Pokud vracíš méně než 5 replacements, něco je špatně — v "notes" vysvětli proč.';
 
     var systemPrompt = sharedHead + apiTail;
 
     if (passNumber === 2) {
         systemPrompt += '\n\n=== PASS 2 — HLUBOKÁ REVIZE PO PRVNÍM PRŮCHODU ===\n' +
             'TOTO JE DRUHÝ PRŮCHOD revize. V Pass 1 už byly aplikovány nějaké změny (viz "JIŽ APLIKOVANÉ ZMĚNY" v user message). Tvůj úkol nyní:\n\n' +
-            '1. NEDUPLIKUJ co už bylo nahrazeno. Pokud Pass 1 už změnila "AGRI PARTNERS s.r.o." → "Louve Group s.r.o.", NEVRACEJ stejný pár.\n' +
-            '2. HLEDEJ CO ZBYLO. Projdi text smlouvy znovu — co tam je z minulého dealu a NEBYLO Pass 1 odstraněno? Specificky:\n' +
+            '1. NEDUPLIKUJ co už bylo nahrazeno. Pokud Pass 1 už změnila "Původní Klient s.r.o." → "Nový Klient s.r.o.", NEVRACEJ stejný pár.\n' +
+            '2. HLEDEJ CO ZBYLO. Projdi text smlouvy znovu — co tam zůstalo z jiného případu nebo jako „(Doplnit)“, pro které DATA mají hodnotu, a Pass 1 to nevyřešila? Specificky:\n' +
             '   - Čísla řízení katastru, která zůstala\n' +
             '   - Stará čísla LV, která zůstala v křížových odkazech\n' +
-            '   - Klauzule o vinkulaci / čerpání / poplatcích, které stále neodpovídají DATA\n' +
-            '   - Historické datumy, jména bank, čísla účtů\n' +
-            '   - Přílohy o nemovitostech, které měly být smazány v Pass 1, ale find string nesedl\n' +
-            '3. ZAMĚŘ SE NA TIŠÉ FAILED REPLACEMENTS. Pokud Pass 1 měla replacement "Příloha 1C — LV 100..." s prázdným replace (= mělo smazat), ale text Přílohy 1C v dokumentu STÁLE existuje, znamená to že find string nesedl přesně. Najdi přesný text Přílohy 1C v dokumentu a vrať NOVÝ replacement s correct find.\n' +
+            '   - Klauzule o vinkulaci / čerpání / poplatcích, které stále neodpovídají DATŮM\n' +
+            '   - Historická data, jména bank, čísla účtů\n' +
+            '   - Přílohy o nemovitostech, které měly být vypuštěny v Pass 1, ale find string nesedl\n' +
+            '3. ZAMĚŘ SE NA TIŠE NEAPLIKOVANÉ REPLACEMENTS. Pokud Pass 1 měla replacement "Příloha 1C — LV 3333..." s prázdným replace (= mělo smazat), ale text Přílohy 1C v dokumentu STÁLE existuje, znamená to, že find string nesedl přesně. Najdi přesný text Přílohy 1C v dokumentu a vrať NOVÝ replacement se správným find.\n' +
             '4. V NOTES uveď, kolik dodatečných změn Pass 2 přidala a jakého typu.';
     }
 
@@ -1113,7 +1107,7 @@ function buildLoanDocDataDescription(formData) {
 
     if (formData.hasGuarantee || formData.guarantorName) {
         d += '\n=== OSOBNÍ RUČENÍ (RUČITEL) ===\n';
-        d += 'Úvěr je zajištěn osobním ručením — PONECHEJ a vyplň klauzuli ručitele v úvěrové smlouvě (NEMAŽ ji). Ručí:\n';
+        d += 'Úvěr je zajištěn osobním ručením — klauzuli ručitele v úvěrové smlouvě PONECHEJ a vyplň (NEMAŽ ji); pokud ji šablona nemá, doplň ručení mezi zajištění (ručitelské prohlášení je samostatný dokument sady). Ručí:\n';
         if (formData.guarantorBorrowerRep) d += '- Jednatel dlužníka (použij údaje z DLUŽNÍK / DODATEČNÉ ÚDAJE).\n';
         if (formData.guarantorPledgor) d += '- Zástavce / vlastníci nemovitosti (použij údaje ze ZÁSTAVCE / z LV).\n';
         if (formData.guarantorBothSpouses) d += '- SJM: ručitelské prohlášení podepíší OBA manželé (vlastníci ve společném jmění manželů) — uveď oba.\n';
@@ -1177,72 +1171,93 @@ function buildLoanDocUserContent(templateName, dataDescription, previousReplacem
 // (formátování, struktura, tabulky) než plain text extrakt. Plain text
 // duplikoval obsah a zbytečně nafukoval prompt o 30-50 KB.
 function buildLoanDocManualUserContent(templateName, dataDescription, templateText) {
-    return 'ÚKOL: Mám historickou šablonu úvěrové smlouvy (' + (templateName || 'smlouva') + ') připojenou jako .docx FILE ATTACHMENT v této konverzaci. Otevři ho přes python-docx (Document(uploaded_file_path)) a pracuj přímo s tím .docx — formátování, struktura, runy. NEČEKEJ na to že ti šablonu pošlu jako text v chatu, je v attachmentu. Šablona je předvyplněná údaji z minulého dealu (jména, IČO, LV, čísla řízení, banky atd.). Uprav ji pro nového klienta dle DAT NÍŽE.\n\n' +
+    return 'ÚKOL: V této konverzaci je jako .docx PŘÍLOHA šablona „' + (templateName || 'smlouva') + '“ ze sady Spolumajitelé Private Credit a.s. Otevři ji přes python-docx (Document(cesta_k_priloze)) a pracuj přímo s tím .docx — formátování, struktura, runy. NEČEKEJ, že ti šablonu pošlu jako text v chatu, je v příloze. Připrav z ní hotový dokument pro případ podle DAT NÍŽE: místa „(Doplnit)“ vyplň a pasáže, které pro případ neplatí, vypusť. (Pokud šablona místo „(Doplnit)“ obsahuje údaje jiného, dřívějšího případu, nahraď je stejně.)\n\n' +
         '⚠ TŘI ABSOLUTNÍ PRAVIDLA (DODRŽ VŠECHNA):\n\n' +
-        '1. FORMÁTOVÁNÍ ZACHOVAT 100%. Minule jsi vrátila dokument se změněnými fonty (Aptos→Calibri default) a uživatel musel hodiny ručně opravovat ve Wordu. To NESMÍ stát znovu. Pokud si nejsi 100% jistá nějakým formátováním, NESAHAJ na něj.\n\n' +
-        '2. DOKUMENT JDE ROVNOU KLIENTOVI. Žádné historické zbytky, žádné odkazy na smazané přílohy, smlouva musí dávat smysl jako celek.\n\n' +
-        '3. VRAŤ .docx JAKO FILE ATTACHMENT, ne plain text v chatu.\n\n' +
-        '=== JAK ZACHOVAT FORMÁTOVÁNÍ (KRITICKÁ ČÁST — ČTI POZORNĚ) ===\n\n' +
-        'Pracuj přes Code Interpreter s python-docx. Klíč: NEVYTVÁŘEJ nové paragraph/run elementy — MODIFIKUJ existující. python-docx ukládá formátování per-run, takže nahrazení .text uvnitř runu zachová bold/italic/font/size automaticky.\n\n' +
-        '✅ SPRÁVNĚ (zachová font Aptos + bold + italic):\n' +
+        '1. FORMÁTOVÁNÍ ŠABLONY ZACHOVAT 100 % — písmo (smluvní dokumentace je v písmu Aptos), velikost, tučnost, kurzíva, řádkování, odsazení, číslování, tabulky. Dřívější výstupy měly změněné písmo (Aptos → Calibri) a uživatel musel hodiny ručně opravovat ve Wordu. To NESMÍ stát znovu. Pokud si nejsi 100% jistá nějakým formátováním, NESAHEJ na něj. Jediná povolená změna: u místa, které vyplníš, odstraň žluté zvýraznění (u zbylých „(Doplnit)“ ho ponech, ať jsou vidět).\n\n' +
+        '2. DOKUMENT JDE ROVNOU KLIENTOVI. Žádné zbytky nepoužitých variant, žádné odkazy na vypuštěné články, přílohy nebo osoby — smlouva musí dávat smysl jako celek.\n\n' +
+        '3. VRAŤ .docx JAKO PŘÍLOHU (ne text v chatu) + krátké shrnutí podle bodu SHRNUTÍ níže.\n\n' +
+        '=== JAK VYPLŇOVAT A ZACHOVAT FORMÁTOVÁNÍ (KRITICKÁ ČÁST — ČTI POZORNĚ) ===\n\n' +
+        'Pracuj přes spouštění kódu s python-docx. Klíč: NEVYTVÁŘEJ nové odstavce ani runy funkcemi python-docx — MODIFIKUJ existující. python-docx ukládá formátování po runech, takže změna .text uvnitř runu zachová písmo, tučnost i velikost automaticky.\n\n' +
+        '„(Doplnit)“ je v dokumentu na desítkách míst a pokaždé znamená jiný údaj → vyplňuj CÍLENĚ podle kontextu odstavce, NIKDY hromadně přes celý dokument.\n\n' +
+        '✅ SPRÁVNĚ (zachová písmo Aptos, tučnost, kurzívu):\n' +
         '```python\n' +
         'from docx import Document\n' +
-        'doc = Document(uploaded_path)\n' +
+        'from copy import deepcopy\n' +
+        'doc = Document(cesta_k_priloze)\n' +
         '\n' +
-        'def iter_all_runs(doc):\n' +
+        'def iter_paragraphs(doc):\n' +
         '    for p in doc.paragraphs:\n' +
-        '        yield from p.runs\n' +
+        '        yield p\n' +
         '    for t in doc.tables:\n' +
         '        for row in t.rows:\n' +
         '            for cell in row.cells:\n' +
-        '                for p in cell.paragraphs:\n' +
-        '                    yield from p.runs\n' +
+        '                yield from cell.paragraphs\n' +
         '\n' +
-        '# Změna hodnoty UVNITŘ runu — formátování zachováno\n' +
-        'for run in iter_all_runs(doc):\n' +
-        '    run.text = run.text.replace("AGRI PARTNERS", "Louve Group")\n' +
+        'def vypln(p, hodnota):\n' +
+        '    # vyplní PRVNÍ „(Doplnit)“ v odstavci p; formátování runu zůstane\n' +
+        '    for run in p.runs:\n' +
+        '        if "(Doplnit)" in run.text:\n' +
+        '            run.text = run.text.replace("(Doplnit)", hodnota, 1)\n' +
+        '            run.font.highlight_color = None  # vyplněné místo už nezvýrazňovat\n' +
+        '            return True\n' +
+        '    return False  # značka je rozdělená do víc runů → viz níže\n' +
         '\n' +
-        '# Smazání celé přílohy/odstavce\n' +
+        '# Příklad: definice Dne konečné splatnosti\n' +
+        'for p in iter_paragraphs(doc):\n' +
+        '    if p.text.startswith("Den konečné splatnosti"):\n' +
+        '        vypln(p, "31.05.2030")\n' +
+        '\n' +
+        '# Vypuštění celého odstavce (nepoužitá varianta, příloha)\n' +
         'p._element.getparent().remove(p._element)\n' +
         '\n' +
-        '# Vložení nové přílohy (clone existující — zachová styling)\n' +
-        'from copy import deepcopy\n' +
-        'new_para = deepcopy(template_para._element)\n' +
-        'template_para._element.addnext(new_para)\n' +
+        '# Nový odstavec jen klonem existujícího (převezme jeho styl)\n' +
+        'novy = deepcopy(vzorovy_odstavec._element)\n' +
+        'vzorovy_odstavec._element.addnext(novy)\n' +
         '```\n\n' +
-        '❌ NIKDY (ztratí Aptos font, bold, alignment — způsobí review markup ve Wordu):\n' +
+        'ZNAČKA ROZDĚLENÁ DO VÍC RUNŮ: Word někdy rozdělí „(Doplnit)“ do víc runů (např. „(“ + „Doplnit“ + „)“), takže run.text ji celou neobsahuje. Pak slož text odstavce, najdi pozici značky, hodnotu vlož do PRVNÍHO dotčeného runu a z následujících runů odstraň jen zbytek značky (jejich formátování ponech). Nikdy kvůli tomu nevytvářej nový odstavec ani run.\n\n' +
+        '❌ NIKDY (ztratí písmo, tučnost, zarovnání — způsobí změny formátování ve Wordu):\n' +
         '- doc.add_paragraph("text")\n' +
         '- doc.add_heading("Nadpis", level=1)\n' +
         '- paragraph.clear() + add_run("text")\n' +
-        '- Jakýkoli způsob co vytvoří nový paragraph/run\n\n' +
-        '=== CO ZMĚNIT ===\n' +
-        'A) NAHRADIT konkrétní údaje z DATA (jméno klienta, IČO, sídlo, částka, úrok, splatnost, datumy, LV, kontakty, podpis).\n' +
-        'B) SMAZAT irrelevantní pasáže:\n' +
-        '   - Přílohy o nemovitostech, které nový klient v collateralItems NEMÁ\n' +
-        '   - Čísla řízení katastru (V-XXXX/YYYY-ZZZ), pokud DATA neuvádí nové\n' +
-        '   - Staré zástavní banky (Raiffeisenbank apod.), pokud DATA nemá existingPledge\n' +
-        '   - Klauzule o ručiteli / vinkulaci, pokud DATA odpovídající údaj nemá\n' +
-        '   - Historické datumy úvěrových komisí, verze šablony\n' +
-        'C) PŘEFORMULOVAT klauzule co neodpovídají dealu (čerpání tranšemi vs jednorázové; poplatek z čerpané částky vs paušál — řiď se hodnotou v DATA "Poplatek za sjednání").\n' +
-        'D) UPDATE křížové odkazy (po smazání Přílohy 1C smaž i "viz Příloha 1C" v hlavním textu).\n\n' +
+        '- hromadné run.text.replace("(Doplnit)", …) přes celý dokument\n' +
+        '- jakýkoli zásah do stylů, řádkování a odsazení odstavců\n\n' +
+        '=== CO UDĚLAT ===\n' +
+        'A) VYPLNIT „(Doplnit)“ z DAT (dlužník, IČO, sídlo, zástupce, částka, úrok, splatnost, data, nemovitosti a LV, odhad, účty, kontakty, podpis). Na místo značky patří jen hodnota — jednotky kolem („Kč“, „korun českých“, „% per annum“) už v šabloně jsou.\n' +
+        'B) VYPUSTIT pasáže, které pro případ neplatí:\n' +
+        '   - podmínku výmazu stávajícího zástavního práva, pokud DATA žádné neuvádějí\n' +
+        '   - přílohy a výčty nemovitostí, které DATA neuvádějí; vinkulaci, pokud zajištění není nemovitost\n' +
+        '   - čerpání ve více částech, pokud se čerpá jednorázově (navazující text přeformuluj)\n' +
+        '   - další varianty a klauzule, které pro případ neplatí\n' +
+        'C) PŘEFORMULOVAT klauzule, které neodpovídají případu (čerpání jednorázově × ve více částech; poplatek za sjednání podle DAT „Poplatek za sjednání“; počet nemovitostí a vlastníků).\n' +
+        'D) UPRAVIT křížové odkazy a definice (po vypuštění Přílohy 1B vypusť i „viz Příloha 1B“ v textu).\n' +
+        'E) CO V DATECH CHYBÍ, NECH „(Doplnit)“ (i se žlutým zvýrazněním) — nic nevymýšlej.\n\n' +
         '=== CO NESAHAT ===\n' +
-        '- Obecné právní formulace bez čísel/jmen ("Smluvní strany se dohodly...", definice pojmů velkými písmeny jako "Den konečné splatnosti")\n' +
-        '- Formátování okolního textu (font, bold, italic, alignment)\n' +
-        '- Strukturu článků (číslování 1., 1.1, 1.1.1 — Word přečísluje sám)\n\n' +
-        '=== POVINNÁ VERIFIKACE PŘED VRÁCENÍM ===\n' +
-        'Po úpravách spusť Python kontrolu:\n' +
+        '- Právní text šablony: formulace, definice pojmů velkými písmeny (např. „Den konečné splatnosti“), lhůty a hodnoty uvedené napevno (např. „10 (deseti) pracovních dnů“)\n' +
+        '- Údaje věřitele Spolumajitelé Private Credit a.s. (kromě dosazení hodnot z DAT)\n' +
+        '- Formátování okolního textu (písmo, tučnost, kurzíva, zarovnání)\n' +
+        '- Strukturu článků (automatické číslování 1., 1.1, (a) — Word přečísluje sám)\n\n' +
+        '=== POVINNÁ KONTROLA PŘED VRÁCENÍM ===\n' +
+        'Po úpravách spusť kontrolu v Pythonu:\n' +
         '```python\n' +
-        'orig = Document(uploaded_path)\n' +
-        'edited = Document(output_path)\n' +
-        '# Sebrej font.name + bold + italic + size pro každý run\n' +
-        '# Pokud edited obsahuje runy s font.name != "Aptos" (nebo cokoli co má orig), OPRAV\n' +
-        'for run in iter_all_runs(edited):\n' +
-        '    if run.font.name and run.font.name != "Aptos":\n' +
-        '        # uprav font na Aptos (nebo cokoli okolní text má)\n' +
-        '        pass\n' +
+        'orig = Document(cesta_k_priloze)\n' +
+        'upraveny = Document(cesta_k_vystupu)\n' +
+        'def iter_runs(doc):\n' +
+        '    for p in iter_paragraphs(doc):\n' +
+        '        yield from p.runs\n' +
+        'pisma_orig = {r.font.name for r in iter_runs(orig)}\n' +
+        'for r in iter_runs(upraveny):\n' +
+        '    if r.font.name not in pisma_orig:\n' +
+        '        print("Změněné písmo:", r.font.name, r.text[:40])  # oprav podle okolního textu (Aptos)\n' +
+        'zbyva = [p.text for p in iter_paragraphs(upraveny) if "(Doplnit)" in p.text]\n' +
+        'print(len(zbyva), "odstavců s (Doplnit)")  # porovnej s tím, co v DATECH opravdu chybí\n' +
         '```\n\n' +
-        'Plus právní due-diligence kontrola: žádné staré jméno klienta / IČO / LV / číslo řízení nikde v textu, odkazy "viz článek X" / "dle Přílohy Y" sedí na existující sekce, čerpání + poplatky odpovídají DATA.\n\n' +
-        'POKUD najdeš jakoukoli odchylku formátování nebo logický problém, OPRAV PŘED vrácením. Lepší další 30 sekund práce než hodina mého ručního formátování.\n\n' +
+        'Plus právní kontrola: žádné údaje jiného případu, odkazy „viz čl. X“ / „Příloha Y“ sedí na existující části, čerpání a poplatky odpovídají DATŮM, mluvnice (pád, rod, číslo) sedí.\n\n' +
+        'POKUD najdeš odchylku formátování nebo logický problém, OPRAV ho PŘED vrácením. Lepší dalších 30 sekund práce než hodina ručního formátování.\n\n' +
+        '=== SHRNUTÍ POD DOKUMENT (stručně, v bodech) ===\n' +
+        '1. Doplněno — hlavní vyplněné údaje.\n' +
+        '2. Zůstalo „(Doplnit)“ — co a kde (článek / příloha), aby to Martin doplnil ručně.\n' +
+        '3. Vypuštěno nebo přeformulováno — co a proč.\n' +
+        '4. Ke kontrole — kde si nejsi jistá, právní nejasnosti, rozpory v DATECH.\n\n' +
         dataDescription;
 }
 

@@ -1315,7 +1315,7 @@
                         <div class="lv-file-list" id="lv-file-list"></div>
                         <div id="lv-instructions-wrap" style="display:none; margin-bottom:0.75rem;">
                             <label class="form-label">Pokyn pro AI (volitelné)</label>
-                            <textarea class="form-textarea" id="lv-instructions" placeholder="např. Použij pouze parcely 456/2 a 456/3 nebo Zajímají mě jen pozemky v kú Čečovice..." style="min-height:50px;"></textarea>
+                            <textarea class="form-textarea" id="lv-instructions" placeholder="např. Použij pouze parcely 456/2 a 456/3 nebo Zajímají mě jen pozemky v k. ú. Vinohrady..." style="min-height:50px;"></textarea>
                         </div>
                         <div id="lv-results-container"></div>
                     </div>
@@ -1340,7 +1340,7 @@
                         <label class="form-label">Položky zajištění</label>
                         <div id="collateral-list" class="dynamic-list">
                             <div class="dynamic-item">
-                                <input type="text" class="form-input" placeholder="např. LV 303, 321 kú Čečovice (BD)">
+                                <input type="text" class="form-input" placeholder="např. LV 1234 k. ú. Vinohrady (bytový dům)">
                                 <button class="btn-remove-item" onclick="removeItem(this)" title="Odebrat">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                 </button>
@@ -2549,7 +2549,7 @@
     function buildTermSheetBodyXml(data) {
         var xml = '';
 
-        // Title — uses Title style matching the Agri Partners reference
+        // Title — uses Title style matching the reference term sheet
         xml += '<w:p><w:pPr><w:pStyle w:val="Title"/><w:spacing w:after="400" w:line="360" w:lineRule="auto"/></w:pPr>' +
                '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="32"/></w:rPr>' +
                '<w:t>Term Sheet \u2013 financov\u00e1n\u00ed</w:t></w:r></w:p>';
