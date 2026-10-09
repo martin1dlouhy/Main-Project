@@ -4017,11 +4017,39 @@
             }, 5000);
         }
 
+        // AI se otevírá v samostatném okně Chrome (ne jako záložka), aby valuace běžely odděleně od ostatních
+        // oken. Web smí otevřít jen okno bez lišty záložek. slot = pořadí AI (0 ChatGPT, 1 Claude, 2 Gemini):
+        // na širokém monitoru jdou okna vedle sebe, jinak do kaskády, aby nebyla přesně přes sebe.
+        function openAiWindow(url, slot) {
+            const sw = screen.availWidth, sh = screen.availHeight;
+            const sx = screen.availLeft || 0, sy = screen.availTop || 0;
+            const third = Math.floor(sw / 3);
+            let width, height, left, top;
+            if (third >= 1000) {
+                width = third - 16;
+                height = sh - 80; // 80 px rezerva na titulek a adresní řádek okna
+                left = sx + slot * third;
+                top = sy;
+            } else {
+                const step = 40;
+                width = Math.min(1400, sw - 2 * step);
+                height = sh - 2 * step - 80;
+                left = sx + Math.max(0, Math.round((sw - width - 2 * step) / 2)) + slot * step;
+                top = sy + slot * step;
+            }
+            const win = window.open(url, '_blank', `popup,width=${width},height=${height},left=${left},top=${top}`);
+            if (win) {
+                try { win.opener = null; } catch (e) { /* no-op */ }
+            } else {
+                showToast('Prohlížeč zablokoval nové okno — povolte vyskakovací okna pro tento web.', 'error');
+            }
+        }
+
         function openInChatGPT() {
             const prompt = document.getElementById('promptText').textContent;
             navigator.clipboard.writeText(prompt).then(() => {
                 showToast('Prompt zkopírován do schránky');
-                setTimeout(() => window.open('https://chat.openai.com/', '_blank'), 500);
+                setTimeout(() => openAiWindow('https://chat.openai.com/', 0), 500);
             });
         }
 
@@ -4029,7 +4057,7 @@
             const prompt = document.getElementById('promptText').textContent;
             navigator.clipboard.writeText(prompt).then(() => {
                 showToast('Prompt zkopírován do schránky');
-                setTimeout(() => window.open('https://claude.ai/new', '_blank'), 500);
+                setTimeout(() => openAiWindow('https://claude.ai/new', 1), 500);
             });
         }
 
@@ -4037,7 +4065,7 @@
             const prompt = document.getElementById('promptText').textContent;
             navigator.clipboard.writeText(prompt).then(() => {
                 showToast('Prompt zkopírován do schránky');
-                setTimeout(() => window.open('https://gemini.google.com/app', '_blank'), 500);
+                setTimeout(() => openAiWindow('https://gemini.google.com/app', 2), 500);
             });
         }
 
