@@ -1817,64 +1817,52 @@
         }
 
         /* ===== Obrázek ocenění (PNG) — dočasná karta mimo obrazovku, jen pro export =====
-           Světlé barvy záměrně: obrázek se sdílí e-mailem a v Teams, kde by tmavý podklad
-           nebyl čitelný (stejná výjimka z tmavé palety jako u dřívějšího exportu). */
+           Tmavá editorial paleta (Martin 12. 10. 2026: tmavé je přehlednější). Jen dva odstíny
+           šedé vlastní — tokeny --text-mute / --text-faint jsou v obrázku příliš tmavé. */
         #reExportCard {
-            --x-bg: #ffffff;
-            --x-surface: #f7f4ee;
-            --x-text: #1a1207;
-            --x-soft: rgba(26, 18, 7, 0.78);
-            --x-mute: rgba(26, 18, 7, 0.58);
-            --x-faint: rgba(26, 18, 7, 0.42);
-            --x-line: rgba(26, 18, 7, 0.12);
-            --x-accent: #9a6f3a;
-            --x-ok-bg: #eaf3de;
-            --x-ok: #3b6d11;
-            --x-warn-bg: #faeeda;
-            --x-warn: #854f0b;
-            --x-bad-bg: #fcebeb;
-            --x-bad: #a32d2d;
+            --x-mute: rgba(241, 236, 225, 0.62);
+            --x-faint: rgba(241, 236, 225, 0.48);
             position: fixed;
             left: -10000px;
             top: 0;
-            width: 1100px;
+            width: 800px;
             box-sizing: border-box;
-            padding: 40px 44px 32px;
-            background: var(--x-bg);
-            color: var(--x-text);
+            padding: 16px;
+            background: var(--bg-deep);
+            color: var(--text);
             font-family: var(--font-body);
             font-size: 15px;
-            line-height: 1.5;
+            line-height: 1.45;
         }
-        #reExportCard .rx-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--x-line); }
-        #reExportCard .rx-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--x-accent); }
-        #reExportCard .rx-title { margin-top: 6px; font-family: var(--font-display); font-size: 30px; font-weight: 400; line-height: 1.15; }
-        #reExportCard .rx-meta { margin-top: 6px; font-size: 14px; color: var(--x-mute); }
-        #reExportCard .rx-brand { font-size: 12px; line-height: 1.5; color: var(--x-faint); text-align: right; white-space: nowrap; }
-        #reExportCard .rx-section { margin-top: 20px; }
-        #reExportCard .rx-label { margin-bottom: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--x-mute); }
+        #reExportCard .rx-card { padding: 28px 32px 24px; background: var(--bg-raised); border: 1px solid var(--line); border-radius: 14px; }
+        #reExportCard .rx-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+        #reExportCard .rx-eyebrow { font-size: 14px; color: var(--text-soft); }
+        #reExportCard .rx-title { margin-top: 2px; font-size: 22px; font-weight: 600; line-height: 1.25; }
+        #reExportCard .rx-meta { margin-top: 4px; font-size: 15px; color: var(--text-soft); }
+        #reExportCard .rx-brand { font-size: 13px; line-height: 1.5; color: var(--x-mute); text-align: right; white-space: nowrap; }
+        #reExportCard .rx-section { margin-top: 18px; }
+        #reExportCard .rx-label { margin-bottom: 8px; font-size: 14px; color: var(--text-soft); }
         #reExportCard .rx-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-        #reExportCard .rx-chip { padding: 4px 12px; font-size: 13px; color: var(--x-soft); border: 1px solid var(--x-line); border-radius: 6px; }
-        #reExportCard .rx-empty { font-size: 13px; color: var(--x-faint); }
-        #reExportCard .rx-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
-        #reExportCard .rx-metric { padding: 14px 16px; background: var(--x-surface); border-radius: 8px; }
-        #reExportCard .rx-metric-label { font-size: 13px; color: var(--x-mute); }
+        #reExportCard .rx-chip { padding: 4px 12px; font-size: 14px; border: 1px solid var(--line-strong); border-radius: 8px; }
+        #reExportCard .rx-empty { font-size: 14px; color: var(--x-faint); }
+        #reExportCard .rx-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+        #reExportCard .rx-metric { padding: 12px 14px; background: var(--bg); border-radius: 10px; }
+        #reExportCard .rx-metric-label { font-size: 14px; color: var(--text-soft); }
         /* bez tabular-nums: html2canvas kreslí proporcionální číslice a za „1" by vznikla mezera */
-        #reExportCard .rx-metric-value { margin-top: 4px; font-size: 24px; font-weight: 600; }
-        #reExportCard .rx-metric-main .rx-metric-value { color: var(--x-accent); }
-        #reExportCard .rx-metric-note { margin-top: 2px; font-size: 12px; color: var(--x-faint); }
-        #reExportCard .rx-compare { display: grid; margin-top: 22px; font-size: 14px; border-top: 1px solid var(--x-line); }
-        #reExportCard .rx-compare > div { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--x-line); }
+        #reExportCard .rx-metric-value { margin-top: 2px; font-size: 21px; font-weight: 600; }
+        #reExportCard .rx-metric-note { margin-top: 2px; font-size: 13px; color: var(--x-mute); }
+        #reExportCard .rx-compare { display: grid; margin-top: 18px; font-size: 15px; border-top: 1px solid var(--line); }
+        #reExportCard .rx-compare > div { padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); }
         #reExportCard .rx-compare .rx-h { font-weight: 600; }
-        #reExportCard .rx-compare .rx-k { color: var(--x-mute); }
-        #reExportCard .rx-badge { display: inline-block; padding: 2px 10px; font-size: 13px; font-weight: 500; border-radius: 6px; background: var(--x-surface); }
-        #reExportCard .rx-badge.ok { background: var(--x-ok-bg); color: var(--x-ok); }
-        #reExportCard .rx-badge.warn { background: var(--x-warn-bg); color: var(--x-warn); }
-        #reExportCard .rx-badge.bad { background: var(--x-bad-bg); color: var(--x-bad); }
-        #reExportCard .rx-risk { position: relative; padding: 4px 0 4px 20px; font-size: 14px; line-height: 1.55; }
-        #reExportCard .rx-risk::before { content: ''; position: absolute; left: 3px; top: 12px; width: 7px; height: 7px; border-radius: 50%; background: var(--x-warn); }
-        #reExportCard .rx-src { color: var(--x-faint); }
-        #reExportCard .rx-foot { margin-top: 22px; padding-top: 12px; font-size: 12px; color: var(--x-faint); border-top: 1px solid var(--x-line); }
+        #reExportCard .rx-compare .rx-k { color: var(--text-soft); }
+        #reExportCard .rx-badge { display: inline-block; padding: 2px 10px; font-size: 14px; border-radius: 8px; background: var(--bg-input); }
+        #reExportCard .rx-badge.ok { background: var(--success-tint); color: var(--success); }
+        #reExportCard .rx-badge.warn { background: var(--warning-tint); color: var(--warning); }
+        #reExportCard .rx-badge.bad { background: var(--danger-tint); color: var(--danger); }
+        #reExportCard .rx-risk { position: relative; padding: 3px 0 3px 20px; font-size: 15px; line-height: 1.5; }
+        #reExportCard .rx-risk::before { content: ''; position: absolute; left: 3px; top: 11px; width: 7px; height: 7px; border-radius: 2px; background: var(--warning); }
+        #reExportCard .rx-src { color: var(--x-mute); }
+        #reExportCard .rx-foot { margin-top: 18px; padding-top: 12px; font-size: 13px; color: var(--x-mute); border-top: 1px solid var(--line); }
 
         /* ===== C5: VALUATION CHART ===== */
         .valuation-chart {
@@ -4740,7 +4728,7 @@
             } catch (e) { /* no-op — bridge nesmí rozbít appku */ }
         }
 
-        // Obrázek ocenění (PNG) ke sdílení — samostatná světlá karta: hlavička případu, podklady,
+        // Obrázek ocenění (PNG) ke sdílení — samostatná tmavá karta: hlavička případu, podklady,
         // klíčová čísla, srovnání AI a rizika. Vykreslí se mimo obrazovku přes html2canvas
         // (scale 2 pro ostrost) a po vykreslení se odstraní; stránka kroku 6 zůstává beze změny.
         async function exportComparisonAsImage() {
@@ -4767,7 +4755,7 @@
                 await new Promise(r => requestAnimationFrame(r));
                 var canvas = await html2canvas(card, {
                     scale: 2,
-                    backgroundColor: '#ffffff',
+                    backgroundColor: getComputedStyle(card).backgroundColor,
                     logging: false,
                     useCORS: true
                 });
@@ -4868,11 +4856,11 @@
             const ltv = data.map(x => num(x.d.ltv)).filter(v => v != null);
             const koefNote = koef.length ? 'koeficient ' + span(koef, dec2, '')
                 : (safetyCoefficients[propertyType] ? 'koeficient ' + dec2(safetyCoefficients[propertyType]) : '');
-            const metric = (label, value, note, main) =>
-                `<div class="rx-metric${main ? ' rx-metric-main' : ''}"><div class="rx-metric-label">${label}</div>` +
+            const metric = (label, value, note) =>
+                `<div class="rx-metric"><div class="rx-metric-label">${label}</div>` +
                 `<div class="rx-metric-value">${value}</div><div class="rx-metric-note">${esc(note || '')}</div></div>`;
             const metrics = [
-                metric('Tržní hodnota', trzni.length ? kc(avg(trzni)) : '—', single ? data[0].label : 'průměr AI', true),
+                metric('Tržní hodnota', trzni.length ? kc(avg(trzni)) : '—', single ? data[0].label : 'průměr AI'),
                 metric('Zástavní hodnota', zastavni.length ? kc(avg(zastavni)) : '—', koefNote),
                 trzni.length >= 2
                     ? metric('Rozdíl mezi AI', Math.round((Math.max(...trzni) - Math.min(...trzni)) / avg(trzni) * 100) + ' %',
@@ -4890,18 +4878,18 @@
                 if (t.includes('vhodn')) return 'ok';
                 return '';
             };
-            const hodnoceni = (h) => {
-                const t = reviewSoften(h);
-                return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
-            };
+            const capital = (t) => t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+            const hodnoceni = (h) => capital(reviewSoften(h));
+            // „Porovnávací metoda" → „Porovnávací" (krátké buňky jako v návrhu)
+            const metoda = (m) => capital(String(m || '').replace(/\s*metoda\b/i, '').trim()) || '—';
             const cmpRow = (label, cell) => `<div class="rx-k">${label}</div>` + data.map(x => `<div>${cell(x)}</div>`).join('');
             const compare =
-                `<div class="rx-compare" style="grid-template-columns: 170px repeat(${data.length}, minmax(0, 1fr));">` +
+                `<div class="rx-compare" style="grid-template-columns: 120px repeat(${data.length}, minmax(0, 1fr));">` +
                 `<div></div>` + data.map(x => `<div class="rx-h">${x.label}</div>`).join('') +
-                cmpRow('Tržní hodnota', x => x.d.trzniHodnota ? kc(x.d.trzniHodnota) : '—') +
-                cmpRow('Zástavní hodnota', x => x.d.zastavniHodnota ? kc(x.d.zastavniHodnota) : '—') +
-                cmpRow('Primární metoda', x => esc(x.d.metoda || '—')) +
-                cmpRow('Hodnocení zástavy', x => x.d.hodnoceni
+                cmpRow('Tržní', x => x.d.trzniHodnota ? kc(x.d.trzniHodnota) : '—') +
+                cmpRow('Zástavní', x => x.d.zastavniHodnota ? kc(x.d.zastavniHodnota) : '—') +
+                cmpRow('Metoda', x => esc(metoda(x.d.metoda))) +
+                cmpRow('Hodnocení', x => x.d.hodnoceni
                     ? `<span class="rx-badge ${badgeClass(x.d.hodnoceni)}">${esc(hodnoceni(x.d.hodnoceni))}</span>` : '—') +
                 `</div>`;
 
@@ -4924,6 +4912,7 @@
             const card = document.createElement('div');
             card.id = 'reExportCard';
             card.innerHTML =
+                `<div class="rx-card">` +
                 `<div class="rx-head"><div>` +
                 `<div class="rx-eyebrow">AI ocenění nemovitosti</div>` +
                 `<div class="rx-title">${esc(title)}</div>` +
@@ -4935,7 +4924,8 @@
                 `<div class="rx-metrics">${metrics}</div>` +
                 compare +
                 risksHtml +
-                `<div class="rx-foot">Orientační AI ocenění, nenahrazuje znalecký posudek.</div>`;
+                `<div class="rx-foot">Orientační AI ocenění, nenahrazuje znalecký posudek.</div>` +
+                `</div>`;
             return card;
         }
 
