@@ -1816,6 +1816,66 @@
             }
         }
 
+        /* ===== Obrázek ocenění (PNG) — dočasná karta mimo obrazovku, jen pro export =====
+           Světlé barvy záměrně: obrázek se sdílí e-mailem a v Teams, kde by tmavý podklad
+           nebyl čitelný (stejná výjimka z tmavé palety jako u dřívějšího exportu). */
+        #reExportCard {
+            --x-bg: #ffffff;
+            --x-surface: #f7f4ee;
+            --x-text: #1a1207;
+            --x-soft: rgba(26, 18, 7, 0.78);
+            --x-mute: rgba(26, 18, 7, 0.58);
+            --x-faint: rgba(26, 18, 7, 0.42);
+            --x-line: rgba(26, 18, 7, 0.12);
+            --x-accent: #9a6f3a;
+            --x-ok-bg: #eaf3de;
+            --x-ok: #3b6d11;
+            --x-warn-bg: #faeeda;
+            --x-warn: #854f0b;
+            --x-bad-bg: #fcebeb;
+            --x-bad: #a32d2d;
+            position: fixed;
+            left: -10000px;
+            top: 0;
+            width: 1100px;
+            box-sizing: border-box;
+            padding: 40px 44px 32px;
+            background: var(--x-bg);
+            color: var(--x-text);
+            font-family: var(--font-body);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        #reExportCard .rx-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--x-line); }
+        #reExportCard .rx-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--x-accent); }
+        #reExportCard .rx-title { margin-top: 6px; font-family: var(--font-display); font-size: 30px; font-weight: 400; line-height: 1.15; }
+        #reExportCard .rx-meta { margin-top: 6px; font-size: 14px; color: var(--x-mute); }
+        #reExportCard .rx-brand { font-size: 12px; line-height: 1.5; color: var(--x-faint); text-align: right; white-space: nowrap; }
+        #reExportCard .rx-section { margin-top: 20px; }
+        #reExportCard .rx-label { margin-bottom: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--x-mute); }
+        #reExportCard .rx-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        #reExportCard .rx-chip { padding: 4px 12px; font-size: 13px; color: var(--x-soft); border: 1px solid var(--x-line); border-radius: 6px; }
+        #reExportCard .rx-empty { font-size: 13px; color: var(--x-faint); }
+        #reExportCard .rx-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+        #reExportCard .rx-metric { padding: 14px 16px; background: var(--x-surface); border-radius: 8px; }
+        #reExportCard .rx-metric-label { font-size: 13px; color: var(--x-mute); }
+        /* bez tabular-nums: html2canvas kreslí proporcionální číslice a za „1" by vznikla mezera */
+        #reExportCard .rx-metric-value { margin-top: 4px; font-size: 24px; font-weight: 600; }
+        #reExportCard .rx-metric-main .rx-metric-value { color: var(--x-accent); }
+        #reExportCard .rx-metric-note { margin-top: 2px; font-size: 12px; color: var(--x-faint); }
+        #reExportCard .rx-compare { display: grid; margin-top: 22px; font-size: 14px; border-top: 1px solid var(--x-line); }
+        #reExportCard .rx-compare > div { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--x-line); }
+        #reExportCard .rx-compare .rx-h { font-weight: 600; }
+        #reExportCard .rx-compare .rx-k { color: var(--x-mute); }
+        #reExportCard .rx-badge { display: inline-block; padding: 2px 10px; font-size: 13px; font-weight: 500; border-radius: 6px; background: var(--x-surface); }
+        #reExportCard .rx-badge.ok { background: var(--x-ok-bg); color: var(--x-ok); }
+        #reExportCard .rx-badge.warn { background: var(--x-warn-bg); color: var(--x-warn); }
+        #reExportCard .rx-badge.bad { background: var(--x-bad-bg); color: var(--x-bad); }
+        #reExportCard .rx-risk { position: relative; padding: 4px 0 4px 20px; font-size: 14px; line-height: 1.55; }
+        #reExportCard .rx-risk::before { content: ''; position: absolute; left: 3px; top: 12px; width: 7px; height: 7px; border-radius: 50%; background: var(--x-warn); }
+        #reExportCard .rx-src { color: var(--x-faint); }
+        #reExportCard .rx-foot { margin-top: 22px; padding-top: 12px; font-size: 12px; color: var(--x-faint); border-top: 1px solid var(--x-line); }
+
         /* ===== C5: VALUATION CHART ===== */
         .valuation-chart {
             background: var(--bg-surface);
@@ -3901,32 +3961,14 @@
             }, 5000);
         }
 
-        // AI se otevírá v samostatném okně Chrome (ne jako záložka), aby valuace běžely odděleně od ostatních
-        // oken. Web smí otevřít jen okno bez lišty záložek (záložky v jednom okně umí jen rozšíření Chrome).
-        // slot = pořadí AI (0 ChatGPT, 1 Claude): na širokém monitoru jdou okna vedle sebe (polovina
-        // obrazovky každé), jinak do kaskády, aby nebyla přesně přes sebe.
-        function openAiWindow(url, slot) {
-            const sw = screen.availWidth, sh = screen.availHeight;
-            const sx = screen.availLeft || 0, sy = screen.availTop || 0;
-            const column = Math.floor(sw / AI_SOURCES.length);
-            let width, height, left, top;
-            if (column >= 1000) {
-                width = column - 16;
-                height = sh - 80; // 80 px rezerva na titulek a adresní řádek okna
-                left = sx + slot * column;
-                top = sy;
-            } else {
-                const step = 40;
-                width = Math.min(1400, sw - 2 * step);
-                height = sh - 2 * step - 80;
-                left = sx + Math.max(0, Math.round((sw - width - 2 * step) / 2)) + slot * step;
-                top = sy + slot * step;
-            }
-            const win = window.open(url, '_blank', `popup,width=${width},height=${height},left=${left},top=${top}`);
+        // AI se otevírá jako nová záložka v aktuálním okně Chrome (Martin 12. 10. 2026: nechce mít otevřeno
+        // víc oken Chrome). Záložka se od R-E odpojí, aby stránka AI nemohla sahat zpět do aplikace.
+        function openAiTab(url) {
+            const win = window.open(url, '_blank');
             if (win) {
                 try { win.opener = null; } catch (e) { /* no-op */ }
             } else {
-                showToast('Prohlížeč zablokoval nové okno — povolte vyskakovací okna pro tento web.', 'error');
+                showToast('Prohlížeč zablokoval novou záložku — povolte vyskakovací okna pro tento web.', 'error');
             }
         }
 
@@ -3934,7 +3976,7 @@
             const prompt = document.getElementById('promptText').textContent;
             navigator.clipboard.writeText(prompt).then(() => {
                 showToast('Prompt zkopírován do schránky');
-                setTimeout(() => openAiWindow('https://chat.openai.com/', 0), 500);
+                setTimeout(() => openAiTab('https://chat.openai.com/'), 500);
             });
         }
 
@@ -3942,7 +3984,7 @@
             const prompt = document.getElementById('promptText').textContent;
             navigator.clipboard.writeText(prompt).then(() => {
                 showToast('Prompt zkopírován do schránky');
-                setTimeout(() => openAiWindow('https://claude.ai/new', 1), 500);
+                setTimeout(() => openAiTab('https://claude.ai/new'), 500);
             });
         }
 
@@ -4698,104 +4740,32 @@
             } catch (e) { /* no-op — bridge nesmí rozbít appku */ }
         }
 
-        // Export srovnávací tabulky + AI shrnutí jako PNG (současný theme, scale 2 pro retina kvalitu)
+        // Obrázek ocenění (PNG) ke sdílení — samostatná světlá karta: hlavička případu, podklady,
+        // klíčová čísla, srovnání AI a rizika. Vykreslí se mimo obrazovku přes html2canvas
+        // (scale 2 pro ostrost) a po vykreslení se odstraní; stránka kroku 6 zůstává beze změny.
         async function exportComparisonAsImage() {
             if (typeof html2canvas === 'undefined') {
                 showToast('Knihovna pro export se ještě načítá, zkuste znovu za chvíli');
                 return;
             }
-            var hasAnyData = AI_SOURCES.some(function(s){ return aiParsedData && aiParsedData[s]; });
-            if (!hasAnyData) {
+            const sources = AI_SOURCES.filter(s => aiParsedData && aiParsedData[s]);
+            if (sources.length === 0) {
                 showToast('Nejprve vložte alespoň jeden AI výstup');
                 return;
             }
 
             showToast('Generuji obrázek...');
 
-            var step6 = document.getElementById('step6');
-            var config = propertyConfigs[propertyType];
-            var typeNameDisplay = (config && config.name) || propertyType || '';
-            var address = formData.adresa || '';
-
-            // Selectivně skryjeme prvky, které nepatří do exportu.
-            // Martin chce JEN: comparison table + finální shrnutí (.final-verdict).
-            // .final-verdict je uvnitř #aiSummaryGrid spolu s .ai-summary-card (3 karty),
-            // takže skryjem karty a nadpis sekce, ale ne celý wrapper.
-            var selectorsToHide = [
-                ':scope > h2',                  // "Srovnání AI valuací"
-                ':scope > p',                   // instrukční text
-                '#propertySummary',
-                '.ai-comparison-grid',
-                '#valuationChartSection',
-                '.btn-group',
-                '.buttons',
-                '#aiSummarySection > h3',       // nadpis "Shrnutí AI analýz" (nepatří, když jsou karty pryč)
-                '.ai-summary-card'              // 3 duplicitní AI karty (data jsou už v comparison table)
-            ];
-            // Každý element schovat JEN JEDNOU. Bez tohoto guardu prvek matchovaný více
-            // selektory (např. <div class="btn-group buttons">) byl push'nut do restoreList
-            // 2× — druhý push zachytil už 'none' stav a restore ho pak vracel na 'none'.
-            // Důsledek: tlačítka 'Uložit/Export/Tisk/Stáhnout' v kroku 6 zůstala trvale skrytá.
-            var hiddenEls = new Set();
-            var restoreList = [];
-            selectorsToHide.forEach(function(sel){
-                step6.querySelectorAll(sel).forEach(function(el){
-                    if (hiddenEls.has(el)) return;
-                    hiddenEls.add(el);
-                    restoreList.push({ el: el, display: el.style.display });
-                    el.style.display = 'none';
-                });
-            });
-
-            // Dočasně přepsat grid layout aby .final-verdict zabral plnou šířku
-            // (jinak zůstane v 1. sloupci 3-col gridu a vypadá jako uťaté).
-            var aiGrid = document.getElementById('aiSummaryGrid');
-            var originalGridCols = aiGrid ? aiGrid.style.gridTemplateColumns : null;
-            if (aiGrid) aiGrid.style.gridTemplateColumns = '1fr';
-
-            // Light theme override pouze pro export — labely v editorial dark mají 46% opacitu
-            // a v PNG renderu vychází nečitelně šedě na černém pozadí. Inverze base palette
-            // přes CSS variables scoped na #step6 — amber accent se zachovává (jen ztmavený
-            // pro lepší kontrast na bílém pozadí). Po snapshot se override-style odstraní.
-            var exportLightOverride = document.createElement('style');
-            exportLightOverride.id = '__exportLightOverride';
-            exportLightOverride.textContent =
-                '#step6 {' +
-                  'background: #ffffff !important;' +
-                  'color: #1a1207 !important;' +
-                  '--bg-deep: #ffffff;' +
-                  '--bg: #ffffff;' +
-                  '--bg-raised: #fafaf5;' +
-                  '--bg-elevated: #fafaf5;' +
-                  '--bg-surface: #fafaf5;' +
-                  '--bg-primary: #ffffff;' +
-                  '--bg-secondary: #fafaf5;' +
-                  '--bg-input: rgba(0,0,0,0.03);' +
-                  '--text: #1a1207;' +
-                  '--text-primary: #1a1207;' +
-                  '--text-soft: rgba(26,18,7,0.85);' +
-                  '--text-mute: rgba(26,18,7,0.62);' +
-                  '--text-secondary: rgba(26,18,7,0.62);' +
-                  '--text-faint: rgba(26,18,7,0.45);' +
-                  '--line: rgba(26,18,7,0.14);' +
-                  '--line-faint: rgba(26,18,7,0.08);' +
-                  '--line-strong: rgba(26,18,7,0.22);' +
-                  '--border-color: rgba(26,18,7,0.16);' +
-                  '--accent: #9a6f3a;' +
-                  '--amber: #9a6f3a;' +
-                  '--amber-warm: #9a6f3a;' +
-                  '--amber-deep: #6b4d27;' +
-                  '--amber-tint: rgba(154,111,58,0.10);' +
-                  '--amber-glow: rgba(154,111,58,0.20);' +
-                  '--accent-light: rgba(154,111,58,0.10);' +
-                  '--accent-hover: #9a6f3a;' +
-                '}' +
-                '#step6 *, #step6 *::before, #step6 *::after { box-shadow: none !important; }';
-            document.head.appendChild(exportLightOverride);
+            const config = propertyConfigs[propertyType];
+            const typeNameDisplay = (config && config.name) || propertyType || '';
+            const address = formData.adresa || '';
+            const card = buildValuationExportCard(sources, getSavedValuationName());
+            document.body.appendChild(card);
 
             try {
-                await new Promise(function(r){ requestAnimationFrame(r); });
-                var canvas = await html2canvas(step6, {
+                if (document.fonts && document.fonts.ready) await document.fonts.ready;
+                await new Promise(r => requestAnimationFrame(r));
+                var canvas = await html2canvas(card, {
                     scale: 2,
                     backgroundColor: '#ffffff',
                     logging: false,
@@ -4847,10 +4817,126 @@
                 console.error('Image export failed:', err);
                 showToast('Chyba při generování obrázku');
             } finally {
-                restoreList.forEach(function(item){ item.el.style.display = item.display; });
-                if (aiGrid) aiGrid.style.gridTemplateColumns = originalGridCols || '';
-                if (exportLightOverride.parentNode) exportLightOverride.remove();
+                card.remove();
             }
+        }
+
+        // Karta pro obrázek ocenění — data z kroků 1–3 a z vložených výstupů AI (jen AI s daty)
+        function buildValuationExportCard(sources, savedName) {
+            const config = propertyConfigs[propertyType] || { name: propertyType || '', inputs: [] };
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const kc = (n) => new Intl.NumberFormat('cs-CZ').format(Math.round(n)) + ' Kč';
+            const mil = (n) => (n / 1e6).toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const dec2 = (n) => n.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+            // První číslo z textu AI („60", „60 %", „0,80"); u rozpětí „55–60" bere dolní hranici
+            const num = (v) => {
+                const m = String(v == null ? '' : v).replace(',', '.').match(/\d+(?:\.\d+)?/);
+                return m ? parseFloat(m[0]) : null;
+            };
+            const span = (vals, fmt, unit) => {
+                const lo = Math.min(...vals), hi = Math.max(...vals);
+                return (lo === hi ? fmt(lo) : fmt(lo) + '–' + fmt(hi)) + unit;
+            };
+            const data = sources.map(s => ({ label: AI_LABELS[s], d: aiParsedData[s] }));
+            const single = data.length === 1;
+
+            // Hlavička — název uloženého ocenění, jinak typ + adresa; datum = poslední uložení, jinak dnes
+            const purposeLabels = { general: 'bezúčelový úvěr', refinancing: 'refinancování', acquisition: 'akvizice' };
+            const title = savedName || [config.name, formData.adresa].filter(Boolean).join(' — ') || 'Ocenění nemovitosti';
+            let datum = new Date().toLocaleDateString('cs-CZ');
+            if (editingId) {
+                try {
+                    const item = JSON.parse(localStorage.getItem('saved-valuations') || '[]').find(v => v.id === editingId);
+                    const d = item ? new Date(item.updatedAtIso || item.id) : null;
+                    if (d && !isNaN(d)) datum = d.toLocaleDateString('cs-CZ');
+                } catch (e) { /* zůstane dnešní datum */ }
+            }
+            const meta = [config.name, purposeLabels[loanPurpose], 'ocenění ' + datum].filter(Boolean).join(' · ');
+
+            // Podklady k ocenění = co je zaškrtnuté v kroku 3
+            const globalInputDefs = { cenova_mapa: 'Cenová mapa CUZK' };
+            const docs = selectedInputs.map(id => {
+                const input = (config.inputs || []).find(i => i.id === id);
+                return input ? input.label : globalInputDefs[id];
+            }).filter(Boolean);
+
+            // Klíčová čísla
+            const trzni = data.map(x => x.d.trzniHodnota).filter(v => v);
+            const zastavni = data.map(x => x.d.zastavniHodnota).filter(v => v);
+            const koef = data.map(x => num(x.d.koeficient)).filter(v => v != null);
+            const ltv = data.map(x => num(x.d.ltv)).filter(v => v != null);
+            const koefNote = koef.length ? 'koeficient ' + span(koef, dec2, '')
+                : (safetyCoefficients[propertyType] ? 'koeficient ' + dec2(safetyCoefficients[propertyType]) : '');
+            const metric = (label, value, note, main) =>
+                `<div class="rx-metric${main ? ' rx-metric-main' : ''}"><div class="rx-metric-label">${label}</div>` +
+                `<div class="rx-metric-value">${value}</div><div class="rx-metric-note">${esc(note || '')}</div></div>`;
+            const metrics = [
+                metric('Tržní hodnota', trzni.length ? kc(avg(trzni)) : '—', single ? data[0].label : 'průměr AI', true),
+                metric('Zástavní hodnota', zastavni.length ? kc(avg(zastavni)) : '—', koefNote),
+                trzni.length >= 2
+                    ? metric('Rozdíl mezi AI', Math.round((Math.max(...trzni) - Math.min(...trzni)) / avg(trzni) * 100) + ' %',
+                        mil(Math.min(...trzni)) + '–' + mil(Math.max(...trzni)) + ' mil. Kč')
+                    : metric('Rozdíl mezi AI', '—', 'jen jedna AI'),
+                metric('Doporučené LTV', ltv.length ? span(ltv, v => Math.round(v), ' %') : '—',
+                    ltv.length >= 2 ? (Math.min(...ltv) === Math.max(...ltv) ? 'shoda obou AI' : 'rozpětí AI') : (single ? data[0].label : ''))
+            ].join('');
+
+            // Srovnání AI (jen AI s daty — žádné prázdné sloupce)
+            const badgeClass = (h) => {
+                const t = String(h || '').toLowerCase();
+                if (t.includes('nevhodn')) return 'bad';
+                if (t.includes('podmín')) return 'warn';
+                if (t.includes('vhodn')) return 'ok';
+                return '';
+            };
+            const hodnoceni = (h) => {
+                const t = reviewSoften(h);
+                return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+            };
+            const cmpRow = (label, cell) => `<div class="rx-k">${label}</div>` + data.map(x => `<div>${cell(x)}</div>`).join('');
+            const compare =
+                `<div class="rx-compare" style="grid-template-columns: 170px repeat(${data.length}, minmax(0, 1fr));">` +
+                `<div></div>` + data.map(x => `<div class="rx-h">${x.label}</div>`).join('') +
+                cmpRow('Tržní hodnota', x => x.d.trzniHodnota ? kc(x.d.trzniHodnota) : '—') +
+                cmpRow('Zástavní hodnota', x => x.d.zastavniHodnota ? kc(x.d.zastavniHodnota) : '—') +
+                cmpRow('Primární metoda', x => esc(x.d.metoda || '—')) +
+                cmpRow('Hodnocení zástavy', x => x.d.hodnoceni
+                    ? `<span class="rx-badge ${badgeClass(x.d.hodnoceni)}">${esc(hodnoceni(x.d.hodnoceni))}</span>` : '—') +
+                `</div>`;
+
+            // Rizika: nejdřív hlavní, pak sekundární; shodná znění sloučit a uvést, která AI je zmínila
+            const risks = [];
+            ['riziko1', 'riziko2'].forEach(key => data.forEach(x => {
+                const text = String(x.d[key] || '').trim().replace(/\.$/, '');
+                if (!text) return;
+                const norm = text.toLowerCase().replace(/\s+/g, ' ');
+                const found = risks.find(r => r.norm === norm);
+                if (found) { if (!found.src.includes(x.label)) found.src.push(x.label); }
+                else risks.push({ norm, text, src: [x.label] });
+            }));
+            const risksHtml = risks.length
+                ? `<div class="rx-section"><div class="rx-label">Hlavní rizika</div>` +
+                  risks.slice(0, 4).map(r => `<div class="rx-risk">${esc(r.text)} <span class="rx-src">· ${esc(r.src.join(', '))}</span></div>`).join('') +
+                  `</div>`
+                : '';
+
+            const card = document.createElement('div');
+            card.id = 'reExportCard';
+            card.innerHTML =
+                `<div class="rx-head"><div>` +
+                `<div class="rx-eyebrow">AI ocenění nemovitosti</div>` +
+                `<div class="rx-title">${esc(title)}</div>` +
+                `<div class="rx-meta">${esc(meta)}</div>` +
+                `</div><div class="rx-brand">Investment Tools<br>R-E Prompt Generator</div></div>` +
+                `<div class="rx-section"><div class="rx-label">Podklady k ocenění</div><div class="rx-chips">` +
+                (docs.length ? docs.map(d => `<span class="rx-chip">${esc(d)}</span>`).join('') : `<span class="rx-empty">Neuvedeny</span>`) +
+                `</div></div>` +
+                `<div class="rx-metrics">${metrics}</div>` +
+                compare +
+                risksHtml +
+                `<div class="rx-foot">Orientační AI ocenění, nenahrazuje znalecký posudek.</div>`;
+            return card;
         }
 
         // ===== SAVED VALUATIONS =====
