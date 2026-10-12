@@ -26,33 +26,6 @@
             width: 100%;
         }
 
-        .language-toggle {
-            display: flex;
-            gap: 8px;
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 4px;
-        }
-
-        .language-toggle button {
-            padding: 8px 16px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            transition: var(--transition);
-            color: var(--text-secondary);
-            font-family: inherit;
-        }
-
-        .language-toggle button.active {
-            background: var(--accent);
-            color: white;
-        }
-
         .subtitle {
             margin-bottom: 50px;
         }
@@ -738,11 +711,14 @@
             color: white;
         }
 
-        /* Toast Notification */
+        /* Toast Notification — left/transform ruší sdílený .toast z app-shell.css (ten ho po animaci
+           posouval pod okraj obrazovky); bottom 80px = nad tlačítkem Google Drive */
         .toast {
             position: fixed;
-            bottom: 20px;
+            bottom: 80px;
             right: 20px;
+            left: auto;
+            transform: none;
             background: var(--text-primary);
             color: var(--bg-primary);
             padding: 16px 24px;
@@ -2051,10 +2027,6 @@
             background: var(--amber-warm) !important;
             box-shadow: 0 4px 14px var(--amber-glow) !important;
         }
-        .language-toggle button.active {
-            background: var(--amber) !important;
-            color: #1a1207 !important;
-        }
         .app-card, .property-type-card, .step-circle {
             background: var(--bg-raised);
             border-color: var(--line-faint);
@@ -2379,14 +2351,6 @@
                     <strong>Návod:</strong> Zkopírujte tento prompt a vložte ho do ChatGPT, Claude nebo Gemini. AI vám poskytne profesionální ocenění včetně zástavní hodnoty pro dluhové financování.
                 </div>
 
-                <div style="margin-top: 30px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
-                    <span style="color: var(--text-secondary); font-weight: 600;">Jazyk promptu:</span>
-                    <div class="language-toggle">
-                        <button class="active" data-lang="cs" onclick="setLanguage('cs')">CZ</button>
-                        <button data-lang="en" onclick="setLanguage('en')">EN</button>
-                    </div>
-                </div>
-
                 <div class="prompt-output" id="promptText"></div>
 
                 <div class="btn-group buttons">
@@ -2654,7 +2618,6 @@
         let selectedInputs = [];
         let formData = {};
         let visitedSteps = [1];
-        let currentLanguage = 'cs';
         let compareSelectedIds = new Set();
         let filterSearchText = '';
         let filterPropertyType = '';
@@ -2921,6 +2884,9 @@
                     var data = window.DashboardBridge ? DashboardBridge.takeHandoff() : null;
                     if (data) {
                         window.__dashCaseId = data.caseId || null;
+                        // Ocenění, se kterým byla appka otevřena — vazba na případ platí jen pro něj
+                        // (loadSavedValuation ji u jiného ocenění zapomene)
+                        window.__dashValuationId = data.valuationId != null ? data.valuationId : null;
                         if (data.nazev) showToast('Propojeno s případem: ' + data.nazev);
                         // Karta „Poslat k prověření" předává uložené ocenění → otevřít ho rovnou (krok 6)
                         if (data.valuationId != null) {
@@ -2958,12 +2924,6 @@
                 selectedInputs = state.selectedInputs || [];
                 formData = state.formData || {};
                 currentStep = state.currentStep || 1;
-                currentLanguage = state.language || 'cs';
-                const langBtn = document.querySelector(`[data-lang="${currentLanguage}"]`);
-                if (langBtn) langBtn.classList.add('active');
-                document.querySelectorAll('[data-lang]').forEach(b => {
-                    if (b.dataset.lang !== currentLanguage) b.classList.remove('active');
-                });
                 // Restore property type selection UI
                 if (propertyType) {
                     document.querySelectorAll('.property-type-card').forEach(card => {
@@ -2997,26 +2957,9 @@
                 loanPurpose,
                 selectedInputs,
                 formData,
-                currentStep,
-                language: currentLanguage
+                currentStep
             };
             localStorage.setItem('prompt-gen-state', JSON.stringify(state));
-        }
-
-        function setLanguage(lang) {
-            currentLanguage = lang;
-            document.querySelectorAll('[data-lang]').forEach(b => b.classList.remove('active'));
-            document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
-            saveState();
-            // Re-build prompt in new language if we're on step 5
-            if (currentStep === 5 && propertyType) {
-                try {
-                    const prompt = buildPrompt();
-                    document.getElementById('promptText').textContent = prompt;
-                } catch (e) {
-                    console.warn('Language switch prompt rebuild error:', e);
-                }
-            }
         }
 
         function selectPropertyType(type) {
@@ -3332,7 +3275,9 @@
                 missingFields.push('Počet podlaží (AI z něj dopočítá užitnou plochu z LV zastavěné)');
             }
 
-            if (missingFields.length > 0) {
+            // S přiloženým posudkem nebo LV vytěží údaje AI z příloh — upozornění na prázdný krok 4 je zbytečné
+            const maPodkladySUdaji = selectedInputs.includes('znalecky_posudek') || selectedInputs.includes('lv');
+            if (missingFields.length > 0 && !maPodkladySUdaji) {
                 showValidationModal(missingFields);
                 return;
             }
@@ -3366,631 +3311,591 @@
             const config = propertyConfigs[propertyType];
             let prompt = '';
 
-            if (currentLanguage === 'en') {
-                prompt = `# MASTER PROMPT: AI PROPERTY VALUATION FOR BANK COLLATERAL\n\n`;
-                prompt += `## ROLE AND CONTEXT\n`;
-                prompt += `You are a senior bank supervisor for property valuation (Collateral Risk Manager) in the Czech Republic. You have deep knowledge of:\n`;
-                prompt += `- Czech property valuation standards and regulations\n`;
-                prompt += `- International standards IVS/EVS\n`;
-                prompt += `- Banking collateral requirements\n\n`;
-                prompt += `Your nature is **skeptical, conservative, and focused on risk identification**. You apply the principle of caution in all valuations.\n\n`;
+            prompt = `# MASTER PROMPT: AI VALUACE NEMOVITOSTI PRO BANKOVNÍ ZAJIŠTĚNÍ\n\n`;
+            // Datum ocenění — bez něj některé modely počítají s trhem z doby svého tréninku
+            prompt += `**Datum ocenění:** ${new Date().toLocaleDateString('cs-CZ')} — tržní data, ceny a výnosy vztahuj k tomuto datu.\n\n`;
+            prompt += `## ROLE A KONTEXT\n`;
+            prompt += `Jsi seniorní bankovní supervizor pro oceňování nemovitostí (Collateral Risk Manager) v České republice. Máš hlubokou znalost:\n`;
+            prompt += `- Zákona č. 151/1997 Sb. o oceňování majetku\n`;
+            prompt += `- Zákona č. 190/2004 Sb. o dluhopisech (§ 29 - zástavní hodnota)\n`;
+            prompt += `- Mezinárodních standardů IVS/EVS\n\n`;
+            prompt += `Tvá povaha je **skeptická, konzervativní a zaměřená na identifikaci rizik**. Při oceňování postupuješ podle principu opatrnosti.\n\n`;
 
-                prompt += `## VALUATION OBJECTIVE\n`;
-                prompt += `Analyze the property and determine:\n`;
-                prompt += `1. **Market Value** - the most probable price at sale\n`;
-                prompt += `2. **Collateral Value** - conservative value for bank collateral purposes (LTV)\n`;
-                prompt += `3. **Risk Identification** - legal defects, technical issues, market risks\n\n`;
+            prompt += `## CÍL OCENĚNÍ\n`;
+            prompt += `Analyzovat nemovitost a stanovit:\n`;
+            prompt += `1. **Tržní hodnotu** (Market Value) - nejpravděpodobnější cena při prodeji\n`;
+            prompt += `2. **Zástavní hodnotu** (Collateral Value) - konzervativní hodnota pro účely bankovního zajištění (LTV)\n`;
+            prompt += `3. **Identifikaci rizik** (Red Flags) - právní vady, technické problémy, tržní rizika\n\n`;
 
-                prompt += `## PROPERTY TYPE\n`;
-                prompt += `**${config.name}**\n\n`;
+            prompt += `## TYP NEMOVITOSTI\n`;
+            prompt += `**${config.name}**\n\n`;
 
-                // Add loan purpose section
-                if (loanPurpose === 'refinancing') {
-                    prompt += `## FINANCING PURPOSE\n`;
-                    prompt += `**Refinancing** — The existing collateral lender will be paid off from our loan proceeds.\n\n`;
-                    prompt += `### CRITICAL INSTRUCTIONS FOR REFINANCING:\n`;
-                    prompt += `I am uploading the Title Deed (Land Registry), where another entity is registered as collateral lender. This lender **will be paid off as part of the refinancing** and we (Spolumajitelé Private Credit) will be the **sole collateral lender**.\n\n`;
-                    prompt += `**STANDARD PAYOFF MECHANISM (treat as given — DO NOT ASK about it):**\n`;
-                    prompt += `Our loan is disbursed into an attorney/notary escrow. The original lender is paid from escrow and issues a release receipt (kvitance) plus consent to delete the lien. The deletion of the original lien and registration of ours happen simultaneously at the Land Registry. Our legal team handles this as a drawdown condition — **do not treat it as an open question, do not ask "what happens to the active lien"**.\n\n`;
-                    prompt += `**Your tasks in the refinancing context:**\n`;
-                    prompt += `1. **Value the property as unencumbered** (the state after the existing lien is deleted) — do NOT deduct the refinanced lien from the value; our financing replaces it.\n`;
-                    prompt += `2. **List ALL liens, executions and legal obligations from the Land Registry** in the Red Flags section as an overview and pre-drawdown conditions — NOT as questions.\n`;
-                    prompt += `3. **Escalate only real risks** — if you find an ADDITIONAL lien beyond the one being refinanced, an execution or a dispute, flag it clearly. The refinanced lien itself is not a risk.\n`;
-                    prompt += `4. **Alert to discrepancies** — the borrower may claim only one lien, but the Land Registry reality may be different.\n\n`;
-                } else if (loanPurpose === 'acquisition') {
-                    prompt += `## FINANCING PURPOSE\n`;
-                    prompt += `**Acquisition** — Borrower is purchasing this property.\n\n`;
-                    prompt += `### CRITICAL INSTRUCTIONS FOR ACQUISITION:\n`;
-                    prompt += `This valuation is for financing the property purchase.\n\n`;
-                    prompt += `**Your tasks in the acquisition context:**\n`;
-                    prompt += `1. **Verify that the purchase price matches market value** — if the purchase price is significantly above market estimate (>10%), clearly flag it\n`;
-                    prompt += `2. **Assess the motivation for sale** — is the property in foreclosure, insolvency, or is it a standard sale?\n`;
-                    prompt += `3. **Identify transaction risks** — are there relationships between buyer and seller (related parties)?\n\n`;
-                } else {
-                    prompt += `## FINANCING PURPOSE\n`;
-                    prompt += `**General-purpose loan** — Standard valuation for loan collateral purposes.\n\n`;
-                }
-
-                // Global input labels (not in config.inputs)
-                const globalInputDefsEN = { cenova_mapa: 'Land Registry Price Map (CUZK)' };
-                if (selectedInputs.length > 0) {
-                    prompt += `## AVAILABLE MATERIALS AND DOCUMENTS\n`;
-                    selectedInputs.forEach(inputId => {
-                        const input = config.inputs.find(i => i.id === inputId);
-                        const label = input ? input.label : globalInputDefsEN[inputId];
-                        if (label) prompt += `- ${label}\n`;
-                    });
-                    prompt += `\n`;
-                }
-
-                prompt += `## PROPERTY DATA\n`;
-                for (const [key, value] of Object.entries(formData)) {
-                    const field = config.fields[key];
-                    if (field && value) prompt += `- **${field.label}**: ${value}\n`;
-                }
-                prompt += `\n`;
-
-                // Land Registry price map reference data (EN version)
-                if (selectedInputs.includes('cenova_mapa')) {
-                    prompt += `## REFERENCE DATA FROM LAND REGISTRY (PRICE MAP)\n\n`;
-                    prompt += `Land Registry price map data (CUZK) is available — a realized transfer of this property (or comparable property in the area) recorded in the Czech Land Registry.\n\n`;
-                    prompt += `### ⚠ CRITICAL INSTRUCTIONS FOR LAND REGISTRY DATA\n`;
-                    prompt += `This Land Registry price is a REFERENCE ONLY — NOT a basis for valuation or confirmation of market value. Reasons:\n\n`;
-                    prompt += `1. **Buyer may have overpaid** — emotional decision, market ignorance, time pressure or speculation. The realized price tells us nothing about whether it was a fair market transaction.\n`;
-                    prompt += `2. **Market shift** — since the transfer date the market may have changed significantly (up or down). Data older than 12 months is particularly unreliable.\n`;
-                    prompt += `3. **Non-standard transaction conditions** — price may have been influenced by related parties, seller distress, non-cash consideration or other non-standard circumstances.\n`;
-                    prompt += `4. **We are financing this property as loan collateral** — our role is to protect the lender, not to confirm the borrower's purchase price.\n\n`;
-                    prompt += `**PROCEDURE**: Conduct your own independent valuation using the appropriate methodology. Only after determining your own market value, compare it to the Land Registry price and comment on the variance:\n`;
-                    prompt += `- KN price **up to 10% above** your estimate: normal variance, no special comment needed.\n`;
-                    prompt += `- KN price **10–20% above** your estimate: flag possible overpayment, request detailed justification.\n`;
-                    prompt += `- KN price **more than 20% above** your estimate: **RED FLAG** — explicitly warn the lender that the buyer likely overpaid and collateral value will be significantly below the Land Registry price.\n\n`;
-                }
-
-                prompt += `## VALUATION METHODOLOGY\n\n`;
-                prompt += `Use comparative method for residential properties and income approach for commercial properties.\n\n`;
-
-                prompt += `## FINAL OUTPUT STRUCTURE\n\n`;
-                prompt += `### 1. PROPERTY SUMMARY\n`;
-                prompt += `- Type, location, key parameters\n\n`;
-
-                prompt += `### 2. MARKET VALUE\n`;
-                prompt += `For each valuation method:\n`;
-                prompt += `- Calculation steps\n`;
-                prompt += `- Assumptions used\n`;
-                prompt += `- Final value in CZK\n\n`;
-
-                prompt += `### 3. COLLATERAL VALUE\n`;
-                prompt += `Apply safety coefficient: ${safetyCoefficients[propertyType]}\n`;
-                prompt += `Collateral Value = Market Value × ${safetyCoefficients[propertyType]}\n\n`;
-
-                prompt += `### 4. RED FLAGS & RISKS\n`;
-                prompt += `Critical risks and recommendations for the lender.\n\n`;
-
+            // Add loan purpose section
+            if (loanPurpose === 'refinancing') {
+                prompt += `## ÚČEL FINANCOVÁNÍ\n`;
+                prompt += `**Refinancování** — Stávající zástavní věřitel bude vyplacen z čerpání našeho úvěru.\n\n`;
+                prompt += `### DŮLEŽITÉ INSTRUKCE PRO REFINANCOVÁNÍ:\n`;
+                prompt += `Nahrávám ti List vlastnictví (LV), kde je jako zástavní věřitel zapsán jiný subjekt. Tento věřitel **bude v rámci refinancování vyplacen** a my (Spolumajitelé Private Credit) budeme **jediný zástavní věřitel**.\n\n`;
+                prompt += `**STANDARDNÍ MECHANISMUS VYPLACENÍ (považuj za daný — NEPTEJ SE na něj):**\n`;
+                prompt += `Čerpání našeho úvěru probíhá do advokátní/notářské úschovy. Z úschovy je vyplacen původní věřitel, který vystaví kvitanci (potvrzení o zániku pohledávky) a souhlas s výmazem zástavního práva. Na katastru proběhne souběžně výmaz původního zástavního práva a vklad našeho. Tento postup zajišťuje naše právní oddělení jako podmínku čerpání — **neřeš ho jako otevřenou otázku, neptej se „co se stane s aktivní zástavou"**.\n\n`;
+                prompt += `**Tvé úkoly v kontextu refinancování:**\n`;
+                prompt += `1. **Oceň nemovitost jako nezatíženou** (stav po výmazu stávající zástavy) — refinancované zástavní právo NEODEČÍTEJ od hodnoty, naše financování jej nahradí.\n`;
+                prompt += `2. **Vypiš VŠECHNY zástavy, exekuce a právní závazky z LV** do sekce Red Flags jako přehled a podmínky před čerpáním — NE jako otázky.\n`;
+                prompt += `3. **Eskaluj jen skutečná rizika** — pokud najdeš DALŠÍ zástavu nad rámec té jedné refinancované, exekuci nebo spor, jasně to označ. Samotné refinancované zástavní právo rizikem není.\n`;
+                prompt += `4. **Upozorni na nesrovnalosti** — dlužník může tvrdit, že jde o jednu zástavu, ale realita na LV může být jiná.\n\n`;
+            } else if (loanPurpose === 'acquisition') {
+                prompt += `## ÚČEL FINANCOVÁNÍ\n`;
+                prompt += `**Akvizice** — Dlužník pořizuje tuto nemovitost.\n\n`;
+                prompt += `### DŮLEŽITÉ INSTRUKCE PRO AKVIZICI:\n`;
+                prompt += `Toto ocenění slouží pro financování nákupu nemovitosti.\n\n`;
+                prompt += `**Tvé úkoly v kontextu akvizice:**\n`;
+                prompt += `1. **Kupní cenu nepřebírej jako hodnotu** — nejdřív urči vlastní tržní hodnotu, teprve potom ji s kupní cenou porovnej. Pokud je kupní cena výrazně nad tvým odhadem (>10%), jasně na to upozorni\n`;
+                prompt += `2. **Zhodnoť motivaci prodeje** — je nemovitost v dražbě, insolvenci, nebo jde o standardní prodej?\n`;
+                prompt += `3. **Identifikuj rizika transakce** — jsou tam vztahy mezi kupujícím a prodávajícím (spříznění)?\n\n`;
             } else {
-                // Czech version (original)
-                prompt = `# MASTER PROMPT: AI VALUACE NEMOVITOSTI PRO BANKOVNÍ ZAJIŠTĚNÍ\n\n`;
-                prompt += `## ROLE A KONTEXT\n`;
-                prompt += `Jsi seniorní bankovní supervizor pro oceňování nemovitostí (Collateral Risk Manager) v České republice. Máš hlubokou znalost:\n`;
-                prompt += `- Zákona č. 151/1997 Sb. o oceňování majetku\n`;
-                prompt += `- Zákona č. 190/2004 Sb. o dluhopisech (§ 29 - zástavní hodnota)\n`;
-                prompt += `- Mezinárodních standardů IVS/EVS\n\n`;
-                prompt += `Tvá povaha je **skeptická, konzervativní a zaměřená na identifikaci rizik**. Při oceňování postupuješ podle principu opatrnosti.\n\n`;
-
-                prompt += `## CÍL OCENĚNÍ\n`;
-                prompt += `Analyzovat nemovitost a stanovit:\n`;
-                prompt += `1. **Tržní hodnotu** (Market Value) - nejpravděpodobnější cena při prodeji\n`;
-                prompt += `2. **Zástavní hodnotu** (Collateral Value) - konzervativní hodnota pro účely bankovního zajištění (LTV)\n`;
-                prompt += `3. **Identifikaci rizik** (Red Flags) - právní vady, technické problémy, tržní rizika\n\n`;
-
-                prompt += `## TYP NEMOVITOSTI\n`;
-                prompt += `**${config.name}**\n\n`;
-
-                // Add loan purpose section
-                if (loanPurpose === 'refinancing') {
-                    prompt += `## ÚČEL FINANCOVÁNÍ\n`;
-                    prompt += `**Refinancování** — Stávající zástavní věřitel bude vyplacen z čerpání našeho úvěru.\n\n`;
-                    prompt += `### DŮLEŽITÉ INSTRUKCE PRO REFINANCOVÁNÍ:\n`;
-                    prompt += `Nahrávám ti List vlastnictví (LV), kde je jako zástavní věřitel zapsán jiný subjekt. Tento věřitel **bude v rámci refinancování vyplacen** a my (Spolumajitelé Private Credit) budeme **jediný zástavní věřitel**.\n\n`;
-                    prompt += `**STANDARDNÍ MECHANISMUS VYPLACENÍ (považuj za daný — NEPTEJ SE na něj):**\n`;
-                    prompt += `Čerpání našeho úvěru probíhá do advokátní/notářské úschovy. Z úschovy je vyplacen původní věřitel, který vystaví kvitanci (potvrzení o zániku pohledávky) a souhlas s výmazem zástavního práva. Na katastru proběhne souběžně výmaz původního zástavního práva a vklad našeho. Tento postup zajišťuje naše právní oddělení jako podmínku čerpání — **neřeš ho jako otevřenou otázku, neptej se „co se stane s aktivní zástavou"**.\n\n`;
-                    prompt += `**Tvé úkoly v kontextu refinancování:**\n`;
-                    prompt += `1. **Oceň nemovitost jako nezatíženou** (stav po výmazu stávající zástavy) — refinancované zástavní právo NEODEČÍTEJ od hodnoty, naše financování jej nahradí.\n`;
-                    prompt += `2. **Vypiš VŠECHNY zástavy, exekuce a právní závazky z LV** do sekce Red Flags jako přehled a podmínky před čerpáním — NE jako otázky.\n`;
-                    prompt += `3. **Eskaluj jen skutečná rizika** — pokud najdeš DALŠÍ zástavu nad rámec té jedné refinancované, exekuci nebo spor, jasně to označ. Samotné refinancované zástavní právo rizikem není.\n`;
-                    prompt += `4. **Upozorni na nesrovnalosti** — dlužník může tvrdit, že jde o jednu zástavu, ale realita na LV může být jiná.\n\n`;
-                } else if (loanPurpose === 'acquisition') {
-                    prompt += `## ÚČEL FINANCOVÁNÍ\n`;
-                    prompt += `**Akvizice** — Dlužník pořizuje tuto nemovitost.\n\n`;
-                    prompt += `### DŮLEŽITÉ INSTRUKCE PRO AKVIZICI:\n`;
-                    prompt += `Toto ocenění slouží pro financování nákupu nemovitosti.\n\n`;
-                    prompt += `**Tvé úkoly v kontextu akvizice:**\n`;
-                    prompt += `1. **Ověř, zda kupní cena odpovídá tržní hodnotě** — pokud je kupní cena výrazně nad tržním odhadem (>10%), jasně na to upozorni\n`;
-                    prompt += `2. **Zhodnoť motivaci prodeje** — je nemovitost v dražbě, insolvenci, nebo jde o standardní prodej?\n`;
-                    prompt += `3. **Identifikuj rizika transakce** — jsou tam vztahy mezi kupujícím a prodávajícím (spříznění)?\n\n`;
-                } else {
-                    prompt += `## ÚČEL FINANCOVÁNÍ\n`;
-                    prompt += `**Bezúčelový úvěr** — Standardní ocenění pro účely zajištění úvěru.\n\n`;
-                }
-
-                // Globální inputy (nejsou v config.inputs)
-                const globalInputDefs = { cenova_mapa: 'Cenová mapa CUZK' };
-                if (selectedInputs.length > 0) {
-                    prompt += `## DOSTUPNÉ MATERIÁLY A PODKLADY\n`;
-                    selectedInputs.forEach(inputId => {
-                        const input = config.inputs.find(i => i.id === inputId);
-                        const label = input ? input.label : globalInputDefs[inputId];
-                        if (label) prompt += `- ${label}\n`;
-                    });
-                    prompt += `\n`;
-                }
-
-                prompt += `## ÚDAJE O NEMOVITOSTI\n`;
-                for (const [key, value] of Object.entries(formData)) {
-                    const field = config.fields[key];
-                    if (field && value) prompt += `- **${field.label}**: ${value}\n`;
-                }
-                prompt += `\n`;
-
-                // Cenová mapa CUZK — instrukce při zaškrtnutém podkladu
-                if (selectedInputs.includes('cenova_mapa')) {
-                    prompt += `## REFERENČNÍ DATA Z KATASTRU NEMOVITOSTÍ (CENOVÁ MAPA)\n\n`;
-                    prompt += `K dispozici jsou data z cenové mapy CUZK — realizovaný převod této nemovitosti (nebo srovnatelné nemovitosti v lokalitě) evidovaný v katastru nemovitostí.\n\n`;
-                    prompt += `### ⚠ KRITICKÉ INSTRUKCE K DATŮM Z CENOVÉ MAPY\n`;
-                    prompt += `Tato cena z katastru TI SLOUŽÍ POUZE JAKO ORIENTAČNÍ REFERENCE — NIKOLI jako základ ocenění ani jako potvrzení tržní hodnoty. Důvody:\n\n`;
-                    prompt += `1. **Kupující mohl nemovitost koupit za NADHODNOCENOU cenu** — přeplacení z emocí, neznalosti trhu, časového tlaku nebo spekulace. Realizační cena z KN nám neříká nic o tom, zda šlo o férovou tržní transakci.\n`;
-                    prompt += `2. **Časový posun** — od data převodu se trh mohl výrazně změnit (nahoru i dolů). Data starší než 12 měsíců jsou zvláště nespolehlivá.\n`;
-                    prompt += `3. **Nestandardní podmínky transakce** — cena mohla být ovlivněna propojenými osobami, tísní prodávajícího, nepeněžním plněním nebo jinými nestandardními okolnostmi.\n`;
-                    prompt += `4. **My financujeme tuto nemovitost jako zajištění úvěru** — naším úkolem je chránit věřitele, ne potvrzovat kupní cenu dlužníka.\n\n`;
-                    prompt += `**POSTUP**: Proveď vlastní nezávislé ocenění dle příslušné metodiky pro tento typ nemovitosti. Teprve po stanovení vlastní tržní hodnoty srovnej s cenou z cenové mapy a komentuj odchylku:\n`;
-                    prompt += `- Cena z KN **do 10 % nad** tvým odhadem tržní hodnoty: standardní rozptyl, bez zvláštního komentáře.\n`;
-                    prompt += `- Cena z KN **10–20 % nad** tvým odhadem: upozorni na možné přeplacení, vyžaduj detailní zdůvodnění.\n`;
-                    prompt += `- Cena z KN **více než 20 % nad** tvým odhadem: **RED FLAG** — explicitně upozorni věřitele, že kupující pravděpodobně přeplatil a zástavní hodnota bude výrazně nižší než cena z KN.\n\n`;
-                }
-
-                // Specifické instrukce podle typu
-                if (propertyType === 'land') {
-                    prompt += `## METODIKA OCENĚNÍ POZEMKU\n\n`;
-                    prompt += `### 1. POROVNÁVACÍ METODA\n`;
-                    prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data. Preferuj data ne starší než 6 měsíců.\n\n`;
-                    prompt += `- Najdi minimálně 5–10 srovnatelných pozemků v lokalitě (ideálně až 20), prodaných v posledních 12 měsících.\n`;
-                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod na realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti. Celkový haircut = cca 15%.\n`;
-                    prompt += `- Aplikuj korekční koeficienty na:\n`;
-                    prompt += `  * Velikost pozemku\n`;
-                    prompt += `  * Dostupnost inženýrských sítí\n`;
-                    prompt += `  * Tvar a svažitost\n`;
-                    prompt += `  * Přístup z veřejné komunikace\n`;
-                    prompt += `- Výsledek: Cena za m² × Výměra pozemku\n\n`;
-
-                    if (formData.developer_projekt && formData.developer_projekt.includes('Ano')) {
-                        prompt += `### 2. REZIDUÁLNÍ METODA (Developerský projekt)\n`;
-                        prompt += `**KRITICKÉ**: Tento pozemek je určen pro developerský projekt. Proveď reverzní kalkulaci:\n\n`;
-                        prompt += `**Krok 1 - Gross Development Value (GDV)**:\n`;
-                        prompt += `- Odhadni prodejní ceny jednotek (byty/domy) na základě aktuálního trhu v lokalitě\n`;
-                        prompt += `- Celková prodejní cena = Počet jednotek × Průměrná cena za jednotku\n`;
-                        if (formData.gdv_ocekavane) {
-                            prompt += `- Uživatel uvádí očekávanou GDV: ${formData.gdv_ocekavane} Kč\n`;
-                            prompt += `- OVĚŘ, zda tato hodnota odpovídá tržním cenám v lokalitě!\n`;
-                        }
-                        prompt += `\n**Krok 2 - Stavební náklady (Hard Costs)**:\n`;
-                        prompt += `- Použij aktuální stavební náklady (2026): minimálně 45.000 Kč/m² pro bytovou výstavbu\n`;
-                        prompt += `- Celkem = HPP (hrubá podlažní plocha) × Jednotkové náklady\n\n`;
-                        prompt += `**Krok 3 - Vedlejší náklady (Soft Costs)**:\n`;
-                        prompt += `- Projektová dokumentace, inženýring, marketing, právní služby\n`;
-                        prompt += `- Standardně 10-15% z Hard Costs\n\n`;
-                        prompt += `**Krok 4 - Finanční náklady**:\n`;
-                        prompt += `- Úroky z úvěru po dobu výstavby\n`;
-                        prompt += `- Při sazbách 5-6% p.a. a době výstavby 18-24 měsíců\n\n`;
-                        prompt += `**Krok 5 - Marže developera (Developer's Profit)**:\n`;
-                        prompt += `- KRITICKÉ: Požadovaný zisk musí být minimálně 15-20% z celkových nákladů\n`;
-                        prompt += `- Pokud je zisk nižší, projekt je **nestabilní** a představuje riziko pro věřitele\n\n`;
-                        prompt += `**Krok 6 - Výpočet reziduální hodnoty pozemku**:\n`;
-                        prompt += `Hodnota pozemku = GDV - (Hard Costs + Soft Costs + Finanční náklady + Marže developera)\n\n`;
-                        prompt += `**STRESS TEST**: Proveď citlivostní analýzu:\n`;
-                        prompt += `- Co se stane, pokud klesne prodejní cena o 10%?\n`;
-                        prompt += `- Co se stane, pokud vzrostou stavební náklady o 15%?\n`;
-                        prompt += `- Je projekt stále rentabilní?\n\n`;
-                    }
-
-                    prompt += `### 3. ANALÝZA ZASTAVITELNOSTI (Development Potential)\n`;
-                    if (formData.kzp || formData.kpp) {
-                        prompt += `Z územního plánu:\n`;
-                        if (formData.kzp) prompt += `- **KZP (Koeficient zastavěné plochy)**: ${formData.kzp}\n`;
-                        if (formData.kpp) prompt += `- **KPP (Koeficient podlažních ploch)**: ${formData.kpp}\n`;
-                        if (formData.vyskova_hladina) prompt += `- **Výšková hladina**: ${formData.vyskova_hladina}\n`;
-                        prompt += `\n**VÝPOČET**:\n`;
-                        if (formData.plocha && formData.kzp) {
-                            prompt += `- Max. zastavěná plocha = ${formData.plocha} m² × ${formData.kzp} = ?\n`;
-                        }
-                        if (formData.plocha && formData.kpp) {
-                            prompt += `- Max. HPP (hrubá podlažní plocha) = ${formData.plocha} m² × ${formData.kpp} = ?\n`;
-                        }
-                    } else {
-                        prompt += `**ÚKOL**: Odhadni zastavitelnost podle obvyklých regulativů pro danou lokalitu.\n`;
-                    }
-                    prompt += `\n`;
-
-                    prompt += `## KRITICKÁ KONTROLA - RED FLAGS\n`;
-                    prompt += `**PRÁVNÍ SCREENING** (Deal Breakers):\n`;
-                    prompt += `1. **Věcná břemena**:\n`;
-                    prompt += `   - Služebnost dožití (usufruct) → FATÁLNÍ RIZIKO - nevhodná zástava!\n`;
-                    prompt += `   - Právo stavby ve prospěch třetí osoby → VYSOKÉ RIZIKO\n`;
-                    prompt += `   - Služebnost inženýrských sítí → Běžné, ale ověř rozsah\n`;
-                    prompt += `2. **Přístupová cesta**:\n`;
-                    prompt += `   - Je zajištěn přístup z veřejné komunikace?\n`;
-                    prompt += `   - Pokud přes soukromý pozemek → musí být věcné břemeno chůze a jízdy!\n`;
-                    prompt += `   - "Ústní dohoda" NENÍ dostatečná pro banku\n`;
-                    prompt += `3. **Územní podmínky**:\n`;
-                    prompt += `   - Je výstavba podmíněna "územní studií" nebo "dohodou o parcelaci"?\n`;
-                    prompt += `   - Takové podmínky = časové riziko (může trvat roky)\n`;
-                    prompt += `4. **Zástavy a exekuce**:\n`;
-                    prompt += `   - Existující zástavy jiných věřitelů?\n`;
-                    prompt += `   - Poznámky o zahájení exekuce?\n`;
-                    prompt += `\n`;
-                }
-
-                if (propertyType === 'apartment' || propertyType === 'house') {
-                    if (formData.typ_vlastnictvi && formData.typ_vlastnictvi.includes('Družstevní')) {
-                        prompt += `## ⚠️ DRUŽSTEVNÍ VLASTNICTVÍ\n`;
-                        prompt += `**KRITICKÉ**: Nemovitost je v družstevním vlastnictví. Toto má zásadní dopad na zástavní hodnotu:\n`;
-                        prompt += `- Družstevní byty mají omezenou obchodovatelnost\n`;
-                        prompt += `- Mnoho bank nepřijímá družstevní byty jako zástavu nebo požaduje vyšší LTV korekci\n`;
-                        prompt += `- Při porovnávací metodě srovnávej POUZE s jinými družstevními byty\n`;
-                        prompt += `- Aplikuj dodatečnou srážku 10-15% oproti osobnímu vlastnictví\n\n`;
-                    }
-                    prompt += `## METODIKA OCENĚNÍ\n\n`;
-                    prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
-                    prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data — aktivně hledej aktuální nabídky a realizované prodeje v dané lokalitě. Preferuj data ne starší než 6 měsíců.\n\n`;
-                    prompt += `- Najdi minimálně 5–10 srovnatelných nemovitostí prodaných v lokalitě (ideálně až 20), za posledních 6–24 měsíců\n`;
-                    prompt += `- Nejdůležitější jsou realizované prodeje. Pro větší vzorek zahrň i inzerované ceny.\n`;
-                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
-                    prompt += `- Korekce na: stav nemovitosti, poloha v rámci lokality, podlaží (u bytů), parkování, orientace a výhled\n`;
-                    prompt += `- Statistická analýza: průměr, medián, směrodatná odchylka. Vážený průměr s důrazem na realizované prodeje.\n`;
-                    prompt += `- Výsledek: Výsledná cena za m² × Užitná plocha\n\n`;
-
-                    prompt += `### 2. VALIDACE PLOCH\n`;
-                    prompt += `**DŮLEŽITÉ**: Rozliš mezi různými typy ploch:\n`;
-                    prompt += `- **Užitná plocha**: Plocha, kterou lze reálně užívat (bez zdí)\n`;
-                    if (formData.balkon_terasa) {
-                        prompt += `- **Balkony/Terasy**: ${formData.balkon_terasa} m² - započítej pouze 50% nebo vůbec!\n`;
-                    }
-                    if (formData.sklep) {
-                        prompt += `- **Sklepy**: ${formData.sklep} m² - započítej pouze 20-30%\n`;
-                    }
-                    prompt += `\nBanky **neakceptují** plnou výměru balkónů a sklepů.\n\n`;
-
-                    // RD-specific: AI odhad užitné plochy z LV zastavěné (typický LV case)
-                    if (propertyType === 'house') {
-                        prompt += `### ODHAD UŽITNÉ PLOCHY Z ZASTAVĚNÉ (typický LV case — pouze RD)\n`;
-                        prompt += `**KONTEXT**: V LV (List vlastnictví / katastrální výpis) je obvykle uvedena pouze **zastavěná plocha** (footprint budovy, jedno podlaží včetně zdí), ne podlahová/užitná plocha.\n`;
-                        if (formData.podlazi) {
-                            prompt += `User uvedl počet podlaží: **${formData.podlazi}**\n\n`;
-                        } else {
-                            prompt += `User neuvedl počet podlaží — pokud máš pouze zastavěnou plochu, tento údaj si dopočítej nebo odhadni z dostupných zdrojů (fotografie, půdorys, popis).\n\n`;
-                        }
-                        prompt += `**ÚKOL**: Pokud user ve formuláři uvedl užitnou plochu, použij ji přímo. Pokud máš pouze zastavěnou plochu z LV a počet podlaží, **odhadni užitnou (podlahovou) plochu podle veřejné metodiky odhadu** (IVS/EVS, ČSN, česká bankovní praxe). Zohledni:\n`;
-                        prompt += `- Koeficient zdí podle stáří a typu konstrukce (cihla, panel, dřevostavba)\n`;
-                        prompt += `- Schodiště u 2+ NP (typicky -6 až -10 m² na patro)\n`;
-                        prompt += `- Obyvatelnost podkroví — započítej jen pokud má dostatečnou světlou výšku, izolaci a okna\n`;
-                        prompt += `- Obyvatelnost suterénu — technické místnosti se nezapočítávají\n\n`;
-                        prompt += `**Uveď výpočet krok po kroku a metodiku, kterou jsi použil.**\n`;
-                        prompt += `PROTOŽE jde o odhad (ne přesné měření z půdorysu), aplikuj dodatečnou opatrnostní srážku **5 %** na finální tržní hodnotu.\n\n`;
-                    }
-
-                    if (formData.najemne) {
-                        prompt += `### 3. VÝNOSOVÁ METODA (Sekundární)\n`;
-                        prompt += `Nemovitost je pronajímána.\n\n`;
-                        prompt += `**Krok 1 - Nájemné**:\n`;
-                        prompt += `- Smluvní nájemné: ${formData.najemne} Kč/měsíc\n`;
-                        prompt += `- **OVĚŘ** tržní nájemné v lokalitě!\n`;
-                        prompt += `- Použij **nižší** z obou hodnot (princip opatrnosti)\n`;
-                        prompt += `- Roční nájemné = Měsíční × 12\n\n`;
-                        prompt += `**Krok 2 - Provozní náklady (OpEx)**:\n`;
-                        prompt += `- Neměřitelné služby, pojištění, daň z nemovitosti, správa\n`;
-                        prompt += `- Obvykle 10-25% z hrubého nájmu\n`;
-                        prompt += `- NOI (Net Operating Income) = Hrubý příjem - OpEx\n\n`;
-                        prompt += `**Krok 3 - Kapitalizace**:\n`;
-                        prompt += `- Použij kapitalizační míru (Yield) odpovídající lokalitě a typu\n`;
-                        prompt += `- Praha centrum: 4-5%, Periferie: 6-7%, Regiony: 7-9%\n`;
-                        prompt += `- Hodnota = NOI / Kapitalizační míra\n\n`;
-                    }
-
-                    prompt += `## RED FLAGS - KONTROLA\n`;
-                    prompt += `1. **Technický stav**:\n`;
-                    if (formData.stav && formData.stav.includes('rekonstrukc')) {
-                        prompt += `   - Stav označen jako "${formData.stav}"\n`;
-                        prompt += `   - **SNIŽ hodnotu** o odhadované náklady na rekonstrukci!\n`;
-                    }
-                    prompt += `   - Zbývající technická životnost (pokud starší 50 let)\n`;
-                    prompt += `2. **Právní vady**:\n`;
-                    prompt += `   - Služebnosti, zástavy, exekuce\n`;
-                    prompt += `   - Nájemní smlouvy na dobu neurčitou (snižují likviditu)\n`;
-                    prompt += `3. **Lokalita**:\n`;
-                    prompt += `   - Likvidita trhu (jak rychle se prodá?)\n`;
-                    prompt += `   - Výtah (u bytů ve vyšších patrech bez výtahu = riziko)\n\n`;
-                }
-
-                if (propertyType === 'commercial') {
-                    prompt += `## METODIKA OCENĚNÍ KOMERČNÍCH NEMOVITOSTÍ\n\n`;
-                    prompt += `### 1. VÝNOSOVÁ METODA (DCF - Primární)\n`;
-                    prompt += `**KRITICKÉ**: Pro komerční nemovitosti je výnosová metoda dominantní!\n\n`;
-                    if (formData.najemne_rocni) {
-                        prompt += `**Krok 1 - Hrubý příjem**:\n`;
-                        prompt += `- Roční nájemné: ${formData.najemne_rocni} Kč\n`;
-                        if (formData.obsazenost) {
-                            prompt += `- Obsazenost: ${formData.obsazenost}%\n`;
-                            prompt += `- Efektivní příjem = ${formData.najemne_rocni} × (${formData.obsazenost}/100)\n`;
-                        }
-                        prompt += `\n**Krok 2 - Provozní náklady (OpEx)**:\n`;
-                        prompt += `- Údržba, pojištění, daně, správa, marketing\n`;
-                        prompt += `- Obvykle 15-30% z hrubého příjmu\n`;
-                        prompt += `- **OVĚŘ** skutečné náklady z podkladů!\n\n`;
-                        prompt += `**Krok 3 - Net Operating Income (NOI)**:\n`;
-                        prompt += `NOI = Efektivní příjem - OpEx\n\n`;
-                        prompt += `**Krok 4 - Kapitalizace**:\n`;
-                        prompt += `- Kapitalizační míra (Yield) podle typu a lokality (použij data od CBRE pro prime yields):\n`;
-                        prompt += `  * Praha Prime Office: < 5%\n`;
-                        prompt += `  * Retail: 6-8%\n`;
-                        prompt += `  * Sklady/Logistika: 6-7%\n`;
-                        prompt += `  * Regionální: +1-2%\n`;
-                        prompt += `- Yield upravíš podle stavu, lokality, stáří, obsazenosti\n`;
-                        prompt += `- Hodnota = NOI / Yield\n\n`;
-                    }
-                    prompt += `### 2. POROVNÁVACÍ METODA (Sekundární)\n`;
-                    prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů. Nepoužívej pouze svá tréninková data.\n\n`;
-                    prompt += `- Najdi minimálně 5–10 srovnatelných komerčních objektů (ideálně až 20) — typ, lokalita, obsazenost, stáří\n`;
-                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
-                    prompt += `- Cena za m² pronajímatelné plochy\n`;
-                    prompt += `- Pro komerční objekty je srovnávací metoda méně podstatná než výnosová, nicméně ji stanov pro validaci\n\n`;
-
-                    prompt += `## RED FLAGS\n`;
-                    prompt += `1. **Kvalita nájemníků**:\n`;
-                    prompt += `   - Bonita nájemníků (velké firmy vs. malé živnostníky)\n`;
-                    prompt += `   - Délka smluv (krátké smlouvy = riziko neobsazenosti)\n`;
-                    prompt += `2. **Koncentrace**:\n`;
-                    prompt += `   - Jeden dominantní nájemník > 50% příjmů = riziko!\n`;
-                    prompt += `3. **Neobsazenost**:\n`;
-                    if (formData.obsazenost && parseInt(formData.obsazenost) < 70) {
-                        prompt += `   - **VAROVÁNÍ**: Obsazenost ${formData.obsazenost}% je nízká!\n`;
-                    }
-                    prompt += `   - Standardní vacancy rate 5-10%\n`;
-                    prompt += `4. **Technický stav**:\n`;
-                    prompt += `   - Odložené investice (CapEx)\n`;
-                    prompt += `   - Životnost technologií (HVAC, výtahy)\n\n`;
-                }
-
-                if (propertyType === 'mixed_use') {
-                    prompt += `## METODIKA OCENĚNÍ POLYFUNKČNÍHO DOMU\n\n`;
-                    prompt += `**DŮLEŽITÉ**: Polyfunkční dům vyžaduje kombinovaný přístup – odděleně ocenit bytovou a komerční část.\n`;
-                    prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data.\n\n`;
-                    prompt += `### 1. BYTOVÁ ČÁST - POROVNÁVACÍ METODA\n`;
-                    prompt += `- Najdi minimálně 5–10 srovnatelných bytů v lokalitě (ideálně až 20)\n`;
-                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
-                    prompt += `- Aplikuj korekce na stav, podlaží, parkování, orientaci\n`;
-                    if (formData.plocha_bytova) prompt += `- Bytová plocha: ${formData.plocha_bytova} m²\n`;
-                    if (formData.pocet_bytu) prompt += `- Počet bytů: ${formData.pocet_bytu}\n`;
-                    prompt += `- Výsledek: Tržní cena za m² × bytová plocha\n\n`;
-                    prompt += `### 2. KOMERČNÍ ČÁST - VÝNOSOVÁ METODA (DCF)\n`;
-                    if (formData.najemne_komercni_rocni) {
-                        prompt += `- Roční komerční nájemné: ${formData.najemne_komercni_rocni} Kč\n`;
-                    }
-                    if (formData.obsazenost_komercni) {
-                        prompt += `- Obsazenost komerčních prostor: ${formData.obsazenost_komercni}%\n`;
-                    }
-                    prompt += `- NOI = Efektivní příjem - OpEx (15-30%)\n`;
-                    prompt += `- Hodnota = NOI / Kapitalizační míra\n\n`;
-                    prompt += `### 3. CELKOVÁ HODNOTA\n`;
-                    prompt += `Celková tržní hodnota = Hodnota bytové části + Hodnota komerční části\n\n`;
-                    prompt += `## RED FLAGS - POLYFUNKČNÍ DŮM\n`;
-                    prompt += `1. **Rozdílné tržní segmenty**: Bytový a komerční trh se mohou vyvíjet různě\n`;
-                    prompt += `2. **Správa budovy**: Složitější správa, vyšší OpEx\n`;
-                    prompt += `3. **Koncentrace nájemníků**: Riziko u komerční části\n`;
-                    prompt += `4. **Právní vady**: Věcná břemena, zástavy, exekuce\n\n`;
-                }
-
-                if (propertyType === 'recreation') {
-                    prompt += `## METODIKA OCENĚNÍ REKREAČNÍHO OBJEKTU\n\n`;
-                    prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů. Nepoužívej pouze svá tréninková data.\n\n`;
-                    prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
-                    prompt += `- Najdi minimálně 5–10 srovnatelných rekreačních objektů v lokalitě (ideálně až 20)\n`;
-                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
-                    prompt += `- **KLÍČOVÉ KOREKČNÍ FAKTORY**:\n`;
-                    prompt += `  * Sezónnost: ${formData.sezonnost || 'N/A'}\n`;
-                    prompt += `  * Přístupnost: ${formData.pristup || 'N/A'}\n`;
-                    prompt += `  * Blízkost vodní plochy: ${formData.pristup_voda || 'N/A'}\n`;
-                    prompt += `  * Vzdálenost od města: ${formData.vzdalenost_mesto || 'N/A'} km\n`;
-                    prompt += `  * Typ objektu: ${formData.typ_rekreace || 'N/A'}\n\n`;
-
-                    if (formData.najemne) {
-                        prompt += `### 2. VÝNOSOVÁ METODA (Sekundární)\n`;
-                        prompt += `- Průměrný měsíční výnos: ${formData.najemne} Kč\n`;
-                        prompt += `- **POZOR**: Sezónnost výrazně ovlivňuje obsazenost!\n`;
-                        prompt += `- Odhadni reálnou roční obsazenost (typicky 30-60% u sezónních objektů)\n`;
-                        prompt += `- NOI = Roční příjem × Obsazenost - OpEx\n\n`;
-                    }
-
-                    prompt += `## RED FLAGS - REKREAČNÍ OBJEKT\n`;
-                    prompt += `1. **Nízká likvidita**: Rekreační objekty se prodávají výrazně pomaleji!\n`;
-                    prompt += `2. **Přístupová cesta**: Je přístup celoroční? Zimní údržba?\n`;
-                    prompt += `3. **Sezónnost**: Výrazná variabilita příjmů\n`;
-                    prompt += `4. **Vzdálenost od města**: Více než 50 km = nižší poptávka\n`;
-                    prompt += `5. **Právní vady**: Pozemek v lese, ochranná pásma, CHKO\n\n`;
-                }
-
-                if (propertyType === 'apartment_building') {
-                    prompt += `## METODIKA OCENĚNÍ BYTOVÉHO DOMU\n\n`;
-                    prompt += `**DŮLEŽITÉ**: Pro bytový dům jsou **obě metody primární** a rovnocenné. Výslednou tržní hodnotu stanov jako vážený průměr obou metod (nebo zdůvodni, proč jedné dáváš vyšší váhu). Neplatí pravidlo „jedna primární, druhá sekundární".\n`;
-                    prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data.\n\n`;
-
-                    prompt += `### 1. VÝNOSOVÁ METODA (Primární — DCF / přímá kapitalizace)\n`;
-                    prompt += `Bytový dům je investiční aktivum — výnosová hodnota je klíčová pro investora.\n\n`;
-                    if (formData.najemne_bytove_rocni) {
-                        prompt += `**Krok 1 - Hrubý roční příjem**:\n`;
-                        prompt += `- Roční nájemné bytů: ${formData.najemne_bytove_rocni} Kč\n`;
-                        if (formData.pocet_bytu) prompt += `- Počet bytových jednotek: ${formData.pocet_bytu}\n`;
-                        if (formData.obsazenost) prompt += `- Obsazenost: ${formData.obsazenost}%\n`;
-                        prompt += `\n**Krok 2 - Provozní náklady (OpEx)**:\n`;
-                        prompt += `- Správa domu, údržba, pojištění, daně, rezervní fond\n`;
-                        prompt += `- Obvykle 25-40% z hrubého příjmu u bytových domů\n\n`;
-                        prompt += `**Krok 3 - Net Operating Income (NOI)**:\n`;
-                        prompt += `NOI = Efektivní příjem × Obsazenost - OpEx\n\n`;
-                        prompt += `**Krok 4 - Kapitalizační míra (Gross Yield)**:\n`;
-                        prompt += `- Praha centrum: 3,5–5 %\n`;
-                        prompt += `- Praha periferie: 4,5–6 %\n`;
-                        prompt += `- Krajská města: 5–7 %\n`;
-                        prompt += `- Menší města: 6–9 %\n`;
-                        prompt += `- Výnosová hodnota = NOI / Yield\n\n`;
-                    } else {
-                        prompt += `- Nájemné nebylo zadáno — odhadni tržní nájemné pro danou lokalitu a typ bytů\n`;
-                        if (formData.pocet_bytu) prompt += `- Počet bytových jednotek: ${formData.pocet_bytu}\n`;
-                        prompt += `- Postup: odhadni průměrné nájemné za m² → vynásob plochou → aplikuj obsazenost a OpEx\n\n`;
-                    }
-
-                    prompt += `### 2. POROVNÁVACÍ METODA (Primární — srovnání s trhem)\n`;
-                    prompt += `Bytový dům lze ocenit i jako celek porovnáním s podobnými realizovanými prodeji.\n\n`;
-                    prompt += `- Hledej prodeje celých bytových domů v dané lokalitě (databáze CUZK, realitní servery)\n`;
-                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod na realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti. Celkový haircut = cca 15%.\n`;
-                    prompt += `- Cena za m² celkové podlahové plochy nebo cena za bytovou jednotku\n`;
-                    if (formData.uzitna_plocha) prompt += `- Celková plocha: ${formData.uzitna_plocha} m²\n`;
-                    if (formData.pocet_bytu) prompt += `- Počet jednotek: ${formData.pocet_bytu}\n`;
-                    prompt += `- Korekce: stav budovy, rok výstavby, lokalita, velikost bytů, výtah\n\n`;
-
-                    prompt += `### 3. VÝSLEDNÁ TRŽNÍ HODNOTA\n`;
-                    prompt += `- Uveď výsledky obou metod\n`;
-                    prompt += `- Pokud se výsledky liší o méně než 15 %, použij vážený průměr (50/50 nebo zdůvodni jiné váhy)\n`;
-                    prompt += `- Pokud se liší o více než 15 %, analyzuj příčinu odchylky a zdůvodni výslednou hodnotu\n\n`;
-
-                    prompt += `## RED FLAGS - BYTOVÝ DŮM\n`;
-                    prompt += `1. **Regulovaná nájemná**: Existují v domě regulované nájemní smlouvy na dobu neurčitou?\n`;
-                    prompt += `2. **Technický stav**: Stav rozvodů (voda, elektrika, plyn), střecha, výtah — nutné investice (CapEx)\n`;
-                    prompt += `3. **Koncentrace vlastnictví**: Je celý dům v osobním vlastnictví, nebo jsou byty v SVJ/BD?\n`;
-                    prompt += `4. **Obsazenost**: Volné byty výrazně snižují výnosovou hodnotu\n`;
-                    prompt += `5. **Právní vady**: Zástavní práva, věcná břemena, exekuce\n\n`;
-                }
-
-                if (propertyType === 'industrial') {
-                    prompt += `## METODIKA OCENĚNÍ PRŮMYSLOVÉHO OBJEKTU\n\n`;
-                    prompt += `**DŮLEŽITÉ**: Pro průmyslové nemovitosti je **výnosová metoda primární** — průmyslový objekt je investiční aktivum a kupující rozhoduje na základě výnosu. Porovnávací metoda slouží jako sekundární validace.\n`;
-                    prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (JLL, CBRE, Cushman & Wakefield, Colliers průmyslové reporty). Nepoužívej pouze svá tréninková data.\n\n`;
-
-                    prompt += `### 1. VÝNOSOVÁ METODA (Primární — přímá kapitalizace / DCF)\n\n`;
-                    if (formData.najemne_rocni) {
-                        prompt += `**Krok 1 - Hrubý roční příjem**:\n`;
-                        prompt += `- Roční nájemné: ${formData.najemne_rocni} Kč\n`;
-                        if (formData.obsazenost) prompt += `- Obsazenost: ${formData.obsazenost}%\n`;
-                        prompt += `\n**Krok 2 - Provozní náklady (OpEx)**:\n`;
-                        prompt += `- Správa, pojištění, daně, údržba\n`;
-                        prompt += `- Průmyslové objekty obvykle NNN (triple-net) smlouvy — ověř, co hradí nájemce vs. vlastník\n\n`;
-                        prompt += `**Krok 3 - Net Operating Income (NOI)**:\n`;
-                        prompt += `NOI = Efektivní příjem × (Obsazenost/100) - OpEx vlastníka\n\n`;
-                        prompt += `**Krok 4 - Kapitalizační míra (Yield)**:\n`;
-                    } else {
-                        prompt += `- Nájemné nebylo zadáno — odhadni tržní nájemné dle lokality a třídy objektu\n\n`;
-                        prompt += `**Krok 1 - Odhad tržního nájemného**:\n`;
-                        if (formData.celkova_plocha) prompt += `- Celková plocha: ${formData.celkova_plocha} m²\n`;
-                        prompt += `- Vyhledej aktuální tržní nájemné pro daný typ a lokalitu (Kč/m²/rok)\n\n`;
-                        prompt += `**Krok 2 - Kapitalizační míra (Yield)**:\n`;
-                    }
-                    prompt += `- Průmyslové prime (logistika u D1/D11): 5,0–6,0 %\n`;
-                    prompt += `- Průmyslové sekundární lokality: 6,5–8,5 %\n`;
-                    prompt += `- Starší výroba (Class C): 8,5–11 %\n`;
-                    if (formData.stav) prompt += `- Stav objektu: ${formData.stav}\n`;
-                    if (formData.dopravni_dostupnost) prompt += `- Dopravní dostupnost: ${formData.dopravni_dostupnost}\n`;
-                    prompt += `- Yield upravíš podle: stáří a stavu, délky nájemních smluv, bonity nájemníků, lokality\n`;
-                    prompt += `- Výnosová hodnota = NOI / Yield\n\n`;
-
-                    prompt += `### 2. POROVNÁVACÍ METODA (Sekundární — validace)\n`;
-                    prompt += `- Hledej srovnatelné prodeje průmyslových nemovitostí (databáze CUZK, JLL, Cushman & Wakefield)\n`;
-                    prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod na realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti. Celkový haircut = cca 15%.\n`;
-                    prompt += `- Cena za m² zastavěné plochy — korekce na typ, stav, lokalitu, světlou výšku, rampy\n`;
-                    if (formData.celkova_plocha) prompt += `- Celková plocha: ${formData.celkova_plocha} m²\n`;
-                    if (formData.vyska_haly) prompt += `- Světlá výška: ${formData.vyska_haly} m (výrazně ovlivňuje hodnotu — haly <6m jsou méně likvidní)\n`;
-                    prompt += `- Porovnávací metoda slouží jako kontrola výnosové — při odchylce > 20 % analyzuj příčinu\n\n`;
-
-                    prompt += `## RED FLAGS - PRŮMYSLOVÝ OBJEKT\n`;
-                    prompt += `1. **⚠ KRITICKÉ — Propojené osoby (nájemce = vlastník nebo spřízněná osoba)**:\n`;
-                    prompt += `   - Pokud je nájemcem stejná osoba jako vlastník, nebo osoba ekonomicky nebo rodinně propojená s vlastníkem, nájemné NEODRÁŽÍ tržní realitu!\n`;
-                    prompt += `   - V takovém případě: nájemné může být uměle nadhodnoceno (pro navýšení hodnoty zástavy) nebo naopak podhodnoceno (daňová optimalizace)\n`;
-                    prompt += `   - **POSTUP**: Nájemné ignoruj jako vstupní hodnotu. Místo toho použij tržní nájemné z externích zdrojů pro daný typ objektu a lokalitu. Upozorni věřitele, že výnos je ze spřízněného vztahu a vyžaduje nezávislé ověření.\n\n`;
-                    prompt += `2. **Ekologická zátěž**:\n`;
-                    if (formData.ekologicka_zatez) prompt += `   - Zadáno: ${formData.ekologicka_zatez}\n`;
-                    prompt += `   - Historická výroba, chemikálie, PHM — může zásadně snížit nebo eliminovat zástavní hodnotu\n`;
-                    prompt += `   - Bez Phase I ekologického auditu = neúplné podklady pro ocenění\n`;
-                    prompt += `3. **Délka a kvalita nájemních smluv**:\n`;
-                    prompt += `   - Krátká zbývající délka smluv (< 2 roky) výrazně zvyšuje riziko a snižuje hodnotu\n`;
-                    prompt += `   - Bonita nájemníků: nadnárodní korporace vs. lokální výrobce\n`;
-                    prompt += `4. **Technická specifika**:\n`;
-                    if (formData.vyska_haly) prompt += `   - Světlá výška ${formData.vyska_haly} m — haly pod 6 m jsou problematické pro moderní logistiku\n`;
-                    if (formData.nosnost_podlahy) prompt += `   - Nosnost podlahy: ${formData.nosnost_podlahy}\n`;
-                    prompt += `   - Kapacita elektro přípojky, přítomnost jeřábové dráhy, stav vzduchotechniky\n`;
-                    prompt += `5. **Monofunkčnost**:\n`;
-                    prompt += `   - Specializované výrobní haly jsou těžko pronajmout jinému nájemci — nízká likvidita\n\n`;
-                }
-
-                // Závěrečné instrukce
-                prompt += `## ZÁVĚREČNÝ VÝSTUP\n\n`;
-                prompt += `Strukturuj svou odpověď následovně:\n\n`;
-                prompt += `### 1. SOUHRN NEMOVITOSTI\n`;
-                prompt += `- Typ, lokalita, klíčové parametry\n\n`;
-
-                prompt += `### 2. TRŽNÍ HODNOTA\n`;
-                prompt += `Pro každou použitou metodu:\n`;
-                prompt += `- Postup výpočtu (krok za krokem)\n`;
-                prompt += `- Použité předpoklady\n`;
-                prompt += `- Výsledná hodnota v Kč\n\n`;
-
-                prompt += `### 3. POROVNÁNÍ METOD\n`;
-                prompt += `- Tabulka výsledků všech použitých metod\n`;
-                if (propertyType === 'apartment_building') {
-                    prompt += `- **PRAVIDLO pro bytový dům**: Obě metody (výnosová i porovnávací) jsou primární a rovnocenné. Výslednou hodnotu stanov jako vážený průměr — pokud se výsledky liší o méně než 15 %, použi 50/50. Při větší odchylce zdůvodni, které metodě dáváš vyšší váhu a proč.\n`;
-                } else {
-                    prompt += `- **PRAVIDLO**: Finální tržní hodnotu stanov výhradně na základě **primární metody** pro daný typ nemovitosti. Sekundární metody slouží pouze jako kontrolní validace — uveď jejich výsledky, ale neprůměruj je s primární metodou.\n`;
-                    prompt += `- Pokud sekundární metoda ukazuje výrazně odlišný výsledek (odchylka > 20%), uveď důvod odchylky.\n`;
-                    prompt += `- **Finální tržní hodnota** = výsledek primární metody (s odůvodněním)\n`;
-                }
-                prompt += `\n`;
-
-                prompt += `### 4. ZÁSTAVNÍ HODNOTA\n`;
-                prompt += `- Bezpečnostní koeficient: **${safetyCoefficients[propertyType]}**\n`;
-                prompt += `- **Zástavní hodnota pro LTV** = Tržní hodnota × ${safetyCoefficients[propertyType]}\n\n`;
-
-                prompt += `### 5. RED FLAGS & RIZIKA\n`;
-                prompt += `**KRITICKÁ RIZIKA** (Deal Breakers):\n`;
-                prompt += `- Právní vady (služebnosti dožití, exekuce)\n`;
-                prompt += `- Technické problémy (špatný stav, nutná sanace)\n`;
-                prompt += `- Tržní rizika (nízká likvidita, přecenění)\n\n`;
-
-                prompt += `**DOPORUČENÍ PRO VĚŘITELE**:\n`;
-                prompt += `- Je nemovitost vhodná jako zástava?\n`;
-                prompt += `- Jaké maximální LTV (Loan-to-Value) doporučuješ?\n`;
-                prompt += `- Jaké podmínky by měly být splněny před poskytnutím úvěru?\n\n`;
-
-                prompt += `### 6. CHYBĚJÍCÍ DOKUMENTY\n`;
-                prompt += `Seznam všech dokumentů, které by měly být doplněny pro kompletní ocenění.\n\n`;
-
-                prompt += `---\n\n`;
-                prompt += `**DŮLEŽITÉ ZÁSADY**:\n`;
-                prompt += `1. **Princip opatrnosti**: Vždy volte konzervativnější odhad\n`;
-                prompt += `2. **Transparentnost**: Jasně uveď všechny předpoklady\n`;
-                prompt += `3. **Konkrétnost**: Používej konkrétní čísla, ne obecné fráze\n`;
-                prompt += `4. **Red flags první**: Pokud najdeš fatální riziko, uveď ho hned na začátku\n`;
-                prompt += `5. **Všechny částky v CZK**: Používej české koruny jako měnu\n\n`;
-
-                prompt += `## POVINNÝ STRUKTUROVANÝ VÝSTUP\n\n`;
-                prompt += `**NA ÚPLNÝ KONEC své odpovědi** vlož tento strukturovaný blok. Dodržuj přesně tento formát — bude strojově zpracován:\n\n`;
-                prompt += '```\n';
-                prompt += `===SHRNUTÍ===\n`;
-                prompt += `TRŽNÍ_HODNOTA: [číslo v Kč, pouze číslo bez mezer a jednotek, např. 8200000]\n`;
-                prompt += `ZÁSTAVNÍ_HODNOTA: [číslo v Kč, pouze číslo]\n`;
-                prompt += `BEZPEČNOSTNÍ_KOEFICIENT: [desetinné číslo, např. 0.80]\n`;
-                prompt += `LTV_DOPORUČENÍ: [procento, např. 80]\n`;
-                prompt += `PRIMÁRNÍ_METODA: [název použité primární metody]\n`;
-                prompt += `HLAVNÍ_RIZIKO: [jedna věta - nejvážnější riziko]\n`;
-                prompt += `SEKUNDÁRNÍ_RIZIKO: [jedna věta - druhé nejvážnější riziko]\n`;
-                prompt += `HODNOCENÍ_ZÁSTAVY: [Vhodná / Podmíněně vhodná / Nevhodná]\n`;
-                prompt += `===KONEC===\n`;
-                prompt += '```\n\n';
-                prompt += `Začni analýzu NYNÍ.`;
+                prompt += `## ÚČEL FINANCOVÁNÍ\n`;
+                prompt += `**Bezúčelový úvěr** — Standardní ocenění pro účely zajištění úvěru.\n\n`;
             }
+
+            // Globální inputy (nejsou v config.inputs)
+            const globalInputDefs = { cenova_mapa: 'Cenová mapa CUZK' };
+            prompt += `## PŘILOŽENÉ PODKLADY\n`;
+            if (selectedInputs.length > 0) {
+                prompt += `K zadání přikládám tyto podklady:\n`;
+                selectedInputs.forEach(inputId => {
+                    const input = config.inputs.find(i => i.id === inputId);
+                    const label = input ? input.label : globalInputDefs[inputId];
+                    if (label) prompt += `- ${label}\n`;
+                });
+                prompt += `\nPokud jsou přiložené i další dokumenty, použij je také.\n\n`;
+            } else {
+                prompt += `Podklady nejsou vyjmenované — pokud jsou k zadání přiložené dokumenty, použij je.\n\n`;
+            }
+
+            // Krok 4 je volitelný — údaje často nejsou vyplněné, protože jsou v přílohách (posudek, LV)
+            prompt += `## ÚDAJE ZADANÉ UŽIVATELEM\n`;
+            const zadaneUdaje = Object.entries(formData).filter(([key, value]) => config.fields[key] && value);
+            if (zadaneUdaje.length > 0) {
+                zadaneUdaje.forEach(([key, value]) => {
+                    prompt += `- **${config.fields[key].label}**: ${value}\n`;
+                });
+                prompt += `\nTyto údaje ověř proti podkladům; při rozporu upozorni a uveď, kterému zdroji věříš.\n\n`;
+            } else {
+                prompt += `Nezadány — všechny údaje o nemovitosti zjisti z přiložených podkladů.\n\n`;
+            }
+
+            prompt += `## POSTUP PRÁCE\n`;
+            prompt += `1. **Údaje z podkladů** — než začneš oceňovat, projdi všechny přílohy a vypiš do tabulky údaje o nemovitosti: adresa, katastrální území, číslo LV, parcely / číslo jednotky, výměry a plochy (užitná, zastavěná, pozemek, balkon / terasa, sklep), podlaží, dispozice, stav, rok výstavby a rekonstrukce, energetická třída, nájemní vztahy, zástavní práva, věcná břemena, exekuce a další omezení. U každého údaje uveď zdroj (dokument, případně stranu). Rozpory mezi podklady výslovně označ.\n`;
+            prompt += `2. **Nezávislé ocenění** — pokud podklady obsahují hodnotu nebo cenu (znalecký posudek, odhad, kupní smlouva, cenová mapa), použij je jen pro fakta o nemovitosti. Hodnotu z nich NEPŘEBÍREJ: nejdřív urči vlastní tržní hodnotu z tržních dat, teprve potom ji s hodnotou z podkladů porovnej a rozdíl vysvětli. Posudky a odhady objednané vlastníkem nebo dlužníkem mohou být nadsazené.\n`;
+            prompt += `3. **Aktuální tržní data** — použij vyhledávání na internetu, nespoléhej jen na znalosti z tréninku. Pokud nemáš přístup k internetu, napiš to hned na začátku odpovědi a ocenění označ jako orientační.\n`;
+            prompt += `4. **Neptej se, pokračuj** — neodpovídej doplňujícími otázkami. Chybějící údaj nahraď zdůvodněným předpokladem, uveď ho a pokračuj; co chybí, vypiš v sekci Chybějící dokumenty.\n`;
+            prompt += `5. **Více nemovitostí** — pokud podklady obsahují víc nemovitostí (jednotky, budovy, pozemky), oceň každou zvlášť a uveď i součet. Ve strojovém shrnutí na konci uveď součet.\n\n`;
+
+            prompt += `## PRAVIDLA PRO SROVNATELNÉ NEMOVITOSTI (platí pro každou porovnávací metodu)\n`;
+            prompt += `- **Stáří dat**: preferuj nabídky a prodeje z posledních 6 měsíců; pro dostatečný vzorek můžeš jít až 24 měsíců zpět, starší data ale přepočti na cenovou úroveň k datu ocenění (uveď o kolik a podle čeho).\n`;
+            prompt += `- **Lokalita**: co nejblíže oceňované nemovitosti — stejná obec / městská část a podobná mikrolokalita.\n`;
+            prompt += `- **Povinná tabulka**: u každé srovnatelné nemovitosti uveď lokalitu, typ údaje (inzerát / realizovaný prodej), datum, plochu, cenu, cenu za m², provedené úpravy (%) a odkaz na zdroj (URL).\n`;
+            prompt += `- **Nic nevymýšlej**: uváděj jen nemovitosti, které jsi skutečně našel. Realizovaný prodej označ jen tehdy, když ho doložíš zdrojem. Pokud nenajdeš dost srovnatelných, napiš, kolik jsi jich našel, a sniž jistotu ocenění.\n`;
+            prompt += `- **Statistika**: průměr, medián, směrodatná odchylka; odlehlé hodnoty vyřaď a uveď proč.\n\n`;
+
+            // Cenová mapa CUZK — instrukce při zaškrtnutém podkladu
+            if (selectedInputs.includes('cenova_mapa')) {
+                prompt += `## REFERENČNÍ DATA Z KATASTRU NEMOVITOSTÍ (CENOVÁ MAPA)\n\n`;
+                prompt += `K dispozici jsou data z cenové mapy CUZK — realizovaný převod této nemovitosti (nebo srovnatelné nemovitosti v lokalitě) evidovaný v katastru nemovitostí.\n\n`;
+                prompt += `### ⚠ KRITICKÉ INSTRUKCE K DATŮM Z CENOVÉ MAPY\n`;
+                prompt += `Tato cena z katastru TI SLOUŽÍ POUZE JAKO ORIENTAČNÍ REFERENCE — NIKOLI jako základ ocenění ani jako potvrzení tržní hodnoty. Důvody:\n\n`;
+                prompt += `1. **Kupující mohl nemovitost koupit za NADHODNOCENOU cenu** — přeplacení z emocí, neznalosti trhu, časového tlaku nebo spekulace. Realizační cena z KN nám neříká nic o tom, zda šlo o férovou tržní transakci.\n`;
+                prompt += `2. **Časový posun** — od data převodu se trh mohl výrazně změnit (nahoru i dolů). Data starší než 12 měsíců jsou zvláště nespolehlivá.\n`;
+                prompt += `3. **Nestandardní podmínky transakce** — cena mohla být ovlivněna propojenými osobami, tísní prodávajícího, nepeněžním plněním nebo jinými nestandardními okolnostmi.\n`;
+                prompt += `4. **My financujeme tuto nemovitost jako zajištění úvěru** — naším úkolem je chránit věřitele, ne potvrzovat kupní cenu dlužníka.\n\n`;
+                prompt += `**POSTUP**: Proveď vlastní nezávislé ocenění dle příslušné metodiky pro tento typ nemovitosti. Teprve po stanovení vlastní tržní hodnoty srovnej s cenou z cenové mapy a komentuj odchylku:\n`;
+                prompt += `- Cena z KN **do 10 % nad** tvým odhadem tržní hodnoty: standardní rozptyl, bez zvláštního komentáře.\n`;
+                prompt += `- Cena z KN **10–20 % nad** tvým odhadem: upozorni na možné přeplacení, vyžaduj detailní zdůvodnění.\n`;
+                prompt += `- Cena z KN **více než 20 % nad** tvým odhadem: **RED FLAG** — explicitně upozorni věřitele, že kupující pravděpodobně přeplatil a zástavní hodnota bude výrazně nižší než cena z KN.\n\n`;
+            }
+
+            // Specifické instrukce podle typu
+            if (propertyType === 'land') {
+                prompt += `## METODIKA OCENĚNÍ POZEMKU\n\n`;
+                prompt += `### 1. POROVNÁVACÍ METODA\n`;
+                prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy) podle pravidel pro srovnatelné nemovitosti výše. Nepoužívej pouze svá tréninková data.\n\n`;
+                prompt += `- Najdi minimálně 5–10 srovnatelných pozemků v lokalitě (ideálně až 20).\n`;
+                prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod na realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti. Celkový haircut = cca 15%.\n`;
+                prompt += `- Aplikuj korekční koeficienty na:\n`;
+                prompt += `  * Velikost pozemku\n`;
+                prompt += `  * Dostupnost inženýrských sítí\n`;
+                prompt += `  * Tvar a svažitost\n`;
+                prompt += `  * Přístup z veřejné komunikace\n`;
+                prompt += `- Výsledek: Cena za m² × Výměra pozemku\n\n`;
+
+                const maRezidualniMetodu = !!(formData.developer_projekt && formData.developer_projekt.includes('Ano'));
+                if (maRezidualniMetodu) {
+                    prompt += `### 2. REZIDUÁLNÍ METODA (Developerský projekt)\n`;
+                    prompt += `**KRITICKÉ**: Tento pozemek je určen pro developerský projekt. Proveď reverzní kalkulaci:\n\n`;
+                    prompt += `**Krok 1 - Gross Development Value (GDV)**:\n`;
+                    prompt += `- Odhadni prodejní ceny jednotek (byty/domy) na základě aktuálního trhu v lokalitě\n`;
+                    prompt += `- Celková prodejní cena = Počet jednotek × Průměrná cena za jednotku\n`;
+                    if (formData.gdv_ocekavane) {
+                        prompt += `- Uživatel uvádí očekávanou GDV: ${formData.gdv_ocekavane} Kč\n`;
+                        prompt += `- OVĚŘ, zda tato hodnota odpovídá tržním cenám v lokalitě!\n`;
+                    }
+                    prompt += `\n**Krok 2 - Stavební náklady (Hard Costs)**:\n`;
+                    prompt += `- Použij aktuální stavební náklady k datu ocenění (dohledej je a uveď zdroj); pro bytovou výstavbu nepočítej s méně než 45.000 Kč/m²\n`;
+                    prompt += `- Celkem = HPP (hrubá podlažní plocha) × Jednotkové náklady\n\n`;
+                    prompt += `**Krok 3 - Vedlejší náklady (Soft Costs)**:\n`;
+                    prompt += `- Projektová dokumentace, inženýring, marketing, právní služby\n`;
+                    prompt += `- Standardně 10-15% z Hard Costs\n\n`;
+                    prompt += `**Krok 4 - Finanční náklady**:\n`;
+                    prompt += `- Úroky z úvěru po dobu výstavby\n`;
+                    prompt += `- Použij aktuální sazby developerského financování v ČR (dohledej je a uveď zdroj), obvyklá doba výstavby 18-24 měsíců\n\n`;
+                    prompt += `**Krok 5 - Marže developera (Developer's Profit)**:\n`;
+                    prompt += `- KRITICKÉ: Požadovaný zisk musí být minimálně 15-20% z celkových nákladů\n`;
+                    prompt += `- Pokud je zisk nižší, projekt je **nestabilní** a představuje riziko pro věřitele\n\n`;
+                    prompt += `**Krok 6 - Výpočet reziduální hodnoty pozemku**:\n`;
+                    prompt += `Hodnota pozemku = GDV - (Hard Costs + Soft Costs + Finanční náklady + Marže developera)\n\n`;
+                    prompt += `**STRESS TEST**: Proveď citlivostní analýzu:\n`;
+                    prompt += `- Co se stane, pokud klesne prodejní cena o 10%?\n`;
+                    prompt += `- Co se stane, pokud vzrostou stavební náklady o 15%?\n`;
+                    prompt += `- Je projekt stále rentabilní?\n\n`;
+                }
+
+                prompt += `### ${maRezidualniMetodu ? 3 : 2}. ANALÝZA ZASTAVITELNOSTI (Development Potential)\n`;
+                if (formData.kzp || formData.kpp) {
+                    prompt += `Z územního plánu:\n`;
+                    if (formData.kzp) prompt += `- **KZP (Koeficient zastavěné plochy)**: ${formData.kzp}\n`;
+                    if (formData.kpp) prompt += `- **KPP (Koeficient podlažních ploch)**: ${formData.kpp}\n`;
+                    if (formData.vyskova_hladina) prompt += `- **Výšková hladina**: ${formData.vyskova_hladina}\n`;
+                    prompt += `\n**VÝPOČET**:\n`;
+                    if (formData.plocha && formData.kzp) {
+                        prompt += `- Max. zastavěná plocha = ${formData.plocha} m² × ${formData.kzp} = ?\n`;
+                    }
+                    if (formData.plocha && formData.kpp) {
+                        prompt += `- Max. HPP (hrubá podlažní plocha) = ${formData.plocha} m² × ${formData.kpp} = ?\n`;
+                    }
+                } else {
+                    prompt += `**ÚKOL**: Zjisti regulativy (KZP, KPP, výšková hladina) z územního plánu obce — z přiloženého ÚP nebo online. Pokud nejsou dostupné, odhadni zastavitelnost podle obvyklých regulativů v lokalitě a uveď to.\n`;
+                }
+                prompt += `\n`;
+
+                prompt += `## KRITICKÁ KONTROLA - RED FLAGS\n`;
+                prompt += `**PRÁVNÍ SCREENING** (Deal Breakers):\n`;
+                prompt += `1. **Věcná břemena**:\n`;
+                prompt += `   - Služebnost dožití (usufruct) → FATÁLNÍ RIZIKO - nevhodná zástava!\n`;
+                prompt += `   - Právo stavby ve prospěch třetí osoby → VYSOKÉ RIZIKO\n`;
+                prompt += `   - Služebnost inženýrských sítí → Běžné, ale ověř rozsah\n`;
+                prompt += `2. **Přístupová cesta**:\n`;
+                prompt += `   - Je zajištěn přístup z veřejné komunikace?\n`;
+                prompt += `   - Pokud přes soukromý pozemek → musí být věcné břemeno chůze a jízdy!\n`;
+                prompt += `   - "Ústní dohoda" NENÍ dostatečná pro banku\n`;
+                prompt += `3. **Územní podmínky**:\n`;
+                prompt += `   - Je výstavba podmíněna "územní studií" nebo "dohodou o parcelaci"?\n`;
+                prompt += `   - Takové podmínky = časové riziko (může trvat roky)\n`;
+                prompt += `4. **Zástavy a exekuce**:\n`;
+                prompt += `   - Existující zástavy jiných věřitelů?\n`;
+                prompt += `   - Poznámky o zahájení exekuce?\n`;
+                prompt += `\n`;
+            }
+
+            if (propertyType === 'apartment' || propertyType === 'house') {
+                if (formData.typ_vlastnictvi && formData.typ_vlastnictvi.includes('Družstevní')) {
+                    prompt += `## ⚠️ DRUŽSTEVNÍ VLASTNICTVÍ\n`;
+                    prompt += `**KRITICKÉ**: Nemovitost je v družstevním vlastnictví. Toto má zásadní dopad na zástavní hodnotu:\n`;
+                    prompt += `- Družstevní byty mají omezenou obchodovatelnost\n`;
+                    prompt += `- Mnoho bank nepřijímá družstevní byty jako zástavu nebo požaduje vyšší LTV korekci\n`;
+                    prompt += `- Při porovnávací metodě srovnávej POUZE s jinými družstevními byty\n`;
+                    prompt += `- Aplikuj dodatečnou srážku 10-15% oproti osobnímu vlastnictví\n\n`;
+                } else if (propertyType === 'apartment' && !formData.typ_vlastnictvi) {
+                    prompt += `## TYP VLASTNICTVÍ\n`;
+                    prompt += `Typ vlastnictví (osobní / družstevní) zjisti z podkladů. Pokud jde o družstevní byt: srovnávej POUZE s jinými družstevními byty a aplikuj dodatečnou srážku 10-15% oproti osobnímu vlastnictví (omezená obchodovatelnost, mnoho bank družstevní byty jako zástavu nepřijímá).\n\n`;
+                }
+                prompt += `## METODIKA OCENĚNÍ\n\n`;
+                prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
+                prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy) podle pravidel pro srovnatelné nemovitosti výše. Nepoužívej pouze svá tréninková data — aktivně hledej aktuální nabídky a realizované prodeje v dané lokalitě.\n\n`;
+                prompt += `- Najdi minimálně 5–10 srovnatelných nemovitostí v lokalitě (ideálně až 20)\n`;
+                prompt += `- Nejdůležitější jsou realizované prodeje. Pro větší vzorek zahrň i inzerované ceny.\n`;
+                prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
+                prompt += `- Korekce na: stav nemovitosti, poloha v rámci lokality, podlaží (u bytů), parkování, orientace a výhled\n`;
+                prompt += `- Statistická analýza: průměr, medián, směrodatná odchylka. Vážený průměr s důrazem na realizované prodeje.\n`;
+                prompt += `- Výsledek: Výsledná cena za m² × Užitná plocha\n\n`;
+
+                prompt += `### 2. VALIDACE PLOCH\n`;
+                prompt += `**DŮLEŽITÉ**: Rozliš mezi různými typy ploch:\n`;
+                prompt += `- **Užitná plocha**: Plocha, kterou lze reálně užívat (bez zdí)\n`;
+                if (formData.balkon_terasa) {
+                    prompt += `- **Balkony/Terasy**: ${formData.balkon_terasa} m² - započítej pouze 50% nebo vůbec!\n`;
+                }
+                if (formData.sklep) {
+                    prompt += `- **Sklepy**: ${formData.sklep} m² - započítej pouze 20-30%\n`;
+                }
+                prompt += `\nBanky **neakceptují** plnou výměru balkónů a sklepů.\n\n`;
+
+                // RD-specific: AI odhad užitné plochy z LV zastavěné (typický LV case)
+                if (propertyType === 'house') {
+                    prompt += `### ODHAD UŽITNÉ PLOCHY Z ZASTAVĚNÉ (typický LV case — pouze RD)\n`;
+                    prompt += `**KONTEXT**: V LV (List vlastnictví / katastrální výpis) je obvykle uvedena pouze **zastavěná plocha** (footprint budovy, jedno podlaží včetně zdí), ne podlahová/užitná plocha.\n`;
+                    if (formData.podlazi) {
+                        prompt += `User uvedl počet podlaží: **${formData.podlazi}**\n\n`;
+                    } else {
+                        prompt += `User neuvedl počet podlaží — zjisti ho z podkladů (posudek, půdorys, fotografie, popis); pokud máš pouze zastavěnou plochu, dopočítej nebo odhadni ho.\n\n`;
+                    }
+                    prompt += `**ÚKOL**: Pokud je užitná plocha uvedená ve formuláři nebo v podkladech (např. ve znaleckém posudku), použij ji přímo. Pokud máš pouze zastavěnou plochu z LV a počet podlaží, **odhadni užitnou (podlahovou) plochu podle veřejné metodiky odhadu** (IVS/EVS, ČSN, česká bankovní praxe). Zohledni:\n`;
+                    prompt += `- Koeficient zdí podle stáří a typu konstrukce (cihla, panel, dřevostavba)\n`;
+                    prompt += `- Schodiště u 2+ NP (typicky -6 až -10 m² na patro)\n`;
+                    prompt += `- Obyvatelnost podkroví — započítej jen pokud má dostatečnou světlou výšku, izolaci a okna\n`;
+                    prompt += `- Obyvatelnost suterénu — technické místnosti se nezapočítávají\n\n`;
+                    prompt += `**Uveď výpočet krok po kroku a metodiku, kterou jsi použil.**\n`;
+                    prompt += `PROTOŽE jde o odhad (ne přesné měření z půdorysu), aplikuj dodatečnou opatrnostní srážku **5 %** na finální tržní hodnotu.\n\n`;
+                }
+
+                // Výnosová metoda i bez kroku 4 — nájemné může být jen v přiložené nájemní smlouvě
+                if (formData.najemne || selectedInputs.includes('najemni_smlouva')) {
+                    prompt += `### 3. VÝNOSOVÁ METODA (Sekundární)\n`;
+                    prompt += `Nemovitost je pronajímána.\n\n`;
+                    prompt += `**Krok 1 - Nájemné**:\n`;
+                    if (formData.najemne) {
+                        prompt += `- Smluvní nájemné: ${formData.najemne} Kč/měsíc\n`;
+                    } else {
+                        prompt += `- Smluvní nájemné zjisti z přiložené nájemní smlouvy\n`;
+                    }
+                    prompt += `- **OVĚŘ** tržní nájemné v lokalitě!\n`;
+                    prompt += `- Použij **nižší** z obou hodnot (princip opatrnosti)\n`;
+                    prompt += `- Roční nájemné = Měsíční × 12\n\n`;
+                    prompt += `**Krok 2 - Provozní náklady (OpEx)**:\n`;
+                    prompt += `- Neměřitelné služby, pojištění, daň z nemovitosti, správa\n`;
+                    prompt += `- Obvykle 10-25% z hrubého nájmu\n`;
+                    prompt += `- NOI (Net Operating Income) = Hrubý příjem - OpEx\n\n`;
+                    prompt += `**Krok 3 - Kapitalizace**:\n`;
+                    prompt += `- Použij aktuální čistou kapitalizační míru (net yield) odpovídající lokalitě a typu — dohledej ji a uveď zdroj\n`;
+                    prompt += `- Orientačně: Praha centrum 4-5%, periferie 6-7%, regiony 7-9% (ověř aktuální hodnoty)\n`;
+                    prompt += `- Hodnota = NOI / čistá kapitalizační míra (hrubý a čistý výnos nemíchej)\n\n`;
+                }
+
+                prompt += `## RED FLAGS - KONTROLA\n`;
+                prompt += `1. **Technický stav**:\n`;
+                if (formData.stav && formData.stav.includes('rekonstrukc')) {
+                    prompt += `   - Stav označen jako "${formData.stav}"\n`;
+                    prompt += `   - **SNIŽ hodnotu** o odhadované náklady na rekonstrukci!\n`;
+                }
+                prompt += `   - Zbývající technická životnost (pokud starší 50 let)\n`;
+                prompt += `2. **Právní vady**:\n`;
+                prompt += `   - Služebnosti, zástavy, exekuce\n`;
+                prompt += `   - Nájemní smlouvy na dobu neurčitou (snižují likviditu)\n`;
+                prompt += `3. **Lokalita**:\n`;
+                prompt += `   - Likvidita trhu (jak rychle se prodá?)\n`;
+                prompt += `   - Výtah (u bytů ve vyšších patrech bez výtahu = riziko)\n\n`;
+            }
+
+            if (propertyType === 'commercial') {
+                prompt += `## METODIKA OCENĚNÍ KOMERČNÍCH NEMOVITOSTÍ\n\n`;
+                prompt += `### 1. VÝNOSOVÁ METODA (DCF - Primární)\n`;
+                prompt += `**KRITICKÉ**: Pro komerční nemovitosti je výnosová metoda dominantní!\n\n`;
+                prompt += `**Krok 1 - Hrubý příjem**:\n`;
+                if (formData.najemne_rocni) {
+                    prompt += `- Roční nájemné: ${formData.najemne_rocni} Kč\n`;
+                    if (formData.obsazenost) {
+                        prompt += `- Obsazenost: ${formData.obsazenost}%\n`;
+                        prompt += `- Efektivní příjem = ${formData.najemne_rocni} × (${formData.obsazenost}/100)\n`;
+                    }
+                } else {
+                    // Krok 4 bývá prázdný — nájemné je v přiložených nájemních smlouvách
+                    prompt += `- Nájemné nebylo zadáno — zjisti ho z přiložených nájemních smluv; pokud nejsou, odhadni tržní nájemné pro daný typ a lokalitu (Kč/m²/měsíc) a uveď zdroj\n`;
+                    prompt += `- Efektivní příjem = roční nájemné × obsazenost (obsazenost zjisti z podkladů, jinak použij tržní)\n`;
+                }
+                prompt += `\n**Krok 2 - Provozní náklady (OpEx)**:\n`;
+                prompt += `- Údržba, pojištění, daně, správa, marketing\n`;
+                prompt += `- Obvykle 15-30% z hrubého příjmu\n`;
+                prompt += `- **OVĚŘ** skutečné náklady z podkladů!\n\n`;
+                prompt += `**Krok 3 - Net Operating Income (NOI)**:\n`;
+                prompt += `NOI = Efektivní příjem - OpEx\n\n`;
+                prompt += `**Krok 4 - Kapitalizace**:\n`;
+                prompt += `- Aktuální kapitalizační míru (yield) dohledej podle typu a lokality (CBRE, JLL, Colliers, Cushman & Wakefield) a uveď zdroj. Orientačně:\n`;
+                prompt += `  * Praha Prime Office: < 5%\n`;
+                prompt += `  * Retail: 6-8%\n`;
+                prompt += `  * Sklady/Logistika: prime 5-6%, sekundární lokality 6,5-8,5%\n`;
+                prompt += `  * Regionální: +1-2%\n`;
+                prompt += `- Yield upravíš podle stavu, lokality, stáří, obsazenosti\n`;
+                prompt += `- Hodnota = NOI / Yield\n\n`;
+                prompt += `### 2. POROVNÁVACÍ METODA (Sekundární)\n`;
+                prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů. Nepoužívej pouze svá tréninková data.\n\n`;
+                prompt += `- Najdi minimálně 5–10 srovnatelných komerčních objektů (ideálně až 20) — typ, lokalita, obsazenost, stáří\n`;
+                prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
+                prompt += `- Cena za m² pronajímatelné plochy\n`;
+                prompt += `- Pro komerční objekty je srovnávací metoda méně podstatná než výnosová, nicméně ji stanov pro validaci\n\n`;
+
+                prompt += `## RED FLAGS\n`;
+                prompt += `1. **Kvalita nájemníků**:\n`;
+                prompt += `   - Bonita nájemníků (velké firmy vs. malé živnostníky)\n`;
+                prompt += `   - Délka smluv (krátké smlouvy = riziko neobsazenosti)\n`;
+                prompt += `2. **Koncentrace**:\n`;
+                prompt += `   - Jeden dominantní nájemník > 50% příjmů = riziko!\n`;
+                prompt += `3. **Neobsazenost**:\n`;
+                if (formData.obsazenost && parseInt(formData.obsazenost) < 70) {
+                    prompt += `   - **VAROVÁNÍ**: Obsazenost ${formData.obsazenost}% je nízká!\n`;
+                }
+                prompt += `   - Standardní vacancy rate 5-10%\n`;
+                prompt += `4. **Technický stav**:\n`;
+                prompt += `   - Odložené investice (CapEx)\n`;
+                prompt += `   - Životnost technologií (HVAC, výtahy)\n\n`;
+            }
+
+            if (propertyType === 'mixed_use') {
+                prompt += `## METODIKA OCENĚNÍ POLYFUNKČNÍHO DOMU\n\n`;
+                prompt += `**DŮLEŽITÉ**: Polyfunkční dům vyžaduje kombinovaný přístup – odděleně ocenit bytovou a komerční část.\n`;
+                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data.\n\n`;
+                prompt += `### 1. BYTOVÁ ČÁST - POROVNÁVACÍ METODA\n`;
+                prompt += `- Najdi minimálně 5–10 srovnatelných bytů v lokalitě (ideálně až 20)\n`;
+                prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
+                prompt += `- Aplikuj korekce na stav, podlaží, parkování, orientaci\n`;
+                if (formData.plocha_bytova) prompt += `- Bytová plocha: ${formData.plocha_bytova} m²\n`;
+                if (formData.pocet_bytu) prompt += `- Počet bytů: ${formData.pocet_bytu}\n`;
+                prompt += `- Výsledek: Tržní cena za m² × bytová plocha\n\n`;
+                prompt += `### 2. KOMERČNÍ ČÁST - VÝNOSOVÁ METODA (DCF)\n`;
+                if (formData.najemne_komercni_rocni) {
+                    prompt += `- Roční komerční nájemné: ${formData.najemne_komercni_rocni} Kč\n`;
+                } else {
+                    prompt += `- Komerční nájemné nebylo zadáno — zjisti ho z přiložených nájemních smluv; pokud nejsou, odhadni tržní nájemné pro daný typ a lokalitu a uveď zdroj\n`;
+                }
+                if (formData.obsazenost_komercni) {
+                    prompt += `- Obsazenost komerčních prostor: ${formData.obsazenost_komercni}%\n`;
+                }
+                prompt += `- NOI = Efektivní příjem - OpEx (15-30%)\n`;
+                prompt += `- Hodnota = NOI / čistá kapitalizační míra (aktuální pro lokalitu a typ — dohledej a uveď zdroj)\n\n`;
+                prompt += `### 3. CELKOVÁ HODNOTA\n`;
+                prompt += `Celková tržní hodnota = Hodnota bytové části + Hodnota komerční části\n\n`;
+                prompt += `## RED FLAGS - POLYFUNKČNÍ DŮM\n`;
+                prompt += `1. **Rozdílné tržní segmenty**: Bytový a komerční trh se mohou vyvíjet různě\n`;
+                prompt += `2. **Správa budovy**: Složitější správa, vyšší OpEx\n`;
+                prompt += `3. **Koncentrace nájemníků**: Riziko u komerční části\n`;
+                prompt += `4. **Právní vady**: Věcná břemena, zástavy, exekuce\n\n`;
+            }
+
+            if (propertyType === 'recreation') {
+                prompt += `## METODIKA OCENĚNÍ REKREAČNÍHO OBJEKTU\n\n`;
+                prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů. Nepoužívej pouze svá tréninková data.\n\n`;
+                prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
+                prompt += `- Najdi minimálně 5–10 srovnatelných rekreačních objektů v lokalitě (ideálně až 20)\n`;
+                prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
+                const zPodkladu = (value, suffix = '') => value ? `${value}${suffix}` : 'neuvedeno — zjisti z podkladů';
+                prompt += `- **KLÍČOVÉ KOREKČNÍ FAKTORY**:\n`;
+                prompt += `  * Sezónnost: ${zPodkladu(formData.sezonnost)}\n`;
+                prompt += `  * Přístupnost: ${zPodkladu(formData.pristup)}\n`;
+                prompt += `  * Blízkost vodní plochy: ${zPodkladu(formData.pristup_voda)}\n`;
+                prompt += `  * Vzdálenost od města: ${zPodkladu(formData.vzdalenost_mesto, ' km')}\n`;
+                prompt += `  * Typ objektu: ${zPodkladu(formData.typ_rekreace)}\n\n`;
+
+                if (formData.najemne) {
+                    prompt += `### 2. VÝNOSOVÁ METODA (Sekundární)\n`;
+                    prompt += `- Průměrný měsíční výnos: ${formData.najemne} Kč\n`;
+                    prompt += `- **POZOR**: Sezónnost výrazně ovlivňuje obsazenost!\n`;
+                    prompt += `- Odhadni reálnou roční obsazenost (typicky 30-60% u sezónních objektů)\n`;
+                    prompt += `- NOI = Roční příjem × Obsazenost - OpEx\n\n`;
+                }
+
+                prompt += `## RED FLAGS - REKREAČNÍ OBJEKT\n`;
+                prompt += `1. **Nízká likvidita**: Rekreační objekty se prodávají výrazně pomaleji!\n`;
+                prompt += `2. **Přístupová cesta**: Je přístup celoroční? Zimní údržba?\n`;
+                prompt += `3. **Sezónnost**: Výrazná variabilita příjmů\n`;
+                prompt += `4. **Vzdálenost od města**: Více než 50 km = nižší poptávka\n`;
+                prompt += `5. **Právní vady**: Pozemek v lese, ochranná pásma, CHKO\n\n`;
+            }
+
+            if (propertyType === 'apartment_building') {
+                prompt += `## METODIKA OCENĚNÍ BYTOVÉHO DOMU\n\n`;
+                prompt += `**DŮLEŽITÉ**: Pro bytový dům jsou **obě metody primární** a rovnocenné. Výslednou tržní hodnotu stanov jako vážený průměr obou metod (nebo zdůvodni, proč jedné dáváš vyšší váhu). Neplatí pravidlo „jedna primární, druhá sekundární".\n`;
+                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data.\n\n`;
+
+                prompt += `### 1. VÝNOSOVÁ METODA (Primární — DCF / přímá kapitalizace)\n`;
+                prompt += `Bytový dům je investiční aktivum — výnosová hodnota je klíčová pro investora.\n\n`;
+                prompt += `**Krok 1 - Hrubý roční příjem**:\n`;
+                if (formData.najemne_rocni) {
+                    prompt += `- Celkové roční nájemné: ${formData.najemne_rocni} Kč\n`;
+                } else {
+                    prompt += `- Nájemné nebylo zadáno — zjisti ho z přiložených nájemních smluv; pokud nejsou, odhadni tržní nájemné pro danou lokalitu a typ bytů (průměrné nájemné za m² × plocha) a uveď zdroj\n`;
+                }
+                if (formData.prumerne_najemne_byt) prompt += `- Průměrné měsíční nájemné za byt: ${formData.prumerne_najemne_byt} Kč\n`;
+                if (formData.pocet_bytu) prompt += `- Počet bytových jednotek: ${formData.pocet_bytu}\n`;
+                if (formData.obsazenost) prompt += `- Obsazenost: ${formData.obsazenost}%\n`;
+                prompt += `\n**Krok 2 - Provozní náklady (OpEx)**:\n`;
+                prompt += `- Správa domu, údržba, pojištění, daně, rezervní fond\n`;
+                if (formData.fond_oprav_rocni) prompt += `- Roční fond oprav / údržba: ${formData.fond_oprav_rocni} Kč\n`;
+                prompt += `- Obvykle 25-40% z hrubého příjmu u bytových domů\n\n`;
+                prompt += `**Krok 3 - Net Operating Income (NOI)**:\n`;
+                prompt += `NOI = Efektivní příjem × Obsazenost - OpEx\n\n`;
+                prompt += `**Krok 4 - Kapitalizační míra**:\n`;
+                prompt += `- Aktuální výnosy pro lokalitu a typ dohledej a uveď zdroj. Orientační hrubé výnosy (gross yield):\n`;
+                prompt += `  * Praha centrum: 3,5–5 %\n`;
+                prompt += `  * Praha periferie: 4,5–6 %\n`;
+                prompt += `  * Krajská města: 5–7 %\n`;
+                prompt += `  * Menší města: 6–9 %\n`;
+                // Hrubý výnos patří k hrubému příjmu — dřív se dělilo NOI hrubým výnosem a hodnota vycházela o OpEx níž
+                prompt += `- Hrubý výnos aplikuj na hrubý (efektivní) příjem, čistý výnos (net yield) na NOI — nemíchej je\n`;
+                prompt += `- Výnosová hodnota = Efektivní hrubý příjem / hrubý výnos, nebo NOI / čistý výnos\n\n`;
+
+                prompt += `### 2. POROVNÁVACÍ METODA (Primární — srovnání s trhem)\n`;
+                prompt += `Bytový dům lze ocenit i jako celek porovnáním s podobnými realizovanými prodeji.\n\n`;
+                prompt += `- Hledej prodeje celých bytových domů v dané lokalitě (databáze CUZK, realitní servery)\n`;
+                prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod na realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti. Celkový haircut = cca 15%.\n`;
+                prompt += `- Cena za m² celkové podlahové plochy nebo cena za bytovou jednotku\n`;
+                if (formData.celkova_plocha) prompt += `- Celková plocha: ${formData.celkova_plocha} m²\n`;
+                if (formData.pocet_bytu) prompt += `- Počet jednotek: ${formData.pocet_bytu}\n`;
+                prompt += `- Korekce: stav budovy, rok výstavby, lokalita, velikost bytů, výtah\n\n`;
+
+                prompt += `### 3. VÝSLEDNÁ TRŽNÍ HODNOTA\n`;
+                prompt += `- Uveď výsledky obou metod\n`;
+                prompt += `- Pokud se výsledky liší o méně než 15 %, použij vážený průměr (50/50 nebo zdůvodni jiné váhy)\n`;
+                prompt += `- Pokud se liší o více než 15 %, analyzuj příčinu odchylky a zdůvodni výslednou hodnotu\n\n`;
+
+                prompt += `## RED FLAGS - BYTOVÝ DŮM\n`;
+                prompt += `1. **Regulovaná nájemná**: Existují v domě regulované nájemní smlouvy na dobu neurčitou?\n`;
+                prompt += `2. **Technický stav**: Stav rozvodů (voda, elektrika, plyn), střecha, výtah — nutné investice (CapEx)\n`;
+                prompt += `3. **Koncentrace vlastnictví**: Je celý dům v osobním vlastnictví, nebo jsou byty v SVJ/BD?\n`;
+                prompt += `4. **Obsazenost**: Volné byty výrazně snižují výnosovou hodnotu\n`;
+                prompt += `5. **Právní vady**: Zástavní práva, věcná břemena, exekuce\n\n`;
+            }
+
+            if (propertyType === 'industrial') {
+                prompt += `## METODIKA OCENĚNÍ PRŮMYSLOVÉHO OBJEKTU\n\n`;
+                prompt += `**DŮLEŽITÉ**: Pro průmyslové nemovitosti je **výnosová metoda primární** — průmyslový objekt je investiční aktivum a kupující rozhoduje na základě výnosu. Porovnávací metoda slouží jako sekundární validace.\n`;
+                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (JLL, CBRE, Cushman & Wakefield, Colliers průmyslové reporty). Nepoužívej pouze svá tréninková data.\n\n`;
+
+                prompt += `### 1. VÝNOSOVÁ METODA (Primární — přímá kapitalizace / DCF)\n\n`;
+                if (formData.najemne_rocni) {
+                    prompt += `**Krok 1 - Hrubý roční příjem**:\n`;
+                    prompt += `- Roční nájemné: ${formData.najemne_rocni} Kč\n`;
+                    if (formData.obsazenost) prompt += `- Obsazenost: ${formData.obsazenost}%\n`;
+                    prompt += `\n**Krok 2 - Provozní náklady (OpEx)**:\n`;
+                    prompt += `- Správa, pojištění, daně, údržba\n`;
+                    prompt += `- Průmyslové objekty obvykle NNN (triple-net) smlouvy — ověř, co hradí nájemce vs. vlastník\n\n`;
+                    prompt += `**Krok 3 - Net Operating Income (NOI)**:\n`;
+                    prompt += `NOI = Efektivní příjem × (Obsazenost/100) - OpEx vlastníka\n\n`;
+                    prompt += `**Krok 4 - Kapitalizační míra (Yield)**:\n`;
+                } else {
+                    prompt += `- Nájemné nebylo zadáno — zjisti ho z přiložených nájemních smluv; pokud nejsou, odhadni tržní nájemné dle lokality a třídy objektu\n\n`;
+                    prompt += `**Krok 1 - Odhad tržního nájemného**:\n`;
+                    if (formData.celkova_plocha) prompt += `- Celková plocha: ${formData.celkova_plocha} m²\n`;
+                    prompt += `- Vyhledej aktuální tržní nájemné pro daný typ a lokalitu (Kč/m²/rok) a uveď zdroj\n`;
+                    prompt += `- NOI = nájemné × plocha × obsazenost - OpEx vlastníka (u NNN smluv hradí většinu nákladů nájemce)\n\n`;
+                    prompt += `**Krok 2 - Kapitalizační míra (Yield)**:\n`;
+                }
+                prompt += `- Aktuální yields dohledej (CBRE, JLL, Colliers, Cushman & Wakefield) a uveď zdroj. Orientačně:\n`;
+                prompt += `- Průmyslové prime (logistika u D1/D11): 5,0–6,0 %\n`;
+                prompt += `- Průmyslové sekundární lokality: 6,5–8,5 %\n`;
+                prompt += `- Starší výroba (Class C): 8,5–11 %\n`;
+                if (formData.stav) prompt += `- Stav objektu: ${formData.stav}\n`;
+                if (formData.dopravni_dostupnost) prompt += `- Dopravní dostupnost: ${formData.dopravni_dostupnost}\n`;
+                prompt += `- Yield upravíš podle: stáří a stavu, délky nájemních smluv, bonity nájemníků, lokality\n`;
+                prompt += `- Výnosová hodnota = NOI / Yield\n\n`;
+
+                prompt += `### 2. POROVNÁVACÍ METODA (Sekundární — validace)\n`;
+                prompt += `- Hledej srovnatelné prodeje průmyslových nemovitostí (databáze CUZK, JLL, Cushman & Wakefield)\n`;
+                prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod na realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti. Celkový haircut = cca 15%.\n`;
+                prompt += `- Cena za m² zastavěné plochy — korekce na typ, stav, lokalitu, světlou výšku, rampy\n`;
+                if (formData.celkova_plocha) prompt += `- Celková plocha: ${formData.celkova_plocha} m²\n`;
+                if (formData.vyska_haly) prompt += `- Světlá výška: ${formData.vyska_haly} m (výrazně ovlivňuje hodnotu — haly <6m jsou méně likvidní)\n`;
+                prompt += `- Porovnávací metoda slouží jako kontrola výnosové — při odchylce > 20 % analyzuj příčinu\n\n`;
+
+                prompt += `## RED FLAGS - PRŮMYSLOVÝ OBJEKT\n`;
+                prompt += `1. **⚠ KRITICKÉ — Propojené osoby (nájemce = vlastník nebo spřízněná osoba)**:\n`;
+                prompt += `   - Pokud je nájemcem stejná osoba jako vlastník, nebo osoba ekonomicky nebo rodinně propojená s vlastníkem, nájemné NEODRÁŽÍ tržní realitu!\n`;
+                prompt += `   - V takovém případě: nájemné může být uměle nadhodnoceno (pro navýšení hodnoty zástavy) nebo naopak podhodnoceno (daňová optimalizace)\n`;
+                prompt += `   - **POSTUP**: Nájemné ignoruj jako vstupní hodnotu. Místo toho použij tržní nájemné z externích zdrojů pro daný typ objektu a lokalitu. Upozorni věřitele, že výnos je ze spřízněného vztahu a vyžaduje nezávislé ověření.\n\n`;
+                prompt += `2. **Ekologická zátěž**:\n`;
+                if (formData.ekologicka_zatez) prompt += `   - Zadáno: ${formData.ekologicka_zatez}\n`;
+                prompt += `   - Historická výroba, chemikálie, PHM — může zásadně snížit nebo eliminovat zástavní hodnotu\n`;
+                prompt += `   - Bez Phase I ekologického auditu = neúplné podklady pro ocenění\n`;
+                prompt += `3. **Délka a kvalita nájemních smluv**:\n`;
+                prompt += `   - Krátká zbývající délka smluv (< 2 roky) výrazně zvyšuje riziko a snižuje hodnotu\n`;
+                prompt += `   - Bonita nájemníků: nadnárodní korporace vs. lokální výrobce\n`;
+                prompt += `4. **Technická specifika**:\n`;
+                if (formData.vyska_haly) prompt += `   - Světlá výška ${formData.vyska_haly} m — haly pod 6 m jsou problematické pro moderní logistiku\n`;
+                if (formData.nosnost_podlahy) prompt += `   - Nosnost podlahy: ${formData.nosnost_podlahy}\n`;
+                prompt += `   - Kapacita elektro přípojky, přítomnost jeřábové dráhy, stav vzduchotechniky\n`;
+                prompt += `5. **Monofunkčnost**:\n`;
+                prompt += `   - Specializované výrobní haly jsou těžko pronajmout jinému nájemci — nízká likvidita\n\n`;
+            }
+
+            // Závěrečné instrukce
+            prompt += `## ZÁVĚREČNÝ VÝSTUP\n\n`;
+            prompt += `Strukturuj svou odpověď následovně:\n\n`;
+            prompt += `### 1. SOUHRN NEMOVITOSTI\n`;
+            prompt += `- Typ, lokalita, klíčové parametry\n`;
+            prompt += `- Tabulka údajů z podkladů se zdrojem (viz Postup práce, bod 1) a označené rozpory\n\n`;
+
+            prompt += `### 2. TRŽNÍ HODNOTA\n`;
+            prompt += `Pro každou použitou metodu:\n`;
+            prompt += `- Postup výpočtu (krok za krokem)\n`;
+            prompt += `- Použité předpoklady\n`;
+            prompt += `- Tabulka srovnatelných nemovitostí s odkazy (viz pravidla pro srovnatelné nemovitosti)\n`;
+            prompt += `- Výsledná hodnota v Kč\n\n`;
+
+            prompt += `### 3. POROVNÁNÍ METOD\n`;
+            prompt += `- Tabulka výsledků všech použitých metod\n`;
+            if (propertyType === 'apartment_building') {
+                prompt += `- **PRAVIDLO pro bytový dům**: Obě metody (výnosová i porovnávací) jsou primární a rovnocenné. Výslednou hodnotu stanov jako vážený průměr — pokud se výsledky liší o méně než 15 %, použi 50/50. Při větší odchylce zdůvodni, které metodě dáváš vyšší váhu a proč.\n`;
+            } else {
+                prompt += `- **PRAVIDLO**: Finální tržní hodnotu stanov výhradně na základě **primární metody** pro daný typ nemovitosti. Sekundární metody slouží pouze jako kontrolní validace — uveď jejich výsledky, ale neprůměruj je s primární metodou.\n`;
+                prompt += `- Pokud sekundární metoda ukazuje výrazně odlišný výsledek (odchylka > 20%), uveď důvod odchylky.\n`;
+                prompt += `- **Finální tržní hodnota** = výsledek primární metody (s odůvodněním)\n`;
+            }
+            prompt += `\n`;
+
+            prompt += `### 4. ROZPĚTÍ A JISTOTA OCENĚNÍ\n`;
+            prompt += `- **Nízká / střední / vysoká hodnota** v Kč; střední hodnota = finální tržní hodnota\n`;
+            prompt += `- **Jistota ocenění** (rozpětí = (střední − nízká) / střední):\n`;
+            prompt += `  * VYSOKÁ — alespoň 3 dobře srovnatelné nemovitosti v lokalitě (ideálně z posledních 12 měsíců) a rozpětí do 15 %\n`;
+            prompt += `  * STŘEDNÍ — málo přímo srovnatelných, ale dostatek tržních dat; rozpětí 15–30 %\n`;
+            prompt += `  * NÍZKÁ — žádné přímo srovnatelné nebo rozpětí nad 30 % → doporuč externí znalecký posudek\n\n`;
+
+            prompt += `### 5. SROVNÁNÍ S HODNOTOU Z PODKLADŮ\n`;
+            prompt += `Pokud podklady obsahují hodnotu nebo cenu (znalecký posudek, odhad, kupní cena), uveď ji vedle své tržní hodnoty a rozdíl v %:\n`;
+            prompt += `- do 10 % nad tvou hodnotou: běžný rozptyl\n`;
+            prompt += `- 10–20 % nad: upozorni a vysvětli možné důvody\n`;
+            prompt += `- více než 20 % nad: **RED FLAG** — hodnota v podkladech je pravděpodobně nadsazená\n`;
+            prompt += `- výrazně pod tvou hodnotou: vysvětli proč\n`;
+            prompt += `Pokud podklady žádnou hodnotu neobsahují, napiš „Neuvedeno".\n\n`;
+
+            prompt += `### 6. ZÁSTAVNÍ HODNOTA\n`;
+            prompt += `- Bezpečnostní koeficient: **${safetyCoefficients[propertyType]}**\n`;
+            prompt += `- **Zástavní hodnota pro LTV** = Tržní hodnota × ${safetyCoefficients[propertyType]}\n\n`;
+
+            prompt += `### 7. RED FLAGS & RIZIKA\n`;
+            prompt += `**KRITICKÁ RIZIKA** (Deal Breakers):\n`;
+            prompt += `- Právní vady (služebnosti dožití, exekuce)\n`;
+            prompt += `- Technické problémy (špatný stav, nutná sanace)\n`;
+            prompt += `- Tržní rizika (nízká likvidita, přecenění)\n\n`;
+
+            prompt += `**DOPORUČENÍ PRO VĚŘITELE**:\n`;
+            prompt += `- Je nemovitost vhodná jako zástava?\n`;
+            prompt += `- Jaké maximální LTV (Loan-to-Value) doporučuješ?\n`;
+            prompt += `- Jaké podmínky by měly být splněny před poskytnutím úvěru?\n\n`;
+
+            prompt += `### 8. CHYBĚJÍCÍ DOKUMENTY\n`;
+            prompt += `Seznam všech dokumentů, které by měly být doplněny pro kompletní ocenění.\n\n`;
+
+            prompt += `---\n\n`;
+            prompt += `**DŮLEŽITÉ ZÁSADY**:\n`;
+            prompt += `1. **Princip opatrnosti**: Vždy volte konzervativnější odhad\n`;
+            prompt += `2. **Transparentnost**: Jasně uveď všechny předpoklady\n`;
+            prompt += `3. **Konkrétnost**: Používej konkrétní čísla, ne obecné fráze\n`;
+            prompt += `4. **Red flags první**: Pokud najdeš fatální riziko, uveď ho hned na začátku\n`;
+            prompt += `5. **Všechny částky v CZK**: Používej české koruny jako měnu\n`;
+            prompt += `6. **Zdroje**: U tržních dat uváděj odkaz — nic nevymýšlej\n\n`;
+
+            prompt += `## POVINNÝ STRUKTUROVANÝ VÝSTUP\n\n`;
+            prompt += `**NA ÚPLNÝ KONEC své odpovědi** vlož tento strukturovaný blok. Dodržuj přesně tento formát — bude strojově zpracován:\n\n`;
+            prompt += '```\n';
+            prompt += `===SHRNUTÍ===\n`;
+            prompt += `TRŽNÍ_HODNOTA: [číslo v Kč, pouze číslo bez mezer a jednotek, např. 8200000]\n`;
+            prompt += `ZÁSTAVNÍ_HODNOTA: [číslo v Kč, pouze číslo]\n`;
+            prompt += `BEZPEČNOSTNÍ_KOEFICIENT: [desetinné číslo, např. 0.80]\n`;
+            prompt += `LTV_DOPORUČENÍ: [procento, např. 80]\n`;
+            prompt += `PRIMÁRNÍ_METODA: [název použité primární metody]\n`;
+            prompt += `HLAVNÍ_RIZIKO: [jedna věta - nejvážnější riziko]\n`;
+            prompt += `SEKUNDÁRNÍ_RIZIKO: [jedna věta - druhé nejvážnější riziko]\n`;
+            prompt += `HODNOCENÍ_ZÁSTAVY: [Vhodná / Podmíněně vhodná / Nevhodná]\n`;
+            prompt += `===KONEC===\n`;
+            prompt += '```\n\n';
+            prompt += `Začni analýzu NYNÍ.`;
 
             return prompt;
         }
@@ -5166,6 +5071,8 @@
                         });
                     }
                 } catch (e) { /* no-op — bridge nesmí rozbít appku */ }
+                // Vazba na případ z Dashboardu patří k prvnímu ocenění uloženému po otevření z karty
+                if (window.__dashCaseId && window.__dashValuationId == null) window.__dashValuationId = editingId;
 
                 closeSaveValuationDialog();
                 showToast(isUpdate ? 'Ocenění aktualizováno' : 'Ocenění uloženo');
@@ -5490,7 +5397,10 @@
                 return d.innerHTML;
             };
 
+            const previousDialog = document.getElementById('notesEditDialog');
+            if (previousDialog) previousDialog.remove();
             const dialog = document.createElement('div');
+            dialog.id = 'notesEditDialog';
             dialog.className = 'modal-overlay show';
             dialog.innerHTML = `
                 <div class="modal-content" style="max-width: 500px;">
@@ -5543,6 +5453,13 @@
 
             const item = saved.find(v => v.id === id);
             if (!item) return;
+
+            // Jiné ocenění než to, ke kterému už vazba na případ z Dashboardu patří → zapomenout ji,
+            // jinak by ho Dashboard připsal k cizímu případu
+            if (window.__dashCaseId && window.__dashValuationId != null && id !== window.__dashValuationId) {
+                window.__dashCaseId = null;
+                window.__dashValuationId = null;
+            }
 
             // Pamatovat, který case byl načtený — musí být nastaveno PŘED showSection(6),
             // aby populatePropertySummary mohlo vykreslit "Pracujete s uloženým případem" banner
@@ -5618,8 +5535,11 @@
             if (e.key === 'Escape') {
                 closeSaveValuationDialog();
                 closeCompareDialog();
-                // Close notes edit dialog if open
-                const notesModal = document.querySelector('.modal-overlay.show');
+                // Statické okno „Chybí důležité údaje" jen skrýt — dřív se odstranilo z DOM
+                // a „Vygenerovat" pak do obnovení stránky nic nedělalo
+                closeValidationModal();
+                // Dynamický dialog poznámek (vzniká při každém otevření) se maže
+                const notesModal = document.getElementById('notesEditDialog');
                 if (notesModal) notesModal.remove();
             }
             if (e.key === 'Enter' && document.getElementById('saveValuationDialog').classList.contains('show')) {
@@ -5948,6 +5868,13 @@
             visitedSteps = [1];
             aiParsedData = { chatgpt: null, claude: null, gemini: null };
             editingId = null; // fresh case → save dialog vyrobí nový záznam, ne update
+            // Vazba na případ z Dashboardu platí pro jedno ocenění: jakmile je k ní nějaké uložené,
+            // nová valuace k případu nepatří. Před prvním uložením zůstává (záložka mohla ukazovat
+            // staré ocenění a „Nová valuace" teprve začíná ocenění pro tento případ).
+            if (window.__dashValuationId != null) {
+                window.__dashCaseId = null;
+                window.__dashValuationId = null;
+            }
             emailIncluded = { chatgpt: true, claude: true, gemini: true };
             updateEmailIncludeToggles();
             const step6Textareas = document.querySelectorAll('#step6 textarea');
