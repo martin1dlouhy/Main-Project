@@ -538,6 +538,9 @@
             white-space: nowrap;
             width: 140px;
         }
+        /* Plomby a omezení na LV — pro úvěr zásadní, zvýraznit */
+        .lv-results-preview tr.lv-warn td { color: var(--warning); }
+        .lv-results-preview tr.lv-warn td:first-child { color: var(--warning); }
 
         /* ===== DYNAMIC LIST (Zajištění, Dokumentace) ===== */
         .dynamic-list { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -3607,6 +3610,19 @@
         return images;
     }
 
+    // Soubor → base64 (bez prefixu data:…;base64,)
+    function fileToBase64(file) {
+        return new Promise(function(resolve, reject) {
+            var reader = new FileReader();
+            reader.onload = function() {
+                var s = String(reader.result || '');
+                resolve(s.indexOf(',') !== -1 ? s.split(',')[1] : s);
+            };
+            reader.onerror = function() { reject(reader.error || new Error('Soubor se nepodařilo načíst')); };
+            reader.readAsDataURL(file);
+        });
+    }
+
     async function extractTextFromDOCX(file) {
         var arrayBuffer = await file.arrayBuffer();
         var zip = new PizZip(arrayBuffer);
@@ -3630,11 +3646,17 @@
                 var ext = lvFiles[i].name.split('.').pop().toLowerCase();
                 var text = '';
                 var pageImages = null;
+                var pdfBase64 = '';
 
                 if (ext === 'pdf') {
                     text = await extractTextFromPDF(lvFiles[i].file);
+                    // Celé PDF jde Claudovi (čte text i rozložení tabulek, i skeny); text z pdf.js je záloha.
+                    // Obří PDF (nad 20 MB) → původní postup přes text / obrázky stránek.
+                    if (lvFiles[i].file.size <= 20 * 1024 * 1024) {
+                        pdfBase64 = await fileToBase64(lvFiles[i].file);
+                    }
                     // If text extraction failed, fall back to image mode
-                    if (!text || text.trim().length < 20) {
+                    if (!pdfBase64 && (!text || text.trim().length < 20)) {
                         console.log(lvFiles[i].name + ': text extraction yielded only ' + (text ? text.trim().length : 0) + ' chars, falling back to image mode');
                         lvFiles[i].status = 'extracting';
                         renderLVFileList();
@@ -3647,7 +3669,7 @@
                 var hasText = text && text.trim().length >= 20;
                 var hasImages = pageImages && pageImages.length > 0;
 
-                if (!hasText && !hasImages) {
+                if (!hasText && !hasImages && !pdfBase64) {
                     lvFiles[i].status = 'error';
                     showToast('Nepodařilo se extrahovat text z ' + lvFiles[i].name, 'error');
                     renderLVFileList();
@@ -3669,6 +3691,9 @@
                 }
                 if (hasImages) {
                     requestBody.images = pageImages;
+                }
+                if (pdfBase64) {
+                    requestBody.pdf = pdfBase64;
                 }
 
                 var postParseLv = function () {
@@ -3750,6 +3775,15 @@
                 var vbStr = lv.vecna_bremena.map(function(v) { return e(v.typ); }).join('<br>');
                 html += '<tr><td>Věcná břemena</td><td>' + vbStr + '</td></tr>';
             }
+            // Pro úvěr zásadní: probíhající řízení (plomby) a omezení (exekuce, insolvence, zákaz zcizení…)
+            var lvTexts = function(arr) {
+                return (Array.isArray(arr) ? arr : []).map(function(x) {
+                    return typeof x === 'string' ? x : (x && (x.popis || x.typ || JSON.stringify(x))) || '';
+                }).filter(function(s) { return String(s).trim(); });
+            };
+            var plomby = lvTexts(lv.plomby), omezeni = lvTexts(lv.omezeni);
+            if (plomby.length) html += '<tr class="lv-warn"><td>⚠ Plomby a upozornění</td><td>' + plomby.map(e).join('<br>') + '</td></tr>';
+            if (omezeni.length) html += '<tr class="lv-warn"><td>⚠ Omezení</td><td>' + omezeni.map(e).join('<br>') + '</td></tr>';
             if (lv.collateral_summary) {
                 html += '<tr><td style="color:var(--accent);font-weight:700;">Zajištění</td><td style="font-weight:600;">' + e(lv.collateral_summary) + '</td></tr>';
             }
@@ -3792,6 +3826,8 @@
         }
         if (!inserted) addCollateralItem(lv.collateral_summary, owner);
         showToast('Zajištění vloženo: LV ' + (lv.lv_cislo || '?'), 'success');
+        var hasRisk = (Array.isArray(lv.plomby) && lv.plomby.length) || (Array.isArray(lv.omezeni) && lv.omezeni.length);
+        if (hasRisk) showToast('Pozor: LV ' + (lv.lv_cislo || '?') + ' má plombu nebo omezení (viz analýza LV) — prověř před nabídkou', 'info');
     }
 
     // ===== ARES AUTOCOMPLETE =====

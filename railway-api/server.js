@@ -522,13 +522,21 @@ app.post('/api/parse-lv', async function (req, res) {
 
     var text = req.body && req.body.text;
     var images = req.body && req.body.images; // Array of base64 JPEG strings (fallback when pdf.js can't extract text)
+    // Celé PDF (base64) — Claude ho čte nativně (text + vzhled stránek, i skeny). Text z pdf.js slouží jako záloha.
+    var pdf = req.body && typeof req.body.pdf === 'string' ? req.body.pdf : '';
+    if (pdf.indexOf(',') !== -1 && /^data:/.test(pdf)) pdf = pdf.split(',')[1];
     var fileName = req.body && req.body.fileName;
     var instructions = req.body && req.body.instructions;
 
     var hasText = text && text.trim().length >= 20;
     var hasImages = images && Array.isArray(images) && images.length > 0;
+    var hasPdf = pdf.length > 100;
 
-    if (!hasText && !hasImages) {
+    if (hasPdf && pdf.length > 28 * 1024 * 1024) {
+        return res.status(400).json({ error: 'PDF je příliš velké (max. cca 20 MB).' });
+    }
+
+    if (!hasText && !hasImages && !hasPdf) {
         return res.status(400).json({ error: 'Z dokumentu se nepodařilo extrahovat text ani obrázky.' });
     }
 
@@ -543,7 +551,7 @@ app.post('/api/parse-lv', async function (req, res) {
     var client = new Anthropic({ apiKey: apiKey });
 
     var systemPrompt = 'Jsi expert na analýzu českých katastrálních dokumentů — Listů vlastnictví (LV).\n' +
-        'Tvým úkolem je z poskytnutého textu extrahovat strukturovaná data.\n\n' +
+        'Tvým úkolem je z poskytnutého dokumentu (PDF, text nebo obrázky stránek) extrahovat strukturovaná data.\n\n' +
         'KRITICKÉ PRAVIDLO: Vrať POUZE platný JSON. Žádný markdown, žádné ```json``` bloky, žádný text před ani za JSON. Odpověď MUSÍ začínat znakem { nebo [.\n\n' +
         'Formát JSON:\n' +
         '{\n' +
@@ -573,7 +581,8 @@ app.post('/api/parse-lv', async function (req, res) {
         '      "opravneny": "oprávněný subjekt nebo null"\n' +
         '    }\n' +
         '  ],\n' +
-        '  "omezeni": ["další omezení vlastnického práva - textové popisy"],\n' +
+        '  "omezeni": ["další omezení vlastnického práva a jiné zápisy z části C a D (exekuce, exekuční příkaz, insolvence, zákaz zcizení nebo zatížení, předkupní právo, poznámky) — krátké textové popisy"],\n' +
+        '  "plomby": ["plomby a upozornění — probíhající řízení u katastru (číslo řízení a čeho se týká, např. V-1234/2026-101 vklad zástavního práva); prázdné pole, pokud nejsou evidovány"],\n' +
         '  "collateral_summary": "Krátká IDENTIFIKACE zástavy do Term Sheetu. Formát: LV [číslo], kú [území] ([obec]) — [parcely]. POUZE identifikace (LV, kú, parcely s výměrou a druhem), NIKDY vlastník ani stav zástavních práv/věcných břemen. Má-li LV více než 4 parcely, nevypisuj všechny — shrň počtem a celkovou výměrou (např. LV 100, kú Zahádka (Čížkov) — 32 pozemků, cca 12,5 ha). Příklad krátkého: LV 41, kú Hejčín (Olomouc) — st. p.č. St. 319 (165 m², zastavěná plocha, součástí bytový dům č.p. 255) + p.č. 406/21 (515 m², zahrada)"\n' +
         '}\n\n' +
         'Pokud některé údaje v textu nejsou, vrať null nebo prázdné pole.\n' +
@@ -680,13 +689,21 @@ app.post('/api/parse-lv', async function (req, res) {
         return null;
     }
 
-    var mode = hasImages && !hasText ? 'images' : 'text';
-    console.log('LV parse request:', { fileName: fileName, mode: mode, textLength: hasText ? text.length : 0, imageCount: hasImages ? images.length : 0 });
+    var mode = hasPdf ? 'pdf' : (hasImages && !hasText ? 'images' : 'text');
+    console.log('LV parse request:', { fileName: fileName, mode: mode, textLength: hasText ? text.length : 0, imageCount: hasImages ? images.length : 0, pdfBase64Length: hasPdf ? pdf.length : 0 });
 
     try {
         var userContentParts;
 
-        if (mode === 'images') {
+        if (mode === 'pdf') {
+            // Nativní PDF — Claude vidí text i rozložení tabulek každé stránky (a přečte i sken)
+            userContentParts = [
+                { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdf } },
+                { type: 'text', text: 'Analyzuj tento List vlastnictví z katastru nemovitostí (soubor: ' + (fileName || 'neznámý') + ').\n' +
+                    (instructions ? 'POKYN OD UŽIVATELE: ' + instructions + '\n' : '') +
+                    'Přečti a extrahuj VŠECHNA data ze VŠECH stránek dokumentu.' }
+            ];
+        } else if (mode === 'images') {
             // Multimodal mode — send page images to Claude
             var textIntro = 'Analyzuj tento List vlastnictví z katastru nemovitostí (soubor: ' + (fileName || 'neznámý') + ').\n' +
                 'Níže jsou obrázky jednotlivých stránek PDF.\n' +
@@ -719,19 +736,34 @@ app.post('/api/parse-lv', async function (req, res) {
             userContentParts = textContent;
         }
 
-        // claude-sonnet-4-6 nepodporuje assistant prefill — konverzace musí končit user zprávou.
+        // Bez assistant prefill — konverzace končí user zprávou.
         // JSON (objekt nebo pole) vynucuje system prompt; tryParseJSON ho robustně extrahuje.
-        var maxTokens = mode === 'images' ? 16384 : 8192;
-        var messages = [{ role: 'user', content: userContentParts }];
+        var maxTokens = mode === 'text' ? 8192 : 16384;
+        var message;
+        try {
+            message = await client.messages.create({
+                model: 'claude-sonnet-5-5',
+                max_tokens: maxTokens,
+                messages: [{ role: 'user', content: userContentParts }],
+                system: systemPrompt
+            });
+        } catch (pdfErr) {
+            // PDF API odmítlo (zaheslované, poškozené, příliš stránek) → záloha: text z pdf.js
+            if (mode !== 'pdf' || pdfErr.status !== 400 || !hasText) throw pdfErr;
+            console.warn('LV parse: PDF odmítnuto (' + pdfErr.message + '), zkouším text z pdf.js');
+            mode = 'text';
+            message = await client.messages.create({
+                model: 'claude-sonnet-5-5',
+                max_tokens: 8192,
+                messages: [{ role: 'user', content: 'Analyzuj tento List vlastnictví z katastru nemovitostí (soubor: ' + (fileName || 'neznámý') + '):\n\n' +
+                    (instructions ? 'POKYN OD UŽIVATELE: ' + instructions + '\n\n' : '') + text.substring(0, 30000) }],
+                system: systemPrompt
+            });
+        }
 
-        var message = await client.messages.create({
-            model: 'claude-sonnet-4-6',
-            max_tokens: maxTokens,
-            messages: messages,
-            system: systemPrompt
-        });
-
-        var responseText = (message.content[0] && message.content[0].text) || '';
+        // Všechny textové bloky (nový model může před text vložit jiný typ bloku)
+        var responseText = (message.content || []).filter(function (b) { return b && b.type === 'text'; })
+            .map(function (b) { return b.text || ''; }).join('');
         var stopReason = message.stop_reason || 'unknown';
         console.log('Claude response length:', responseText.length, 'stop_reason:', stopReason, 'mode:', mode, 'first 200 chars:', responseText.substring(0, 200));
 
