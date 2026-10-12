@@ -797,16 +797,25 @@
         .empty-state p { font-size: 0.9375rem; margin-bottom: 1.5rem; }
 
         /* ===== TOAST ===== */
+        /* bottom 5rem = nad tlačítkem Google Drive vpravo dole */
         .toast-container {
             position: fixed;
-            bottom: 2rem;
+            bottom: 5rem;
             right: 2rem;
             z-index: 10000;
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
         }
+        /* position/left/bottom/transform ruší sdílený .toast z app-shell.css — ten hlášku
+           po náběhové animaci posunul pod okraj obrazovky (jen „problikla") */
         .toast {
+            position: relative;
+            left: auto;
+            bottom: auto;
+            transform: none;
+            z-index: auto;
+            cursor: pointer;
             background: var(--bg-primary);
             border: 1px solid var(--border-color);
             border-radius: 10px;
@@ -3377,13 +3386,21 @@
             info: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
         };
         toast.innerHTML = (icons[type] || icons.info) + '<span>' + escapeHtml(msg) + '</span>';
+        toast.title = 'Kliknutím zavřete';
         container.appendChild(toast);
-        setTimeout(function() {
+        var closed = false;
+        function close() {
+            if (closed) return;
+            closed = true;
             toast.style.opacity = '0';
             toast.style.transform = 'translateX(100%)';
             toast.style.transition = 'all 0.3s ease';
             setTimeout(function() { toast.remove(); }, 300);
-        }, 4000);
+        }
+        toast.addEventListener('click', close);
+        // Doba zobrazení podle délky textu (4–12 s, chyby o polovinu déle) — aby se dala přečíst
+        var ms = Math.max(4000, Math.min(12000, 1500 + String(msg || '').length * 70));
+        setTimeout(close, type === 'error' ? Math.min(15000, Math.round(ms * 1.5)) : ms);
     }
 
     // ===== CUSTOM DROPDOWN =====

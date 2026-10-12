@@ -1232,7 +1232,15 @@
             gap: 1rem;
         }
 
+        /* position/left/bottom/transform ruší sdílený .toast z app-shell.css — ten hlášku
+           po náběhové animaci posunul pod okraj obrazovky (jen „problikla") */
         .toast {
+            position: relative;
+            left: auto;
+            bottom: auto;
+            transform: none;
+            z-index: auto;
+            cursor: pointer;
             background-color: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 10px;
@@ -3966,11 +3974,19 @@
                     <div class="toast-message">${message}</div>
                 </div>
             `;
+            toast.title = 'Kliknutím zavřete';
             container.appendChild(toast);
-            setTimeout(() => {
+            let closed = false;
+            const close = () => {
+                if (closed) return;
+                closed = true;
                 toast.style.animation = 'slideIn 0.3s ease-out reverse';
                 setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            };
+            toast.addEventListener('click', close);
+            // Doba zobrazení podle délky textu (4–12 s, chyby o polovinu déle) — aby se dala přečíst
+            const ms = Math.max(4000, Math.min(12000, 1500 + String(message || '').length * 70));
+            setTimeout(close, type === 'error' ? Math.min(15000, Math.round(ms * 1.5)) : ms);
         }
 
         // ================== COPY TO CLIPBOARD ==================

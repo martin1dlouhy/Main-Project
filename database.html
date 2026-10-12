@@ -1482,7 +1482,12 @@
             gap: 8px;
             pointer-events: none;
         }
+        /* position/left/bottom ruší sdílený .toast z app-shell.css (fixed uprostřed dole) —
+           jinak se hlášky překrývaly mimo toast-host */
         .toast {
+            position: relative;
+            left: auto;
+            bottom: auto;
             background: var(--bg-elevated);
             border: 1px solid var(--line-strong);
             border-left: 3px solid var(--amber);
@@ -6935,10 +6940,12 @@ function toast(type, message, duration) {
     t.textContent = message;
     host.appendChild(t);
     requestAnimationFrame(() => t.classList.add('show'));
+    // Výchozí doba podle délky textu (4–12 s, chyby o polovinu déle) — aby se dala přečíst
+    const auto = Math.max(4000, Math.min(12000, 1500 + String(message || '').length * 70));
     setTimeout(() => {
         t.classList.remove('show');
         setTimeout(() => t.remove(), 400);
-    }, duration || 3500);
+    }, duration || (type === 'error' ? Math.min(15000, Math.round(auto * 1.5)) : auto));
 }
 
 // ============================================================

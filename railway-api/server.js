@@ -838,6 +838,64 @@ function formatCzAmount(num) {
     return Math.round(num).toLocaleString('cs-CZ').replace(/ /g, '.').replace(/\s/g, '.');
 }
 
+// Částky a procenta slovy pro smlouvy („38.000.000 Kč (slovy třicet osm milionů korun českých)“).
+// DOSLOVNÁ kopie je v loan-documentation.html (náhled promptu / ruční chat) — měnit obojí.
+// gender jednotek 1–2: 'm' jeden/dva, 'f' jedna/dvě, 'n' jedno/dvě
+function czNumberWords(n, gender) {
+    n = Math.floor(Math.abs(n));
+    if (n === 0) return 'nula';
+    var ONES = ['', 'jeden', 'dva', 'tři', 'čtyři', 'pět', 'šest', 'sedm', 'osm', 'devět'];
+    var TEENS = ['deset', 'jedenáct', 'dvanáct', 'třináct', 'čtrnáct', 'patnáct', 'šestnáct', 'sedmnáct', 'osmnáct', 'devatenáct'];
+    var TENS = ['', '', 'dvacet', 'třicet', 'čtyřicet', 'padesát', 'šedesát', 'sedmdesát', 'osmdesát', 'devadesát'];
+    var HUNDREDS = ['', 'sto', 'dvě stě', 'tři sta', 'čtyři sta', 'pět set', 'šest set', 'sedm set', 'osm set', 'devět set'];
+    function unit(d, g) {
+        if (d === 1) return g === 'f' ? 'jedna' : (g === 'n' ? 'jedno' : 'jeden');
+        if (d === 2) return g === 'm' ? 'dva' : 'dvě';
+        return ONES[d];
+    }
+    function below1000(x, g) {
+        var parts = [];
+        var h = Math.floor(x / 100), r = x % 100;
+        if (h) parts.push(HUNDREDS[h]);
+        if (r >= 10 && r < 20) {
+            parts.push(TEENS[r - 10]);
+        } else {
+            if (Math.floor(r / 10)) parts.push(TENS[Math.floor(r / 10)]);
+            if (r % 10) parts.push(unit(r % 10, g));
+        }
+        return parts.join(' ');
+    }
+    function group(x, g, one, few, many) {
+        var r = x % 100, u = x % 10;
+        var noun = (r >= 10 && r < 20) ? many : (u === 1 ? one : (u >= 2 && u <= 4 ? few : many));
+        return below1000(x, g) + ' ' + noun;
+    }
+    var words = [];
+    var bil = Math.floor(n / 1e9), mil = Math.floor(n / 1e6) % 1000, th = Math.floor(n / 1000) % 1000, rest = n % 1000;
+    if (bil) words.push(group(bil, 'f', 'miliarda', 'miliardy', 'miliard'));
+    if (mil) words.push(group(mil, 'm', 'milion', 'miliony', 'milionů'));
+    if (th) words.push(group(th, 'm', 'tisíc', 'tisíce', 'tisíc'));
+    if (rest) words.push(below1000(rest, gender || 'm'));
+    return words.join(' ');
+}
+// Celá kladná částka (číslo) slovy včetně měny; jinak ''
+function czAmountWords(n, currency) {
+    if (!(n > 0) || n !== Math.floor(n) || n >= 1e12) return '';
+    var cur = String(currency || 'CZK').toUpperCase();
+    var r = n % 100, u = n % 10;
+    var k = (r >= 10 && r < 20) ? 2 : (u === 1 ? 0 : (u >= 2 && u <= 4 ? 1 : 2));
+    if (cur === 'CZK') return czNumberWords(n, 'f') + ' ' + ['koruna česká', 'koruny české', 'korun českých'][k];
+    if (cur === 'EUR') return czNumberWords(n, 'n') + ' ' + ['euro', 'eura', 'eur'][k];
+    return czNumberWords(n, 'm') + ' ' + cur;
+}
+// Celé procento slovy („8“ → „osm procent“); desetinná čísla → ''
+function czPercentWords(n) {
+    if (!(n > 0) || n !== Math.floor(n) || n > 1000) return '';
+    var r = n % 100, u = n % 10;
+    var k = (r >= 10 && r < 20) ? 2 : (u === 1 ? 0 : (u >= 2 && u <= 4 ? 1 : 2));
+    return czNumberWords(n, 'n') + ' ' + ['procento', 'procenta', 'procent'][k];
+}
+
 // =============================================
 // Loan doc prompt builders — single source of truth.
 // Tyto funkce VOLÁ jak /api/generate-loan-doc (reálné AI volání), tak
@@ -982,9 +1040,21 @@ function buildLoanDocDataDescription(formData) {
     d += '\n=== PARAMETRY ÚVĚRU ===\n';
     if (formData.purpose) d += 'Účel úvěru: ' + formData.purpose + '\n';
     if (formData.amount) d += 'Výše úvěru: ' + formData.amount + ' ' + (formData.currency || 'CZK') + '\n';
+    var amountWords = czAmountWords(parseCzNumber(formData.amount), formData.currency);
+    if (amountWords) d += 'Výše úvěru slovy: ' + amountWords + '\n';
     if (formData.currency) d += 'Měna: ' + formData.currency + '\n';
     if (formData.drawdownDate) d += 'Datum čerpání: ' + formData.drawdownDate + '\n';
     if (formData.drawdownType) d += 'Typ čerpání: ' + formData.drawdownType + '\n';
+    var tranchesList = (formData.drawdownType === 'Postupné' && Array.isArray(formData.tranches))
+        ? formData.tranches.filter(function (t) { return t && (t.amount || t.date); }) : [];
+    if (tranchesList.length) {
+        d += 'Čerpání po částech:\n';
+        tranchesList.forEach(function (t, i) {
+            var tWords = czAmountWords(parseCzNumber(t.amount), formData.currency);
+            d += '  ' + (i + 1) + '. část: ' + (t.amount ? t.amount + ' ' + (formData.currency || 'CZK') : 'částka neuvedena') +
+                 (tWords ? ' (slovy ' + tWords + ')' : '') + (t.date ? ', předpokládané datum čerpání ' + t.date : '') + '\n';
+        });
+    }
     if (formData.interest) d += 'Úroková sazba: ' + formData.interest + ' % p.a.\n';
     if (formData.interestPayment) d += 'Placení úroků: ' + formData.interestPayment + '\n';
     if (formData.maturity) d += 'Doba splatnosti: ' + formData.maturity + ' ' + (formData.maturityUnit || 'let') + '\n';
@@ -1012,6 +1082,16 @@ function buildLoanDocDataDescription(formData) {
             }
         } else {
             d += 'Poplatek za sjednání: ' + formData.originationFee + ' ' + currency + '\n';
+        }
+        // Poplatek se strhne z první vyplácené částky (šablona: „…a na Účet pro čerpání tak bude vyplacena částka …“)
+        var payoutFeeType = String(formData.originationFeeType || '').toLowerCase();
+        var payoutAmount = parseCzNumber(formData.amount);
+        var payoutFeeNum = parseCzNumber(formData.originationFee);
+        var payoutFee = (payoutFeeType === 'percent' || payoutFeeType === '%' || payoutFeeType === 'pct')
+            ? (payoutAmount > 0 ? payoutAmount * payoutFeeNum / 100 : NaN) : payoutFeeNum;
+        var payoutFirst = tranchesList.length ? parseCzNumber(tranchesList[0].amount) : payoutAmount;
+        if (payoutFee > 0 && payoutFirst > payoutFee) {
+            d += 'K výplatě při prvním čerpání (poplatek za sjednání se strhne z první části): ' + formatCzAmount(payoutFirst - payoutFee) + ' ' + currency + '\n';
         }
     }
     if (formData.otherCosts) d += 'Ostatní náklady: ' + formData.otherCosts + '\n';
@@ -1086,8 +1166,21 @@ function buildLoanDocDataDescription(formData) {
         }
     }
 
+    if (formData.securedDebtsYears || formData.securedMaxAmount || formData.pledgeBanUntil) {
+        d += '\n=== PODMÍNKY ZÁSTAVY ===\n';
+        if (formData.securedDebtsYears) d += 'Zajištěné dluhy vzniknou v období: ' + formData.securedDebtsYears + ' let po dni uzavření úvěrové smlouvy\n';
+        if (formData.securedMaxAmount) {
+            var maxWords = czAmountWords(parseCzNumber(formData.securedMaxAmount), formData.currency);
+            d += 'Maximální celková částka jistiny zajištěných dluhů: ' + formData.securedMaxAmount + ' ' + (formData.currency || 'CZK') + (maxWords ? ' (slovy ' + maxWords + ')' : '') + '\n';
+        }
+        if (formData.pledgeBanUntil) d += 'Zákaz zcizení a zatížení účinný do dne úplného splacení, nejdéle do: ' + formData.pledgeBanUntil + '\n';
+    }
+    if (formData.insuranceDetails) d += '\n=== POJIŠTĚNÍ NEMOVITOSTÍ (VINKULACE) ===\n' + formData.insuranceDetails + '\n';
+    if (formData.shareDetails) d += '\n=== ZASTAVOVANÝ PODÍL ===\n' + formData.shareDetails + '\n';
+
     d += '\n=== DODATEČNÉ ÚDAJE ===\n';
     if (formData.representativeName) d += 'Jednatel/zástupce dlužníka: ' + formData.representativeName + ', funkce: ' + (formData.representativeRole || '') + '\n';
+    if (formData.representative2Name) d += 'Druhý jednatel/zástupce dlužníka (podepisuje společně s prvním): ' + formData.representative2Name + (formData.representative2Role ? ', funkce: ' + formData.representative2Role : '') + '\n';
     if (formData.contactName || formData.contactPhone || formData.contactEmail) d += 'Kontaktní osoba: ' + (formData.contactName || '-') + ', tel: ' + (formData.contactPhone || '') + ', e-mail: ' + (formData.contactEmail || '') + '\n';
     if (formData.deliveryAddress) d += 'Adresa pro doručování dlužníka: ' + formData.deliveryAddress + '\n';
     if (formData.borrowerAccount) d += 'Účet dlužníka: ' + formData.borrowerAccount + ' u ' + (formData.borrowerBank || '') + '\n';
@@ -1100,7 +1193,8 @@ function buildLoanDocDataDescription(formData) {
     if (formData.existingPledge) d += 'Existující zástavní právo k výmazu: ' + formData.existingPledge + '\n';
     if (formData.propertyOwners) d += 'Vlastníci nemovitostí: ' + formData.propertyOwners + '\n';
     if (formData.defaultInterest) d += 'Úrok z prodlení: ' + formData.defaultInterest + ' % p.a.\n';
-    if (formData.accelerationPenalty) d += 'Smluvní pokuta při zesplatnění: ' + formData.accelerationPenalty + ' %\n';
+    var accelWords = czPercentWords(parseCzNumber(formData.accelerationPenalty));
+    if (formData.accelerationPenalty) d += 'Smluvní pokuta při zesplatnění: ' + formData.accelerationPenalty + ' %' + (accelWords ? ' (slovy ' + accelWords + ')' : '') + '\n';
     if (formData.breachPenalty) d += 'Smluvní pokuta za porušení: ' + formData.breachPenalty + ' %\n';
     if (formData.signDate) d += 'Datum podpisu: ' + formData.signDate + '\n';
     if (formData.signPlace) d += 'Místo podpisu: ' + formData.signPlace + '\n';

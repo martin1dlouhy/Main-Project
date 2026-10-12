@@ -168,11 +168,13 @@ window.GDriveSync = (function() {
         t.className = `gdrive-toast ${type}`;
         t.textContent = msg;
         document.body.appendChild(t);
+        // Doba zobrazení podle délky textu (4–10 s) — delší hlášky se dají dočíst
+        const ms = Math.max(4000, Math.min(10000, 1500 + String(msg || '').length * 70));
         setTimeout(() => {
             t.style.opacity = '0';
             t.style.transition = 'opacity 0.3s';
             setTimeout(() => t.remove(), 300);
-        }, 3000);
+        }, ms);
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -577,6 +579,28 @@ window.GDriveSync = (function() {
         return true;
     }
 
+    // Přesune soubor ve sdílené složce (relativně k ROOT, např. "Šablony/x.docx") do koše Drive —
+    // dá se obnovit. Vrací false, když soubor (nebo složka) neexistuje. Složky nevytváří.
+    async function trashShared(path) {
+        if (!accessToken) throw new Error('Not authenticated');
+        if (!rootFolderId) await ensureFolders();
+        const parts = path.split('/').filter(Boolean);
+        const filename = parts.pop();
+        let parentId = rootFolderId;
+        for (let i = 0; i < parts.length; i++) {
+            parentId = await findFolder(parts[i], parentId);
+            if (!parentId) return false;
+        }
+        const file = await findFile(filename, parentId);
+        if (!file) return false;
+        await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trashed: true })
+        });
+        return true;
+    }
+
     // ──────────────────────────────────────────────────────────────────
     //  Init
     // ──────────────────────────────────────────────────────────────────
@@ -659,6 +683,7 @@ window.GDriveSync = (function() {
         listShared: listShared,
         getFolderUrl: getFolderUrl,
         deleteFile: deleteFile,
+        trashShared: trashShared,
         isConnected: () => !!accessToken,
         showToast: showToast
     };
