@@ -8,7 +8,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="design-system/tokens.css">
     <link rel="stylesheet" href="design-system/app-shell.css">
-    <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -548,6 +547,13 @@
             align-items: center;
         }
         .dynamic-item input, .dynamic-item select { flex: 1; }
+        /* Položka zajištění: označení nemovitosti | vlastník */
+        .collateral-item .collateral-text { flex: 2 1 0; min-width: 0; }
+        .collateral-item .collateral-owner { flex: 1 1 0; min-width: 0; }
+        @media (max-width: 640px) {
+            .collateral-item { flex-wrap: wrap; }
+            .collateral-item .collateral-text { flex: 1 1 100%; }
+        }
         .btn-remove-item {
             width: 32px;
             height: 32px;
@@ -1168,6 +1174,11 @@
                             <input type="text" class="form-input" id="f-sidlo" placeholder="např. Těšetiny 6, 339 01 Mochtín">
                         </div>
                         <div class="form-group">
+                            <label class="form-label">Podepisující za úvěrovaného</label>
+                            <input type="text" class="form-input" id="f-signatory" placeholder="např. Jan Novák, jednatel">
+                            <p class="form-hint" id="f-signatory-hint">Předvyplní se do formuláře pro klienta, klient ho jen potvrdí. Doplní se z ARES, když má firma jednoho jednatele.</p>
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Stav</label>
                             <select class="form-select" id="f-status">
                                 <option value="draft">Návrh</option>
@@ -1339,13 +1350,15 @@
                     <div style="margin-top:1rem;">
                         <label class="form-label">Položky zajištění</label>
                         <div id="collateral-list" class="dynamic-list">
-                            <div class="dynamic-item">
-                                <input type="text" class="form-input" placeholder="např. LV 1234 k. ú. Vinohrady (bytový dům)">
+                            <div class="dynamic-item collateral-item">
+                                <input type="text" class="form-input collateral-text" placeholder="např. LV 1234 k. ú. Vinohrady (bytový dům)">
+                                <input type="text" class="form-input collateral-owner" placeholder="Vlastník (např. Úvěrovaný)" title="Vlastník nemovitosti — předvyplní se do formuláře pro klienta">
                                 <button class="btn-remove-item" onclick="removeItem(this)" title="Odebrat">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                 </button>
                             </div>
                         </div>
+                        <p class="form-hint">Vlastník se doplní z LV. Ve formuláři pro klienta podle něj předvyplníme vlastníka zástavy — prázdné pole = klient vybere sám.</p>
                         <button class="btn-add-item" onclick="addCollateralItem()">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             Přidat zajištění
@@ -1395,6 +1408,16 @@
                             <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
                             <span>Vinkulace pojistného plnění</span>
                         </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="doc-plna-moc" checked>
+                            <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span>Plná moc k přímému prodeji</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="doc-rucitelske">
+                            <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                            <span>Ručitelské prohlášení</span>
+                        </label>
                     </div>
                     <div style="margin-top:0.75rem;">
                         <label class="form-label">Další dokumenty</label>
@@ -1413,29 +1436,29 @@
                         Údaje od klienta
                     </h2>
                     <div class="checkbox-group">
-                        <label class="checkbox-item" title="Na konec Term Sheetu (za podmínky) se vloží zvýrazněná výzva a tabulka, kterou klient po odsouhlasení vyplní. Vrácený Word pak načteš v aplikaci Úvěrová dokumentace.">
+                        <label class="checkbox-item" title="Za nabídku se na novou stranu vloží formulář, který klient po odsouhlasení vyplní ve Wordu (šedá pole, rozbalovací seznamy). Vrácený Word pak načteš v aplikaci Úvěrová dokumentace.">
                             <input type="checkbox" id="cd-enabled" checked onchange="toggleClientDataOptions()">
                             <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-                            <span>Vložit blok „Údaje pro smluvní dokumentaci"</span>
+                            <span>Vložit formulář „Údaje pro smluvní dokumentaci"</span>
                         </label>
                     </div>
                     <div id="cd-options" style="margin-left:1.75rem;margin-top:0.5rem;">
-                        <p class="form-hint" style="margin:0 0 0.5rem;">Osoby, kontakt a účet pro čerpání jsou v tabulce vždy. Volitelné bloky (předvolí se samy podle případu):</p>
+                        <p class="form-hint" style="margin:0 0 0.5rem;">Úvěrovaný (podpis, kontakt, účet) a zastavované nemovitosti s vlastníky jsou ve formuláři vždy. Ručitel a zastavovaný podíl se přidají podle zaškrtnuté dokumentace. Volitelné části (předvolí se samy podle případu):</p>
                         <div class="checkbox-group">
-                            <label class="checkbox-item">
-                                <input type="checkbox" id="cd-pledgor">
-                                <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-                                <span>Zástavce (jiný než dlužník)</span>
-                            </label>
                             <label class="checkbox-item" title="Předvolí se samo, když LV analýza najde existující zástavní právo">
                                 <input type="checkbox" id="cd-refi">
                                 <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-                                <span>Refinancování — payoff stávajícího věřitele</span>
+                                <span>Refinancování — doplacení stávajícího věřitele</span>
                             </label>
                             <label class="checkbox-item" title="Předvolí se samo při čerpání ve tranších">
                                 <input type="checkbox" id="cd-tranches">
                                 <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-                                <span>Tranše čerpání</span>
+                                <span>Čerpání ve více částech (tranše)</span>
+                            </label>
+                            <label class="checkbox-item" title="Klient ve Wordu mění jen pole formuláře — nepřepíše podmínky ani popisky. Odškrtni jen výjimečně (např. když klient píše v jiném programu než Word).">
+                                <input type="checkbox" id="cd-protect" checked>
+                                <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+                                <span>Zamknout dokument — klient vyplní jen šedá pole (doporučeno)</span>
                             </label>
                         </div>
                     </div>
@@ -1643,7 +1666,7 @@
                         curEl.value = data.mena;
                         document.getElementById('amount-unit').textContent = data.mena;
                         document.getElementById('collateral-unit').textContent = data.mena;
-                        syncCustomDropdown(curEl);
+                        syncTsDropdown(curEl);
                     }
                     calcLTV();
                 }
@@ -1684,10 +1707,22 @@
         };
     }
 
+    // Čerstvý session token pro AI endpointy. Token uložený v sessionStorage po redeployi
+    // Railway neplatí (server drží sessions v paměti) — parse-lv by pak vracel 401.
+    function refreshTsToken() {
+        var cached = sessionStorage.getItem('ts-token');
+        if (!window.ProfilendAuth) return Promise.resolve(cached);
+        return ProfilendAuth.getSessionToken().then(function (token) {
+            if (token) sessionStorage.setItem('ts-token', token);
+            return token || cached;
+        }).catch(function () { return cached; });
+    }
+
     (function initPIN() {
         // Starší sessions nemají ts-token — vynutit nový PIN, jinak by parse-lv vracel 401.
         if (sessionStorage.getItem('ts-auth') === 'true' && sessionStorage.getItem('ts-token')) {
             unlockTermsheetApp();
+            refreshTsToken();
             return;
         }
 
@@ -1910,15 +1945,17 @@
         return Math.round(v).toLocaleString('cs-CZ');
     }
 
-    // Display string for the DOCX export (built from the saved data object).
+    // Text pro Term Sheet (z uložených dat), např. „380 000 Kč měsíčně“
     function paymentDisplayFromData(data) {
         var amount = parseAmount(data.amount);
         var rate = parseFloat(String(data.interest || '').replace(',', '.')) || 0;
         var months = maturityMonths(data.maturity, data.maturityUnit);
         var res = calcPayment(amount, rate, months, data.interestPayment);
         if (!res) return '';
-        if (res.value == null) return res.note;
-        return fmtMoney(res.value) + ' ' + (data.currency || 'CZK') + ' ' + res.period;
+        if (res.value == null) return 'Bez pravidelných splátek';
+        var cur = (!data.currency || data.currency === 'CZK') ? 'Kč' : data.currency;
+        var period = { '/ měsíc': 'měsíčně', '/ čtvrtletí': 'čtvrtletně', '/ pololetí': 'pololetně' }[res.period] || res.period;
+        return fmtMoney(res.value) + ' ' + cur + ' ' + period + (data.interestPayment === 'Anuitní' ? ' (anuita)' : '');
     }
 
     // Live update of the on-screen "orientační splátka" box.
@@ -1969,13 +2006,18 @@
         }
     }
 
-    function addCollateralItem() {
+    // Položka zajištění = označení nemovitosti + vlastník (vlastník předvyplní formulář pro klienta)
+    function addCollateralItem(text, owner) {
         var list = document.getElementById('collateral-list');
         var div = document.createElement('div');
-        div.className = 'dynamic-item';
-        div.innerHTML = '<input type="text" class="form-input" placeholder="např. LV xxx kú Obec (typ)">' +
+        div.className = 'dynamic-item collateral-item';
+        div.innerHTML = '<input type="text" class="form-input collateral-text" placeholder="např. LV xxx kú Obec (typ)">' +
+            '<input type="text" class="form-input collateral-owner" placeholder="Vlastník (např. Úvěrovaný)" title="Vlastník nemovitosti — předvyplní se do formuláře pro klienta">' +
             '<button class="btn-remove-item" onclick="removeItem(this)" title="Odebrat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+        div.querySelector('.collateral-text').value = text || '';
+        div.querySelector('.collateral-owner').value = owner || '';
         list.appendChild(div);
+        return div;
     }
 
     function addCustomDoc() {
@@ -1993,10 +2035,18 @@
 
     // ===== COLLECT FORM DATA =====
     function collectFormData() {
+        // collateralItems a collateralOwnerTexts jsou zarovnané podle pořadí (prázdné položky se vynechají)
         var collateralItems = [];
-        document.querySelectorAll('#collateral-list .dynamic-item input').forEach(function(inp) {
-            if (inp.value.trim()) collateralItems.push(inp.value.trim());
+        var collateralOwnerTexts = [];
+        document.querySelectorAll('#collateral-list .collateral-item').forEach(function(row) {
+            var textEl = row.querySelector('.collateral-text');
+            var ownerEl = row.querySelector('.collateral-owner');
+            var text = textEl ? textEl.value.trim() : '';
+            if (!text) return;
+            collateralItems.push(text);
+            collateralOwnerTexts.push(ownerEl ? ownerEl.value.trim() : '');
         });
+        var lvCreditors = lvCreditorsFromResults();
 
         var docs = [];
         if (document.getElementById('doc-zastavni').checked) docs.push('Zástavní smlouva – nemovitosti');
@@ -2006,6 +2056,8 @@
         if (document.getElementById('doc-nz').checked) docs.push('Notářský zápis (NZ)');
         if (document.getElementById('doc-smenka').checked) docs.push('Směnka');
         if (document.getElementById('doc-vinkulace').checked) docs.push('Vinkulace pojistného plnění');
+        if (document.getElementById('doc-plna-moc').checked) docs.push('Plná moc k přímému prodeji');
+        if (document.getElementById('doc-rucitelske').checked) docs.push('Ručitelské prohlášení');
         document.querySelectorAll('#custom-docs-list .dynamic-item input').forEach(function(inp) {
             if (inp.value.trim()) docs.push(inp.value.trim());
         });
@@ -2023,6 +2075,7 @@
             ico: document.getElementById('f-ico').value.trim(),
             spisovaZnacka: document.getElementById('f-spisova-znacka').value.trim(),
             sidlo: document.getElementById('f-sidlo').value.trim(),
+            signatory: document.getElementById('f-signatory').value.trim(),
             status: document.getElementById('f-status').value,
             purpose: document.getElementById('f-purpose').value.trim(),
             amount: document.getElementById('f-amount').value.trim(),
@@ -2041,15 +2094,18 @@
             otherCosts: document.getElementById('f-other-costs').value.trim(),
             collateralValue: document.getElementById('f-collateral-value').value.trim(),
             collateralItems: collateralItems,
+            collateralOwnerTexts: collateralOwnerTexts,
+            // věřitelé z LV (analýza LV se neukládá — po načtení TS platí poslední uložený seznam)
+            lvCreditors: lvCreditors.length ? lvCreditors : loadedLvCreditors.slice(),
             documentation: docs,
             validityDate: document.getElementById('f-validity-date').value,
             clientNote: document.getElementById('f-client-note').value.trim(),
             notes: document.getElementById('f-notes').value.trim(),
             clientChecklist: {
                 enabled: document.getElementById('cd-enabled').checked,
-                pledgor: document.getElementById('cd-pledgor').checked,
                 refi: document.getElementById('cd-refi').checked,
-                tranches: document.getElementById('cd-tranches').checked
+                tranches: document.getElementById('cd-tranches').checked,
+                protect: document.getElementById('cd-protect').checked
             },
             createdAt: currentEditId ? (termSheets.find(function(t) { return t.id === currentEditId; }) || {}).createdAt || new Date().toISOString() : new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -2073,6 +2129,9 @@
         document.getElementById('f-ico').value = data.ico || '';
         document.getElementById('f-spisova-znacka').value = data.spisovaZnacka || '';
         document.getElementById('f-sidlo').value = data.sidlo || '';
+        document.getElementById('f-signatory').value = data.signatory || '';
+        resetSignatoryHint();
+        loadedLvCreditors = Array.isArray(data.lvCreditors) ? data.lvCreditors.slice() : [];
         document.getElementById('f-status').value = data.status || 'draft';
         document.getElementById('f-purpose').value = data.purpose || '';
         document.getElementById('f-amount').value = data.amount || '';
@@ -2098,21 +2157,18 @@
         // Údaje od klienta — starší případy bez clientChecklist dostanou default (blok zapnutý)
         var cc = data.clientChecklist || {};
         document.getElementById('cd-enabled').checked = cc.enabled !== false;
-        document.getElementById('cd-pledgor').checked = !!cc.pledgor;
         document.getElementById('cd-refi').checked = !!cc.refi;
         document.getElementById('cd-tranches').checked = !!cc.tranches;
+        document.getElementById('cd-protect').checked = cc.protect !== false;
         toggleClientDataOptions();
 
-        // Collateral items
+        // Collateral items (+ vlastník; starší Term Sheety vlastníka nemají)
         var list = document.getElementById('collateral-list');
         list.innerHTML = '';
         var items = data.collateralItems || [''];
-        items.forEach(function(item) {
-            var div = document.createElement('div');
-            div.className = 'dynamic-item';
-            div.innerHTML = '<input type="text" class="form-input" placeholder="např. LV xxx kú Obec (typ)" value="' + escapeHtml(item) + '">' +
-                '<button class="btn-remove-item" onclick="removeItem(this)" title="Odebrat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
-            list.appendChild(div);
+        var owners = data.collateralOwnerTexts || [];
+        items.forEach(function(item, i) {
+            addCollateralItem(item, owners[i]);
         });
         if (items.length === 0) addCollateralItem();
 
@@ -2125,10 +2181,12 @@
         document.getElementById('doc-nz').checked = docsArr.indexOf('Notářský zápis (NZ)') >= 0;
         document.getElementById('doc-smenka').checked = docsArr.indexOf('Směnka') >= 0;
         document.getElementById('doc-vinkulace').checked = docsArr.indexOf('Vinkulace pojistného plnění') >= 0;
+        document.getElementById('doc-plna-moc').checked = docsArr.indexOf('Plná moc k přímému prodeji') >= 0;
+        document.getElementById('doc-rucitelske').checked = docsArr.indexOf('Ručitelské prohlášení') >= 0;
 
         // Custom docs
         var customDocs = docsArr.filter(function(d) {
-            return ['Zástavní smlouva – nemovitosti', 'Zástavní smlouva – podíly', 'Zástavní smlouva – akcie', 'Úvěrová smlouva', 'Notářský zápis (NZ)', 'Směnka', 'Vinkulace pojistného plnění'].indexOf(d) === -1;
+            return ['Zástavní smlouva – nemovitosti', 'Zástavní smlouva – podíly', 'Zástavní smlouva – akcie', 'Úvěrová smlouva', 'Notářský zápis (NZ)', 'Směnka', 'Vinkulace pojistného plnění', 'Plná moc k přímému prodeji', 'Ručitelské prohlášení'].indexOf(d) === -1;
         });
         var cdList = document.getElementById('custom-docs-list');
         cdList.innerHTML = '';
@@ -2145,7 +2203,7 @@
 
         // Sync custom dropdowns
         ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type','f-maturity-unit'].forEach(function(id) {
-            syncCustomDropdown(document.getElementById(id));
+            syncTsDropdown(document.getElementById(id));
         });
     }
 
@@ -2157,6 +2215,9 @@
         document.getElementById('f-ico').value = '';
         document.getElementById('f-spisova-znacka').value = '';
         document.getElementById('f-sidlo').value = '';
+        document.getElementById('f-signatory').value = '';
+        resetSignatoryHint();
+        loadedLvCreditors = [];
         document.getElementById('f-status').value = 'draft';
         document.getElementById('f-purpose').value = '';
         document.getElementById('f-amount').value = '';
@@ -2193,17 +2254,19 @@
         document.getElementById('doc-nz').checked = true;
         document.getElementById('doc-smenka').checked = false;
         document.getElementById('doc-vinkulace').checked = false;
+        document.getElementById('doc-plna-moc').checked = true;
+        document.getElementById('doc-rucitelske').checked = false;
         document.getElementById('cd-enabled').checked = true;
-        document.getElementById('cd-pledgor').checked = false;
         document.getElementById('cd-refi').checked = false;
         document.getElementById('cd-tranches').checked = false;
+        document.getElementById('cd-protect').checked = true;
         toggleClientDataOptions();
         calcLTV();
         updatePaymentCalc();
 
         // Sync custom dropdowns
         ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type','f-maturity-unit'].forEach(function(id) {
-            syncCustomDropdown(document.getElementById(id));
+            syncTsDropdown(document.getElementById(id));
         });
     }
 
@@ -2358,44 +2421,586 @@
         document.getElementById('format-modal').classList.remove('visible');
     }
 
-    // ===== GENERATE DOCX =====
-    // ===== XML HELPERS FOR TEMPLATE =====
-    function xmlEscape(str) {
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
+    /* ===== TERM SHEET DOCX — vzhled dokumentu pro klienta + formulář =====
+       Jediný zdroj XML těla Term Sheetu (generateDOCX ho vkládá do šablony s hlavičkou a zápatím).
+       Strana 1 = stručná nabídka v bodech (jen ke čtení). Další strany = formulář „Údaje pro smluvní
+       dokumentaci“ z obsahových prvků Wordu: textová pole, rozbalovací seznamy, kalendář a opakovací
+       sekce (klient přidá nemovitost, vlastníka, část čerpání nebo věřitele tlačítkem +).
+       Dokument je zamčený pro „vyplňování formulářů“ — klient mění jen pole formuláře.
+       Pole mají tag „spc:…“. Aplikace Úvěrová dokumentace je čte podle tagů a pořadí položek
+       (importFilledTermSheet v loan-documentation.html) — při změně tagu upravit mapování i tam.
+       Barvy podle pokynů značky (pokyny-marketing.md, kap. 12): zlatá jen na zelené ploše nebo jako linka. */
+    var TermSheetDocx = (function () {
+        'use strict';
 
-    // Bullet list paragraph (List Paragraph style with indent)
-    var BULLET_PPR = '<w:pPr><w:pStyle w:val="ListParagraph"/>' +
-        '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>' +
-        '<w:spacing w:after="40" w:line="360" w:lineRule="auto"/></w:pPr>';
+        var FORM_VERSION = '2';
+        var C = {
+            green: '2F4741',      // tmavě zelená — nadpisy, pruhy
+            gold: 'D7AD5B',       // zlatá — linky, text jen na zelené
+            paper: 'E9E9E9',      // světle šedá — pole k vyplnění
+            sage: '485B56',       // šedozelená — popisky, vedlejší text
+            sageLight: 'C9CFCD',  // světlá šedozelená — text na zelené, dělicí linky
+            white: 'FFFFFF'
+        };
+        var PAGE_W = 9072;        // šířka textu A4 při okrajích 2,5 cm (twips)
+        var LABEL_W = 2980;       // sloupec popisků
+        var FONT = '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>';
+        var NBSP = '\u00a0';
 
-    function buildFieldXml(label, value) {
-        if (!value) return '';
-        // Bold label as normal paragraph
-        var xml = '<w:p><w:pPr><w:spacing w:before="120" w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
-               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="22"/></w:rPr>' +
-               '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>';
-        // Value as bullet list paragraph
-        xml += '<w:p>' + BULLET_PPR +
-               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr>' +
-               '<w:t xml:space="preserve">' + xmlEscape(value) + '</w:t></w:r></w:p>';
-        return xml;
-    }
+        var idCounter = 0;
+        function nextId() { idCounter++; return 702000 + idCounter; }
 
-    function buildListXml(label, items) {
-        if (!items || items.length === 0) return '';
-        var xml = '<w:p><w:pPr><w:spacing w:before="120" w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
-                  '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="22"/></w:rPr>' +
-                  '<w:t>' + xmlEscape(label) + '</w:t></w:r></w:p>';
-        items.forEach(function(item) {
-            xml += '<w:p>' + BULLET_PPR +
-                   '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr>' +
-                   '<w:t xml:space="preserve">' + xmlEscape(item) + '</w:t></w:r></w:p>';
-        });
-        return xml;
-    }
+        // ---------- formátování hodnot ----------
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function digits(s) { return String(s || '').replace(/[^\d]/g, ''); }
+        function groupThousands(n) {
+            var s = String(Math.round(n));
+            var out = '';
+            while (s.length > 3) { out = NBSP + s.slice(-3) + out; s = s.slice(0, -3); }
+            return s + out;
+        }
+        function currencyLabel(cur) { return (!cur || cur === 'CZK') ? 'Kč' : cur; }
+        function fmtMoney(amount, cur) {
+            var d = digits(amount);
+            if (!d) return '';
+            return groupThousands(parseInt(d, 10)) + NBSP + currencyLabel(cur);
+        }
+        function parseNum(s) {
+            var v = parseFloat(String(s || '').replace(/\s/g, '').replace(',', '.'));
+            return isNaN(v) ? 0 : v;
+        }
+        function fmtPct(s) { return String(parseNum(s)).replace('.', ',') + NBSP + '%'; }
+        function fmtDate(iso) {
+            var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+            if (!m) return '';
+            return parseInt(m[3], 10) + '.' + NBSP + parseInt(m[2], 10) + '.' + NBSP + m[1];
+        }
+        function capFirst(s) { s = String(s || '').trim(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+        function nonEmpty(arr) { return (arr || []).filter(function (s) { return String(s || '').trim(); }); }
 
-    // ===== ÚDAJE OD KLIENTA — blok k vyplnění v Term Sheetu =====
+        // ---------- stavební prvky WordprocessingML ----------
+        // o: { b, i, color, sz (pt), caps, spacing (twips mezi znaky) }
+        function rPr(o) {
+            o = o || {};
+            var x = FONT;
+            if (o.b) x += '<w:b/><w:bCs/>';
+            if (o.i) x += '<w:i/><w:iCs/>';
+            if (o.caps) x += '<w:caps/>';
+            if (o.color) x += '<w:color w:val="' + o.color + '"/>';
+            if (o.spacing) x += '<w:spacing w:val="' + o.spacing + '"/>';
+            var sz = Math.round((o.sz || 11) * 2);
+            x += '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>';
+            return '<w:rPr>' + x + '</w:rPr>';
+        }
+        function run(text, o) {
+            var parts = String(text == null ? '' : text).split('\n');
+            var x = '<w:r>' + rPr(o);
+            for (var i = 0; i < parts.length; i++) {
+                if (i > 0) x += '<w:br/>';
+                x += '<w:t xml:space="preserve">' + esc(parts[i]) + '</w:t>';
+            }
+            return x + '</w:r>';
+        }
+        // o: { before, after, line, jc, keepNext, pageBreakBefore, borderBottom:{color,sz,space} }
+        function pPr(o) {
+            o = o || {};
+            var x = '';
+            if (o.keepNext) x += '<w:keepNext/>';
+            if (o.pageBreakBefore) x += '<w:pageBreakBefore/>';
+            if (o.borderBottom) {
+                x += '<w:pBdr><w:bottom w:val="single" w:sz="' + (o.borderBottom.sz || 6) + '" w:space="' +
+                     (o.borderBottom.space || 4) + '" w:color="' + o.borderBottom.color + '"/></w:pBdr>';
+            }
+            x += '<w:spacing w:before="' + (o.before || 0) + '" w:after="' + (o.after == null ? 0 : o.after) +
+                 '" w:line="' + (o.line || 252) + '" w:lineRule="auto"/>';
+            if (o.jc) x += '<w:jc w:val="' + o.jc + '"/>';
+            return '<w:pPr>' + x + '</w:pPr>';
+        }
+        function para(content, o) { return '<w:p>' + pPr(o) + (content || '') + '</w:p>'; }
+        function spacer(after) { return para(run('', { sz: 4 }), { after: after || 0, line: 240 }); }
+        // Drží odstavce (i řádky tabulek) s následujícím obsahem na stejné straně
+        function keep(xml) { return xml.replace(/<w:pPr>/g, '<w:pPr><w:keepNext/>'); }
+
+        // Tabulka s pevnou šířkou sloupců. rows = řetězce <w:tr>…</w:tr> (nebo opakovací sekce řádků).
+        function table(colWidths, rows, o) {
+            o = o || {};
+            var total = 0;
+            for (var i = 0; i < colWidths.length; i++) total += colWidths[i];
+            var b = o.borders === 'rows'
+                ? '<w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="' + C.sageLight + '"/>' +
+                  '<w:right w:val="nil"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="' + C.sageLight + '"/><w:insideV w:val="nil"/>'
+                : '<w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/>';
+            var m = o.cellMar || { top: 45, bottom: 45, left: 110, right: 110 };
+            var x = '<w:tbl><w:tblPr><w:tblW w:w="' + total + '" w:type="dxa"/><w:tblBorders>' + b + '</w:tblBorders>' +
+                    '<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="' + m.top + '" w:type="dxa"/><w:left w:w="' + m.left +
+                    '" w:type="dxa"/><w:bottom w:w="' + m.bottom + '" w:type="dxa"/><w:right w:w="' + m.right + '" w:type="dxa"/></w:tblCellMar>' +
+                    '<w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="1" w:noVBand="1"/></w:tblPr><w:tblGrid>';
+            for (var j = 0; j < colWidths.length; j++) x += '<w:gridCol w:w="' + colWidths[j] + '"/>';
+            return x + '</w:tblGrid>' + rows.join('') + '</w:tbl>';
+        }
+        // o: { w, span, fill, borders:{top|left|bottom|right:{color,sz}} }
+        function cell(content, o) {
+            o = o || {};
+            var x = '<w:tcPr><w:tcW w:w="' + o.w + '" w:type="dxa"/>';
+            if (o.span) x += '<w:gridSpan w:val="' + o.span + '"/>';
+            if (o.borders) {
+                x += '<w:tcBorders>';
+                ['top', 'left', 'bottom', 'right'].forEach(function (side) {
+                    var bd = o.borders[side];
+                    if (bd) x += '<w:' + side + ' w:val="single" w:sz="' + bd.sz + '" w:space="0" w:color="' + bd.color + '"/>';
+                });
+                x += '</w:tcBorders>';
+            }
+            if (o.fill) x += '<w:shd w:val="clear" w:color="auto" w:fill="' + o.fill + '"/>';
+            x += '</w:tcPr>';
+            return '<w:tc>' + x + (content || para('')) + '</w:tc>';
+        }
+        function row(cells) { return '<w:tr><w:trPr><w:cantSplit/></w:trPr>' + cells.join('') + '</w:tr>'; }
+
+        // ---------- obsahové prvky Wordu ----------
+        var FIELD_RPR = rPr({ sz: 11 });
+        var PH_RPR = rPr({ sz: 11, i: true, color: C.sage });
+        function sdtField(tag, alias, typeXml, content, isPlaceholder) {
+            return '<w:sdt><w:sdtPr>' + FIELD_RPR + '<w:alias w:val="' + esc(alias) + '"/><w:tag w:val="spc:' + esc(tag) + '"/>' +
+                   '<w:id w:val="' + nextId() + '"/><w:lock w:val="sdtLocked"/>' + (isPlaceholder ? '<w:showingPlcHdr/>' : '') +
+                   typeXml + '</w:sdtPr><w:sdtContent>' + content + '</w:sdtContent></w:sdt>';
+        }
+        function sdtRun(text, placeholder) {
+            return '<w:r>' + (placeholder ? PH_RPR : FIELD_RPR) + '<w:t xml:space="preserve">' + esc(text) + '</w:t></w:r>';
+        }
+        function fieldText(tag, alias, placeholder, value) {
+            var has = value != null && String(value).trim() !== '';
+            return sdtField(tag, alias, '<w:text/>', sdtRun(has ? value : placeholder, !has), !has);
+        }
+        // items: [{ v: 'hodnota', t: 'Zobrazený text' }]
+        function fieldDropdown(tag, alias, items, selected) {
+            var list = '<w:dropDownList' + (selected ? ' w:lastValue="' + esc(selected) + '"' : '') + '>';
+            var shown = null;
+            for (var i = 0; i < items.length; i++) {
+                list += '<w:listItem w:displayText="' + esc(items[i].t) + '" w:value="' + esc(items[i].v) + '"/>';
+                if (selected && items[i].v === selected) shown = items[i].t;
+            }
+            list += '</w:dropDownList>';
+            return sdtField(tag, alias, list, sdtRun(shown || 'Vyberte z nabídky', !shown), !shown);
+        }
+        function fieldDate(tag, alias) {
+            var typeXml = '<w:date><w:dateFormat w:val="d. M. yyyy"/><w:lid w:val="cs-CZ"/>' +
+                          '<w:storeMappedDataAs w:val="dateTime"/><w:calendar w:val="gregorian"/></w:date>';
+            return sdtField(tag, alias, typeXml, sdtRun('Vyberte datum', true), true);
+        }
+        // Opakovací sekce (Word 2013+): položky = řádky tabulky (rows) nebo bloky (tabulky + odstavce).
+        // Klient přidá další položku tlačítkem + u poslední položky; import čte položky v pořadí.
+        function repeating(tag, alias, itemsXml) {
+            var x = '<w:sdt><w:sdtPr><w:alias w:val="' + esc(alias) + '"/><w:tag w:val="spc:' + esc(tag) + '"/>' +
+                    '<w:id w:val="' + nextId() + '"/><w15:repeatingSection/></w:sdtPr><w:sdtContent>';
+            for (var i = 0; i < itemsXml.length; i++) {
+                x += '<w:sdt><w:sdtPr><w:id w:val="' + nextId() + '"/><w15:repeatingSectionItem/></w:sdtPr><w:sdtContent>' +
+                     itemsXml[i] + '</w:sdtContent></w:sdt>';
+            }
+            return x + '</w:sdtContent></w:sdt>';
+        }
+
+        // ---------- volby rozbalovacích seznamů (hodnoty čte import v Úvěrové dokumentaci) ----------
+        var OPT = {
+            funkce: [
+                { v: 'jednatel', t: 'Jednatel' },
+                { v: 'predseda_predstavenstva', t: 'Předseda představenstva' },
+                { v: 'clen_predstavenstva', t: 'Člen představenstva' },
+                { v: 'prokurista', t: 'Prokurista' },
+                { v: 'zmocnenec', t: 'Zmocněnec na základě plné moci' }
+            ],
+            vlastnik: [
+                { v: 'dluznik', t: 'Úvěrovaný' },
+                { v: 'firma', t: 'Jiná společnost' },
+                { v: 'osoba', t: 'Fyzická osoba' },
+                { v: 'vice_osob', t: 'Více fyzických osob (např. manželé)' }
+            ],
+            pojistovna: [
+                { v: 'allianz', t: 'Allianz pojišťovna' },
+                { v: 'csob', t: 'ČSOB Pojišťovna' },
+                { v: 'direct', t: 'Direct pojišťovna' },
+                { v: 'generali', t: 'Generali Česká pojišťovna' },
+                { v: 'kooperativa', t: 'Kooperativa pojišťovna' },
+                { v: 'maxima', t: 'MAXIMA pojišťovna' },
+                { v: 'slavia', t: 'Slavia pojišťovna' },
+                { v: 'uniqa', t: 'UNIQA pojišťovna' },
+                { v: 'vzp', t: 'Pojišťovna VZP' },
+                { v: 'jina', t: 'Jiná pojišťovna' },
+                { v: 'nepojisteno', t: 'Zatím nepojištěno' }
+            ]
+        };
+
+        // ---------- nabídka (strana 1) ----------
+        function ltvText(d) {
+            var a = parseInt(digits(d.amount), 10) || 0;
+            var c = parseInt(digits(d.collateralValue), 10) || 0;
+            return (a > 0 && c > 0) ? (Math.round(a / c * 1000) / 10).toString().replace('.', ',') + NBSP + '%' : '';
+        }
+        function feeShort(d) {
+            if (!d.originationFee) return '';
+            return d.originationFeeType === 'percent' ? fmtPct(d.originationFee) : fmtMoney(d.originationFee, d.currency);
+        }
+        function feeLong(d) {
+            if (!d.originationFee) return '';
+            if (d.originationFeeType !== 'percent') return fmtMoney(d.originationFee, d.currency);
+            var a = parseInt(digits(d.amount), 10) || 0;
+            var p = parseNum(d.originationFee);
+            var txt = fmtPct(d.originationFee) + ' z výše úvěru';
+            if (a > 0 && p > 0) txt += ' (' + fmtMoney(String(Math.round(a * p / 100)), d.currency) + ')';
+            return txt;
+        }
+        function repaymentText(d) {
+            var map = {
+                'Měsíční': 'Úroky měsíčně, jistina jednorázově ke dni splatnosti',
+                'Čtvrtletní': 'Úroky čtvrtletně, jistina jednorázově ke dni splatnosti',
+                'Pololetní': 'Úroky pololetně, jistina jednorázově ke dni splatnosti',
+                'Anuitní': 'Anuitní měsíční splátky (jistina i úroky)',
+                'Úroky s jistinou k splatnosti': 'Úroky i jistina jednorázově ke dni splatnosti'
+            };
+            return map[d.interestPayment] || capFirst(d.interestPayment);
+        }
+        function maturityText(d) {
+            if (d.maturityDate) return fmtDate(d.maturityDate) + (d.maturity ? ' (' + d.maturity + ' ' + (d.maturityUnit || 'let') + ')' : '');
+            return d.maturity ? d.maturity + ' ' + (d.maturityUnit || 'let') : '';
+        }
+        function drawdownText(d) {
+            if (d.drawdownType === 'Ve tranších') return 'Ve více částech' + (d.drawdownDate ? ', první předpoklad ' + fmtDate(d.drawdownDate) : '');
+            return 'Jednorázově' + (d.drawdownDate ? ', předpoklad ' + fmtDate(d.drawdownDate) : '');
+        }
+        var DOC_LABELS = {
+            'Notářský zápis (NZ)': 'Notářský zápis se svolením k přímé vykonatelnosti',
+            'Vinkulace pojistného plnění': 'Vinkulace pojistného plnění z pojištění nemovitostí'
+        };
+
+        function titleBlock(d) {
+            var meta = [];
+            if (d.issueDate) meta.push('Vystaveno ' + fmtDate(d.issueDate));
+            if (d.validityDate) meta.push('Platnost do ' + fmtDate(d.validityDate));
+            return para(run('Indikativní nabídka financování', { b: true, caps: true, spacing: 30, color: C.sage }), { after: 40 }) +
+                   para(run('Term Sheet', { b: true, sz: 26, color: C.green }), { after: 30, line: 240 }) +
+                   para(run(d.borrower || '', { sz: 13 }), { after: 40 }) +
+                   para(run(meta.join('   ·   '), { color: C.sage }), { after: 180, borderBottom: { color: C.gold, sz: 12, space: 8 } });
+        }
+
+        function keyFigures(d) {
+            var tiles = [['Výše úvěru', fmtMoney(d.amount, d.currency)]];
+            if (d.interest) tiles.push(['Úroková sazba', fmtPct(d.interest) + NBSP + 'p.a.']);
+            if (d.maturity) tiles.push(['Doba splatnosti', d.maturity + NBSP + (d.maturityUnit || 'let')]);
+            if (ltvText(d)) tiles.push(['LTV', ltvText(d)]);
+            else if (d.originationFee) tiles.push(['Poplatek za sjednání', feeShort(d)]);
+            var w = Math.floor(PAGE_W / tiles.length);
+            var widths = [], cells = [];
+            tiles.forEach(function (t, i) {
+                var cw = (i === tiles.length - 1) ? PAGE_W - w * (tiles.length - 1) : w;
+                widths.push(cw);
+                cells.push(cell(para(run(t[0], { color: C.sageLight }), { after: 40 }) +
+                                para(run(t[1], { b: true, sz: 16, color: C.white }), { line: 240 }),
+                                { w: cw, fill: C.green, borders: { bottom: { color: C.gold, sz: 18 } } }));
+            });
+            return table(widths, [row(cells)], { cellMar: { top: 140, bottom: 140, left: 170, right: 110 } }) + spacer(160);
+        }
+
+        // Body nabídky: popisek | hodnota, víc hodnot = víc řádků v buňce
+        function pointRow(label, values, bold) {
+            var vals = nonEmpty(Array.isArray(values) ? values : [values]);
+            if (!vals.length) return '';
+            var content = vals.map(function (v) { return para(run(v, { b: !!bold })); }).join('');
+            return row([cell(para(run(label, { color: C.sage })), { w: LABEL_W }), cell(content, { w: PAGE_W - LABEL_W })]);
+        }
+
+        function offerBody(d) {
+            var borrowerLine = (d.borrower || '') + (d.ico ? ', IČO ' + d.ico : '');
+            var borrowerSp = d.spisovaZnacka ? 'Spisová značka ' + String(d.spisovaZnacka).replace(/ /g, NBSP) : '';
+            var col = nonEmpty(d.collateralItems).map(capFirst);
+            var docs = nonEmpty(d.documentation).map(function (s) { return '–  ' + (DOC_LABELS[s] || capFirst(s)); });
+            var rows = [
+                pointRow('Úvěrovaný', [borrowerLine, d.sidlo, borrowerSp], false),
+                pointRow('Účel úvěru', capFirst(d.purpose)),
+                pointRow('Splácení', repaymentText(d)),
+                pointRow('Orientační splátka', d.paymentDisplay ? capFirst(d.paymentDisplay) : ''),
+                pointRow('Splatnost', maturityText(d)),
+                pointRow('Čerpání', drawdownText(d)),
+                pointRow('Poplatek za sjednání', capFirst(feeLong(d))),
+                pointRow('Předčasné splacení', capFirst(d.earlyRepayment)),
+                pointRow('Ostatní náklady', capFirst(d.otherCosts)),
+                pointRow('Zajištění', col),
+                d.collateralValue ? pointRow('Hodnota zajištění', fmtMoney(d.collateralValue, d.currency) + (ltvText(d) ? '   ·   LTV ' + ltvText(d) : '')) : '',
+                pointRow('Smluvní dokumentace', docs),
+                pointRow('Poznámka', d.clientNote ? capFirst(d.clientNote) : '')
+            ].filter(function (r) { return r; });
+            var x = table([LABEL_W, PAGE_W - LABEL_W], rows, { borders: 'rows' });
+            x += spacer(220);
+            x += noticeBox(run('Upozornění: ', { b: true, color: C.green }) +
+                run('Finální schválení financování závisí na interním ocenění nemovitosti ze strany Spolumajitelé Private Credit a.s. ' +
+                    'Uvedené podmínky jsou předběžné a mohou být upraveny na základě výsledků ocenění.', { color: C.sage }));
+            x += para(run('Kontakt: ', { b: true, color: C.green }) +
+                run('Martin Dlouhý   ·   +420 721 847 777   ·   martin.dlouhy@spolumajitele.cz', { color: C.sage }), { before: 180 });
+            return x;
+        }
+
+        // Rámeček se zlatou linkou vlevo (upozornění, pokyny)
+        function noticeBox(runsXml) {
+            return table([PAGE_W], [row([cell(para(runsXml), { w: PAGE_W, borders: { left: { color: C.gold, sz: 24 } } })])],
+                { cellMar: { top: 100, bottom: 100, left: 220, right: 160 } });
+        }
+
+        // ---------- formulář ----------
+        var FIELD_W = PAGE_W - LABEL_W;
+        function formRow(label, fieldXml, hint) {
+            var labelXml = para(run(label));
+            if (hint) labelXml += para(run(hint, { color: C.sage }));
+            return row([cell(labelXml, { w: LABEL_W }), cell(para(fieldXml), { w: FIELD_W, fill: C.paper })]);
+        }
+        function formInfoRow(label, valueText) {
+            return row([cell(para(run(label)), { w: LABEL_W }), cell(para(run(valueText, { b: true })), { w: FIELD_W })]);
+        }
+        // Zelený pruh s písmenem části (zlaté písmeno na zelené je v souladu se značkou)
+        function blockHead(letter, title, hint) {
+            var content = para(run(letter + '   ', { b: true, color: C.gold }) + run(title, { b: true, color: C.white }));
+            if (hint) content += para(run(hint, { color: C.sageLight }));
+            return keep(table([PAGE_W], [row([cell(content, { w: PAGE_W, fill: C.green })])],
+                { cellMar: { top: 80, bottom: 80, left: 160, right: 110 } }));
+        }
+        function formTable(rows) {
+            return table([LABEL_W, FIELD_W], rows, { borders: 'rows', cellMar: { top: 70, bottom: 70, left: 110, right: 110 } });
+        }
+        // Tabulka se záhlavím sloupců a opakovacími řádky (tranše, vlastníci, věřitelé)
+        function gridWithRepeat(widths, headers, tag, alias, itemRows) {
+            var head = row(headers.map(function (h, i) { return cell(para(run(h, { color: C.sage })), { w: widths[i] }); }));
+            return table(widths, [head, repeating(tag, alias, itemRows)], { borders: 'rows', cellMar: { top: 70, bottom: 70, left: 110, right: 110 } });
+        }
+        function gridFieldRow(widths, fields) {
+            return row(fields.map(function (f, i) { return cell(para(f), { w: widths[i], fill: C.paper }); }));
+        }
+
+        var OWNER_W = [2700, 2700, PAGE_W - 5400];
+        function ownerRow(name) {
+            return gridFieldRow(OWNER_W, [
+                fieldText('vl.jmeno', 'Vlastník – jméno nebo název', 'Jméno nebo název', name),
+                fieldText('vl.id', 'Vlastník – IČO nebo datum narození', 'IČO / datum narození'),
+                fieldText('vl.adresa', 'Vlastník – sídlo nebo bydliště', 'Ulice a číslo, PSČ, obec')
+            ]);
+        }
+        // Jedna nemovitost = položka opakovací sekce (klient může přidat další nemovitost)
+        function propertyItem(itemText, owner, withInsurance) {
+            var type = owner && owner.type ? owner.type : null;
+            var names = (owner && owner.names && owner.names.length) ? owner.names : [''];
+            // začátek bloku (nadpis, označení, vlastník, tabulka vlastníků) držet pohromadě
+            var x = keep(formTable([
+                row([cell(para(run('Nemovitost', { b: true, color: C.green })), { w: PAGE_W, span: 2, borders: { bottom: { color: C.gold, sz: 6 } } })]),
+                formRow('Označení nemovitosti', fieldText('nem.oznaceni', 'Označení nemovitosti', 'LV, katastrální území', itemText)),
+                formRow('Vlastník', fieldDropdown('nem.vlastnik', 'Vlastník nemovitosti', OPT.vlastnik, type))
+            ]) + spacer(60) + gridWithRepeat(OWNER_W, ['Jméno nebo název', 'IČO nebo datum narození', 'Sídlo nebo bydliště'],
+                'nem.vlastnici', 'Vlastníci nemovitosti', names.map(function (n) { return ownerRow(n); })));
+            x += spacer(0);
+            var rows = [
+                formRow('Za společnost jedná', fieldText('nem.jedna', 'Za vlastníka jedná', 'Jen u společnosti: jméno a funkce')),
+                formRow('Kontakt na vlastníka', fieldText('nem.kontakt', 'Kontakt na vlastníka', 'Telefon a e-mail'))
+            ];
+            if (withInsurance) {
+                rows.push(formRow('Pojišťovna', fieldDropdown('nem.pojistovna', 'Pojišťovna', OPT.pojistovna, null)));
+                rows.push(formRow('Číslo pojistné smlouvy', fieldText('nem.pojistka', 'Číslo pojistné smlouvy', 'Podle pojistné smlouvy')));
+            }
+            x += formTable(rows);
+            return x + spacer(200);
+        }
+
+        function formSections(d) {
+            var x = '';
+            var letters = 'ABCDEFG'.split('');
+            var li = 0;
+            function nextLetter() { return letters[li++]; }
+            var docsText = nonEmpty(d.documentation).join(' ');
+            var hasVinkulace = /vinkulace/i.test(docsText);
+            var hasRefi = !!(d.clientChecklist && d.clientChecklist.refi);
+            var hasTranches = d.drawdownType === 'Ve tranších' || !!(d.clientChecklist && d.clientChecklist.tranches);
+
+            x += para(run('Formulář pro klienta', { b: true, caps: true, spacing: 30, color: C.sage }), { after: 40, pageBreakBefore: true });
+            x += para(run('Údaje pro smluvní dokumentaci', { b: true, sz: 20, color: C.green }), { after: 120, line: 240 });
+            x += noticeBox(run('Pokud s podmínkami souhlasíte, vyplňte prosím šedá pole a pošlete nám dokument zpět jako soubor Word (.docx). ' +
+                'Další nemovitost, vlastníka nebo část čerpání přidáte tlačítkem + u posledního řádku.'));
+            x += spacer(180);
+
+            // A — úvěrovaný: podpis, kontakt, účet (podepisující předvyplněný z ARES, pokud je jednatel jen jeden)
+            var sig = splitSignatory(d.signatory);
+            x += blockHead(nextLetter(), 'Úvěrovaný');
+            x += formTable([
+                formInfoRow('Úvěrovaný', (d.borrower || '') + (d.ico ? ', IČO ' + d.ico : '')),
+                formRow('Kdo podepíše smlouvy', fieldText('podpis1.jmeno', 'Kdo podepíše smlouvy', 'Jméno a příjmení', sig.name)),
+                formRow('Funkce', fieldDropdown('podpis1.funkce', 'Funkce podepisujícího', OPT.funkce, funkceValue(sig.role))),
+                formRow('Druhá podepisující osoba', fieldText('podpis2', 'Druhá podepisující osoba', 'Jen pokud jednají dvě osoby společně')),
+                formRow('Telefon', fieldText('kontakt.telefon', 'Telefon', '+420 …')),
+                formRow('E-mail', fieldText('kontakt.email', 'E-mail', 'jmeno@firma.cz')),
+                formRow('Doručovací adresa', fieldText('doruceni', 'Doručovací adresa', 'Jen pokud je jiná než sídlo')),
+                formRow('Účet pro čerpání úvěru', fieldText('ucet', 'Účet pro čerpání úvěru', 'Např. 123456789/0800'))
+            ]);
+            x += spacer(200);
+
+            // B — nemovitosti a vlastníci (opakovací sekce bloků)
+            var col = nonEmpty(d.collateralItems);
+            var items = (col.length ? col : ['']).map(function (item, i) {
+                return propertyItem(shortCollateral(item), (d.collateralOwners || [])[i], hasVinkulace);
+            });
+            x += blockHead(nextLetter(), 'Zastavované nemovitosti a jejich vlastníci',
+                'Údaje o vlastníkovi vyplňte, jen pokud vlastníkem není Úvěrovaný.');
+            x += keep(spacer(60));
+            x += repeating('nemovitosti', 'Zastavované nemovitosti', items);
+
+            // C — čerpání ve více částech (opakovací řádky)
+            if (hasTranches) {
+                var TW = [4536, PAGE_W - 4536];
+                x += blockHead(nextLetter(), 'Čerpání ve více částech');
+                x += keep(gridWithRepeat(TW, ['Částka (Kč)', 'Předpokládané datum'], 'transe', 'Části čerpání', [1, 2].map(function () {
+                    return gridFieldRow(TW, [fieldText('tr.castka', 'Částka čerpání', 'Např. 20 000 000'), fieldDate('tr.datum', 'Datum čerpání')]);
+                })));
+                x += spacer(200);
+            }
+
+            // D — refinancování (opakovací řádky)
+            if (hasRefi) {
+                var RW = [3000, 2800, PAGE_W - 5800];
+                x += blockHead(nextLetter(), 'Refinancování stávajícího úvěru');
+                // věřitelé ze zástavních práv na LV se předvyplní, klient doplní zůstatek a kontakt
+                var creditors = nonEmpty(d.refiCreditors);
+                x += keep(gridWithRepeat(RW, ['Stávající věřitel', 'Zůstatek k doplacení (Kč)', 'Kontakt na věřitele'], 'refi', 'Stávající věřitelé',
+                    (creditors.length ? creditors : ['']).map(function (cr) {
+                        return gridFieldRow(RW, [fieldText('refi.veritel', 'Stávající věřitel', 'Název', cr), fieldText('refi.zustatek', 'Zůstatek k doplacení', 'Částka'),
+                                                 fieldText('refi.kontakt', 'Kontakt na věřitele', 'Telefon nebo e-mail')]);
+                    })));
+                x += spacer(200);
+            }
+
+            // E — ručitel (jen s ručitelským prohlášením)
+            if (/ručitel/i.test(docsText)) {
+                var GW = [3300, 2300, PAGE_W - 5600];
+                x += blockHead(nextLetter(), 'Ručitel', 'Je-li ručitel v manželství se společným jměním, uveďte i manžela nebo manželku.');
+                x += keep(gridWithRepeat(GW, ['Jméno a příjmení', 'Datum narození', 'Bydliště'], 'rucitele', 'Ručitelé', [
+                    gridFieldRow(GW, [fieldText('ruc.jmeno', 'Ručitel – jméno', 'Jméno a příjmení'), fieldDate('ruc.narozeni', 'Ručitel – datum narození'),
+                                      fieldText('ruc.bydliste', 'Ručitel – bydliště', 'Ulice a číslo, PSČ, obec')])
+                ]));
+                x += spacer(200);
+            }
+
+            // F — zastavovaný podíl (jen se zástavní smlouvou k podílu)
+            if (/podíl/i.test(docsText)) {
+                var SW = [3700, 3300, PAGE_W - 7000];
+                x += blockHead(nextLetter(), 'Zastavovaný podíl ve společnosti');
+                x += keep(gridWithRepeat(SW, ['Společnost (název a IČO)', 'Společník, který podíl vlastní', 'Výše podílu (%)'], 'podily', 'Zastavované podíly', [
+                    gridFieldRow(SW, [fieldText('pod.spolecnost', 'Společnost', 'Název a IČO'), fieldText('pod.spolecnik', 'Společník', 'Jméno nebo název'),
+                                      fieldText('pod.vyse', 'Výše podílu', 'Např. 100')])
+                ]));
+                x += spacer(200);
+            }
+
+            // Podklady
+            var needed = ['Kopie dokladu totožnosti osob, které budou podepisovat', 'Informace o skutečném majiteli Úvěrovaného'];
+            if (hasVinkulace) needed.push('Pojistné smlouvy k zastavovaným nemovitostem');
+            if (hasRefi) needed.push('Vyčíslení zůstatku od stávajícího věřitele');
+            x += blockHead(nextLetter(), 'Podklady, které nám prosím pošlete');
+            x += keep(table([PAGE_W], needed.map(function (s) { return row([cell(para(run('–  ' + s)), { w: PAGE_W })]); }),
+                { cellMar: { top: 50, bottom: 50, left: 160, right: 110 } }));
+            return x;
+        }
+        function shortCollateral(item) {
+            var s = String(item || '').split('—')[0].split(' - ')[0].trim();
+            return s.length > 80 ? s.slice(0, 77) + '…' : s;
+        }
+        // „Jiří Dvořáček, jednatel“ → { name, role } (role za poslední čárkou)
+        function splitSignatory(s) {
+            s = String(s || '').trim();
+            var i = s.lastIndexOf(',');
+            return i > 0 ? { name: s.slice(0, i).trim(), role: s.slice(i + 1).trim() } : { name: s, role: '' };
+        }
+        function funkceValue(role) {
+            var r = String(role || '').toLowerCase();
+            if (/předsed/.test(r) && /představenst/.test(r)) return 'predseda_predstavenstva';
+            if (/člen/.test(r) && /představenst/.test(r)) return 'clen_predstavenstva';
+            if (/prokur/.test(r)) return 'prokurista';
+            if (/jednatel/.test(r)) return 'jednatel';
+            return null;
+        }
+
+        // Tělo dokumentu (vše mezi <w:body> a <w:sectPr>)
+        function buildBodyXml(d) {
+            idCounter = 0;
+            var x = titleBlock(d) + keyFigures(d) + offerBody(d);
+            if (!d.clientChecklist || d.clientChecklist.enabled !== false) x += formSections(d);
+            return x + para('');
+        }
+
+        // Vloží tělo do document.xml šablony (zachová hlavičku, zápatí a okraje šablony)
+        function applyToDocumentXml(docXml, d) {
+            var m = docXml.match(/(<w:body[^>]*>)([\s\S]*?)(<w:sectPr[\s\S]*?<\/w:body>)/);
+            if (!m) throw new Error('Šablona Term Sheetu má neočekávanou strukturu (chybí w:body / w:sectPr).');
+            if (!/xmlns:w15=/.test(docXml)) {
+                // starší šablona bez jmenného prostoru w15 — opakovací sekce by Word neotevřel
+                docXml = docXml.replace(/<w:document\b/, '<w:document xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"');
+                m = docXml.match(/(<w:body[^>]*>)([\s\S]*?)(<w:sectPr[\s\S]*?<\/w:body>)/);
+            }
+            return docXml.replace(m[0], m[1] + buildBodyXml(d) + m[3]);
+        }
+
+        // Zámek „jen vyplňování formuláře“ + identifikace TS (docVars) v settings.xml
+        function applyToSettingsXml(settingsXml, meta) {
+            var x = settingsXml.replace(/<w:documentProtection\b[^>]*\/>/g, '').replace(/<w:docVars>[\s\S]*?<\/w:docVars>/g, '');
+            if (!meta || meta.protect !== false) {
+                var prot = '<w:documentProtection w:edit="forms" w:enforcement="1"/>';
+                var anchor = x.search(/<w:(autoFormatOverride|styleLockTheme|styleLockQFSet|defaultTabStop)\b/);
+                x = anchor >= 0 ? x.slice(0, anchor) + prot + x.slice(anchor) : x.replace(/(<w:settings\b[^>]*>)/, '$1' + prot);
+            }
+            var vars = '<w:docVars><w:docVar w:name="spcFormVersion" w:val="' + FORM_VERSION + '"/>' +
+                       (meta && meta.tsId ? '<w:docVar w:name="spcTermSheetId" w:val="' + esc(meta.tsId) + '"/>' : '') + '</w:docVars>';
+            var vAnchor = x.search(/<w:(rsids|attachedSchema|themeFontLang|clrSchemeMapping)\b|<m:mathPr\b/);
+            x = vAnchor >= 0 ? x.slice(0, vAnchor) + vars + x.slice(vAnchor) : x.replace(/<\/w:settings>/, vars + '</w:settings>');
+            return x;
+        }
+
+        // Náhradní balíček DOCX bez šablony (bez loga a zápatí) — když šablona není na Drive ani ve složce
+        function minimalPackage() {
+            var XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+            var W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+            var REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+            return {
+                '[Content_Types].xml': XH + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+                    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+                    '<Default Extension="xml" ContentType="application/xml"/>' +
+                    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+                    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+                    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/></Types>',
+                '_rels/.rels': XH + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="' + REL + '/officeDocument" Target="word/document.xml"/></Relationships>',
+                'word/_rels/document.xml.rels': XH + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="' + REL + '/styles" Target="styles.xml"/>' +
+                    '<Relationship Id="rId2" Type="' + REL + '/settings" Target="settings.xml"/></Relationships>',
+                'word/document.xml': XH + '<w:document ' + W + ' xmlns:r="' + REL + '" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"' +
+                    ' xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" mc:Ignorable="w14 w15">' +
+                    '<w:body><w:p/><w:sectPr><w:pgSz w:w="11906" w:h="16838"/>' +
+                    '<w:pgMar w:top="1417" w:right="1417" w:bottom="1417" w:left="1417" w:header="567" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>',
+                'word/styles.xml': XH + '<w:styles ' + W + '><w:docDefaults><w:rPrDefault><w:rPr>' + FONT +
+                    '<w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="cs-CZ"/></w:rPr></w:rPrDefault>' +
+                    '<w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="252" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>' +
+                    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>' +
+                    '<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/>' +
+                    '<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>',
+                'word/settings.xml': XH + '<w:settings ' + W + '><w:zoom w:percent="100"/><w:defaultTabStop w:val="708"/>' +
+                    '<w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>' +
+                    '<w:themeFontLang w:val="cs-CZ"/></w:settings>'
+            };
+        }
+
+        return {
+            FORM_VERSION: FORM_VERSION,
+            OPTIONS: OPT,
+            buildBodyXml: buildBodyXml,
+            applyToDocumentXml: applyToDocumentXml,
+            applyToSettingsXml: applyToSettingsXml,
+            minimalPackage: minimalPackage
+        };
+    })();
+
+    // ===== ÚDAJE OD KLIENTA — formulář v Term Sheetu =====
     function toggleClientDataOptions() {
         var on = document.getElementById('cd-enabled').checked;
         document.getElementById('cd-options').style.display = on ? '' : 'none';
@@ -2407,424 +3012,129 @@
         if (document.getElementById('f-drawdown-type').value === 'Ve tranších') {
             document.getElementById('cd-tranches').checked = true;
         }
-        try {
-            if (typeof allResults !== 'undefined' && Array.isArray(allResults) && allResults.some(function(lv) {
-                return lv && lv.zastavni_prava && lv.zastavni_prava.length > 0;
-            })) {
-                document.getElementById('cd-refi').checked = true;
-            }
-        } catch (e) { /* allResults nemusí existovat před první LV analýzou */ }
+        if (lvCreditorsFromResults().length > 0) {
+            document.getElementById('cd-refi').checked = true;
+        }
     }
 
-    // Řádky tabulky pro klienta — JEDINÝ zdroj popisků. Aplikace Úvěrová dokumentace
-    // (importFilledTermSheet v loan-documentation.html) mapuje TYTÉŽ popisky na pole
-    // formuláře — při změně textu popisku je nutné upravit mapování i tam.
-    // Řádek může mít { h: 'nadpis sekce' }, nebo { l: 'popisek', v: 'předvyplněná hodnota' }.
-    // `v` je volitelné — pravá buňka se předvyplní (např. Úvěrovaný = jméno dlužníka), klient ji
-    // jen potvrdí. Adresy jsou rozdělené (ulice / PSČ / město) jako na běžných webových formulářích;
-    // aplikace Úvěrová dokumentace je při importu zase složí do jednoho pole.
-    function buildClientDataRows(data) {
-        var cc = (data && data.clientChecklist) || {};
-        var rows = [
-            { h: 'Osoby a podpis' },
-            { l: 'Úvěrovaný', v: (data && data.borrower) || '' },
-            { l: 'Jednatel / zástupce (kdo podepisuje)' },
-            { l: 'Funkce podepisujícího' },
-            { l: 'Telefon' },
-            { l: 'E-mail' },
-            { l: 'Doručovací adresa (pokud jiná než sídlo) — ulice a č.p.' },
-            { l: 'Doručovací adresa — PSČ' },
-            { l: 'Doručovací adresa — město' },
-            { h: 'Bankovní spojení' },
-            { l: 'Číslo účtu pro čerpání úvěru' },
-            { l: 'Banka (název)' }
-        ];
-        if (cc.pledgor) {
-            rows.push({ h: 'Zástavce — vyplňte, pokud nemovitost nevlastní dlužník' });
-            rows.push({ l: 'Zástavce — jméno' });
-            rows.push({ l: 'Zástavce — IČO' });
-            rows.push({ l: 'Zástavce — datum narození' });
-            rows.push({ l: 'Zástavce — bydliště/sídlo: ulice a č.p.' });
-            rows.push({ l: 'Zástavce — bydliště/sídlo: PSČ' });
-            rows.push({ l: 'Zástavce — bydliště/sídlo: město' });
-            rows.push({ l: 'Zástavce — spisová značka (pokud právnická osoba)' });
-            rows.push({ l: 'Zástavce — jednatel / zástupce (pokud právnická osoba)' });
-            rows.push({ l: 'Zástavce — funkce' });
-            rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná): ulice a č.p.' });
-            rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná): PSČ' });
-            rows.push({ l: 'Zástavce — doručovací adresa (pokud jiná): město' });
-            rows.push({ l: 'Zástavce — telefon' });
-            rows.push({ l: 'Zástavce — e-mail' });
-        }
-        if (cc.refi) {
-            rows.push({ h: 'Refinancování — stávající zástavní právo' });
-            rows.push({ l: 'Stávající věřitel' });
-            rows.push({ l: 'Zůstatek k doplacení (payoff)' });
-            rows.push({ l: 'Kontakt na stávajícího věřitele' });
-        }
-        if (cc.tranches) {
-            // Mřížka 2 sloupce (Částka | Datum), 3 řádky na 3 čerpání. `cols` = záhlaví sloupců,
-            // `pair` = dvě prázdné buňky k vyplnění klientem.
-            rows.push({ h: 'Tranše čerpání' });
-            rows.push({ cols: ['Částka', 'Datum'] });
-            rows.push({ pair: true });
-            rows.push({ pair: true });
-            rows.push({ pair: true });
-        }
-        return rows;
-    }
-
-    // XML blok pro generování ze šablony — vkládá se za podmínky, před box Upozornění
-    function buildClientDataBlockXml(data) {
-        var rows = buildClientDataRows(data);
-        var CAL = '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/>';
-
-        var xml = '<w:p><w:pPr><w:spacing w:before="360" w:after="0"/></w:pPr><w:r><w:t></w:t></w:r></w:p>';
-
-        // Zvýrazněná výzva — stejný vizuální jazyk jako box Upozornění (barva značky)
-        xml += '<w:p><w:pPr><w:pBdr>' +
-               '<w:top w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
-               '<w:left w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
-               '<w:bottom w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
-               '<w:right w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
-               '</w:pBdr><w:shd w:val="clear" w:fill="E8F8FD"/>' +
-               '<w:spacing w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
-               '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="22"/><w:color w:val="2F4741"/></w:rPr>' +
-               '<w:t xml:space="preserve">V případě odsouhlasení Term Sheetu prosíme o vyplnění údajů níže. </w:t></w:r>' +
-               '<w:r><w:rPr>' + CAL + '<w:sz w:val="20"/><w:color w:val="555555"/></w:rPr>' +
-               '<w:t>Vyplněný dokument nám prosím zašlete zpět.</w:t></w:r></w:p>';
-
-        // Nadpis tabulky
-        xml += '<w:p><w:pPr><w:spacing w:before="240" w:after="80"/></w:pPr>' +
-               '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="22"/></w:rPr>' +
-               '<w:t>ÚDAJE PRO SMLUVNÍ DOKUMENTACI</w:t></w:r></w:p>';
-
-        // Tabulka 2 sloupce: popisek | prázdná buňka k vyplnění klientem
-        xml += '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>' +
-               '<w:top w:val="single" w:sz="4" w:color="BFBFBF"/>' +
-               '<w:left w:val="single" w:sz="4" w:color="BFBFBF"/>' +
-               '<w:bottom w:val="single" w:sz="4" w:color="BFBFBF"/>' +
-               '<w:right w:val="single" w:sz="4" w:color="BFBFBF"/>' +
-               '<w:insideH w:val="single" w:sz="4" w:color="BFBFBF"/>' +
-               '<w:insideV w:val="single" w:sz="4" w:color="BFBFBF"/>' +
-               '</w:tblBorders>' +
-               '<w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar>' +
-               '</w:tblPr><w:tblGrid><w:gridCol w:w="4250"/><w:gridCol w:w="5110"/></w:tblGrid>';
-
-        function cellXml(w, runs) {
-            return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/></w:tcPr>' +
-                   '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>' + runs + '</w:p></w:tc>';
-        }
-        rows.forEach(function(r) {
-            if (r.h) {
-                xml += '<w:tr><w:tc><w:tcPr><w:gridSpan w:val="2"/><w:shd w:val="clear" w:fill="E8F8FD"/></w:tcPr>' +
-                       '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>' +
-                       '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="20"/><w:color w:val="0B6E8C"/></w:rPr>' +
-                       '<w:t xml:space="preserve">' + xmlEscape(r.h) + '</w:t></w:r></w:p></w:tc></w:tr>';
-            } else if (r.cols) {
-                // záhlaví sloupců (tučné) — např. Částka | Datum
-                var hdr = function(t) { return '<w:r><w:rPr>' + CAL + '<w:b/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">' + xmlEscape(t) + '</w:t></w:r>'; };
-                xml += '<w:tr>' + cellXml('4250', hdr(r.cols[0])) + cellXml('5110', hdr(r.cols[1])) + '</w:tr>';
-            } else if (r.pair) {
-                // dvě prázdné buňky k vyplnění (částka | datum)
-                xml += '<w:tr>' + cellXml('4250', '') + cellXml('5110', '') + '</w:tr>';
-            } else {
-                var valRun = r.v
-                    ? '<w:r><w:rPr>' + CAL + '<w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">' + xmlEscape(r.v) + '</w:t></w:r>'
-                    : '';
-                xml += '<w:tr>' +
-                       '<w:tc><w:tcPr><w:tcW w:w="4250" w:type="dxa"/></w:tcPr>' +
-                       '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>' +
-                       '<w:r><w:rPr>' + CAL + '<w:sz w:val="20"/></w:rPr>' +
-                       '<w:t xml:space="preserve">' + xmlEscape(r.l) + '</w:t></w:r></w:p></w:tc>' +
-                       '<w:tc><w:tcPr><w:tcW w:w="5110" w:type="dxa"/></w:tcPr>' +
-                       '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>' + valRun + '</w:p></w:tc>' +
-                       '</w:tr>';
-            }
+    // Věřitelé ze zástavních práv na analyzovaných LV — klientovi se předvyplní v bloku Refinancování.
+    // Analýza LV se neukládá, proto si TS pamatuje poslední známý seznam (data.lvCreditors).
+    var loadedLvCreditors = [];
+    function lvCreditorsFromResults() {
+        var out = [];
+        (lvFiles || []).forEach(function (lf) {
+            (lf.results || []).forEach(function (lv) {
+                (lv.zastavni_prava || []).forEach(function (z) {
+                    var n = String((z && z.opravneny) || '').trim();
+                    if (n && out.indexOf(n) === -1) out.push(n);
+                });
+            });
         });
-        xml += '</w:tbl>';
-        return xml;
+        return out;
     }
 
-    function buildTermSheetBodyXml(data) {
-        var xml = '';
-
-        // Title — uses Title style matching the reference term sheet
-        xml += '<w:p><w:pPr><w:pStyle w:val="Title"/><w:spacing w:after="400" w:line="360" w:lineRule="auto"/></w:pPr>' +
-               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="32"/></w:rPr>' +
-               '<w:t>Term Sheet \u2013 financov\u00e1n\u00ed</w:t></w:r></w:p>';
-
-        var basicInfoParts = [data.borrower];
-        if (data.ico) basicInfoParts.push(data.ico);
-        if (data.spisovaZnacka) basicInfoParts.push(data.spisovaZnacka);
-        if (data.sidlo) basicInfoParts.push(data.sidlo);
-        xml += buildFieldXml('\u00dav\u011brovan\u00fd:', basicInfoParts.join(', '));
-        if (data.purpose) xml += buildFieldXml('\u00da\u010del \u00fav\u011bru:', data.purpose);
-        xml += buildFieldXml('\u00dav\u011brovan\u00e1 \u010d\u00e1stka:', data.amount ? data.amount + ' ' + data.currency : '');
-        if (data.drawdownDate) {
-            var dd = new Date(data.drawdownDate);
-            xml += buildFieldXml('Datum \u010derp\u00e1n\u00ed:', dd.toLocaleDateString('cs-CZ'));
+    // ===== VLASTNÍCI NEMOVITOSTÍ (předvyplnění formuláře pro klienta) =====
+    var COMPANY_RE = /(s\.\s?r\.\s?o\.|spol\.\s?s\s?r\.\s?o\.|a\.\s?s\.|v\.\s?o\.\s?s\.|k\.\s?s\.|z\.\s?s\.|z\.\s?ú\.|o\.\s?p\.\s?s\.|\bSE\b|družstvo|nadace|nadační fond|státní podnik)/i;
+    function normName(s) {
+        return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    }
+    // Vlastníci z LV → čistá jména (bez adres, IČO a značky SJM); jediný vlastník = úvěrovaný → „Úvěrovaný“
+    function cleanLvOwners(vlastnici, borrower) {
+        var names = [];
+        (vlastnici || []).forEach(function (raw) {
+            var s = String(raw || '').trim();
+            if (!s) return;
+            var sjm = /^SJM\b/i.test(s);
+            s = s.replace(/^SJM\s*/i, '');
+            var parts = sjm ? s.split(/\s+a\s+(?=[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ])/) : [s];
+            parts.forEach(function (p) {
+                var name = p.split(/,\s*(?=[^,]*\d)|,?\s*(?=IČO|IČ:|RČ|nar\.)/i)[0].trim().replace(/[,;]+$/, '');
+                if (name && names.indexOf(name) === -1) names.push(name);
+            });
+        });
+        if (borrower && names.length === 1 && normName(names[0]) === normName(borrower)) return 'Úvěrovaný';
+        return names.join(', ');
+    }
+    // Text z pole „Vlastník“ → { type, names } pro formulář (klient může typ v dokumentu změnit)
+    function ownerFromText(text, borrower) {
+        var t = String(text || '').trim();
+        if (!t) return null;
+        if (/^(úvěrovaný|uverovany|dlužník|dluznik)$/i.test(t) || (borrower && normName(t) === normName(borrower))) {
+            return { type: 'dluznik', names: [] };
         }
-        xml += buildFieldXml('\u010cerp\u00e1n\u00ed:', data.drawdownType);
-        xml += buildFieldXml('M\u011bna:', data.currency);
-        xml += buildFieldXml('\u00darok:', data.interest ? data.interest + ' % p.a.' : '');
-        xml += buildFieldXml('Placen\u00ed \u00farok\u016f:', data.interestPayment);
-        xml += buildFieldXml('Doba splatnosti:', data.maturity ? data.maturity + ' ' + data.maturityUnit : '');
-        if (data.maturityDate) {
-            var md = new Date(data.maturityDate);
-            xml += buildFieldXml('Datum splatnosti:', md.toLocaleDateString('cs-CZ'));
-        }
-        var paymentStrXml = paymentDisplayFromData(data);
-        if (paymentStrXml) xml += buildFieldXml('Pravidelná splátka:', paymentStrXml);
-        if (data.earlyRepayment) xml += buildFieldXml('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
-        if (data.originationFeeDisplay) xml += buildFieldXml('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
-
-        // Collateral value + LTV
-        if (data.collateralValue) {
-            xml += buildFieldXml('Hodnota zaji\u0161t\u011bn\u00ed:', data.collateralValue + ' ' + data.currency);
-            var amt = parseAmount(data.amount);
-            var col = parseAmount(data.collateralValue);
-            if (amt > 0 && col > 0) {
-                xml += buildFieldXml('LTV:', (amt / col * 100).toFixed(1) + ' %');
+        var names = [];
+        t.split(/\s*[;,]\s*/).forEach(function (p) {
+            if (!p) return;
+            // právní forma za čárkou („ABC, a.s.“) patří k předchozímu názvu
+            if (names.length && /^(a\.\s?s\.|s\.\s?r\.\s?o\.|spol\..*|v\.\s?o\.\s?s\.|k\.\s?s\.|z\.\s?s\.|se)$/i.test(p)) {
+                names[names.length - 1] += ', ' + p;
+                return;
             }
-        }
-
-        // Collateral items
-        xml += buildListXml('Zaji\u0161t\u011bn\u00ed:', data.collateralItems);
-
-        // Documentation
-        xml += buildListXml('Dokumentace:', data.documentation);
-
-        // Other costs
-        if (data.otherCosts) xml += buildFieldXml('Ostatn\u00ed n\u00e1klady a poplatky:', data.otherCosts);
-
-        // Validity date
-        if (data.validityDate) {
-            var vd = new Date(data.validityDate);
-            xml += buildFieldXml('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
-        }
-
-        // Poznámka pro klienta — součást Term Sheetu
-        if (data.clientNote) xml += buildFieldXml('Poznámka:', data.clientNote);
-
-        // Údaje od klienta — blok k vyplnění (za podmínkami, před Upozorněním)
-        if (data.clientChecklist && data.clientChecklist.enabled) {
-            xml += buildClientDataBlockXml(data);
-        }
-
-        // Upozornění — vždy na konci, barva značky #2F4741
-        xml += '<w:p><w:pPr><w:spacing w:before="400" w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
-               '<w:r><w:t></w:t></w:r></w:p>';
-        xml += '<w:p><w:pPr><w:pBdr>' +
-               '<w:top w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
-               '<w:left w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
-               '<w:bottom w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
-               '<w:right w:val="single" w:sz="6" w:space="8" w:color="2F4741"/>' +
-               '</w:pBdr>' +
-               '<w:shd w:val="clear" w:fill="E8F8FD"/>' +
-               '<w:spacing w:after="0" w:line="360" w:lineRule="auto"/></w:pPr>' +
-               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/><w:color w:val="2F4741"/></w:rPr>' +
-               '<w:t xml:space="preserve">Upozorn\u011bn\u00ed: </w:t></w:r>' +
-               '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/><w:color w:val="555555"/></w:rPr>' +
-               '<w:t>Fin\u00e1ln\u00ed schv\u00e1len\u00ed financov\u00e1n\u00ed z\u00e1vis\u00ed na intern\u00edm ocen\u011bn\u00ed nemovitosti ze strany Spolumajitel\u00e9 Private Credit a.s. Uveden\u00e9 podm\u00ednky jsou p\u0159edb\u011b\u017en\u00e9 a mohou b\u00fdt upraveny na z\u00e1klad\u011b v\u00fdsledk\u016f ocen\u011bn\u00ed.</w:t></w:r></w:p>';
-
-        return xml;
+            names.push(p);
+        });
+        if (names.length === 1 && /\s+a\s+/.test(names[0]) && !COMPANY_RE.test(names[0])) names = names[0].split(/\s+a\s+/);
+        var companies = names.filter(function (n) { return COMPANY_RE.test(n); }).length;
+        var type = companies === names.length ? 'firma' : (names.length > 1 ? 'vice_osob' : 'osoba');
+        return { type: type, names: names };
     }
 
+    // Lokální datum yyyy-mm-dd (NE toISOString — to převádí na UTC a v CZ pásmu může posunout den)
+    function localIsoDate(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    // Uložená data Term Sheetu + dopočtené údaje pro dokument
+    function buildDocData(data) {
+        var d = Object.assign({}, data);
+        d.issueDate = localIsoDate(new Date());
+        d.paymentDisplay = paymentDisplayFromData(data);
+        d.collateralOwners = (data.collateralItems || []).map(function (item, i) {
+            return ownerFromText((data.collateralOwnerTexts || [])[i], data.borrower);
+        });
+        d.refiCreditors = data.lvCreditors || [];
+        return d;
+    }
+
+    async function syncTermSheetsToDrive() {
+        if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
+            try {
+                await GDriveSync.saveFile('termsheets.json', JSON.stringify(termSheets, null, 2), 'application/json');
+            } catch (e) { console.warn('GDrive save failed:', e); }
+        }
+    }
+
+    // ===== GENERATE DOCX =====
+    // Šablona (Drive / lokální složka) dává hlavičku s logem, zápatí a okraje; tělo skládá TermSheetDocx.
+    // Bez šablony vznikne stejný dokument bez loga a zápatí (náhradní balíček).
     async function generateDOCX(data) {
-        // Try to load template
+        var docData = buildDocData(data);
+        var cc = data.clientChecklist || {};
         var zip = await loadTemplateAsZip();
-
-        if (zip) {
-            // === TEMPLATE-BASED GENERATION ===
-            console.log('Generuji DOCX ze šablony...');
-            var docXml = zip.file('word/document.xml').asText();
-
-            // Build content XML
-            var contentXml = buildTermSheetBodyXml(data);
-
-            // Find the body content area — replace empty body paragraphs with our content
-            var bodyMatch = docXml.match(/(<w:body[^>]*>)([\s\S]*?)(<w:sectPr[\s\S]*?<\/w:body>)/);
-            if (bodyMatch) {
-                // CRITICAL: use replace on the full match to preserve XML declaration,
-                // namespace declarations, and </w:document> closing tag
-                docXml = docXml.replace(bodyMatch[0], bodyMatch[1] + contentXml + bodyMatch[3]);
-                console.log('Obsah vložen do šablony, XML struktura zachována');
-            } else {
-                console.error('Regex pro body/sectPr nenašel shodu — šablona má neočekávanou strukturu');
-                // Nepokračovat: výsledkem by byl DOCX s NEVYPLNĚNÝM tělem šablony,
-                // který by mohl odejít klientovi. Chybu zachytí catch volajícího.
-                throw new Error('Šablona má neočekávanou XML strukturu — dokument nebyl vygenerován. Zkuste znovu nahrát šablonu na Drive.');
-            }
-
-            zip.file('word/document.xml', docXml);
-
-            var blob = zip.generate({
-                type: 'blob',
-                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            });
-            showToast('Term Sheet vygenerován ze šablony (s logem a zápatím)', 'success');
-            return blob;
-        } else {
-            // === FALLBACK: Generate from scratch (original method) ===
-            var D = docx;
-            var children = [];
-
-            children.push(new D.Paragraph({
-                children: [new D.TextRun({ text: 'Term Sheet \u2013 financov\u00e1n\u00ed', bold: true, size: 32, font: 'Calibri' })],
-                spacing: { after: 400 },
-                alignment: D.AlignmentType.LEFT,
-            }));
-
-            function addField(label, value) {
-                if (!value) return;
-                children.push(new D.Paragraph({
-                    children: [new D.TextRun({ text: label, bold: true, size: 24, font: 'Calibri' })],
-                    spacing: { before: 200, after: 60 },
-                }));
-                children.push(new D.Paragraph({
-                    children: [new D.TextRun({ text: value, size: 24, font: 'Calibri' })],
-                    spacing: { after: 80 },
-                }));
-            }
-
-            var basicInfoParts = [data.borrower];
-            if (data.ico) basicInfoParts.push(data.ico);
-            if (data.spisovaZnacka) basicInfoParts.push(data.spisovaZnacka);
-            if (data.sidlo) basicInfoParts.push(data.sidlo);
-            addField('\u00dav\u011brovan\u00fd:', basicInfoParts.join(', '));
-            if (data.purpose) addField('\u00da\u010del \u00fav\u011bru:', data.purpose);
-            addField('\u00dav\u011brovan\u00e1 \u010d\u00e1stka:', data.amount ? data.amount + ' ' + data.currency : '');
-            if (data.drawdownDate) {
-                var dd = new Date(data.drawdownDate);
-                addField('Datum \u010derp\u00e1n\u00ed:', dd.toLocaleDateString('cs-CZ'));
-            }
-            addField('\u010cerp\u00e1n\u00ed:', data.drawdownType);
-            addField('M\u011bna:', data.currency);
-            addField('\u00darok:', data.interest ? data.interest + ' % p.a.' : '');
-            addField('Placen\u00ed \u00farok\u016f:', data.interestPayment);
-            addField('Doba splatnosti:', data.maturity ? data.maturity + ' ' + data.maturityUnit : '');
-            if (data.maturityDate) {
-                var md2 = new Date(data.maturityDate);
-                addField('Datum splatnosti:', md2.toLocaleDateString('cs-CZ'));
-            }
-            var paymentStrDoc = paymentDisplayFromData(data);
-            if (paymentStrDoc) addField('Pravidelná splátka:', paymentStrDoc);
-            if (data.earlyRepayment) addField('P\u0159ed\u010dasn\u00e9 splacen\u00ed:', data.earlyRepayment);
-            if (data.originationFeeDisplay) addField('Poplatek za sjedn\u00e1n\u00ed:', data.originationFeeDisplay);
-            if (data.collateralValue) {
-                addField('Hodnota zaji\u0161t\u011bn\u00ed:', data.collateralValue + ' ' + data.currency);
-                var amt = parseAmount(data.amount);
-                var col = parseAmount(data.collateralValue);
-                if (amt > 0 && col > 0) addField('LTV:', (amt / col * 100).toFixed(1) + ' %');
-            }
-            if (data.collateralItems && data.collateralItems.length > 0) {
-                children.push(new D.Paragraph({
-                    children: [new D.TextRun({ text: 'Zaji\u0161t\u011bn\u00ed:', bold: true, size: 24, font: 'Calibri' })],
-                    spacing: { before: 200, after: 60 },
-                }));
-                data.collateralItems.forEach(function(item) {
-                    children.push(new D.Paragraph({
-                        children: [new D.TextRun({ text: item, size: 24, font: 'Calibri' })],
-                        spacing: { after: 40 },
-                    }));
-                });
-            }
-            if (data.documentation && data.documentation.length > 0) {
-                children.push(new D.Paragraph({
-                    children: [new D.TextRun({ text: 'Dokumentace:', bold: true, size: 24, font: 'Calibri' })],
-                    spacing: { before: 200, after: 60 },
-                }));
-                data.documentation.forEach(function(d) {
-                    children.push(new D.Paragraph({
-                        children: [new D.TextRun({ text: d, size: 24, font: 'Calibri' })],
-                        spacing: { after: 40 },
-                    }));
-                });
-            }
-            if (data.otherCosts) addField('Ostatn\u00ed n\u00e1klady a poplatky:', data.otherCosts);
-            if (data.validityDate) {
-                var vd = new Date(data.validityDate);
-                addField('Platnost Term Sheetu do:', vd.toLocaleDateString('cs-CZ'));
-            }
-            if (data.clientNote) addField('Poznámka:', data.clientNote);
-
-            // Údaje od klienta — blok k vyplnění (zrcadlí template cestu)
-            if (data.clientChecklist && data.clientChecklist.enabled) {
-                var ccRows = buildClientDataRows(data);
-                children.push(new D.Paragraph({ children: [], spacing: { before: 360 } }));
-                children.push(new D.Paragraph({
-                    children: [
-                        new D.TextRun({ text: 'V případě odsouhlasení Term Sheetu prosíme o vyplnění údajů níže. ', bold: true, size: 22, font: 'Calibri', color: '2F4741' }),
-                        new D.TextRun({ text: 'Vyplněný dokument nám prosím zašlete zpět.', size: 20, font: 'Calibri', color: '555555' })
-                    ],
-                    shading: { type: D.ShadingType.CLEAR, fill: 'E8F8FD' },
-                    border: {
-                        top: { style: D.BorderStyle.SINGLE, size: 6, color: '2F4741', space: 8 },
-                        bottom: { style: D.BorderStyle.SINGLE, size: 6, color: '2F4741', space: 8 },
-                        left: { style: D.BorderStyle.SINGLE, size: 6, color: '2F4741', space: 8 },
-                        right: { style: D.BorderStyle.SINGLE, size: 6, color: '2F4741', space: 8 }
-                    },
-                    spacing: { after: 120 }
-                }));
-                children.push(new D.Paragraph({
-                    children: [new D.TextRun({ text: 'ÚDAJE PRO SMLUVNÍ DOKUMENTACI', bold: true, size: 22, font: 'Calibri' })],
-                    spacing: { before: 120, after: 80 }
-                }));
-                children.push(new D.Table({
-                    width: { size: 100, type: D.WidthType.PERCENTAGE },
-                    rows: ccRows.map(function(r) {
-                        if (r.h) {
-                            return new D.TableRow({ children: [new D.TableCell({
-                                columnSpan: 2,
-                                shading: { type: D.ShadingType.CLEAR, fill: 'E8F8FD' },
-                                children: [new D.Paragraph({ children: [new D.TextRun({ text: r.h, bold: true, size: 20, font: 'Calibri' })] })]
-                            })] });
-                        }
-                        if (r.cols) {
-                            return new D.TableRow({ children: [
-                                new D.TableCell({ width: { size: 45, type: D.WidthType.PERCENTAGE }, children: [new D.Paragraph({ children: [new D.TextRun({ text: r.cols[0], bold: true, size: 20, font: 'Calibri' })] })] }),
-                                new D.TableCell({ width: { size: 55, type: D.WidthType.PERCENTAGE }, children: [new D.Paragraph({ children: [new D.TextRun({ text: r.cols[1], bold: true, size: 20, font: 'Calibri' })] })] })
-                            ] });
-                        }
-                        if (r.pair) {
-                            return new D.TableRow({ children: [
-                                new D.TableCell({ width: { size: 45, type: D.WidthType.PERCENTAGE }, children: [new D.Paragraph({ children: [] })] }),
-                                new D.TableCell({ width: { size: 55, type: D.WidthType.PERCENTAGE }, children: [new D.Paragraph({ children: [] })] })
-                            ] });
-                        }
-                        return new D.TableRow({ children: [
-                            new D.TableCell({
-                                width: { size: 45, type: D.WidthType.PERCENTAGE },
-                                children: [new D.Paragraph({ children: [new D.TextRun({ text: r.l, size: 20, font: 'Calibri' })] })]
-                            }),
-                            new D.TableCell({
-                                width: { size: 55, type: D.WidthType.PERCENTAGE },
-                                children: [new D.Paragraph({ children: r.v ? [new D.TextRun({ text: r.v, size: 20, font: 'Calibri' })] : [] })]
-                            })
-                        ] });
-                    })
-                }));
-            }
-
-            children.push(new D.Paragraph({ children: [], spacing: { before: 300 } }));
-            children.push(new D.Paragraph({
-                children: [
-                    new D.TextRun({ text: 'Upozorn\u011bn\u00ed: ', bold: true, size: 20, font: 'Calibri', italics: true }),
-                    new D.TextRun({ text: 'Fin\u00e1ln\u00ed schv\u00e1len\u00ed financov\u00e1n\u00ed z\u00e1vis\u00ed na intern\u00edm ocen\u011bn\u00ed nemovitosti ze strany Spolumajitel\u00e9 Private Credit a.s. Uveden\u00e9 podm\u00ednky jsou p\u0159edb\u011b\u017en\u00e9 a mohou b\u00fdt upraveny na z\u00e1klad\u011b v\u00fdsledk\u016f ocen\u011bn\u00ed.', size: 20, font: 'Calibri', italics: true })
-                ],
-                spacing: { before: 200 },
-            }));
-
-            var doc = new D.Document({
-                sections: [{
-                    properties: { page: { margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 } } },
-                    children: children
-                }]
-            });
-
-            return D.Packer.toBlob(doc);
+        var fromTemplate = !!zip;
+        if (!zip) {
+            zip = new PizZip();
+            var pkg = TermSheetDocx.minimalPackage();
+            Object.keys(pkg).forEach(function (p) { zip.file(p, pkg[p]); });
         }
+        var docFile = zip.file('word/document.xml');
+        if (!docFile) throw new Error('Šablona neobsahuje word/document.xml — nahrajte ji prosím znovu.');
+        // applyToDocumentXml při neočekávané struktuře šablony vyhodí chybu (zachytí ji generateTermSheet),
+        // aby klientovi nikdy neodešel dokument s nevyplněným tělem
+        zip.file('word/document.xml', TermSheetDocx.applyToDocumentXml(docFile.asText(), docData));
+        var setFile = zip.file('word/settings.xml');
+        if (setFile) {
+            zip.file('word/settings.xml', TermSheetDocx.applyToSettingsXml(setFile.asText(), {
+                tsId: data.id,
+                protect: cc.enabled !== false && cc.protect !== false
+            }));
+        }
+        var blob = zip.generate({
+            type: 'blob',
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        });
+        showToast(fromTemplate ? 'Term Sheet vygenerován ze šablony (s logem a zápatím)'
+                               : 'Term Sheet vygenerován bez loga a zápatí (šablona chybí)', fromTemplate ? 'success' : 'info');
+        return blob;
     }
 
     // PDF generation removed — only DOCX output is supported
@@ -2852,11 +3162,12 @@
         closeGenerateDialog();
         showToast('Generuji Term Sheet...', 'info');
 
-        // Save first
+        // Save first (+ Drive: Úvěrová dokumentace najde TS podle ID uloženého ve vráceném Wordu)
         try {
             currentEditId = data.id;
             await saveToDB(data);
             termSheets = await getAllFromDB();
+            syncTermSheetsToDrive();
         } catch (e) {
             console.error('Save before generate failed:', e);
         }
@@ -3076,7 +3387,7 @@
     }
 
     // ===== CUSTOM DROPDOWN =====
-    function initCustomDropdowns() {
+    function initTsDropdowns() {
         document.querySelectorAll('select.form-select').forEach(function(sel) {
             // Skip already initialized
             if (sel.parentElement.classList && sel.parentElement.classList.contains('custom-dropdown')) return;
@@ -3136,7 +3447,7 @@
     }
 
     // Update custom dropdown display when select value changes programmatically
-    function syncCustomDropdown(selectEl) {
+    function syncTsDropdown(selectEl) {
         var wrapper = selectEl.closest('.custom-dropdown');
         if (!wrapper) return;
         var trigger = wrapper.querySelector('.custom-dropdown-trigger');
@@ -3343,11 +3654,19 @@
                     requestBody.images = pageImages;
                 }
 
-                var response = await fetch(LV_API_BASE + '/api/parse-lv', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Database-Token': sessionStorage.getItem('ts-token') || '' },
-                    body: JSON.stringify(requestBody)
-                });
+                var postParseLv = function () {
+                    return fetch(LV_API_BASE + '/api/parse-lv', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Database-Token': sessionStorage.getItem('ts-token') || '' },
+                        body: JSON.stringify(requestBody)
+                    });
+                };
+                var response = await postParseLv();
+                // Neplatný token (např. po redeployi serveru) → jednou obnovit a zopakovat
+                if (response.status === 401 && window.ProfilendAuth) {
+                    await refreshTsToken();
+                    response = await postParseLv();
+                }
 
                 if (!response.ok) {
                     var errData = {};
@@ -3406,7 +3725,7 @@
             }
             if (lv.zastavni_prava && lv.zastavni_prava.length > 0) {
                 var zpStr = lv.zastavni_prava.map(function(z) {
-                    return e(z.typ) + ' — ' + e(z.oprávněný || '') + (z.castka ? ' (' + e(z.castka) + ')' : '');
+                    return e(z.typ) + ' — ' + e(z.opravneny || '') + (z.castka ? ' (' + e(z.castka) + ')' : '');
                 }).join('<br>');
                 html += '<tr><td>Zástavní práva</td><td>' + zpStr + '</td></tr>';
             }
@@ -3438,23 +3757,23 @@
         var lv = allResults[resultIdx];
         if (!lv || !lv.collateral_summary) return;
 
-        // Add to collateral items list
+        // Add to collateral items list (+ vlastník z LV, jen do prázdného pole vlastníka)
+        var owner = cleanLvOwners(lv.vlastnici, document.getElementById('f-borrower').value.trim());
         var list = document.getElementById('collateral-list');
-        var items = list.querySelectorAll('.dynamic-item input');
+        var rows = list.querySelectorAll('.collateral-item');
         // Find empty slot or add new
         var inserted = false;
-        for (var i = 0; i < items.length; i++) {
-            if (!items[i].value.trim()) {
-                items[i].value = lv.collateral_summary;
+        for (var i = 0; i < rows.length; i++) {
+            var textEl = rows[i].querySelector('.collateral-text');
+            if (textEl && !textEl.value.trim()) {
+                textEl.value = lv.collateral_summary;
+                var ownerEl = rows[i].querySelector('.collateral-owner');
+                if (ownerEl && !ownerEl.value.trim()) ownerEl.value = owner;
                 inserted = true;
                 break;
             }
         }
-        if (!inserted) {
-            addCollateralItem();
-            var newItems = list.querySelectorAll('.dynamic-item input');
-            newItems[newItems.length - 1].value = lv.collateral_summary;
-        }
+        if (!inserted) addCollateralItem(lv.collateral_summary, owner);
         showToast('Zajištění vloženo: LV ' + (lv.lv_cislo || '?'), 'success');
     }
 
@@ -3601,6 +3920,33 @@
         if (subj.ico) document.getElementById('f-ico').value = subj.ico;
         if (subj.spisovaZnacka) document.getElementById('f-spisova-znacka').value = subj.spisovaZnacka;
         if (subj.sidlo) document.getElementById('f-sidlo').value = subj.sidlo;
+        fillSignatoryFromAres(subj.jednatele);
+    }
+
+    // Podepisující z obchodního rejstříku (ARES vrací statutáry jen při hledání podle IČO).
+    // Jeden statutár → předvyplní prázdné pole; víc statutárů → jen je vypíše do nápovědy.
+    var SIGNATORY_HINT_DEFAULT = '';
+    function resetSignatoryHint() {
+        var hint = document.getElementById('f-signatory-hint');
+        if (!hint) return;
+        if (!SIGNATORY_HINT_DEFAULT) SIGNATORY_HINT_DEFAULT = hint.textContent;
+        hint.textContent = SIGNATORY_HINT_DEFAULT;
+    }
+    function fillSignatoryFromAres(jednatele) {
+        if (!Array.isArray(jednatele) || !jednatele.length) return;
+        var people = jednatele.filter(function (j) { return j && j.jmeno; }).map(function (j) {
+            return j.jmeno + (j.funkce ? ', ' + String(j.funkce).toLowerCase() : '');
+        });
+        if (!people.length) return;
+        var sigEl = document.getElementById('f-signatory');
+        var hint = document.getElementById('f-signatory-hint');
+        if (people.length === 1) {
+            if (!sigEl.value.trim()) sigEl.value = people[0];
+            resetSignatoryHint();
+        } else if (hint) {
+            resetSignatoryHint();
+            hint.textContent = 'Podle obchodního rejstříku: ' + people.join(' · ') + '. Doplňte, kdo podepíše.';
+        }
     }
 
     function setAresStatus(field, state) {
@@ -3657,17 +4003,17 @@
     // Custom dropdowns must paint regardless of DB init — initialize them as soon as the
     // script runs, so a failing openDB() can never leave the form selects empty.
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCustomDropdowns);
+        document.addEventListener('DOMContentLoaded', initTsDropdowns);
     } else {
-        initCustomDropdowns();
+        initTsDropdowns();
     }
 
     async function init() {
         await openDB();
         termSheets = await getAllFromDB();
 
-        // Set default date
-        var today = new Date().toISOString().slice(0, 10);
+        // Set default date (lokální datum — toISOString by v noci posunul den)
+        var today = localIsoDate(new Date());
         if (!document.getElementById('f-drawdown-date').value) {
             document.getElementById('f-drawdown-date').value = today;
         }
@@ -3688,7 +4034,7 @@
         });
 
         // Re-init dropdowns — idempotent, picks up any selects added after first paint
-        initCustomDropdowns();
+        initTsDropdowns();
 
         // Initialize ARES autocomplete
         initAresAutocomplete();
