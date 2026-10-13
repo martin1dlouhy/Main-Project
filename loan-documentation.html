@@ -1168,6 +1168,22 @@
             margin-bottom: 1rem;
         }
         .manual-chat-buttons .btn { flex: 1; min-width: 200px; }
+        .manual-chat-folder-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin: -0.25rem 0 1rem;
+        }
+        .manual-chat-folder-actions[hidden] { display: none; }
+
+        /* Lišta akcí: generování přes API (stojí kredity) jako vedlejší skupina vpravo */
+        .action-bar-api {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-left: auto;
+        }
 
         /* ─── PROMPT PREVIEW MODAL ─── */
         .modal-wide {
@@ -1580,6 +1596,7 @@
             .header-title h1 { font-size: 1.5rem; }
             .form-grid { grid-template-columns: 1fr; }
             .action-bar { flex-direction: column; }
+            .action-bar-api { margin-left: 0; flex-direction: column; }
             .content { padding: 1.5rem; }
         }
 
@@ -1776,7 +1793,7 @@
                     </div>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-outline" onclick="connectFolder()" id="btn-folder" title="Připojit složku pro ukládání na disk">
+                    <button class="btn btn-outline" onclick="connectFolder()" id="btn-folder" title="Složka pro smluvní dokumentaci — „Stáhnout pro manuální chat“ do ní ukládá složky klientů. Kliknutím ji změníte.">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                         <span id="folder-status-text">Připojit složku</span>
                     </button>
@@ -2320,39 +2337,15 @@
                 </form>
             </div>
 
-            <!-- ACTION BAR -->
+            <!-- ACTION BAR — hlavní volba je ruční chat (předplatné, bez API kreditů); generování přes API vpravo -->
             <div class="action-bar">
-                <div class="ai-provider-toggle" title="AI model pro vyplnění šablony — Claude (Anthropic) nebo ChatGPT (OpenAI GPT-4o)">
-                    <button type="button" class="mode-option active" data-provider="claude" onclick="setAiProvider('claude')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                        Claude
-                    </button>
-                    <button type="button" class="mode-option" data-provider="openai" onclick="setAiProvider('openai')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.08V8l-6-5H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3.08"/><polyline points="14 3 14 8 19 8"/><circle cx="18" cy="18" r="3"/><path d="m22 22-1.5-1.5"/></svg>
-                        ChatGPT
-                    </button>
-                </div>
-                <div class="generate-mode-toggle" title="Přepínač: čistý dokument vs. s revizemi (track changes)">
-                    <button type="button" class="mode-option active" data-mode="clean" onclick="setGenerateMode('clean')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        Clean verze
-                    </button>
-                    <button type="button" class="mode-option" data-mode="tracked" onclick="setGenerateMode('tracked')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        S revizemi
-                    </button>
-                </div>
-                <button class="btn btn-generate" onclick="generateDocuments(generateModeIsTracked())">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-                    Generovat dokumenty
-                </button>
-                <button class="btn btn-outline" onclick="openPromptPreview()" title="Náhled toho, co se pošle přes AI API — kontrola dat a šablony před voláním">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    Náhled promptu
-                </button>
-                <button class="btn btn-outline" onclick="downloadForManualChat()" title="Stáhne .zip s promptem + originální šablonou pro paste do Claude.ai (MAX) nebo ChatGPT.com (Plus). Code Interpreter umí vrátit upravený DOCX s revizemi. Doporučeno pro komplexní smlouvy (úvěrová, zástavní).">
+                <button class="btn btn-primary" onclick="downloadForManualChat()" title="Uloží šablony a prompty do složky klienta (nebo jako ZIP) pro Claude.ai (MAX) nebo ChatGPT.com (Plus) — bez API kreditů. AI v chatu vrátí upravený DOCX s revizemi. Doporučeno pro všechny smlouvy.">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Stáhnout pro manuální chat
+                </button>
+                <button class="btn btn-outline" onclick="openPromptPreview()" title="Náhled promptu — kontrola dat a šablony (pro ruční chat i API)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Náhled promptu
                 </button>
                 <button class="btn btn-outline" onclick="openScheduleModal()" title="Vyplní firemní šablonu splátkového kalendáře v Excelu údaji z formuláře — data a částky čerpání zkontroluješ v dalším kroku">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -2366,6 +2359,32 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                     Reset
                 </button>
+                <div class="action-bar-api" title="Automatické vyplnění přes AI API — stojí kredity">
+                    <div class="ai-provider-toggle" title="AI model pro vyplnění šablony — Claude (Anthropic) nebo ChatGPT (OpenAI GPT-4o)">
+                        <button type="button" class="mode-option active" data-provider="claude" onclick="setAiProvider('claude')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                            Claude
+                        </button>
+                        <button type="button" class="mode-option" data-provider="openai" onclick="setAiProvider('openai')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.08V8l-6-5H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3.08"/><polyline points="14 3 14 8 19 8"/><circle cx="18" cy="18" r="3"/><path d="m22 22-1.5-1.5"/></svg>
+                            ChatGPT
+                        </button>
+                    </div>
+                    <div class="generate-mode-toggle" title="Přepínač: čistý dokument vs. s revizemi (track changes)">
+                        <button type="button" class="mode-option active" data-mode="clean" onclick="setGenerateMode('clean')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Clean verze
+                        </button>
+                        <button type="button" class="mode-option" data-mode="tracked" onclick="setGenerateMode('tracked')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            S revizemi
+                        </button>
+                    </div>
+                    <button class="btn btn-outline" onclick="generateDocuments(generateModeIsTracked())" title="Automatické vyplnění přes AI API — stojí kredity">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                        Generovat přes API
+                    </button>
+                </div>
             </div>
 
             <!-- GENERATING PANEL — visible during long Claude API calls -->
@@ -2464,10 +2483,19 @@
 
             <div class="manual-chat-status" id="manualChatStatus">Připravuji soubory…</div>
 
+            <!-- Když zápis do složky potřebuje nové kliknutí (povolení / výběr složky) nebo selhal -->
+            <div class="manual-chat-folder-actions" id="manualChatFolderActions" hidden>
+                <button type="button" class="btn btn-primary btn-small" onclick="manualChatSaveToFolder()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <span id="manualChatFolderBtnLabel">Uložit do složky</span>
+                </button>
+                <button type="button" class="btn btn-outline btn-small" onclick="manualChatDownloadZip()">Stáhnout jako ZIP</button>
+            </div>
+
             <div class="manual-chat-steps">
-                <strong>Postup po stažení .zip:</strong>
+                <strong id="manualChatStepsTitle">Postup:</strong>
                 <ol>
-                    <li>Rozbal stažený .zip soubor</li>
+                    <li id="manualChatStep1">Otevři složku klienta (nebo rozbal stažený .zip)</li>
                     <li>Otevři chat (tlačítko vlevo nebo vpravo dole)</li>
                     <li>Připoj (drag&drop) soubor <code>.docx</code> šablonu</li>
                     <li>Paste obsah <code>prompt-pro-AI.txt</code> jako svou zprávu</li>
@@ -2608,7 +2636,8 @@
             var handle = await loadLoanFolderHandle();
             if (!handle) return;
             try {
-                var perm = await handle.requestPermission({ mode: 'readwrite' });
+                // Jen zjistit stav — o povolení lze žádat až po kliknutí (viz resolveLoanFolder)
+                var perm = await handle.queryPermission({ mode: 'readwrite' });
                 if (perm === 'granted') {
                     folderHandle = handle;
                     var btn = document.getElementById('btn-folder');
@@ -5635,11 +5664,187 @@
             });
         }
 
+        /* ─── SLOŽKA PRO RUČNÍ CHAT ───
+         * Šablony + prompty se ukládají do „<připojená složka>/<Klient> - smluvní dokumentace/“ (stejná
+         * složka jako tlačítko „Připojit složku“). Chrome nedovolí zapisovat přímo do celých Stažených
+         * souborů — jednou se vybere jejich podsložka. Bez složky (zrušeno / jiný prohlížeč) → ZIP. */
+        var manualChatPending = null; // připravené soubory, když zápis čeká na kliknutí v okně
+
+        function setLoanFolder(handle) {
+            folderHandle = handle;
+            var btn = document.getElementById('btn-folder');
+            if (btn) btn.classList.add('folder-connected');
+            var statusText = document.getElementById('folder-status-text');
+            if (statusText) statusText.textContent = handle.name;
+        }
+
+        // Složka s povolením k zápisu. interactive = smí ukázat výběr složky nebo dotaz na povolení
+        // (prohlížeč to dovolí jen hned po kliknutí); forcePick = vybrat jinou složku.
+        // Vrací handle | 'needs-click' | 'cancelled' | 'denied' | null (prohlížeč složky neumí)
+        async function resolveLoanFolder(interactive, forcePick) {
+            if (!window.showDirectoryPicker) return null;
+            var handle = forcePick ? null : (folderHandle || await loadLoanFolderHandle());
+            if (handle) {
+                try {
+                    var perm = await handle.queryPermission({ mode: 'readwrite' });
+                    if (perm !== 'granted') {
+                        if (!interactive) return 'needs-click';
+                        perm = await handle.requestPermission({ mode: 'readwrite' });
+                    }
+                    if (perm === 'granted') { setLoanFolder(handle); return handle; }
+                    return 'denied';
+                } catch (e) {
+                    if (e && e.name === 'SecurityError') return 'needs-click';
+                    console.warn('Uložená složka nejde použít, vyberu novou:', e);
+                }
+            }
+            if (!interactive) return 'needs-click';
+            try {
+                var picked = await window.showDirectoryPicker({ id: 'loan-doc-folder', mode: 'readwrite', startIn: 'downloads' });
+                setLoanFolder(picked);
+                await saveLoanFolderHandle(picked);
+                return picked;
+            } catch (e) {
+                if (e && e.name === 'AbortError') return 'cancelled';
+                if (e && e.name === 'SecurityError') return 'needs-click';
+                throw e;
+            }
+        }
+
+        function loanClientFolderName(client) {
+            var base = String(client || '').replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').trim() || 'Klient';
+            return base + ' - smluvní dokumentace';
+        }
+
+        function czFileCount(n) {
+            return n + (n === 1 ? ' soubor' : (n >= 2 && n <= 4 ? ' soubory' : ' souborů'));
+        }
+
+        function setManualChatSteps(mode, sub, rootName) {
+            var title = document.getElementById('manualChatStepsTitle');
+            var step1 = document.getElementById('manualChatStep1');
+            if (title) title.textContent = mode === 'zip' ? 'Postup po stažení .zip:' : 'Postup:';
+            if (!step1) return;
+            if (mode === 'zip') step1.textContent = 'Rozbal stažený .zip soubor';
+            else if (mode === 'folder') step1.textContent = 'Otevři složku „' + sub + '“ (je ve složce ' + rootName + ')';
+            else step1.textContent = 'Otevři složku klienta (nebo rozbal stažený .zip)';
+        }
+
+        function showManualChatFolderActions(label) {
+            var box = document.getElementById('manualChatFolderActions');
+            var lbl = document.getElementById('manualChatFolderBtnLabel');
+            if (lbl) lbl.textContent = label || 'Uložit do složky';
+            if (box) box.hidden = false;
+        }
+
+        function hideManualChatFolderActions() {
+            var box = document.getElementById('manualChatFolderActions');
+            if (box) box.hidden = true;
+        }
+
+        // Zápis do <root>/<Klient> - smluvní dokumentace/ (soubory stejného jména přepíše)
+        async function deliverManualChatToFolder(root, p) {
+            var statusEl = document.getElementById('manualChatStatus');
+            statusEl.className = 'manual-chat-status';
+            statusEl.textContent = 'Ukládám do složky ' + root.name + '…';
+            var dir = await root.getDirectoryHandle(p.sub, { create: true });
+            for (var i = 0; i < p.files.length; i++) {
+                var fh = await dir.getFileHandle(p.files[i].name, { create: true });
+                var writable = await fh.createWritable();
+                await writable.write(p.files[i].data);
+                await writable.close();
+            }
+            manualChatPending = null;
+            hideManualChatFolderActions();
+            setManualChatSteps('folder', p.sub, root.name);
+            statusEl.className = 'manual-chat-status success';
+            statusEl.textContent = '✓ Uloženo do složky ' + root.name + ' › ' + p.sub + ' (' + czFileCount(p.files.length) + '). Pokračuj kliknutím na tlačítko vlevo nebo vpravo.';
+            emitManualChatDone(p);
+        }
+
+        async function deliverManualChatZip(p, note) {
+            var statusEl = document.getElementById('manualChatStatus');
+            statusEl.className = 'manual-chat-status';
+            statusEl.textContent = 'Generuji .zip soubor…';
+            var zip = new JSZip();
+            p.files.forEach(function(f) { zip.file(f.name, f.data); });
+            var blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+            saveAs(blob, p.zipName);
+            manualChatPending = null;
+            hideManualChatFolderActions();
+            setManualChatSteps('zip');
+            statusEl.className = 'manual-chat-status success';
+            statusEl.textContent = (note ? note + ' ' : '') + '✓ Staženo: ' + p.zipName + ' (' + Math.round(blob.size / 1024) + ' KB). Pokračuj kliknutím na tlačítko vlevo nebo vpravo.';
+            emitManualChatDone(p);
+        }
+
+        // Dashboard bridge: dokumentace sestavena (ruční chat — složka nebo ZIP)
+        function emitManualChatDone(p) {
+            try {
+                window.DashboardBridge && DashboardBridge.emit('loandoc', 'dokumentace_vygenerovana', {
+                    caseId: window.__dashCaseId || null,
+                    klient: p.formData.uvereovany || '',
+                    ico: p.formData.ico || '',
+                    dokumenty: p.okNames
+                });
+            } catch (e) { /* no-op */ }
+        }
+
+        // Srozumitelný důvod, proč zápis do složky selhal
+        function folderWriteErrorText(err) {
+            var name = err && err.name;
+            if (name === 'NotFoundError') return 'složka už neexistuje nebo byla přesunuta';
+            if (name === 'NotAllowedError' || name === 'SecurityError') return 'zápis nebyl povolen';
+            if (name === 'QuotaExceededError') return 'na disku není místo';
+            if (name === 'NoModificationAllowedError' || name === 'InvalidModificationError') return 'soubor je otevřený v jiném programu';
+            return (err && err.message) || String(err);
+        }
+
+        function showManualChatError(err) {
+            console.error('Ruční chat:', err);
+            var statusEl = document.getElementById('manualChatStatus');
+            statusEl.className = 'manual-chat-status error';
+            statusEl.textContent = 'Chyba: ' + ((err && err.message) || err);
+        }
+
+        // Tlačítko v okně: zápis do složky (povolení / výběr složky po novém kliknutí)
+        async function manualChatSaveToFolder() {
+            var p = manualChatPending;
+            if (!p) return;
+            try {
+                var target = await resolveLoanFolder(true, p.forcePick);
+                if (target && typeof target === 'object') {
+                    try {
+                        await deliverManualChatToFolder(target, p);
+                    } catch (werr) {
+                        console.warn('Zápis do složky selhal:', werr);
+                        p.forcePick = true;
+                        showManualChatFolderActions('Vybrat jinou složku');
+                        showManualChatError(new Error('do složky ' + target.name + ' se nepodařilo zapsat (' + folderWriteErrorText(werr) + '). Vyber jinou složku, nebo stáhni ZIP.'));
+                    }
+                    return;
+                }
+                if (target === null) { await deliverManualChatZip(p); return; }
+                var statusEl = document.getElementById('manualChatStatus');
+                statusEl.className = 'manual-chat-status error';
+                statusEl.textContent = target === 'denied'
+                    ? 'Zápis do složky nebyl povolen. Zkus to znovu, nebo stáhni ZIP.'
+                    : 'Složka nebyla vybrána. Zkus to znovu, nebo stáhni ZIP.';
+            } catch (err) {
+                showManualChatError(err);
+            }
+        }
+
+        // Tlačítko v okně: ZIP místo složky
+        async function manualChatDownloadZip() {
+            if (!manualChatPending) return;
+            try { await deliverManualChatZip(manualChatPending); } catch (err) { showManualChatError(err); }
+        }
+
         /* ─── DOWNLOAD FOR MANUAL CHAT (Claude.ai MAX / ChatGPT Plus) ─── */
-        // Pro komplexní smlouvy (úvěrová, zástavní) — naše API replace pipeline
-        // nedosáhne 100% kvality. Manuální chat má Code Interpreter: vidí celý
-        // DOCX, vrátí upravený s revizemi. Tato funkce stáhne .zip se vším co
-        // Martin potřebuje k paste do Claude.ai nebo ChatGPT.com.
+        // Hlavní cesta ke smlouvám (předplatné, bez API kreditů). Manuální chat má Code Interpreter:
+        // vidí celý DOCX, vrátí upravený s revizemi. Tato funkce připraví šablony + prompty a uloží
+        // je do složky klienta (viz SLOŽKA PRO RUČNÍ CHAT), jinak stáhne .zip.
         async function downloadForManualChat() {
             updateSelectedDocs();
             var templateIds = Object.keys(selectedTemplates);
@@ -5656,6 +5861,9 @@
 
             var modal = document.getElementById('manualChatModal');
             var statusEl = document.getElementById('manualChatStatus');
+            manualChatPending = null;
+            hideManualChatFolderActions();
+            setManualChatSteps('pending');
             statusEl.className = 'manual-chat-status';
             statusEl.textContent = 'Připravuji soubory…';
             modal.classList.add('visible');
@@ -5664,30 +5872,38 @@
                 var formData = collectFormData();
                 var safeClient = (formData.uvereovany || 'klient').replace(/[\\/:*?"<>|]/g, '_').trim() || 'klient';
 
-                var zip = new JSZip();
+                // Složka hned po kliknutí — výběr složky / dotaz na povolení prohlížeč dovolí jen teď
+                var interactive = !(navigator.userActivation && !navigator.userActivation.isActive);
+                if (!folderHandle && interactive && window.showDirectoryPicker) {
+                    statusEl.textContent = 'Složka pro smluvní dokumentaci: vyber ji (poprvé — třeba ve Stažených souborech vytvoř složku „Smluvní dokumentace“), nebo povol zápis, když se prohlížeč zeptá.';
+                }
+                var target = null;
+                try { target = await resolveLoanFolder(interactive); } catch (e) { console.warn('Složka pro ruční chat:', e); }
 
                 // INSTRUKCE.txt záměrně NEpřidáváme — postup je v UI modálu a Martin ho zná.
-                // Do zipu patří jen šablony (.docx) + prompty (.txt) pro AI.
+                // Ukládají se jen šablony (.docx) + prompty (.txt) pro AI.
+                var files = [];
 
+                statusEl.className = 'manual-chat-status';
                 statusEl.textContent = 'Načítám šablony a generuji prompt…';
                 var ready = 0;
                 var totalT = templateIds.length;
-                var okNames = []; // šablony reálně přibalené do ZIPu (pro Dashboard event)
+                var okNames = []; // šablony reálně připravené (pro Dashboard event)
 
                 // Pro každou vybranou šablonu: extrahuj plain text + zavolej preview endpoint
-                // → uloží prompt-pro-AI-[name].txt + originál [name].docx do .zip
+                // → připraví prompt-pro-AI__[name].txt + originál [name].docx
                 for (var i = 0; i < templateIds.length; i++) {
                     var tid = templateIds[i];
                     var tName = selectedTemplates[tid];
                     var template = await getTemplateById(tid);
                     if (!template || !template.data) {
-                        zip.file('CHYBA-' + tName + '.txt', 'Šablonu se nepodařilo načíst z IndexedDB.');
+                        files.push({ name: 'CHYBA-' + tName + '.txt', data: 'Šablonu se nepodařilo načíst z IndexedDB.' });
                         ready++;
                         continue;
                     }
 
-                    // Originál DOCX do zipu (pro upload do chatu)
-                    zip.file(template.name, template.data);
+                    // Originál DOCX (pro upload do chatu)
+                    files.push({ name: template.name, data: template.data });
                     okNames.push(tName);
 
                     // Extract plain text pro prompt
@@ -5718,13 +5934,13 @@
                         var data = await resp.json();
                         if (!data || !data.success) throw new Error('Preview endpoint vrátil neplatnou odpověď');
                         // Manuální variant: má instrukce pro python-docx + .docx attachment workflow
-                        // bez plain text duplicity (šablona je v .zip vedle ve formátu .docx).
+                        // bez plain text duplicity (šablona je vedle promptu ve formátu .docx).
                         // Manuální workflow — použij manualSystemPrompt (čistě .docx instrukce, žádný JSON).
                         // Fallback na systemPrompt jen pokud server starší build ještě nevrací manualSystemPrompt.
                         var sysPrompt = data.manualSystemPrompt || data.systemPrompt;
                         promptText = '=== INSTRUKCE PRO AI (zkopíruj jako první zprávu) ===\n\n' +
                             sysPrompt + '\n\n' +
-                            '=== ÚKOL + DATA (zkopíruj jako druhou zprávu — plus připoj .docx šablonu z tohoto .zip) ===\n\n' +
+                            '=== ÚKOL + DATA (zkopíruj jako druhou zprávu — plus připoj .docx šablonu uloženou vedle tohoto promptu) ===\n\n' +
                             (data.manualUserContent || data.userContent);
                     } catch (err) {
                         // Fallback: lokální kopie ručního promptu (doslovně shodná se serverem, bez textu šablony).
@@ -5733,35 +5949,48 @@
                         var manualLocal = buildManualUserContentPreview(template.name, dataLocal);
                         promptText = '=== INSTRUKCE PRO AI (zkopíruj jako první zprávu) ===\n\n' +
                             sysLocal + '\n\n' +
-                            '=== ÚKOL + DATA (zkopíruj jako druhou zprávu — plus připoj .docx šablonu z tohoto .zip) ===\n\n' +
+                            '=== ÚKOL + DATA (zkopíruj jako druhou zprávu — plus připoj .docx šablonu uloženou vedle tohoto promptu) ===\n\n' +
                             manualLocal;
                         console.warn('Preview endpoint selhal, použil jsem lokální fallback:', err);
                     }
 
                     var promptFileName = 'prompt-pro-AI__' + template.name.replace(/\.docx$/i, '') + '.txt';
-                    zip.file(promptFileName, promptText);
+                    files.push({ name: promptFileName, data: promptText });
 
                     ready++;
                     statusEl.textContent = 'Připraveno ' + ready + ' / ' + totalT + ' šablon…';
                 }
 
-                statusEl.textContent = 'Generuji .zip soubor…';
-                var blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-                var zipName = safeClient + '__pro_manualni_chat.zip';
-                saveAs(blob, zipName);
-
-                statusEl.className = 'manual-chat-status success';
-                statusEl.textContent = '✓ Staženo: ' + zipName + ' (' + Math.round(blob.size / 1024) + ' KB). Pokračuj kliknutím na tlačítko vlevo nebo vpravo.';
-
-                // Dashboard bridge: dokumentace sestavena a stažena (manuální chat ZIP)
-                try {
-                    window.DashboardBridge && DashboardBridge.emit('loandoc', 'dokumentace_vygenerovana', {
-                        caseId: window.__dashCaseId || null,
-                        klient: formData.uvereovany || '',
-                        ico: formData.ico || '',
-                        dokumenty: okNames
-                    });
-                } catch (e) { /* no-op */ }
+                var p = {
+                    files: files,
+                    sub: loanClientFolderName(formData.uvereovany),
+                    zipName: safeClient + '__pro_manualni_chat.zip',
+                    formData: formData,
+                    okNames: okNames,
+                    forcePick: false
+                };
+                if (target && typeof target === 'object') {
+                    try {
+                        await deliverManualChatToFolder(target, p);
+                    } catch (werr) {
+                        // Složka mezitím zmizela / nejde do ní psát → nabídnout jinou složku nebo ZIP
+                        console.warn('Zápis do složky selhal:', werr);
+                        p.forcePick = true;
+                        manualChatPending = p;
+                        showManualChatFolderActions('Vybrat jinou složku');
+                        showManualChatError(new Error('do složky ' + target.name + ' se nepodařilo zapsat (' + folderWriteErrorText(werr) + '). Vyber jinou složku, nebo stáhni ZIP.'));
+                    }
+                } else if (target === 'needs-click') {
+                    // Prohlížeč potřebuje nové kliknutí (povolení zápisu / výběr složky)
+                    manualChatPending = p;
+                    showManualChatFolderActions('Uložit do složky');
+                    statusEl.className = 'manual-chat-status';
+                    statusEl.textContent = 'Soubory jsou připravené (' + czFileCount(files.length) + '). Klikni na „Uložit do složky“ — prohlížeč se zeptá na povolení zápisu.';
+                } else {
+                    var note = target === 'cancelled' ? 'Složka nebyla vybrána —'
+                        : (target === 'denied' ? 'Zápis do složky nebyl povolen —' : '');
+                    await deliverManualChatZip(p, note);
+                }
             } catch (err) {
                 console.error('downloadForManualChat error:', err);
                 statusEl.className = 'manual-chat-status error';
