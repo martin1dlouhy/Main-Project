@@ -1176,6 +1176,13 @@
         }
         .manual-chat-folder-actions[hidden] { display: none; }
 
+        /* Stav automatického uložení případu do Přehledu */
+        .autosave-status {
+            font-size: 0.75rem;
+            color: var(--text-mute);
+            white-space: nowrap;
+        }
+
         /* Lišta akcí: generování přes API (stojí kredity) jako vedlejší skupina vpravo */
         .action-bar-api {
             display: flex;
@@ -2359,6 +2366,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                     Reset
                 </button>
+                <span class="autosave-status" id="autosaveStatus" aria-live="polite"></span>
                 <div class="action-bar-api" title="Automatické vyplnění přes AI API — stojí kredity">
                     <div class="ai-provider-toggle" title="AI model pro vyplnění šablony — Claude (Anthropic) nebo ChatGPT (OpenAI GPT-4o)">
                         <button type="button" class="mode-option active" data-provider="claude" onclick="setAiProvider('claude')">
@@ -2877,7 +2885,7 @@
                     container.innerHTML = '<div class="doc-list-empty">' +
                         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
                         '<p>' + (searchVal ? 'Žádné výsledky' : 'Žádné uložené sady') + '</p>' +
-                        '<small>' + (searchVal ? 'Zkuste jiný hledaný výraz' : 'Uložte první sadu dokumentů tlačítkem "Uložit"') + '</small>' +
+                        '<small>' + (searchVal ? 'Zkuste jiný hledaný výraz' : 'Případ se uloží automaticky, jakmile ve formuláři vyplníte Úvěrovaného') + '</small>' +
                         '</div>';
                     return;
                 }
@@ -3298,6 +3306,10 @@
             var form = document.getElementById('documentForm');
             form.addEventListener('input', scheduleReadiness);
             form.addEventListener('change', scheduleReadiness);
+            // Případ se průběžně ukládá do Přehledu (jakmile je vyplněný Úvěrovaný)
+            form.addEventListener('input', scheduleAutosave);
+            form.addEventListener('change', scheduleAutosave);
+            document.addEventListener('visibilitychange', flushAutosave);
         }
 
         // Datum splatnosti = Datum čerpání + Doba splatnosti (jednotka let/měsíců).
@@ -5859,6 +5871,9 @@
             }
             if (!confirmReadiness()) return;
 
+            // Případ vždy do Přehledu (bez čekání — výběr složky potřebuje čerstvé kliknutí)
+            autosaveCase({ force: true, extra: { manualGenerated: true } });
+
             var modal = document.getElementById('manualChatModal');
             var statusEl = document.getElementById('manualChatStatus');
             manualChatPending = null;
@@ -6050,6 +6065,7 @@
             populateFormFromTermSheet(item.data);
             closeModal('importModal');
             showToast('Term sheet importován: ' + (item.data.borrower || item.data.borrowerName || ''), 'success');
+            autosaveCase(); // případ hned do Přehledu
         }
 
         // TS a loan-doc mají u některých selectů jiné hodnoty voleb — překlad TS → loan-doc
@@ -7147,6 +7163,7 @@
             var toFix = (report.errors || []).length + (report.missing || []).length;
             showToast('Vyplněný Term Sheet načten: ' + report.filled.length + ' polí doplněno' + (toFix ? ', ' + toFix + ' k řešení s klientem — viz přehled.' : '.'),
                 report.filled.length && !toFix ? 'success' : 'info');
+            autosaveCase(); // případ hned do Přehledu
         }
 
         function renderFilledTsSummary(report) {
@@ -7787,6 +7804,10 @@
             if (confirm('Opravdu resetovat formulář?')) {
                 currentDocSetId = null; // další Uložit vytvoří novou sadu
                 currentDocSetUid = null;
+                clearTimeout(autosaveTimer);
+                autosaveTimer = null;
+                lastSavedSnapshot = null;
+                setAutosaveStatus('');
                 document.getElementById('documentForm').reset();
                 renderFormTranches([]);
                 setPledgorOptions([]);
@@ -8550,11 +8571,98 @@
 
         function saveDocumentSet() {
             var updating = currentDocSetId != null;
+            clearTimeout(autosaveTimer);
+            var snap = caseSnapshot();
             storeDocumentSet(null, function(id) {
                 if (id != null) {
+                    lastSavedSnapshot = snap;
+                    setAutosaveStatus('Uloženo v Přehledu · ' + autosaveTime());
                     showToast(updating ? 'Sada dokumentů aktualizována' : 'Sada dokumentů uložena', 'success');
                 } else {
                     showToast('Uložení selhalo — zkus znovu', 'error');
+                }
+            });
+        }
+
+        /* ─── AUTOMATICKÉ ULOŽENÍ PŘÍPADU ───
+         * Případ se uloží do Přehledu, jakmile je vyplněný Úvěrovaný (dlužník), a při každé úpravě
+         * formuláře se průběžně aktualizuje (otevřená sada). Navíc vždy po importu Term Sheetu a při
+         * „Stáhnout pro manuální chat“. Ukládá se jen skutečná změna oproti poslednímu uložení /
+         * otevření — samotné otevření sady z Přehledu nic nepřepíše (slučování s Drive bere novější
+         * verzi). Drive se synchronizuje s odstupem, ať se neposílá každá klávesa. */
+        var autosaveTimer = null;
+        var autosaveDriveTimer = null;
+        var lastSavedSnapshot = null;
+
+        function caseSnapshot() {
+            return JSON.stringify({ formData: collectFormData(), templates: selectedTemplates });
+        }
+
+        function autosaveTime() {
+            return new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function setAutosaveStatus(text) {
+            var el = document.getElementById('autosaveStatus');
+            if (el) el.textContent = text || '';
+        }
+
+        function scheduleAutosave() {
+            clearTimeout(autosaveTimer);
+            autosaveTimer = setTimeout(function() { autosaveCase(); }, 1500);
+        }
+
+        // Při odchodu ze stránky / přepnutí okna uložit hned a poslat na Drive
+        function flushAutosave() {
+            if (document.visibilityState !== 'hidden') return;
+            if (autosaveTimer) autosaveCase();
+            if (autosaveDriveTimer) {
+                clearTimeout(autosaveDriveTimer);
+                autosaveDriveTimer = null;
+                syncDocumentsToDrive();
+            }
+        }
+
+        // opts.force = uložit i beze změny; opts.extra = doplňkové atributy sady. callback(id | null)
+        function autosaveCase(opts, callback) {
+            opts = opts || {};
+            clearTimeout(autosaveTimer);
+            autosaveTimer = null;
+            var nameEl = document.getElementById('uvereovany');
+            var name = nameEl ? nameEl.value.trim() : '';
+            if (!name) { if (callback) callback(null); return; }
+            var snap = caseSnapshot();
+            if (!opts.force && snap === lastSavedSnapshot) { if (callback) callback(currentDocSetId); return; }
+            var creating = currentDocSetId == null;
+            storeDocumentSet(opts.extra || null, function(id) {
+                if (id != null) {
+                    lastSavedSnapshot = snap;
+                    setAutosaveStatus('Uloženo v Přehledu · ' + autosaveTime());
+                    if (creating) notifyNewCase(name, id);
+                    clearTimeout(autosaveDriveTimer);
+                    autosaveDriveTimer = setTimeout(function() { autosaveDriveTimer = null; syncDocumentsToDrive(); }, 8000);
+                } else {
+                    setAutosaveStatus('Automatické uložení selhalo — klikni na Uložit');
+                }
+                if (callback) callback(id);
+            });
+        }
+
+        // Nový případ v Přehledu; upozornit, když už pro stejného klienta jiná sada existuje
+        function notifyNewCase(name, id) {
+            getAllFromDB('documents', function(docs) {
+                var ico = (document.getElementById('ico').value || '').replace(/\s/g, '');
+                var norm = function(s) { return String(s || '').trim().toLowerCase(); };
+                var other = (docs || []).filter(function(d) {
+                    if (d.id === id || !d.formData) return false;
+                    var dIco = String(d.formData.ico || '').replace(/\s/g, '');
+                    return (ico && dIco === ico) || norm(d.formData.uvereovany) === norm(name);
+                })[0];
+                if (other) {
+                    var when = other.generatedAt ? ' z ' + new Date(other.generatedAt).toLocaleDateString('cs-CZ') : '';
+                    showToast('Případ „' + name + '“ uložen do Přehledu. Pro tohoto klienta tam už je sada' + when + ' — jde-li o stejný případ, otevři tu starší z Přehledu a tuto smaž.', 'info');
+                } else {
+                    showToast('Případ „' + name + '“ uložen do Přehledu — další změny se ukládají automaticky.', 'success');
                 }
             });
         }
@@ -8599,8 +8707,12 @@
                     populateForm(doc.formData);
                     currentDocSetId = doc.id;
                     currentDocSetUid = doc.uid || null;
+                    // Otevření samo nic neukládá — uloží se až skutečná změna
+                    clearTimeout(autosaveTimer);
+                    lastSavedSnapshot = caseSnapshot();
+                    setAutosaveStatus('Změny se ukládají automaticky');
                     showView('form');
-                    showToast('Sada dokumentů načtena — Uložit ji aktualizuje', 'success');
+                    showToast('Sada dokumentů načtena — změny se ukládají automaticky', 'success');
                 }
             });
         }
@@ -8818,6 +8930,7 @@
             if (subj.ico) document.getElementById('ico').value = subj.ico;
             if (subj.spisovaZnacka) document.getElementById('spisovaZnacka').value = subj.spisovaZnacka;
             if (subj.sidlo) document.getElementById('sidlo').value = subj.sidlo;
+            scheduleAutosave(); // údaje z ARES (název firmy) → případ do Přehledu
         }
 
         function setAresStatus(field, state) {
