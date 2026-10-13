@@ -5683,6 +5683,8 @@
             } else {
                 report.missing.push('E-mail');
             }
+            // Kontakt Úvěrovaného — u vlastníka lze vybrat „Stejný jako u Úvěrovaného“ (formulář od 10/2026)
+            var borrowerContact = [tel ? TsCheck.phone(tel).text : '', mail && TsCheck.email(mail) ? mail : ''].filter(Boolean).join(', ');
             var deliv = tsT(form, 'doruceni');
             if (deliv) fillTsField('deliveryAddress', deliv, 'Doručovací adresa', report);
             var acc = tsT(form, 'ucet');
@@ -5714,7 +5716,8 @@
                         report.warnings.push({ label: 'Pojištění — ' + label, value: poj.text, reason: 'vinkulace až po uzavření pojistné smlouvy' });
                     } else if (poj || pol) {
                         insurance.push(label + ': ' + (poj ? poj.text : 'pojišťovna neuvedena') + (pol ? ', pojistná smlouva č. ' + pol : ''));
-                        if (!pol) report.missing.push('Číslo pojistné smlouvy — ' + label);
+                        // číslo pojistky je jen ve starších formulářích (nový ho nechce)
+                        if (!pol && p.fields['nem.pojistka']) report.missing.push('Číslo pojistné smlouvy — ' + label);
                     } else {
                         report.missing.push('Pojišťovna — ' + label);
                     }
@@ -5733,8 +5736,14 @@
                 if (type === 'osoba' && owners.length > 1) report.warnings.push({ label: 'Vlastník — ' + label, value: owners.length + ' osoby', reason: 'vybráno „Fyzická osoba“, ale vyplněno víc osob' });
                 var described = owners.map(function(o) { return tsDescribeOwner(o, type, report, label); });
                 var jedna = tsT(p, 'nem.jedna'), kontakt = tsT(p, 'nem.kontakt');
+                var kontaktF = tsF(p, 'nem.kontakt');
+                if (kontaktF && kontaktF.value === 'jako_uverovany') {
+                    kontakt = borrowerContact;
+                    if (!kontakt) report.missing.push('Kontakt na vlastníka — ' + label + ' (stejný jako u Úvěrovaného, ale ten chybí)');
+                } else if (!kontakt) {
+                    report.missing.push('Kontakt na vlastníka — ' + label);
+                }
                 if (type === 'firma' && !jedna) report.missing.push('Kdo jedná za vlastníka — ' + label);
-                if (!kontakt) report.missing.push('Kontakt na vlastníka — ' + label);
                 ownerLines.push(label + ' — ' + (described.length > 1 ? 'vlastníci: ' : 'vlastník: ') +
                     described.map(function(d) { return d.text; }).join('; ') +
                     (jedna ? '; jedná ' + jedna : '') + (kontakt ? '; kontakt ' + kontakt : ''));
@@ -5847,23 +5856,38 @@
                 if (rLines.length) fillTsField('existingPledge', rLines.join('\n'), 'Refinancování', report);
             }
 
-            // E — ručitelé
-            if (form.repeats['rucitele']) {
-                var guar = form.repeats['rucitele'].map(function(g) {
+            // E — ručitelé (od 10/2026 lze vybrat „Vlastník zastavované nemovitosti“ místo vypisování)
+            if (form.repeats['rucitele'] || form.fields['ruc.kdo']) {
+                var guar = (form.repeats['rucitele'] || []).map(function(g) {
                     var nar = tsF(g, 'ruc.narozeni');
                     return { name: tsT(g, 'ruc.jmeno'), iso: nar ? nar.iso : null, narText: nar ? nar.text : '', addr: tsT(g, 'ruc.bydliste') };
                 }).filter(function(g) { return g.name || g.narText || g.addr; });
+                guar.forEach(function(g) {
+                    var who = g.name || 'ručitel';
+                    if (!g.name) report.missing.push('Jméno ručitele');
+                    if (!g.narText) report.missing.push('Datum narození — ' + who);
+                    else if (!g.iso) report.errors.push({ label: 'Datum narození — ' + who, value: g.narText, reason: 'neplatné datum' });
+                    else if (!TsCheck.birthPlausible(g.iso)) report.warnings.push({ label: 'Datum narození — ' + who, value: tsIsoToCs(g.iso), reason: 'neobvyklé datum narození — ověřte' });
+                    if (!g.addr) report.missing.push('Bydliště — ' + who);
+                    g.birthCs = g.iso ? tsIsoToCs(g.iso) : '';
+                });
+                var kdo = tsF(form, 'ruc.kdo');
+                if (kdo && kdo.value === 'vlastnik') {
+                    if (!pledgors.length) {
+                        report.warnings.push({ label: 'Ručitel', value: 'vlastník zastavované nemovitosti', reason: 'vlastníkem je podle formuláře Úvěrovaný — ověřte, kdo bude ručit' });
+                    } else {
+                        if (pledgors.length > 1) report.warnings.push({ label: 'Ručitel', value: 'vlastník zastavované nemovitosti', reason: 'nemovitosti mají víc vlastníků — doplněn první, upřesněte s klientem' });
+                        // vlastníci (z části B) jsou ručiteli — před případné další osoby z tabulky
+                        guar = pledgors[0].owners.filter(function(o) { return o.name; }).map(function(o) {
+                            return { name: o.name, birthCs: o.birth, ico: o.ico, addr: o.addr };
+                        }).concat(guar);
+                        var gp = document.getElementById('guarantorPledgor');
+                        if (gp && !gp.checked) { gp.checked = true; report.filled.push({ label: 'Ručí', value: 'zástavce / vlastník nemovitosti' }); }
+                    }
+                }
                 if (!guar.length) {
-                    report.missing.push('Ručitel');
+                    if (!(kdo && kdo.value === 'vlastnik')) report.missing.push('Ručitel');
                 } else {
-                    guar.forEach(function(g) {
-                        var who = g.name || 'ručitel';
-                        if (!g.name) report.missing.push('Jméno ručitele');
-                        if (!g.narText) report.missing.push('Datum narození — ' + who);
-                        else if (!g.iso) report.errors.push({ label: 'Datum narození — ' + who, value: g.narText, reason: 'neplatné datum' });
-                        else if (!TsCheck.birthPlausible(g.iso)) report.warnings.push({ label: 'Datum narození — ' + who, value: tsIsoToCs(g.iso), reason: 'neobvyklé datum narození — ověřte' });
-                        if (!g.addr) report.missing.push('Bydliště — ' + who);
-                    });
                     var hg = document.getElementById('hasGuarantee');
                     if (hg && !hg.checked) {
                         hg.checked = true;
@@ -5872,8 +5896,10 @@
                     }
                     var gNames = guar.map(function(g) { return g.name; }).filter(Boolean);
                     if (gNames.length) fillTsField('guarantorName', gNames.join(' a '), 'Ručitel', report);
-                    var gBirths = guar.filter(function(g) { return g.iso; }).map(function(g) {
-                        return guar.length > 1 ? tsIsoToCs(g.iso) + ' (' + g.name + ')' : tsIsoToCs(g.iso);
+                    var gIcos = guar.filter(function(g) { return g.ico; }).map(function(g) { return g.ico; });
+                    if (gIcos.length) fillTsField('guarantorIco', gIcos.join('; '), 'Ručitel — IČO', report);
+                    var gBirths = guar.filter(function(g) { return g.birthCs; }).map(function(g) {
+                        return guar.length > 1 ? g.birthCs + ' (' + g.name + ')' : g.birthCs;
                     });
                     if (gBirths.length) fillTsField('guarantorBirthDate', gBirths.join('; '), 'Ručitel — datum narození', report);
                     var gAddrs = tsUnique(guar.map(function(g) { return g.addr; }));
