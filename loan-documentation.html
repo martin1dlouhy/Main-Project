@@ -521,6 +521,46 @@
             margin-top: 0.25rem;
         }
 
+        .upload-zone:focus-visible {
+            outline: 2px solid var(--amber);
+            outline-offset: 2px;
+        }
+
+        /* Vyplněný Term Sheet od klienta — hlavní nahrávání, velká jantarová plocha */
+        .upload-zone-ts {
+            padding: 2rem 1.5rem;
+            border-color: var(--line-amber);
+            background-color: var(--amber-tint);
+        }
+        .upload-zone-ts .upload-icon {
+            width: 44px;
+            height: 44px;
+            color: var(--amber);
+        }
+        .upload-zone-title {
+            font-size: 1.0625rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        /* Šablony se nahrávají zřídka — menší plocha v jednom řádku */
+        .upload-zone-compact {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-width: 1px;
+        }
+        .upload-zone-compact .upload-icon {
+            width: 20px;
+            height: 20px;
+            margin: 0;
+            flex-shrink: 0;
+        }
+
         /* ─── TEMPLATE LIST ─── */
         .template-list {
             display: flex;
@@ -1841,14 +1881,17 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                             Import & Šablony
                         </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:0.75rem;">
+                        <!-- Vyplněný Term Sheet od klienta — nejčastější akce, proto velká plocha (klik i přetažení) -->
+                        <div class="upload-zone upload-zone-ts" id="filledTsZone" role="button" tabindex="0" title="Word vrácený klientem s vyplněnou tabulkou Údaje pro smluvní dokumentaci — údaje se doplní do formuláře, čte se lokálně v prohlížeči">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+                            <div class="upload-zone-title">Nahrát vyplněný Term Sheet od klienta</div>
+                            <div class="upload-zone-text">Přetáhněte sem Word od klienta nebo <span class="upload-link">klikněte pro výběr</span></div>
+                            <div class="upload-zone-hint">Údaje se doplní do formuláře a případ se uloží do Přehledu. Soubor se čte jen v prohlížeči.</div>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.75rem;">
                             <button type="button" class="btn btn-outline" onclick="openImportModal()" title="Načte uložená data případu z Term Sheet Generátoru (Drive / lokální)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                 Importovat term sheet
-                            </button>
-                            <button type="button" class="btn btn-outline" onclick="document.getElementById('filledTsInput').click()" title="Word vrácený klientem s vyplněnou tabulkou Údaje pro smluvní dokumentaci — údaje se doplní do formuláře, čte se lokálně v prohlížeči">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
-                                Nahrát vyplněný TS od klienta
                             </button>
                             <input type="file" id="filledTsInput" accept=".docx" style="display:none;" onchange="importFilledTermSheet(this.files[0]); this.value='';">
                         </div>
@@ -1860,10 +1903,12 @@
                                     <span id="btn-push-all-templates-label">Nahrát vše na Drive</span>
                                 </button>
                             </div>
-                            <div class="upload-zone" id="uploadZone">
+                            <div class="upload-zone upload-zone-compact" id="uploadZone">
                                 <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                                <div class="upload-zone-text">Přetáhněte soubory nebo <span class="upload-link">klikněte pro výběr</span></div>
-                                <div class="upload-zone-hint">Podporovány jsou šablony Word (.docx) a šablona splátkového kalendáře v Excelu (.xlsx). Kategorie Wordu se rozpozná automaticky z názvu (nebo ji později přeřaď).</div>
+                                <div>
+                                    <div class="upload-zone-text">Přetáhněte šablony nebo <span class="upload-link">klikněte pro výběr</span></div>
+                                    <div class="upload-zone-hint">Word (.docx) a splátkový kalendář v Excelu (.xlsx). Kategorie Wordu se rozpozná z názvu (nebo ji později přeřaď).</div>
+                                </div>
                                 <input type="file" id="fileInput" accept=".docx,.xlsx" multiple style="display: none;">
                             </div>
                         </div>
@@ -3296,6 +3341,24 @@
                 uploadTemplateFiles(this.files);
                 this.value = '';
             });
+
+            // Vyplněný Term Sheet od klienta — klik, klávesa i přetažení (kontrolu souboru dělá import)
+            var tsZone = document.getElementById('filledTsZone');
+            var tsInput = document.getElementById('filledTsInput');
+            if (tsZone && tsInput) {
+                tsZone.addEventListener('click', function() { tsInput.click(); });
+                tsZone.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tsInput.click(); }
+                });
+                tsZone.addEventListener('dragover', function(e) { e.preventDefault(); tsZone.classList.add('dragover'); });
+                tsZone.addEventListener('dragleave', function() { tsZone.classList.remove('dragover'); });
+                tsZone.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    tsZone.classList.remove('dragover');
+                    var file = e.dataTransfer.files && e.dataTransfer.files[0];
+                    if (file) importFilledTermSheet(file);
+                });
+            }
 
             loanInitMaturityDate();
 
