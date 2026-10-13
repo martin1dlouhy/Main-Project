@@ -2649,7 +2649,11 @@
         // 'clean' | 'tracked' — globální přepínač režimu generování
         var generateMode = 'clean';
 
-        /* ─── FOLDER HANDLE PERSISTENCE (IndexedDB) ─── */
+        /* ─── FOLDER HANDLE PERSISTENCE (IndexedDB) ───
+         * Klíč 'loanFolderV2': ruční chat do složky ukládá složky klientů. Dřívější klíč 'loanFolder'
+         * držel složku vybranou ještě pro staré „Připojit složku“ (např. stará složka na OneDrive) —
+         * záměrně se znovu nepoužije, složka se po této změně vybere jednou znovu. */
+        var LOAN_FOLDER_KEY = 'loanFolderV2';
         function openLoanFolderDB() {
             return new Promise(function(resolve, reject) {
                 var req = indexedDB.open('LoanDocFolderDB', 1);
@@ -2665,7 +2669,7 @@
             try {
                 var fdb = await openLoanFolderDB();
                 var tx = fdb.transaction('handles', 'readwrite');
-                tx.objectStore('handles').put(handle, 'loanFolder');
+                tx.objectStore('handles').put(handle, LOAN_FOLDER_KEY);
                 await new Promise(function(resolve, reject) {
                     tx.oncomplete = resolve;
                     tx.onerror = reject;
@@ -2677,7 +2681,7 @@
             try {
                 var fdb = await openLoanFolderDB();
                 var tx = fdb.transaction('handles', 'readonly');
-                var req = tx.objectStore('handles').get('loanFolder');
+                var req = tx.objectStore('handles').get(LOAN_FOLDER_KEY);
                 return new Promise(function(resolve) {
                     req.onsuccess = function() { resolve(req.result || null); };
                     req.onerror = function() { resolve(null); };
@@ -5833,7 +5837,7 @@
             hideManualChatFolderActions();
             setManualChatSteps('folder', p.sub, root.name);
             statusEl.className = 'manual-chat-status success';
-            statusEl.textContent = '✓ Uloženo do složky ' + root.name + ' › ' + p.sub + ' (' + czFileCount(p.files.length) + '). Pokračuj kliknutím na tlačítko vlevo nebo vpravo.';
+            statusEl.textContent = '✓ Uloženo do složky ' + root.name + ' › ' + p.sub + ' (' + czFileCount(p.files.length) + '). Pokračuj kliknutím na tlačítko vlevo nebo vpravo. Složku změníš tlačítkem „' + root.name + '“ nahoře.';
             emitManualChatDone(p);
         }
 
@@ -8784,7 +8788,7 @@
         async function connectFolder() {
             if (window.showDirectoryPicker) {
                 try {
-                    var handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                    var handle = await window.showDirectoryPicker({ id: 'loan-doc-folder', mode: 'readwrite', startIn: 'downloads' });
                     folderHandle = handle;
                     var btn = document.getElementById('btn-folder');
                     if (btn) { btn.classList.add('folder-connected'); }
