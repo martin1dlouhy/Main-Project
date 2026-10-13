@@ -139,6 +139,23 @@
         .tranches-sum-status.ok { color: #10b981; }
         .tranches-sum-status.warn { color: #f59e0b; }
         .tranches-sum-status.err { color: #ef4444; }
+        /* Firemní šablona splátkového kalendáře (Excel) — info v okně + poplatek z 1. čerpání */
+        .schedule-template-info {
+            margin: 0 0 1rem;
+            padding: 0.625rem 0.875rem;
+            border-left: 3px solid var(--amber);
+            border-radius: 0 var(--r-sm) var(--r-sm) 0;
+            background: var(--bg-raised);
+            font-size: 0.8125rem;
+            line-height: 1.5;
+            color: var(--text-soft);
+        }
+        .schedule-template-info.missing { border-left-color: var(--warning); }
+        .schedule-fee-hint {
+            margin-top: 0.375rem;
+            font-size: 0.8125rem;
+            color: var(--text-mute);
+        }
         .doc-list-empty {
             text-align: center;
             padding: 3rem 1rem;
@@ -515,6 +532,17 @@
             flex: 1;
             font-weight: 500;
             color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Excel šablona splátkového kalendáře — místo výběru kategorie jen poznámka */
+        .template-note {
+            flex-shrink: 1;
+            min-width: 0;
+            font-size: 0.75rem;
+            color: var(--text-mute);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -1778,7 +1806,7 @@
                         </div>
                         <div style="margin-top: 1rem;">
                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem;">
-                                <label class="form-label" style="margin: 0;">Nahrát šablony DOCX</label>
+                                <label class="form-label" style="margin: 0;">Nahrát šablony (Word, Excel)</label>
                                 <button type="button" class="btn btn-outline btn-small" onclick="pushAllTemplatesToDrive()" id="btn-push-all-templates" title="Nahraje všechny lokální šablony na Google Drive (přepíše stejně pojmenované)">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                     <span id="btn-push-all-templates-label">Nahrát vše na Drive</span>
@@ -1787,8 +1815,8 @@
                             <div class="upload-zone" id="uploadZone">
                                 <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                 <div class="upload-zone-text">Přetáhněte soubory nebo <span class="upload-link">klikněte pro výběr</span></div>
-                                <div class="upload-zone-hint">Podporovány jsou soubory .docx. Kategorie se rozpozná automaticky z názvu (nebo ji později přeřaď).</div>
-                                <input type="file" id="fileInput" accept=".docx" multiple style="display: none;">
+                                <div class="upload-zone-hint">Podporovány jsou šablony Word (.docx) a šablona splátkového kalendáře v Excelu (.xlsx). Kategorie Wordu se rozpozná automaticky z názvu (nebo ji později přeřaď).</div>
+                                <input type="file" id="fileInput" accept=".docx,.xlsx" multiple style="display: none;">
                             </div>
                         </div>
                         <div id="templateList" class="template-list"></div>
@@ -2302,6 +2330,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Stáhnout pro manuální chat
                 </button>
+                <button class="btn btn-outline" onclick="openScheduleModal()" title="Vyplní firemní šablonu splátkového kalendáře v Excelu údaji z formuláře — data a částky čerpání zkontroluješ v dalším kroku">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Splátkový kalendář
+                </button>
                 <button class="btn btn-outline" onclick="saveDocumentSet()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                     Uložit
@@ -2346,10 +2378,11 @@
         <div class="modal" style="max-width: 620px;">
             <h3>Vygenerovat splátkový kalendář</h3>
             <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
-                Zadej skutečné datum (data) čerpání. Kalendář se vygeneruje jako Excel podle šablony na Drive.
+                Zadej skutečné datum (data) a částky čerpání — předvyplní se z formuláře. Kalendář se vygeneruje jako Excel.
             </p>
+            <div id="scheduleTemplateInfo" class="schedule-template-info" hidden></div>
 
-            <div class="form-group" style="margin-bottom: 1rem;">
+            <div class="form-group" id="scheduleDayCountGroup" style="margin-bottom: 1rem;">
                 <label class="form-label">Konvence úročení</label>
                 <select id="scheduleDayCount" class="form-select">
                     <option value="ACT/360">ACT/360 (standardní)</option>
@@ -2363,6 +2396,7 @@
             </div>
             <div id="tranchesContainer" class="tranches-container"></div>
             <div id="tranchesSumStatus" class="tranches-sum-status"></div>
+            <div id="scheduleFeeHint" class="schedule-fee-hint" hidden></div>
 
             <div class="modal-actions" style="margin-top: 1.25rem;">
                 <button class="btn btn-outline btn-small" onclick="closeModal('scheduleModal')">Zavřít</button>
@@ -3195,12 +3229,10 @@
             uploadZone.addEventListener('drop', function(e) {
                 e.preventDefault();
                 uploadZone.classList.remove('dragover');
-                Array.from(e.dataTransfer.files).forEach(function(file) {
-                    if (file.name.endsWith('.docx')) uploadTemplate(file);
-                });
+                uploadTemplateFiles(e.dataTransfer.files);
             });
             fileInput.addEventListener('change', function() {
-                Array.from(this.files).forEach(function(file) { uploadTemplate(file); });
+                uploadTemplateFiles(this.files);
                 this.value = '';
             });
 
@@ -3256,47 +3288,75 @@
         }
 
         /* ─── TEMPLATES ─── */
+        // Šablony Word (.docx) + Excel jen jako šablona splátkového kalendáře (.xlsx)
+        function uploadTemplateFiles(files) {
+            Array.from(files || []).forEach(function(file) {
+                if (/\.(docx|xlsx)$/i.test(file.name)) {
+                    uploadTemplate(file);
+                } else {
+                    showToast('Soubor ' + file.name + ' nelze nahrát — podporované jsou šablony Word (.docx) a splátkový kalendář v Excelu (.xlsx).', 'error');
+                }
+            });
+        }
+
         function uploadTemplate(file) {
+            var isSheet = isXlsxName(file.name);
             var reader = new FileReader();
             reader.onload = function(e) {
-                // Auto-detekce kategorie + dedup podle name (jinak druhý drag&drop stejné
-                // šablony vytvořil další entry s autoIncrement id — typický původ duplikátů
-                // mezi "Úvěrové smlouvy" a "Nezařazeno").
-                getAllFromDB('categories', function(cats) {
-                    getAllFromDB('templates', function(existing) {
-                        var prior = (existing || []).find(function(t) { return t.name === file.name; });
-                        var detected = detectCategory(file.name, cats);
-                        var record = {
-                            name: file.name,
-                            data: e.target.result,
-                            // Pokud už existuje s manuálně přiřazenou kategorií, neignoruj ji.
-                            category: (prior && prior.category) ? prior.category : (detected ? detected.name : null),
-                            uploadedAt: new Date().toISOString()
-                        };
-                        if (prior) record.id = prior.id;
-                        // Nově nahraná šablona už není „smazaná“ (Drive sync ji smí načíst)
-                        unmarkTemplateDeleted(file.name);
-                        // put = přepíše existující záznam se stejným id (add by u přepisu selhal)
-                        (prior ? putToDb : saveToDb)('templates', record, function(id) {
-                            if (id) {
-                                var catNote;
-                                if (prior) {
-                                    catNote = ' → aktualizováno (kategorie zachována: "' + (record.category || 'Nezařazeno') + '")';
-                                } else {
-                                    catNote = detected
-                                        ? ' → kategorie "' + detected.name + '"'
-                                        : ' → "Nezařazeno" (přiřaď kategorii ručně)';
-                                }
-                                showToast('Šablona ' + file.name + (prior ? ' přepsána' : ' nahrána') + catNote, 'success');
-                                renderTemplateList();
+                // Excel umíme jen jako šablonu splátkového kalendáře — nejdřív ověřit, že má očekávaná pole
+                var check = isSheet ? inspectScheduleTemplate(e.target.result) : Promise.resolve({ ok: true });
+                check.then(function(res) {
+                    if (!res.ok) {
+                        showToast('Excel ' + file.name + ' nejde použít jako šablona splátkového kalendáře: ' + res.error, 'error');
+                        return;
+                    }
+                    storeTemplateFile(file.name, e.target.result, isSheet);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function storeTemplateFile(name, data, isSheet) {
+            // Auto-detekce kategorie + dedup podle name (jinak druhý drag&drop stejné
+            // šablony vytvořil další entry s autoIncrement id — typický původ duplikátů
+            // mezi "Úvěrové smlouvy" a "Nezařazeno").
+            getAllFromDB('categories', function(cats) {
+                getAllFromDB('templates', function(existing) {
+                    var prior = (existing || []).find(function(t) { return t.name === name; });
+                    var detected = isSheet ? null : detectCategory(name, cats);
+                    var record = {
+                        name: name,
+                        data: data,
+                        // Pokud už existuje s manuálně přiřazenou kategorií, neignoruj ji.
+                        category: (prior && prior.category) ? prior.category : (detected ? detected.name : null),
+                        uploadedAt: new Date().toISOString()
+                    };
+                    if (prior) record.id = prior.id;
+                    // Nově nahraná šablona už není „smazaná“ (Drive sync ji smí načíst)
+                    unmarkTemplateDeleted(name);
+                    // put = přepíše existující záznam se stejným id (add by u přepisu selhal)
+                    (prior ? putToDb : saveToDb)('templates', record, function(id) {
+                        if (id) {
+                            var catNote;
+                            if (isSheet) {
+                                catNote = ' — použije se u tlačítka „Splátkový kalendář“';
+                            } else if (prior) {
+                                catNote = ' → aktualizováno (kategorie zachována: "' + (record.category || 'Nezařazeno') + '")';
+                            } else {
+                                catNote = detected
+                                    ? ' → kategorie "' + detected.name + '"'
+                                    : ' → "Nezařazeno" (přiřaď kategorii ručně)';
+                            }
+                            showToast((isSheet ? 'Šablona splátkového kalendáře ' : 'Šablona ') + name + (prior ? ' přepsána' : ' nahrána') + catNote, 'success');
+                            renderTemplateList();
                             // Also push to Google Drive (shared Šablony folder)
                             if (window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected()) {
                                 try {
-                                    var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-                                    var blob = new Blob([e.target.result], { type: mime });
-                                    GDriveSync.saveShared('Šablony/Úvěrová dokumentace/' + file.name, blob, mime)
+                                    var mime = templateMime(name);
+                                    var blob = new Blob([data], { type: mime });
+                                    GDriveSync.saveShared('Šablony/Úvěrová dokumentace/' + name, blob, mime)
                                         .then(function() {
-                                            GDriveSync.showToast && GDriveSync.showToast('Šablona nahrána na Drive: ' + file.name, 'success');
+                                            GDriveSync.showToast && GDriveSync.showToast('Šablona nahrána na Drive: ' + name, 'success');
                                         })
                                         .catch(function(err) {
                                             console.warn('GDrive template upload failed:', err);
@@ -3309,10 +3369,8 @@
                             showToast('Chyba při nahrávání šablony', 'error');
                         }
                     });
-                    });
                 });
-            };
-            reader.readAsArrayBuffer(file);
+            });
         }
 
         /* ─── BULK PUSH TEMPLATES TO DRIVE ─── */
@@ -3334,13 +3392,13 @@
                     showToast('Žádné lokální šablony k nahrání', 'info');
                     return;
                 }
-                var mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
                 var ok = 0, fail = 0;
                 for (var i = 0; i < templates.length; i++) {
                     var t = templates[i];
                     if (!t || !t.data || !t.name) { fail++; continue; }
                     if (lbl) lbl.textContent = 'Nahrávám… ' + (i + 1) + '/' + templates.length;
                     try {
+                        var mime = templateMime(t.name);
                         var blob = (t.data instanceof Blob) ? t.data : new Blob([t.data], { type: mime });
                         await GDriveSync.saveShared('Šablony/Úvěrová dokumentace/' + t.name, blob, mime);
                         ok++;
@@ -3616,7 +3674,7 @@
         }
 
         /* ─── SPLÁTKOVÝ KALENDÁŘ — MODAL + GENERATOR ─── */
-        var scheduleContext = null; // { docSet, formData }
+        var scheduleContext = null; // { docSet, formData, template, templatePromise }
 
         function parseCzAmount(s) {
             if (s == null) return 0;
@@ -3634,36 +3692,77 @@
             return isNaN(n) ? 0 : n;
         }
 
+        // Okno splátkového kalendáře: s id = uložená sada (Přehled), bez id = aktuální formulář
         function openScheduleModal(docSetId) {
+            if (docSetId === undefined || docSetId === null) {
+                showScheduleModal(collectFormData(), null);
+                return;
+            }
             getAllFromDB('documents', function(documents) {
                 var docSet = (documents || []).find(function(d) { return d.id === docSetId; });
                 if (!docSet) { showToast('Sada nenalezena', 'error'); return; }
-                var fd = docSet.formData || {};
-                scheduleContext = { docSet: docSet, formData: fd };
-
-                // Předvyplnění konvence (default ACT/360)
-                var dc = document.getElementById('scheduleDayCount');
-                if (dc) dc.value = 'ACT/360';
-
-                // Inicializace tranší: defaultně jedna tranše s datem podpisu (nebo dnes) + plná částka
-                var container = document.getElementById('tranchesContainer');
-                if (container) container.innerHTML = '';
-
-                var signDate = fd.signDate || '';
-                var defaultDate = signDate || (new Date().toISOString().slice(0, 10));
-                var defaultAmount = parseCzAmount(fd.amount);
-                // Části čerpání z formuláře (postupné čerpání) → tranše kalendáře; jinak jedna tranše
-                var formTranches = (fd.drawdownType === 'Postupné' && Array.isArray(fd.tranches))
-                    ? fd.tranches.filter(function(t) { return t && parseCzAmount(t.amount) > 0; }) : [];
-                if (formTranches.length) {
-                    formTranches.forEach(function(t) { addTrancheRow(t.date || defaultDate, parseCzAmount(t.amount)); });
-                } else {
-                    addTrancheRow(defaultDate, defaultAmount);
-                }
-
-                updateTranchesSumStatus();
-                document.getElementById('scheduleModal').classList.add('visible');
+                showScheduleModal(docSet.formData || {}, docSet);
             });
+        }
+
+        function showScheduleModal(fd, docSet) {
+            scheduleContext = { docSet: docSet, formData: fd, template: null, templatePromise: null };
+
+            // Předvyplnění konvence (default ACT/360)
+            var dc = document.getElementById('scheduleDayCount');
+            if (dc) {
+                dc.value = 'ACT/360';
+                if (typeof window.syncCustomDropdown === 'function') window.syncCustomDropdown('scheduleDayCount');
+            }
+
+            // Inicializace tranší: defaultně jedna tranše s datem čerpání (nebo podpisu / dnes) + plná částka
+            var container = document.getElementById('tranchesContainer');
+            if (container) container.innerHTML = '';
+
+            var now = new Date();
+            var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            var defaultDate = fd.drawdownDate || fd.signDate || today;
+            var defaultAmount = parseCzAmount(fd.amount);
+            // Části čerpání z formuláře (postupné čerpání) → tranše kalendáře; jinak jedna tranše
+            var formTranches = (fd.drawdownType === 'Postupné' && Array.isArray(fd.tranches))
+                ? fd.tranches.filter(function(t) { return t && parseCzAmount(t.amount) > 0; }) : [];
+            if (formTranches.length) {
+                formTranches.forEach(function(t) { addTrancheRow(t.date || defaultDate, parseCzAmount(t.amount)); });
+            } else {
+                addTrancheRow(defaultDate, defaultAmount);
+            }
+
+            updateTranchesSumStatus();
+            document.getElementById('scheduleModal').classList.add('visible');
+
+            // Firemní šablona v Excelu (nahraná v aplikaci, jinak z Drive)
+            renderScheduleTemplateInfo(null, true);
+            var ctx = scheduleContext;
+            ctx.templatePromise = findScheduleTemplate();
+            ctx.templatePromise.then(function(tpl) {
+                if (scheduleContext !== ctx) return; // okno se mezitím otevřelo znovu
+                ctx.template = tpl;
+                renderScheduleTemplateInfo(tpl, false);
+                updateTranchesSumStatus();
+            });
+        }
+
+        function renderScheduleTemplateInfo(tpl, loading) {
+            var box = document.getElementById('scheduleTemplateInfo');
+            var dcGroup = document.getElementById('scheduleDayCountGroup');
+            if (box) {
+                box.hidden = false;
+                box.classList.toggle('missing', !loading && !tpl);
+                if (loading) {
+                    box.textContent = 'Hledám firemní šablonu splátkového kalendáře…';
+                } else if (tpl) {
+                    box.textContent = 'Vyplní se firemní šablona „' + tpl.name + '“. Splátky spočítají vzorce v Excelu (měsíčně, úrok na bázi 360 dní jako ve smlouvě).';
+                } else {
+                    box.textContent = 'Firemní šablona v Excelu není nahraná — vytvoří se jednoduchá tabulka. Šablonu nahraješ v sekci Import & Šablony.';
+                }
+            }
+            // Konvenci úročení určuje šablona — volba platí jen pro jednoduchou tabulku
+            if (dcGroup) dcGroup.style.display = tpl ? 'none' : '';
         }
 
         function addTrancheRow(date, amount) {
@@ -3711,6 +3810,19 @@
                 var fmtDiff = Math.abs(diff).toLocaleString('cs-CZ', { maximumFractionDigits: 2 });
                 status.textContent = '⚠ Součet: ' + fmtSum + ' ' + currency + ' / smlouva: ' + fmtTarget + ' ' + currency + ' (rozdíl ' + fmtDiff + ')';
             }
+
+            // Firemní šablona: poplatek za sjednání se strhne z prvního čerpání (smlouva čl. 4.3)
+            var feeHint = document.getElementById('scheduleFeeHint');
+            if (feeHint) {
+                var fee = scheduleContext.template ? scheduleFeeAmount(scheduleContext.formData) : 0;
+                var list = fee > 0 ? collectTrancheInputs() : null;
+                var firstAmt = (list && list.length) ? list[0].amount : 0;
+                feeHint.hidden = !(fee > 0 && firstAmt > fee);
+                if (!feeHint.hidden) {
+                    var fmt = function(n) { return n.toLocaleString('cs-CZ', { maximumFractionDigits: 2 }); };
+                    feeHint.textContent = 'Poplatek za sjednání ' + fmt(fee) + ' ' + currency + ' se odečte z prvního čerpání — na účet se vyplatí ' + fmt(firstAmt - fee) + ' ' + currency + '.';
+                }
+            }
         }
 
         function collectTranches() {
@@ -3751,6 +3863,29 @@
             // Rate (% p.a.) — field id "interest"
             var rate = parseCzAmount(fd.interest);
             if (!(rate > 0)) { showToast('Ve smlouvě chybí úroková sazba', 'error'); return; }
+
+            // Firemní šablona v Excelu: aplikace vyplní jen vstupy, kalendář spočítají vzorce šablony
+            var genBtn = document.getElementById('btn-gen-schedule');
+            if (genBtn) genBtn.disabled = true;
+            var tpl = null;
+            try { tpl = await (scheduleContext.templatePromise || findScheduleTemplate()); } catch (e) { tpl = null; }
+            if (genBtn) genBtn.disabled = false;
+            if (tpl) {
+                if (!(maturity > tranches[0].date)) { showToast('Datum splatnosti musí být až po prvním čerpání', 'error'); return; }
+                if (genBtn) genBtn.disabled = true;
+                try {
+                    if (await generateScheduleFromTemplate(tpl, fd)) {
+                        showToast('Splátkový kalendář vyplněn do firemní šablony — otevři ho v Excelu a zkontroluj', 'success');
+                        closeModal('scheduleModal');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    showToast('Splátkový kalendář se nepodařilo vyplnit: ' + e.message, 'error');
+                } finally {
+                    if (genBtn) genBtn.disabled = false;
+                }
+                return;
+            }
 
             // Payment type
             var interestPayment = fd.interestPayment || 'Měsíční';
@@ -3878,6 +4013,546 @@
             }
         }
 
+        /* ─── SPLÁTKOVÝ KALENDÁŘ — FIREMNÍ ŠABLONA (Excel) ───
+         * Šablona Spolumajitelé Private Credit počítá kalendář sama vzorci. Aplikace vyplní jen vstupní
+         * pole podle popisků vedle nich („Dlužník:“, „Výše úvěru:“ …) a tabulku čerpání (záhlaví
+         * „Datum čerpání“ + „Částka čerpání“). Soubor se upravuje přímo (JSZip + XML listu), takže logo,
+         * formáty, podmíněné formátování, oblast tisku i patička zůstanou beze změny — SheetJS by je
+         * při zápisu ztratil. Popisky se porovnávají bez diakritiky a koncové dvojtečky. */
+        var SCHEDULE_LABELS = {
+            lenderAccount: ['ucet veritele'],
+            contractDate: ['uverova smlouva', 'datum smlouvy'],
+            amount: ['vyse uveru'],
+            rate: ['urokova sazba'],
+            maturity: ['konecna splatnost', 'splatnost jistiny', 'datum splatnosti'],
+            model: ['model splaceni'],
+            firstAnnuity: ['den 1. anuitni splatky', 'den prvni anuitni splatky']
+        };
+        var SCHEDULE_REQUIRED = {
+            borrower: 'Dlužník',
+            amount: 'Výše úvěru',
+            rate: 'Úroková sazba',
+            maturity: 'Konečná splatnost',
+            model: 'Model splácení',
+            table: 'tabulka čerpání (Datum čerpání, Částka čerpání)'
+        };
+
+        function isXlsxName(name) { return /\.xlsx$/i.test(String(name || '')); }
+
+        function templateMime(name) {
+            return isXlsxName(name)
+                ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        }
+
+        // Popisek pro porovnání: bez diakritiky, malá písmena, bez koncové dvojtečky
+        function scheduleNorm(s) {
+            return String(s || '').normalize('NFD').replace(/\p{M}/gu, '')
+                .toLowerCase().replace(/\s+/g, ' ').trim().replace(/\s*:$/, '');
+        }
+
+        function sheetXmlText(s) {
+            return String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+                .replace(/&#x([0-9a-f]+);/gi, function(m, h) { return String.fromCharCode(parseInt(h, 16)); })
+                .replace(/&#(\d+);/g, function(m, d) { return String.fromCharCode(+d); })
+                .replace(/&amp;/g, '&');
+        }
+
+        // Text z <si> / <is> — spojí běhy <r><t>, vynechá fonetické přepisy <rPh>
+        function sheetRichText(inner) {
+            var out = '';
+            String(inner || '').replace(/<rPh\b[\s\S]*?<\/rPh>/g, '').replace(/<t\b[^>]*\/>/g, '')
+                .replace(/<t\b[^>]*>([\s\S]*?)<\/t>/g, function(m, t) { out += sheetXmlText(t); return m; });
+            return out;
+        }
+
+        function sheetColNum(col) {
+            var n = 0;
+            for (var i = 0; i < col.length; i++) n = n * 26 + (col.charCodeAt(i) - 64);
+            return n;
+        }
+
+        function sheetColName(n) {
+            var s = '';
+            while (n > 0) { var r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); }
+            return s;
+        }
+
+        // Model listu: text buněk (sdílené i vložené řetězce, čísla), vzorce, skryté sloupce/řádky a sloučené oblasti
+        function readSheetModel(sheetXml, sst) {
+            var start = sheetXml.indexOf('<sheetData');
+            var end = sheetXml.lastIndexOf('</sheetData>');
+            var data = (start >= 0 && end > start) ? sheetXml.slice(start, end) : '';
+            // Skryté pomocné sloupce/řádky (šablona v nich má vlastní popisky, např. „Konečná splatnost“)
+            var hiddenCols = {}, hiddenRows = {};
+            sheetXml.replace(/<col\b[^>]*>/g, function(m) {
+                if (!/\bhidden="(1|true)"/.test(m)) return m;
+                var min = +((/\bmin="(\d+)"/.exec(m) || [])[1] || 0);
+                var max = +((/\bmax="(\d+)"/.exec(m) || [])[1] || 0);
+                for (var c = min; c <= max && c <= 16384; c++) hiddenCols[c] = true;
+                return m;
+            });
+            data.replace(/<row\b[^>]*>/g, function(m) {
+                if (/\bhidden="(1|true)"/.test(m)) hiddenRows[(/\br="(\d+)"/.exec(m) || [])[1]] = true;
+                return m;
+            });
+            var cells = {};
+            data.replace(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, function(m, attrs, inner) {
+                var r = /\br="([A-Z]+)(\d+)"/.exec(attrs);
+                if (!r) return m;
+                var t = (/\bt="(\w+)"/.exec(attrs) || [])[1] || 'n';
+                var v = /<v>([\s\S]*?)<\/v>/.exec(inner || '');
+                var text = '';
+                if (t === 's') {
+                    text = v ? (sst[parseInt(v[1], 10)] || '') : '';
+                } else if (t === 'inlineStr') {
+                    var is = /<is>([\s\S]*?)<\/is>/.exec(inner || '');
+                    text = is ? sheetRichText(is[1]) : '';
+                } else if (t === 'n' || t === 'str') {
+                    text = v ? sheetXmlText(v[1]) : '';
+                }
+                var col = sheetColNum(r[1]);
+                cells[r[1] + r[2]] = {
+                    col: col,
+                    row: parseInt(r[2], 10),
+                    text: text,
+                    norm: scheduleNorm(text),
+                    formula: /<f[\s>\/]/.test(inner || ''),
+                    hidden: !!(hiddenCols[col] || hiddenRows[r[2]])
+                };
+                return m;
+            });
+            var merges = [];
+            sheetXml.replace(/<mergeCell\b[^>]*\bref="([A-Z]+)(\d+):([A-Z]+)(\d+)"/g, function(m, c1, r1, c2, r2) {
+                merges.push({ c1: sheetColNum(c1), r1: +r1, c2: sheetColNum(c2), r2: +r2 });
+                return m;
+            });
+            return { cells: cells, merges: merges };
+        }
+
+        // Buňka hodnoty = první vpravo od popisku (za jeho sloučenou oblastí)
+        function sheetRefRightOf(model, ref) {
+            var c = model.cells[ref];
+            var endCol = c.col;
+            model.merges.forEach(function(mg) {
+                if (c.row >= mg.r1 && c.row <= mg.r2 && c.col >= mg.c1 && c.col <= mg.c2) endCol = Math.max(endCol, mg.c2);
+            });
+            return sheetColName(endCol + 1) + c.row;
+        }
+
+        // Viditelné buňky se zadaným popiskem, seřazené po řádcích
+        function sheetFindLabels(model, norms) {
+            return Object.keys(model.cells).filter(function(ref) {
+                var c = model.cells[ref];
+                return !c.hidden && norms.indexOf(c.norm) !== -1;
+            }).sort(function(a, b) {
+                var A = model.cells[a], B = model.cells[b];
+                return (A.row - B.row) || (A.col - B.col);
+            });
+        }
+
+        function locateScheduleFields(model) {
+            // Hodnota vpravo od prvního vhodného popisku; buňku se vzorcem nikdy nepřepisovat
+            var valueOf = function(refs) {
+                for (var i = 0; i < refs.length; i++) {
+                    var target = sheetRefRightOf(model, refs[i]);
+                    if (!(model.cells[target] && model.cells[target].formula)) return target;
+                }
+                return null;
+            };
+            var f = {};
+            Object.keys(SCHEDULE_LABELS).forEach(function(key) {
+                f[key] = valueOf(sheetFindLabels(model, SCHEDULE_LABELS[key]));
+            });
+            // Dlužník + jeho Sídlo a IČO — stejné popisky má i věřitel, bereme nejbližší pod „Dlužník:“
+            var dl = sheetFindLabels(model, ['dluznik']);
+            f.borrower = valueOf(dl);
+            f.borrowerSeat = null;
+            f.borrowerIco = null;
+            if (dl.length) {
+                var anchor = model.cells[dl[0]];
+                var below = function(norm) {
+                    return valueOf(sheetFindLabels(model, [norm]).filter(function(ref) {
+                        var c = model.cells[ref];
+                        return c.col === anchor.col && c.row > anchor.row;
+                    }));
+                };
+                f.borrowerSeat = below('sidlo');
+                f.borrowerIco = below('ico');
+            }
+            // Tabulka čerpání: záhlaví „Datum čerpání“ + „Částka čerpání“ v jednom řádku, pod ním číslované řádky
+            f.table = null;
+            sheetFindLabels(model, ['datum cerpani']).some(function(dateRef) {
+                var head = model.cells[dateRef];
+                var rowCells = Object.keys(model.cells).map(function(ref) { return model.cells[ref]; })
+                    .filter(function(c) { return c.row === head.row; });
+                var colOf = function(test) {
+                    var hit = rowCells.filter(function(c) { return test(c.norm); })[0];
+                    return hit ? hit.col : null;
+                };
+                var amountCol = colOf(function(n) { return n.indexOf('castka cerpani') === 0; });
+                if (!amountCol) return false;
+                var numCol = colOf(function(n) { return n === 'c.' || n === 'c' || n === 'cislo'; });
+                var rows = [];
+                for (var r = head.row + 1; r <= head.row + 50; r++) {
+                    var numCell = numCol ? model.cells[sheetColName(numCol) + r] : null;
+                    var ok = numCol ? !!(numCell && /^\d+$/.test(numCell.text.trim())) : !!model.cells[sheetColName(head.col) + r];
+                    if (!ok) break;
+                    rows.push(r);
+                }
+                if (!rows.length) return false;
+                var labelCol = colOf(function(n) { return n.indexOf('transe') === 0 || n.indexOf('popis') === 0; });
+                f.table = {
+                    rows: rows,
+                    dateCol: head.col,
+                    amountCol: amountCol,
+                    payoutCol: colOf(function(n) { return n.indexOf('vyplaceno') === 0; }),
+                    labelCol: labelCol,
+                    presetLabels: rows.map(function(row) {
+                        var c = labelCol ? model.cells[sheetColName(labelCol) + row] : null;
+                        var t = c ? c.text.trim() : '';
+                        return /\(\s*doplnit\s*\)/i.test(t) ? '' : t;
+                    })
+                };
+                return true;
+            });
+            f.missing = Object.keys(SCHEDULE_REQUIRED).filter(function(key) { return !f[key]; })
+                .map(function(key) { return SCHEDULE_REQUIRED[key]; });
+            return f;
+        }
+
+        // <c> s hodnotou: číslo, text (vložený řetězec) nebo prázdná; styl buňky (s="…") zůstává
+        function sheetCellXml(ref, style, value) {
+            var s = style ? ' s="' + style + '"' : '';
+            if (value === null || value === undefined || value === '' || (typeof value === 'number' && !isFinite(value))) {
+                return '<c r="' + ref + '"' + s + '/>';
+            }
+            if (typeof value === 'number') return '<c r="' + ref + '"' + s + '><v>' + value + '</v></c>';
+            var text = String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+            return '<c r="' + ref + '"' + s + ' t="inlineStr"><is><t xml:space="preserve">' + escapeXml(text) + '</t></is></c>';
+        }
+
+        // Zapíše hodnoty do buněk listu (values: { 'C15': text | číslo | '' }). restyle(index stylu) smí
+        // styl vyměnit (bez žluté výplně). Buňku se vzorcem nepřepíše. Chybějící buňku vloží do řádku
+        // podle pořadí sloupců; zbytek listu zůstane znak po znaku stejný.
+        function sheetWriteCells(sheetXml, values, restyle) {
+            var start = sheetXml.indexOf('<sheetData');
+            var end = sheetXml.lastIndexOf('</sheetData>');
+            if (start < 0 || end < start) throw new Error('list šablony nemá data');
+            var data = sheetXml.slice(start, end);
+            var pending = Object.keys(values);
+            data = data.replace(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g, function(m, attrs, inner) {
+                var r = /\br="([A-Z]+\d+)"/.exec(attrs);
+                if (!r || !Object.prototype.hasOwnProperty.call(values, r[1])) return m;
+                pending = pending.filter(function(ref) { return ref !== r[1]; });
+                if (/<f[\s>\/]/.test(inner || '')) return m;
+                var st = /\bs="(\d+)"/.exec(attrs);
+                var style = st ? (restyle ? restyle(st[1]) : st[1]) : null;
+                return sheetCellXml(r[1], style, values[r[1]]);
+            });
+            pending.forEach(function(ref) {
+                var p = /^([A-Z]+)(\d+)$/.exec(ref);
+                if (!p) return;
+                var col = sheetColNum(p[1]);
+                var rm = new RegExp('<row\\b[^>]*?\\br="' + p[2] + '"[^>]*?(\\/>|>([\\s\\S]*?)<\\/row>)').exec(data);
+                if (!rm) return; // řádek v šabloně není — hodnotu nelze umístit
+                var cellXml = sheetCellXml(ref, null, values[ref]);
+                var newRow;
+                if (rm[1] === '/>') {
+                    newRow = rm[0].slice(0, -2) + '>' + cellXml + '</row>';
+                } else {
+                    var inner = rm[2] || '';
+                    var done = false;
+                    var newInner = inner.replace(/<c\b[^>]*?\br="([A-Z]+)\d+"[^>]*?(?:\/>|>[\s\S]*?<\/c>)/g, function(cm, cc) {
+                        if (!done && sheetColNum(cc) > col) { done = true; return cellXml + cm; }
+                        return cm;
+                    });
+                    if (!done) newInner += cellXml;
+                    newRow = rm[0].slice(0, rm[0].length - inner.length - '</row>'.length) + newInner + '</row>';
+                }
+                data = data.slice(0, rm.index) + newRow + data.slice(rm.index + rm[0].length);
+            });
+            return sheetXml.slice(0, start) + data + sheetXml.slice(end);
+        }
+
+        // Žlutá výplň = místo k doplnění (jako „(Doplnit)“ ve Word šablonách). Vyplněné buňky dostanou
+        // stejný styl bez žluté, žlutě zůstane jen to, co chybí. restyle(index) → index stylu bez žluté
+        // (existující, nebo nově přidaný na konec cellXfs); xml() → upravené styles.xml.
+        function scheduleStyleTools(stylesXml) {
+            var fills = [];
+            var fillsBlock = /<fills\b[^>]*>([\s\S]*?)<\/fills>/.exec(stylesXml);
+            if (fillsBlock) {
+                fillsBlock[1].replace(/<fill\b[^>]*?(?:\/>|>([\s\S]*?)<\/fill>)/g, function(m, inner) { fills.push(inner || ''); return m; });
+            }
+            var isYellow = function(i) {
+                var fill = fills[i] || '';
+                return /patternType="solid"/.test(fill) && /<fgColor\b[^>]*\brgb="FFFFFF00"/i.test(fill);
+            };
+            var block = /<cellXfs\b[^>]*>[\s\S]*?<\/cellXfs>/.exec(stylesXml);
+            var xfs = [];
+            if (block) block[0].replace(/<xf\b[^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g, function(m) { xfs.push(m); return m; });
+            var original = xfs.length, cache = {};
+            return {
+                restyle: function(idx) {
+                    idx = String(idx);
+                    if (Object.prototype.hasOwnProperty.call(cache, idx)) return cache[idx];
+                    var xf = xfs[+idx];
+                    if (!xf || !isYellow(+((/\bfillId="(\d+)"/.exec(xf) || [])[1] || 0))) return (cache[idx] = idx);
+                    var plain = xf.replace(/\bfillId="\d+"/, 'fillId="0"').replace(/\s*\bapplyFill="[^"]*"/, '');
+                    var found = xfs.indexOf(plain);
+                    if (found === -1) { found = xfs.length; xfs.push(plain); }
+                    return (cache[idx] = String(found));
+                },
+                xml: function() {
+                    if (!block || xfs.length === original) return stylesXml;
+                    var newBlock = block[0]
+                        .replace(/<\/cellXfs>$/, xfs.slice(original).join('') + '</cellXfs>')
+                        .replace(/(<cellXfs\b[^>]*\bcount=")\d+(")/, function(m, a, b) { return a + xfs.length + b; });
+                    return stylesXml.slice(0, block.index) + newBlock + stylesXml.slice(block.index + block[0].length);
+                }
+            };
+        }
+
+        // Přepočet vzorců při otevření v Excelu (vzorce v šabloně nemají uložené výsledky)
+        function ensureFullCalcOnLoad(wbXml) {
+            if (/<calcPr\b/.test(wbXml)) {
+                return wbXml.replace(/<calcPr\b([^>]*?)(\/?)>/, function(m, attrs, slash) {
+                    return '<calcPr' + attrs.replace(/\s+fullCalcOnLoad="[^"]*"/, '') + ' fullCalcOnLoad="1"' + slash + '>';
+                });
+            }
+            var at = wbXml.search(/<(?:oleSize|customWorkbookViews|pivotCaches|smartTagPr|smartTagTypes|webPublishing|fileRecoveryPr|webPublishObjects|extLst)\b/);
+            if (at < 0) at = wbXml.lastIndexOf('</workbook>');
+            return at < 0 ? wbXml : wbXml.slice(0, at) + '<calcPr fullCalcOnLoad="1"/>' + wbXml.slice(at);
+        }
+
+        // První list sešitu (cesta podle workbook.xml + vazeb), jinak xl/worksheets/sheet1.xml
+        async function scheduleFirstSheet(zip) {
+            var wbFile = zip.file('xl/workbook.xml');
+            if (!wbFile) return null;
+            var wbXml = await wbFile.async('string');
+            var path = 'xl/worksheets/sheet1.xml';
+            var sheet = /<sheet\b[^>]*?\b\w+:id="([^"]+)"/.exec(wbXml);
+            var relsFile = zip.file('xl/_rels/workbook.xml.rels');
+            if (sheet && relsFile) {
+                var rels = (await relsFile.async('string')).match(/<Relationship\b[^>]*>/g) || [];
+                for (var i = 0; i < rels.length; i++) {
+                    if ((/\bId="([^"]+)"/.exec(rels[i]) || [])[1] !== sheet[1]) continue;
+                    var target = (/\bTarget="([^"]+)"/.exec(rels[i]) || [])[1] || '';
+                    if (target) path = target.charAt(0) === '/' ? target.slice(1) : 'xl/' + target.replace(/^\.\//, '');
+                    break;
+                }
+            }
+            var sheetFile = zip.file(path);
+            return sheetFile ? { path: path, xml: await sheetFile.async('string'), wbXml: wbXml } : null;
+        }
+
+        async function readScheduleWorkbook(data) {
+            var zip;
+            try { zip = await JSZip.loadAsync(data); } catch (e) { throw new Error('soubor se nepodařilo otevřít jako Excel (.xlsx)'); }
+            var sheet = await scheduleFirstSheet(zip);
+            if (!sheet) throw new Error('soubor není sešit Excelu (.xlsx)');
+            var sst = [];
+            var sstFile = zip.file('xl/sharedStrings.xml');
+            if (sstFile) {
+                (await sstFile.async('string')).replace(/<si\b[^>]*?(?:\/>|>([\s\S]*?)<\/si>)/g, function(m, inner) {
+                    sst.push(sheetRichText(inner));
+                    return m;
+                });
+            }
+            return { zip: zip, sheet: sheet, fields: locateScheduleFields(readSheetModel(sheet.xml, sst)) };
+        }
+
+        // Kontrola Excelu při nahrání: je to šablona splátkového kalendáře?
+        async function inspectScheduleTemplate(data) {
+            try {
+                var wb = await readScheduleWorkbook(data);
+                if (wb.fields.missing.length) return { ok: false, error: 'chybí pole ' + wb.fields.missing.join(', ') + '.' };
+                return { ok: true };
+            } catch (e) {
+                return { ok: false, error: (e && e.message) || 'soubor se nepodařilo přečíst' };
+            }
+        }
+
+        // 'YYYY-MM-DD' → pořadové číslo dne v Excelu
+        function excelSerialFromIso(iso) {
+            var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '').trim());
+            if (!m) return null;
+            return Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - Date.UTC(1899, 11, 30)) / 86400000);
+        }
+
+        // Poslední den měsíce následujícího po datu (jako EOMONTH(datum; 1) v Excelu)
+        function endOfNextMonthIso(iso) {
+            var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '').trim());
+            if (!m) return '';
+            var d = new Date(Date.UTC(+m[1], +m[2] + 1, 0));
+            return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+        }
+
+        // Vyplní šablonu. input: { borrower, borrowerSeat, borrowerIco, lenderAccount, contractDate (ISO),
+        // amount, ratePct, maturityDate (ISO), annuity, tranches: [{ date (ISO), amount, payout }] podle data }.
+        // Chybějící údaj zůstane v šabloně („(Doplnit)“). Vrací Blob .xlsx.
+        async function fillScheduleWorkbook(data, input) {
+            var wb = await readScheduleWorkbook(data);
+            var f = wb.fields;
+            if (f.missing.length) throw new Error('v šabloně chybí pole ' + f.missing.join(', '));
+            var table = f.table;
+            var n = input.tranches.length;
+            if (n > table.rows.length) throw new Error('šablona má řádky jen pro ' + table.rows.length + ' čerpání, zadáno je ' + n);
+
+            var v = {};
+            var put = function(ref, value) {
+                if (!ref || value === null || value === undefined || value === '') return;
+                if (typeof value === 'number' && !isFinite(value)) return;
+                v[ref] = value;
+            };
+            put(f.borrower, input.borrower);
+            put(f.borrowerSeat, input.borrowerSeat);
+            put(f.borrowerIco, input.borrowerIco);
+            put(f.lenderAccount, input.lenderAccount);
+            put(f.contractDate, excelSerialFromIso(input.contractDate));
+            put(f.amount, input.amount > 0 ? input.amount : null);
+            put(f.rate, input.ratePct > 0 ? parseFloat((input.ratePct / 100).toFixed(10)) : null);
+            put(f.maturity, excelSerialFromIso(input.maturityDate));
+            put(f.model, input.annuity ? 'Anuitní' : 'Pouze úroky');
+            if (f.firstAnnuity) {
+                // Anuita: konec měsíce po posledním čerpání (stejně jako výchozí vzorec šablony); jinak pomlčka
+                v[f.firstAnnuity] = input.annuity
+                    ? (excelSerialFromIso(endOfNextMonthIso(n ? input.tranches[n - 1].date : '')) || '')
+                    : '–';
+            }
+
+            // Tabulka čerpání; popisky šablony („1. tranše (čl. 4.3)“) jen když sedí počet čerpání
+            var keepPreset = n > 1 && table.presetLabels.filter(Boolean).length === n;
+            table.rows.forEach(function(row, i) {
+                var cell = function(col) { return sheetColName(col) + row; };
+                var t = input.tranches[i];
+                if (!t) {
+                    // Nepoužitý řádek — smazat „(Doplnit)“, formát buňky zůstává
+                    [table.labelCol, table.dateCol, table.amountCol, table.payoutCol].forEach(function(col) {
+                        if (col) v[cell(col)] = '';
+                    });
+                    return;
+                }
+                if (table.labelCol) {
+                    v[cell(table.labelCol)] = n === 1 ? 'Jednorázové čerpání'
+                        : (keepPreset && table.presetLabels[i] ? table.presetLabels[i] : (i + 1) + '. tranše');
+                }
+                v[cell(table.dateCol)] = excelSerialFromIso(t.date) || '';
+                v[cell(table.amountCol)] = t.amount;
+                if (table.payoutCol) v[cell(table.payoutCol)] = t.payout;
+            });
+
+            // createFolders: false — balíček zůstane stejný jako šablona (bez položek pro složky)
+            var keep = { createFolders: false };
+            var stylesFile = wb.zip.file('xl/styles.xml');
+            var styles = stylesFile ? scheduleStyleTools(await stylesFile.async('string')) : null;
+            wb.zip.file(wb.sheet.path, sheetWriteCells(wb.sheet.xml, v, styles && styles.restyle), keep);
+            if (styles) wb.zip.file('xl/styles.xml', styles.xml(), keep);
+            wb.zip.file('xl/workbook.xml', ensureFullCalcOnLoad(wb.sheet.wbXml), keep);
+            return wb.zip.generateAsync({
+                type: 'blob',
+                mimeType: templateMime('.xlsx'),
+                compression: 'DEFLATE',
+                compressionOptions: { level: 6 }
+            });
+        }
+
+        // Poplatek za sjednání v Kč (strhne se z první části čerpání — smlouva čl. 4.3)
+        function scheduleFeeAmount(fd) {
+            var fee = parseCzAmount(fd && fd.originationFee);
+            if (!(fee > 0)) return 0;
+            var type = String((fd && fd.originationFeeType) || '').toLowerCase();
+            if (type === '%' || type === 'percent' || type === 'pct') {
+                var amount = parseCzAmount(fd.amount);
+                return amount > 0 ? Math.round(amount * fee) / 100 : 0;
+            }
+            return fee;
+        }
+
+        // Tranše z okna jako 'YYYY-MM-DD' + částka, seřazené podle data; null = neúplný řádek
+        function collectTrancheInputs() {
+            var rows = document.querySelectorAll('#tranchesContainer .tranche-row');
+            var out = [];
+            for (var i = 0; i < rows.length; i++) {
+                var d = rows[i].querySelector('.tranche-date').value;
+                var a = parseCzAmount(rows[i].querySelector('.tranche-amount').value);
+                if (!d || !(a > 0)) return null;
+                out.push({ date: d, amount: a });
+            }
+            out.sort(function(x, y) { return x.date < y.date ? -1 : (x.date > y.date ? 1 : 0); });
+            return out;
+        }
+
+        // Šablona splátkového kalendáře: nahraná v aplikaci, jinak z Drive (Šablony/Úvěrová dokumentace).
+        // Přednost má soubor se „splátkov…“ v názvu, pak nejnovější. Vrací { name, data } nebo null.
+        function findScheduleTemplate() {
+            var rank = function(name) { return /spl[aá]tkov/i.test(name || '') ? 1 : 0; };
+            return new Promise(function(resolve) {
+                getAllFromDB('templates', function(templates) {
+                    var local = (templates || []).filter(function(t) { return t && t.data && isXlsxName(t.name); });
+                    local.sort(function(a, b) {
+                        return (rank(b.name) - rank(a.name)) || String(b.uploadedAt || '').localeCompare(String(a.uploadedAt || ''));
+                    });
+                    if (local.length) { resolve({ name: local[0].name, data: local[0].data }); return; }
+                    if (!(window.GDriveSync && GDriveSync.isConnected && GDriveSync.isConnected())) { resolve(null); return; }
+                    var deleted = getDeletedTemplateNames();
+                    GDriveSync.listShared('Šablony/Úvěrová dokumentace').then(function(files) {
+                        // listShared řadí od nejnovějšího
+                        var xl = (files || []).filter(function(x) { return isXlsxName(x.name) && deleted.indexOf(x.name) === -1; });
+                        xl.sort(function(a, b) { return rank(b.name) - rank(a.name); });
+                        if (!xl.length) { resolve(null); return; }
+                        return GDriveSync.loadSharedBinary('Šablony/Úvěrová dokumentace/' + xl[0].name).then(function(buf) {
+                            resolve(buf ? { name: xl[0].name, data: buf } : null);
+                        });
+                    }).catch(function(e) {
+                        console.warn('findScheduleTemplate (Drive):', e);
+                        resolve(null);
+                    });
+                });
+            });
+        }
+
+        // Vyplní firemní šablonu z údajů sady / formuláře a tranší v okně a stáhne ji. false = zrušeno.
+        async function generateScheduleFromTemplate(tpl, fd) {
+            var tranches = collectTrancheInputs();
+            if (!tranches || !tranches.length) throw new Error('vyplň datum a částku každého čerpání');
+            var warn = [];
+            var currency = fd.currency || 'CZK';
+            if (currency !== 'CZK') warn.push('Úvěr je v měně ' + currency + ', šablona počítá v Kč.');
+            var ip = fd.interestPayment || 'Měsíční';
+            if (ip !== 'Měsíční' && ip !== 'Anuita (měsíčně)') warn.push('Placení úroků je ve formuláři „' + ip + '“, šablona počítá měsíční splátky.');
+            if (warn.length && !confirm(warn.join('\n') + '\n\nVygenerovat i tak?')) return false;
+
+            var fee = scheduleFeeAmount(fd);
+            var input = {
+                borrower: String(fd.uvereovany || '').trim(),
+                borrowerSeat: String(fd.sidlo || '').trim(),
+                borrowerIco: String(fd.ico || '').replace(/\s/g, ''),
+                lenderAccount: [fd.lenderAccount, fd.lenderBank].map(function(s) { return String(s || '').trim(); }).filter(Boolean).join(', '),
+                contractDate: fd.signDate || '',
+                amount: parseCzAmount(fd.amount),
+                ratePct: parseCzAmount(fd.interest),
+                maturityDate: fd.maturityDate || '',
+                annuity: fd.interestPayment === 'Anuita (měsíčně)',
+                tranches: tranches.map(function(t, i) {
+                    var payout = (i === 0 && fee > 0 && fee < t.amount) ? Math.round((t.amount - fee) * 100) / 100 : t.amount;
+                    return { date: t.date, amount: t.amount, payout: payout };
+                })
+            };
+            var blob = await fillScheduleWorkbook(tpl.data, input);
+            var who = (input.borrower || 'úvěr').replace(/[\\/:*?"<>|]/g, '_').trim() || 'úvěr';
+            var filename = 'Splátkový kalendář – ' + who + '.xlsx';
+            if (typeof saveAs !== 'undefined') {
+                saveAs(blob, filename);
+            } else {
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url; a.download = filename; a.click();
+                setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+            }
+            return true;
+        }
+
         /* ─── GENERATE MODE (clean vs. tracked changes) ─── */
         function setGenerateMode(mode) {
             generateMode = (mode === 'tracked') ? 'tracked' : 'clean';
@@ -3969,7 +4644,7 @@
                         var added = 0;
                         var pending = 0;
                         driveFiles.forEach(function(f) {
-                            if (!/\.docx$/i.test(f.name)) return;
+                            if (!/\.(docx|xlsx)$/i.test(f.name)) return;
                             if (localNames.has(f.name)) return;
                             // Šablona smazaná v aplikaci (např. když Drive nebyl připojený) — nevracet ji,
                             // ale dokončit smazání i na Drive (do koše)
@@ -3980,7 +4655,7 @@
                             pending++;
                             GDriveSync.loadSharedBinary('Šablony/Úvěrová dokumentace/' + f.name).then(function(buf) {
                                 if (buf) {
-                                    var detected = detectCategory(f.name, cats);
+                                    var detected = isXlsxName(f.name) ? null : detectCategory(f.name, cats);
                                     saveToDb('templates', {
                                         name: f.name,
                                         data: buf,
@@ -4020,7 +4695,10 @@
                     var grouped = {};
                     sortedCats.forEach(function(c) { grouped[c.name] = []; });
                     grouped['__unassigned__'] = [];
+                    // Excel = šablona splátkového kalendáře — vlastní skupina, negeneruje se s dokumenty
+                    var sheetTemplates = [];
                     templates.forEach(function(t) {
+                        if (isXlsxName(t.name)) { sheetTemplates.push(t); return; }
                         var key = t.category && grouped.hasOwnProperty(t.category) ? t.category : '__unassigned__';
                         grouped[key].push(t);
                     });
@@ -4100,6 +4778,19 @@
                     });
                     if (grouped['__unassigned__'].length > 0) {
                         html += renderGroup('Nezařazeno', grouped['__unassigned__'], '');
+                    }
+                    if (sheetTemplates.length > 0) {
+                        html += '<div class="template-group">';
+                        html += '<div class="template-group-header">Splátkový kalendář (Excel) <span class="template-group-count">(' + sheetTemplates.length + ')</span></div>';
+                        sheetTemplates.forEach(function(template) {
+                            html += '<div class="template-item">';
+                            html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+                            html += '<span class="template-name">' + escapeHtml(template.name) + '</span>';
+                            html += '<span class="template-note">Pro tlačítko Splátkový kalendář</span>';
+                            html += '<button type="button" class="template-delete" onclick="deleteTemplate(' + template.id + ')" title="Smazat šablonu">✕</button>';
+                            html += '</div>';
+                        });
+                        html += '</div>';
                     }
 
                     // HTML: checkboxy pro generování (seskupené)
