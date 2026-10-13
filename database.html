@@ -457,6 +457,77 @@
         .stav-badge.stav-reaguje { color: var(--amber-warm); background: var(--amber-tint); }
         .stav-badge.stav-klient { color: var(--success); background: var(--success-tint); }
         .stav-badge.stav-odmitnut { color: var(--danger); background: var(--danger-tint); }
+        .stav-badge.stav-partner { color: var(--success); background: var(--success-tint); font-weight: 600; }
+        .li-form-block { margin: 6px 0 14px; padding: 12px 12px 2px; border: 1px solid var(--line-faint); border-radius: 6px; }
+        .li-form-steps { font-size: 12px; color: var(--text-mute); line-height: 1.6; padding-top: 6px; }
+
+        /* ===== LinkedIn dnes ===== */
+        .li-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+        .li-stat { background: var(--bg-elevated); border: 1px solid var(--line-faint); border-radius: 8px; padding: 12px 14px; }
+        .li-stat-wide { grid-column: 1 / -1; }
+        .li-stat-val { font-size: 18px; font-weight: 600; color: var(--text); }
+        .li-stat-lbl { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
+        .li-stat-warn { border-color: var(--warning); }
+        .li-stat-bad { border-color: var(--danger); background: var(--danger-tint); }
+        .li-drop { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px; border: 1.5px dashed var(--line-strong); border-radius: 8px; font-size: 13.5px; color: var(--text-soft); }
+        .li-drop-over { border-color: var(--amber); background: var(--amber-tint); }
+        .li-search { margin: 16px 0 6px; max-width: 420px; }
+        .li-section { margin-top: 18px; }
+        .li-section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+        .li-section-head h4 { margin: 0; font-size: 14px; font-weight: 600; color: var(--text); }
+        .li-count { display: inline-block; min-width: 22px; padding: 1px 7px; margin-left: 6px; border-radius: 10px; font-size: 12px; background: var(--bg-input); color: var(--text-mute); text-align: center; }
+        .li-empty { font-size: 13px; color: var(--text-mute); line-height: 1.5; }
+        .li-muted { color: var(--text-mute); }
+        .li-red { color: var(--danger); font-weight: 600; }
+        .li-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+        .li-card { background: var(--bg-elevated); border: 1px solid var(--line-faint); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+        .li-card-error { border-color: var(--danger); }
+        .li-card-head { display: flex; justify-content: space-between; gap: 8px; }
+        .li-name { font-weight: 600; color: var(--text); font-size: 14px; }
+        .li-sub { font-size: 12.5px; color: var(--text-soft); margin-top: 2px; }
+        .li-open { background: transparent; border: 1px solid var(--line); border-radius: 6px; color: var(--text-mute); cursor: pointer; height: 28px; min-width: 32px; font-size: 16px; line-height: 1; }
+        .li-open:hover { color: var(--text); border-color: var(--line-strong); }
+        .li-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+        .li-badge { font-size: 11.5px; padding: 2px 8px; border-radius: 10px; background: var(--bg-input); color: var(--text-mute); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .li-badge-sit { color: var(--amber-warm); background: var(--amber-tint); }
+        .li-badge-warn { color: var(--danger); background: var(--danger-tint); }
+        .li-badge-note { white-space: normal; }
+        .li-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .li-btn { padding: 6px 12px; font-size: 12.5px; }
+        .li-disabled { opacity: 0.45; }
+        .li-salut { flex: 1 1 100%; padding: 7px 10px; font-size: 13px; }
+        .li-gate { flex: 1 1 100%; font-size: 12px; color: var(--warning); }
+        .li-manual { display: grid; grid-template-columns: 2fr 1.4fr auto; gap: 8px; }
+        .li-btn-small { padding: 4px 10px; font-size: 12px; }
+        .li-hint { flex: 1 1 100%; font-size: 11.5px; color: var(--text-mute); }
+        .li-keyrow { flex: 1 1 100%; display: flex; gap: 6px; }
+        .li-keyrow .form-input { flex: 1; padding: 6px 10px; font-size: 12.5px; }
+        .li-maybe-red { border-color: var(--danger); }
+        .li-manual-box { margin: 10px 0 4px; font-size: 13px; color: var(--text-soft); }
+        .li-manual-box summary { cursor: pointer; color: var(--text-soft); font-weight: 600; padding: 4px 0; }
+        .li-manual-box summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+        .li-today { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text); }
+        .li-today-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .li-imp-sum { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-soft); }
+        .li-maybe { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--line-faint); border-radius: 6px; max-height: 260px; overflow: auto; }
+        .li-maybe label { display: flex; gap: 6px; align-items: baseline; font-size: 12.5px; }
+        .li-maybe label > .li-imp-lbl { flex: 1; min-width: 0; }
+        .li-site-table { font-size: 12.5px; border: 1px solid var(--line-faint); border-radius: 6px; overflow: hidden; }
+        .li-site-row { display: grid; grid-template-columns: minmax(0, 2.4fr) repeat(5, minmax(0, 1fr)); gap: 6px; padding: 6px 10px; border-top: 1px solid var(--line-faint); color: var(--text-soft); overflow-wrap: anywhere; }
+        .li-site-row:first-child { border-top: none; }
+        .li-site-hdr { color: var(--text-mute); font-weight: 600; background: var(--bg-input); }
+        @media (max-width: 1100px) {
+            .db-layout[data-active="linkedin"] .db-sidebar { display: none; }
+            .li-btn, .li-open { min-height: 44px; }
+        }
+        @media (max-width: 720px) {
+            .section-tabs { flex-wrap: wrap; width: auto; }
+            .li-drop { flex-direction: column; align-items: stretch; }
+            .li-cards { grid-template-columns: 1fr; }
+            .li-manual { grid-template-columns: 1fr; }
+            .li-site-row { grid-template-columns: minmax(0, 1.6fr) repeat(5, minmax(0, 1fr)); font-size: 11px; padding: 6px; }
+            .li-actions .li-btn { flex: 1 1 auto; }
+        }
 
         .prio-dot {
             display: inline-block;
@@ -1680,6 +1751,7 @@
                 <span class="filter-pill" data-stav="Reaguje">Reaguje</span>
                 <span class="filter-pill" data-stav="Klient">Klient</span>
                 <span class="filter-pill" data-stav="Odmítnut">Odmítnut</span>
+                <span class="filter-pill" data-stav="Partner">Partner</span>
             </div>
         </div>
 
@@ -1691,6 +1763,9 @@
                 <span class="filter-pill" data-linkedinstav="Posláno">Posláno</span>
                 <span class="filter-pill" data-linkedinstav="Přijato">Přijato</span>
                 <span class="filter-pill" data-linkedinstav="Zpráva">Zpráva</span>
+                <span class="filter-pill" data-linkedinstav="Odpověděl">Odpověděl</span>
+                <span class="filter-pill" data-linkedinstav="Staženo">Staženo</span>
+                <span class="filter-pill" data-linkedinstav="Neposílat">Neposílat</span>
             </div>
         </div>
 
@@ -1720,6 +1795,7 @@
         <!-- Tab nav -->
         <div class="section-tabs">
             <button class="section-tab active" data-section="kontakty">Kontakty</button>
+            <button class="section-tab" data-section="linkedin">LinkedIn dnes</button>
             <button class="section-tab" data-section="dashboard">Dashboard</button>
             <button class="section-tab" data-section="vyhledavac">Vyhledávač</button>
             <button class="section-tab" data-section="nastaveni">Nastavení</button>
@@ -1766,6 +1842,40 @@
                     </button>
                 </div>
             </div>
+        </section>
+
+        <!-- ===== SECTION: LinkedIn dnes (oslovování poradců) ===== -->
+        <section class="db-section" data-section="linkedin">
+            <div class="info-note warning" id="li-blocker" style="display:none;"></div>
+            <div class="li-stats" id="li-stats"></div>
+
+            <div class="li-drop" id="li-drop">
+                <div>
+                    <strong>Přetáhněte sem export z LinkedInu</strong> (zip nebo Invitations.csv / Connections.csv) nebo dávku kandidátů od Clauda.
+                    <div class="li-muted" style="font-size:12px;margin-top:4px;">LinkedIn → Nastavení → Ochrana dat → Získat kopii dat → Pozvánky a Spojení. Pozvánky přijdou do ~10 minut, spojení do 2 dnů.</div>
+                </div>
+                <button type="button" class="btn btn-secondary li-btn" onclick="document.getElementById('li-file').click()">Vybrat soubor</button>
+                <input type="file" id="li-file" accept=".zip,.csv" multiple style="display:none;" aria-label="Soubor exportu z LinkedInu nebo dávky kandidátů" onchange="liHandleFiles(this.files); this.value='';">
+            </div>
+            <div id="li-import-preview"></div>
+            <div id="li-copy-fallback" style="display:none;margin-top:12px;"></div>
+
+            <div class="db-search li-search">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="li-search" placeholder="Najít člověka (jméno nebo firma)" aria-label="Najít člověka v LinkedIn evidenci" oninput="onLiSearch()">
+            </div>
+
+            <details class="li-manual-box">
+                <summary>Ruční přidání (když export nejde nebo nestačí)</summary>
+                <div class="li-empty" style="margin:8px 0;">Vložte adresu profilu člověka, který přijal pozvánku. Aplikace pohlídá, jestli dříve neodmítl, a případně ho spáruje s kandidátem.</div>
+                <div class="li-manual">
+                    <input type="text" class="form-input" id="li-man-url" placeholder="linkedin.com/in/…" aria-label="Adresa profilu na LinkedInu">
+                    <input type="text" class="form-input" id="li-man-name" placeholder="Jméno a příjmení" aria-label="Jméno a příjmení">
+                    <button class="btn btn-primary li-btn" onclick="liManualAdd()">Přidat do „Přijali"</button>
+                </div>
+            </details>
+
+            <div id="li-sections"></div>
         </section>
 
         <!-- ===== SECTION: Dashboard ===== -->
@@ -2072,7 +2182,7 @@
 
             <div class="settings-panel">
                 <h4>Srovnat sloupce podle obsahu (heuristická diagnostika + oprava)</h4>
-                <p class="panel-desc">Pokud header říká „linkedinUrl" v sloupci P, ale data v P obsahují <em>role</em> hodnoty — tj. data jsou posunutá oproti hlavičce — tato akce projde každý sloupec, podle obsahu (LinkedIn URL pattern, IČO 8 cifer, email s @, datum ISO formátu, atd.) detekuje, které pole tam ve skutečnosti je, a přepíše Sheet do kanonického pořadí 24 sloupců (A–X).</p>
+                <p class="panel-desc">Pokud header říká „linkedinUrl" v sloupci P, ale data v P obsahují <em>role</em> hodnoty — tj. data jsou posunutá oproti hlavičce — tato akce projde každý sloupec, podle obsahu (LinkedIn URL pattern, IČO 8 cifer, email s @, datum ISO formátu, atd.) detekuje, které pole tam ve skutečnosti je, a přepíše Sheet do kanonického pořadí sloupců aplikace.</p>
                 <p class="panel-desc"><strong>Bezpečnost:</strong> nejprve ukáže preview tabulky „Header říká vs Detekováno z obsahu" se zvýrazněnými posuny. Teprve po potvrzení přepíše Sheet. Drive History tě vždy jistí (Soubor → Historie verzí).</p>
                 <div class="settings-row">
                     <div>
@@ -2101,6 +2211,38 @@
                         <div class="settings-row-meta">Skip kontaktů, kde už máš nastaveno LinkedIn workflow (Posláno/Přijato/Zpráva) — to znamená, že URL jsi pravděpodobně ověřil.</div>
                     </div>
                     <button class="btn btn-primary" onclick="startCleanupLinkedInUrls()">Najít a přepsat</button>
+                </div>
+            </div>
+
+            <div class="settings-panel">
+                <h4>Staré kontakty (jednorázově)</h4>
+                <p class="panel-desc">Kontakty z doby před Spolumajitelé Private Credit (založené před 13. 10. 2026 nebo v 17 původních segmentech) se označí „neoslovovat – starý kontakt“. Data zůstanou, jen se nikdy nedostanou do fronty k oslovení. Kontakty v segmentech „Poradci – …“ se neoznačí.</p>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Označit staré kontakty</div>
+                        <div class="settings-row-meta" id="old-mark-meta">Nejdřív se ukáže náhled.</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="previewMarkOldContacts()">Náhled</button>
+                </div>
+                <div id="old-mark-results" style="margin-top:14px;display:none;"></div>
+            </div>
+
+            <div class="settings-panel">
+                <h4>LinkedIn oslovování</h4>
+                <p class="panel-desc">Segmenty pro poradce a bezpečné zkoušení na kopii databáze. Testovací kopie má vlastní odkaz; ostrá databáze se při zkoušení nemění.</p>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Založit chybějící segmenty</div>
+                        <div class="settings-row-meta">Poradci – menší sítě · nezávislí brokeři · pooly · realitky</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="liEnsureSegments()">Založit</button>
+                </div>
+                <div class="settings-row">
+                    <div>
+                        <div class="settings-row-label">Testovací kopie databáze</div>
+                        <div class="settings-row-meta" id="li-testcopy-meta">Vytvoří kopii Sheetu na Disku a dá odkaz, který otevře aplikaci nad kopií.</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="liCreateTestCopy()">Vytvořit kopii</button>
                 </div>
             </div>
 
@@ -2160,6 +2302,7 @@
                         <option value="Reaguje">Reaguje</option>
                         <option value="Klient">Klient</option>
                         <option value="Odmítnut">Odmítnut</option>
+                        <option value="Partner">Partner</option>
                     </select>
                 </div>
             </div>
@@ -2230,11 +2373,54 @@
                         <option value="Posláno">Posláno (pozvánka odeslaná, čekám na přijetí)</option>
                         <option value="Přijato">Přijato (spojení je, mohu napsat zprávu)</option>
                         <option value="Zpráva">Zpráva (zprávu jsem poslal, čekám na odpověď)</option>
+                        <option value="Odpověděl">Odpověděl</option>
+                        <option value="Staženo">Staženo (pozvánku jsem stáhl)</option>
+                        <option value="Neposílat">Neposílat</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Tagy (oddělené čárkou)</label>
                     <input type="text" class="form-input" id="f-tagy" placeholder="Praha, M&A, top-100">
+                </div>
+            </div>
+
+            <!-- LinkedIn evidence (zadání 2026-10-13) -->
+            <div class="li-form-block">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Vazba</label>
+                        <select class="form-input" id="f-vazba">
+                            <option value="">— neznámá —</option>
+                            <option value="nezávislý">Nezávislý poradce / broker</option>
+                            <option value="vázaný zástupce">Vázaný zástupce sítě</option>
+                            <option value="majitel sítě">Majitel / vedení firmy či sítě</option>
+                            <option value="podfirma poolu">Podfirma poolu</option>
+                            <option value="realitka">Realitní kancelář</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Síť / pool (pod čí licencí)</label>
+                        <input type="text" class="form-input" id="f-sit" list="dl-site" placeholder="např. Broker Trust">
+                        <datalist id="dl-site"></datalist>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Neoslovovat</label>
+                        <select class="form-input" id="f-neoslovovat-duvod">
+                            <option value="">— lze oslovit —</option>
+                            <option value="námitka">Námitka (odpověděl „ne“)</option>
+                            <option value="nemá zájem">Nemá zájem</option>
+                            <option value="starý kontakt">Starý kontakt (před 13. 10. 2026)</option>
+                            <option value="blokovaná síť">Blokovaná síť</option>
+                            <option value="nevhodný">Nevhodný</option>
+                        </select>
+                        <input type="hidden" id="f-neoslovovat">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">LinkedIn kroky</label>
+                        <div class="li-form-steps" id="f-li-steps">—</div>
+                    </div>
                 </div>
             </div>
 
@@ -2407,6 +2593,19 @@ const SHARED_GTOKEN_EXP_KEY = 'gdrive-shared-token-expiry';
 // PIN session + Railway session token (pro AI endpointy)
 const PIN_SESSION_KEY = 'db-auth';
 const DB_TOKEN_KEY = 'db-session-token';
+
+// Testovací režim: database.html?testSheet=<ID kopie> — musí být definováno před initPIN (bootstrap běží hned)
+const TEST_SHEET_REQUESTED = (function () {
+    try { return new URLSearchParams(location.search).has('testSheet'); } catch (e) { return false; }
+})();
+const TEST_SHEET_ID = (function () {
+    try {
+        let v = String(new URLSearchParams(location.search).get('testSheet') || '').trim();
+        const m = v.match(/\/d\/([A-Za-z0-9_-]{20,})/);   // vložená celá adresa Sheetu
+        if (m) v = m[1];
+        return /^[A-Za-z0-9_-]{20,}$/.test(v) ? v : '';
+    } catch (e) { return ''; }
+})();
 
 // ============================================================
 // SEGMENTY (embedované z Markdownu Segmenty_a_zdroje_kontaktu.md)
@@ -3097,6 +3296,18 @@ async function ensureFolders() {
 }
 
 async function ensureSpreadsheet() {
+    // Testovací režim (?testSheet=<ID>): pracuje jen nad kopií, ostré ID se neukládá ani nečte
+    if (TEST_SHEET_REQUESTED && !TEST_SHEET_ID) throw new Error('Neplatný odkaz testovacího režimu – ostrá databáze se neotevře. Použijte odkaz z Nastavení → Testovací kopie.');
+    if (TEST_SHEET_ID) {
+        const tres = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + TEST_SHEET_ID + '?fields=properties.title,sheets.properties');
+        if (!tres.ok) throw new Error('Testovací kopii nejde otevřít (ID ' + TEST_SHEET_ID + ').');
+        const tdata = await tres.json();
+        if (String((tdata.properties || {}).title || '').trim() === SHEET_TITLE) throw new Error('Odkaz testovacího režimu míří na ostrou databázi – zastaveno.');
+        state.spreadsheetId = TEST_SHEET_ID;
+        state.sheetTabIds = {};
+        (tdata.sheets || []).forEach(s => { state.sheetTabIds[s.properties.title] = s.properties.sheetId; });
+        return TEST_SHEET_ID;
+    }
     // Try restored ID first
     const cachedId = sessionStorage.getItem(SHEET_ID_KEY);
     if (cachedId) {
@@ -3173,7 +3384,17 @@ const CONTACTS_HEADER = [
     'firma', 'ico', 'sidlo', 'web', 'email', 'telefon',
     'kontaktniOsoba', 'role', 'linkedinUrl', 'facebookUrl',
     'zdrojUrl', 'tagy', 'poznamka', 'osloven_kdy', 'osloven_kanal', 'spolehlivost',
-    'linkedinStav'  // LinkedIn outreach workflow: '' (nic) / Posláno / Přijato / Zpráva
+    'linkedinStav',  // LinkedIn outreach workflow: '' / Posláno / Přijato / Zpráva / Odpověděl / Staženo / Neposílat / Vymazáno
+    // --- LinkedIn evidence (zadání 2026-10-13). Nová pole VŽDY jen na konec (migrateSheetHeader je připojí). ---
+    'li_pozvanka_kdy',  // RRRR-MM-DD odeslání pozvánky (z exportu LinkedInu nebo ručně)
+    'li_prijato_kdy',   // RRRR-MM-DD přijetí pozvánky
+    'li_zprava_kdy',    // RRRR-MM-DD zkopírování představení (= předání informace podle čl. 14 GDPR)
+    'li_odpoved_kdy',   // RRRR-MM-DD odpovědi
+    'li_klic',          // linkedin.com/in/<slug> (normalizovaná URL profilu), po výmazu h:<sha256>
+    'sablona',          // kód a verze odeslané šablony, např. A-poradce-v1 (nikdy text zprávy)
+    'sit',              // síť / pool, pod jehož licencí firma pracuje (jen pro přehled a priority)
+    'vazba',            // nezávislý / vázaný zástupce / majitel sítě / podfirma poolu / realitka
+    'neoslovovat'       // RRRR-MM-DD důvod (námitka / nemá zájem / starý kontakt / blokovaná síť / nevhodný)
 ];
 const SOURCES_HEADER = ['segment', 'idx', 'nazev', 'url', 'poznamka'];
 const SEGMENTS_HEADER = ['nazev', 'typ', 'priorita', 'useCase', 'pocetZdroju'];
@@ -3217,7 +3438,61 @@ async function checkSheetsResponse(res, op) {
     throw new Error(op + ' selhalo HTTP ' + res.status + ': ' + body.slice(0, 300));
 }
 
+// ============================================================
+// WRITE QUEUE — všechny zápisy do Sheetu jdou jeden po druhém.
+// Dvě rychlé akce za sebou (např. Představení u dvou lidí, nebo zápis během importu)
+// by jinak mohly spočítat stejný cílový řádek a jedna by přepsala druhou.
+// Pravidlo: veřejné funkce (sheetsAppend, sheetsUpdateRow, sheetsDeleteRows,
+// patchContactById, deleteContactById) frontu používají; uvnitř fronty se volají
+// jen _raw varianty (jinak deadlock).
+// ============================================================
+let _writeChain = Promise.resolve();
+function enqueueWrite(fn) {
+    const run = _writeChain.then(fn, fn);
+    _writeChain = run.catch(function () {});
+    return run;
+}
+
+// Lokální datum RRRR-MM-DD (pražský čas uživatele), ne UTC — toISOString() by po půlnoci
+// letního času zapsal včerejšek. Pro osloven_kdy, li_*_kdy, neoslovovat.
+function localISODate(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Sheets API values PUT neumí zapisovat mimo mřížku listu (výchozí 26 sloupců × 1000 řádků)
+// a vrátí "exceeds grid limits". Před zápisem proto mřížku případně rozšíříme.
+async function _ensureGridSizeRaw(tabName, minCols, minRows) {
+    const sheetId = state.sheetTabIds[tabName];
+    if (sheetId === undefined) return;
+    const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
+        '?fields=sheets(properties(sheetId,gridProperties))');
+    await checkSheetsResponse(res, 'ensureGridSize.read(' + tabName + ')');
+    const data = await res.json();
+    const sh = (data.sheets || []).find(function (s) { return s.properties && s.properties.sheetId === sheetId; });
+    if (!sh) return;
+    const gp = sh.properties.gridProperties || {};
+    const requests = [];
+    if (minCols && (gp.columnCount || 0) < minCols) {
+        requests.push({ appendDimension: { sheetId: sheetId, dimension: 'COLUMNS', length: minCols - (gp.columnCount || 0) + 5 } });
+    }
+    if (minRows && (gp.rowCount || 0) < minRows) {
+        requests.push({ appendDimension: { sheetId: sheetId, dimension: 'ROWS', length: minRows - (gp.rowCount || 0) + 500 } });
+    }
+    if (requests.length === 0) return;
+    const res2 = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + ':batchUpdate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: requests })
+    });
+    await checkSheetsResponse(res2, 'ensureGridSize.expand(' + tabName + ')');
+}
+
 async function sheetsAppend(tabName, rows) {
+    return enqueueWrite(function () { return _sheetsAppendRaw(tabName, rows); });
+}
+
+async function _sheetsAppendRaw(tabName, rows) {
     if (!rows || rows.length === 0) return;
     // KRITICKÝ DESIGN: nepoužíváme Sheets API ':append' endpoint, protože jeho "table
     // extent detection" je nedeterministická — Sheets sám hádá, kde tabulka začíná/končí,
@@ -3238,6 +3513,7 @@ async function sheetsAppend(tabName, rows) {
     const startRow = currentRowCount + 1;
     const endRow = startRow + rows.length - 1;
     const maxCols = Math.max.apply(null, rows.map(function (r) { return (r || []).length; }));
+    await _ensureGridSizeRaw(tabName, maxCols, endRow);
     const lastCol = colLetter(maxCols);
     const writeRange = encodeURIComponent(tabName + '!A' + startRow + ':' + lastCol + endRow);
     const url2 = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
@@ -3275,6 +3551,11 @@ function colLetter(n) {
 }
 
 async function sheetsUpdateRow(tabName, rowIndex /* 1-based incl. header */, rowValues) {
+    return enqueueWrite(function () { return _sheetsUpdateRowRaw(tabName, rowIndex, rowValues); });
+}
+
+async function _sheetsUpdateRowRaw(tabName, rowIndex /* 1-based incl. header */, rowValues) {
+    await _ensureGridSizeRaw(tabName, rowValues.length, rowIndex);
     const lastCol = colLetter(rowValues.length);
     const range = encodeURIComponent(tabName + '!A' + rowIndex + ':' + lastCol + rowIndex);
     const url = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId +
@@ -3309,6 +3590,10 @@ async function sheetsClearRow(tabName, rowIndex) {
 // sekvenčně — pokud bychom mazali od nejmenšího indexu nahoru, každé smazání by posunulo
 // následující řádky o 1 dolů a indexy by ztratily platnost. Proto sort DESC.
 async function sheetsDeleteRows(tabName, rowIndices) {
+    return enqueueWrite(function () { return _sheetsDeleteRowsRaw(tabName, rowIndices); });
+}
+
+async function _sheetsDeleteRowsRaw(tabName, rowIndices) {
     if (!rowIndices || rowIndices.length === 0) return;
     const tabId = state.sheetTabIds[tabName];
     if (tabId === undefined) throw new Error('Tab ID nenalezen pro ' + tabName);
@@ -3328,6 +3613,160 @@ async function sheetsDeleteRows(tabName, rowIndices) {
         body: JSON.stringify({ requests: requests })
     });
     await checkSheetsResponse(res, 'sheetsDeleteRows(' + tabName + ', n=' + rowIndices.length + ')');
+}
+
+// ============================================================
+// BEZPEČNÝ ZÁPIS KONTAKTU PODLE ID
+// Najde řádek podle sloupce id v AKTUÁLNÍM Sheetu (ne podle _rowIndex z paměti —
+// ten po smazání/řazení jinde neplatí) a zapíše jen změněné buňky + updatedAt.
+// Vlastní sloupce asistentky i pole, na která uživatel nesáhl, zůstanou netknutá.
+// ============================================================
+async function _locateContactRowRaw(id) {
+    const tab = SHEET_TABS.contacts;
+    const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values/';
+    const resH = await gfetch(base + encodeURIComponent(tab + '!1:1'));
+    await checkSheetsResponse(resH, 'locateContact.header');
+    const header = ((await resH.json()).values || [[]])[0] || [];
+    const idCol = header.indexOf('id');
+    if (idCol === -1) throw new Error('V listu ' + tab + ' chybí sloupec id.');
+    const L = colLetter(idCol + 1);
+    const resI = await gfetch(base + encodeURIComponent(tab + '!' + L + ':' + L));
+    await checkSheetsResponse(resI, 'locateContact.ids');
+    const ids = (await resI.json()).values || [];
+    let rowIdx = -1, hits = 0;
+    for (let i = 1; i < ids.length; i++) {
+        if (String((ids[i] || [])[0] || '') === String(id)) { if (rowIdx === -1) rowIdx = i; hits++; }
+    }
+    if (rowIdx === -1) {
+        const e = new Error('Kontakt ' + id + ' už v Sheetu není (mezitím smazán nebo přesunut).');
+        e.code = 'NOT_FOUND';
+        throw e;
+    }
+    if (hits > 1) throw new Error('ID ' + id + ' je v Sheetu ' + hits + '× — zápis zastaven, zkontroluj duplicity.');
+    state.headerOrders.contacts = header.slice();
+    return { header: header, rowNumber: rowIdx + 1 };
+}
+
+async function patchContactById(id, patch, opts) {
+    opts = opts || {};
+    if (!id) throw new Error('patchContactById: chybí id');
+    if (state.alignmentIssue) {
+        throw new Error('Sheet má posunuté sloupce — Nastavení → „Diagnostikovat a srovnat" před zápisem.');
+    }
+    return enqueueWrite(async function () {
+        const loc = await _locateContactRowRaw(id);
+        const fields = Object.assign({}, patch);
+        if (!opts.keepUpdatedAt) fields.updatedAt = new Date().toISOString();
+        const data = [];
+        Object.keys(fields).forEach(function (field) {
+            const col = loc.header.indexOf(field);
+            if (col === -1) {
+                const e = new Error('Sloupec „' + field + '" chybí v hlavičce listu ' + SHEET_TABS.contacts + ' (migrace neproběhla).');
+                e.code = 'NO_COLUMN';
+                throw e;
+            }
+            const v = fields[field];
+            data.push({
+                range: SHEET_TABS.contacts + '!' + colLetter(col + 1) + loc.rowNumber,
+                values: [[(v === undefined || v === null) ? '' : String(v)]]
+            });
+        });
+        if (data.length === 0) return { rowNumber: loc.rowNumber };
+        const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values:batchUpdate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ valueInputOption: 'RAW', data: data })
+        });
+        await checkSheetsResponse(res, 'patchContactById(' + id + ')');
+        const c = state.contacts.find(function (x) { return x.id === id; });
+        if (c) {
+            Object.keys(fields).forEach(function (f) { c[f] = (fields[f] === undefined || fields[f] === null) ? '' : String(fields[f]); });
+            c._rowIndex = loc.rowNumber;
+            if (c._rawRow) {
+                Object.keys(fields).forEach(function (f) {
+                    const col = loc.header.indexOf(f);
+                    if (col >= 0) c._rawRow[col] = c[f];
+                });
+            }
+        }
+        return { rowNumber: loc.rowNumber };
+    });
+}
+
+// Hromadný patch (Vymazat, Zkrátit, označení starých kontaktů): jeden zápis pro mnoho
+// kontaktů. patches = [{ id, fields }]. Kontakty, které v Sheetu nejsou, přeskočí a vrátí.
+async function patchContactsBulk(patches, opts) {
+    opts = opts || {};
+    if (state.alignmentIssue) {
+        throw new Error('Sheet má posunuté sloupce — Nastavení → „Diagnostikovat a srovnat" před zápisem.');
+    }
+    return enqueueWrite(async function () {
+        const tab = SHEET_TABS.contacts;
+        const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values/';
+        const resH = await gfetch(base + encodeURIComponent(tab + '!1:1'));
+        await checkSheetsResponse(resH, 'patchBulk.header');
+        const header = ((await resH.json()).values || [[]])[0] || [];
+        const idCol = header.indexOf('id');
+        if (idCol === -1) throw new Error('V listu ' + tab + ' chybí sloupec id.');
+        const L = colLetter(idCol + 1);
+        const resI = await gfetch(base + encodeURIComponent(tab + '!' + L + ':' + L));
+        await checkSheetsResponse(resI, 'patchBulk.ids');
+        const ids = (await resI.json()).values || [];
+        const rowOf = {};
+        const dup = {};
+        for (let i = 1; i < ids.length; i++) {
+            const v = String((ids[i] || [])[0] || '');
+            if (!v) continue;
+            if (rowOf[v]) dup[v] = true; else rowOf[v] = i + 1;
+        }
+        const now = new Date().toISOString();
+        const data = [];
+        const missing = [];
+        const applied = [];
+        patches.forEach(function (p) {
+            const rowNumber = rowOf[String(p.id)];
+            if (!rowNumber || dup[String(p.id)]) { missing.push(p.id); return; }
+            const fields = Object.assign({}, p.fields);
+            if (!opts.keepUpdatedAt) fields.updatedAt = now;
+            Object.keys(fields).forEach(function (f) {
+                const col = header.indexOf(f);
+                if (col === -1) {
+                    const e = new Error('Sloupec „' + f + '" chybí v hlavičce listu ' + tab + ' (migrace neproběhla).');
+                    e.code = 'NO_COLUMN';
+                    throw e;
+                }
+                const v = fields[f];
+                data.push({ range: tab + '!' + colLetter(col + 1) + rowNumber, values: [[(v === undefined || v === null) ? '' : String(v)]] });
+            });
+            applied.push({ id: p.id, fields: fields, rowNumber: rowNumber });
+        });
+        // Sheets API batchUpdate má limit velikosti požadavku — posílat po dávkách.
+        for (let i = 0; i < data.length; i += 2000) {
+            const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values:batchUpdate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ valueInputOption: 'RAW', data: data.slice(i, i + 2000) })
+            });
+            await checkSheetsResponse(res, 'patchContactsBulk');
+        }
+        state.headerOrders.contacts = header.slice();
+        applied.forEach(function (a) {
+            const c = state.contacts.find(function (x) { return x.id === a.id; });
+            if (!c) return;
+            Object.keys(a.fields).forEach(function (f) { c[f] = (a.fields[f] === undefined || a.fields[f] === null) ? '' : String(a.fields[f]); });
+            c._rowIndex = a.rowNumber;
+        });
+        return { applied: applied.length, missing: missing };
+    });
+}
+
+async function deleteContactById(id) {
+    return enqueueWrite(async function () {
+        const loc = await _locateContactRowRaw(id);
+        await _sheetsDeleteRowsRaw(SHEET_TABS.contacts, [loc.rowNumber]);
+        state.contacts = state.contacts.filter(function (c) { return c.id !== id; });
+        return { rowNumber: loc.rowNumber };
+    });
 }
 
 async function sheetsClearAll(tabName) {
@@ -3451,6 +3890,27 @@ async function migrateSheetHeader(tabName, expectedHeader, opts) {
             };
         }
 
+        // Pojistka: pokud jsou v datových řádcích hodnoty ZA koncem hlavičky (sloupec bez
+        // názvu, např. ruční poznámky asistentky), nová pole by si ten sloupec přivlastnila
+        // a jeho data by se začala číst jako li_* datum apod. Migraci v tom případě zastavit.
+        const strayCols = {};
+        for (let r = 1; r < rows.length; r++) {
+            const row = rows[r] || [];
+            for (let ci = actualHeader.length; ci < row.length; ci++) {
+                if (String(row[ci] || '').trim() !== '') strayCols[ci] = true;
+            }
+        }
+        const strayList = Object.keys(strayCols).map(function (ci) { return colLetter(parseInt(ci, 10) + 1); });
+        if (strayList.length > 0) {
+            return {
+                tab: tabName,
+                action: 'blocked',
+                error: 'Ve sloupcích ' + strayList.join(', ') + ' (za koncem hlavičky, bez názvu) jsou data. Doplň jim v Sheetu název do řádku 1, nebo je přesuň, a načti znovu.',
+                oldCount: actualHeader.length,
+                newCount: actualHeader.length
+            };
+        }
+
         // Append missing fields na konec — zachová existing order + vlastní sloupce
         const newHeader = actualHeader.concat(missingFields);
         await sheetsUpdateRow(tabName, 1, newHeader);
@@ -3474,8 +3934,15 @@ async function migrateContactsHeader(contactRows) {
     const result = await migrateSheetHeader(SHEET_TABS.contacts, CONTACTS_HEADER, { cachedRows: contactRows });
     if (result.action === 'migrated') {
         console.log('Migrated contacts header: ' + result.oldCount + ' → ' + result.newCount + ' columns');
-    } else if (result.action === 'error') {
+        state.migrationIssue = null;
+    } else if (result.action === 'error' || result.action === 'blocked') {
         console.warn('Auto-migration of contacts header failed:', result.error);
+        // Bez nových sloupců by se pole LinkedIn evidence tiše neukládala — proto
+        // trvalé varování a zablokování záložky LinkedIn dnes, importu a hromadných akcí.
+        state.migrationIssue = result.error || 'Hlavičku listu Contacts se nepodařilo doplnit.';
+        toast('error', '⚠ Nové sloupce se nepodařilo přidat do Sheetu: ' + state.migrationIssue, 12000);
+    } else {
+        state.migrationIssue = null;
     }
 }
 
@@ -3576,6 +4043,9 @@ function detectAlignmentDrift(headerOrder, sampleRows) {
         const maxCols = Math.max.apply(null, sampleRows.map(r => (r || []).length));
         let bestCol = -1, bestMatches = 0;
         for (let c = 0; c < maxCols; c++) {
+            // Sloupce s jiným známým polem LinkedIn evidence přeskočit (např. „sit" = Broker
+            // Trust by jinak chytil slabý detektor firmy a ohlásil falešný posun).
+            if (LI_FIELDS.indexOf(headerOrder[c]) !== -1 && headerOrder[c] !== a.field) continue;
             let matches = 0;
             for (const row of sampleRows) {
                 const v = ((row || [])[c] || '').toString().trim();
@@ -3625,7 +4095,8 @@ async function logActivity(kontaktId, what, detail) {
         const activityHeader = (state.headerOrders.activity && state.headerOrders.activity.length > 0)
             ? state.headerOrders.activity : ACTIVITY_HEADER;
         await sheetsAppend(SHEET_TABS.activity, [objectToRow(obj, activityHeader, ACTIVITY_HEADER)]);
-        state.activity.unshift(obj);
+        // state.activity je chronologicky (jako v Sheetu); Dashboard bere slice(-20).reverse()
+        state.activity.push(obj);
     } catch (err) {
         console.warn('Activity log failed:', err);
     }
@@ -3653,6 +4124,9 @@ function openEditContact(id) {
     document.getElementById('form-meta').style.display = 'block';
     populateSegmentSelect('f-segment');
     populateForm(c);
+    // Snímek formuláře hned po naplnění — při Uložit se zapíše jen to, co uživatel změnil.
+    // (Hodnota, kterou select nezná, se tak nikdy tiše nepřepíše na prázdnou.)
+    state.formSnapshot = collectForm();
     openDetail();
 }
 
@@ -3664,10 +4138,42 @@ function resetForm() {
     document.getElementById('f-linkedinStav').value = '';
     ['f-firma','f-ico','f-sidlo','f-kontaktniOsoba','f-role','f-email','f-telefon',
      'f-web','f-linkedinUrl','f-facebookUrl','f-tagy','f-zdrojUrl','f-poznamka',
-     'f-osloven_kdy','f-osloven_kanal'].forEach(id => {
+     'f-osloven_kdy','f-osloven_kanal','f-vazba','f-sit','f-neoslovovat','f-neoslovovat-duvod'].forEach(id => {
         document.getElementById(id).value = '';
     });
+    document.getElementById('f-li-steps').textContent = '—';
+    populateSiteDatalist();
     updateLinkedInBadge();
+}
+
+// Neoslovovat: uloženo jako „RRRR-MM-DD důvod". Formulář ukazuje jen důvod; při beze změny
+// důvodu se zachová původní datum, při novém důvodu se doplní dnešní.
+const NEOSLOVOVAT_DUVODY = ['námitka', 'nemá zájem', 'odmítl', 'starý kontakt', 'blokovaná síť', 'nevhodný'];
+function parseNeoslovovat(v) {
+    const m = String(v || '').trim().match(/^(\d{4}-\d{2}-\d{2})\s+(.+)$/);
+    if (!m) return { date: '', reason: String(v || '').trim() };
+    return { date: m[1], reason: m[2] };
+}
+
+function liStepsText(c) {
+    const parts = [];
+    if (c.li_pozvanka_kdy) parts.push('pozvánka ' + formatDate(c.li_pozvanka_kdy));
+    if (c.li_prijato_kdy) parts.push('přijato ' + formatDate(c.li_prijato_kdy));
+    if (c.li_zprava_kdy) parts.push('představení ' + formatDate(c.li_zprava_kdy));
+    if (c.li_odpoved_kdy) parts.push('odpověď ' + formatDate(c.li_odpoved_kdy));
+    if (c.sablona) parts.push('šablona ' + c.sablona);
+    return parts.length ? parts.join(' · ') : '—';
+}
+
+function populateSiteDatalist() {
+    const dl = document.getElementById('dl-site');
+    if (!dl) return;
+    const seen = {};
+    ['Broker Trust', 'SAB servis', 'OK KLIENT', 'EFEKTA Brokerpool', 'INSIA', 'Gepard Finance', 'BEplan', 'Fingo']
+        .concat(state.contacts.map(function (c) { return (c.sit || '').trim(); }))
+        .forEach(function (s) { if (s && !seen[s.toLowerCase()]) seen[s.toLowerCase()] = s; });
+    dl.innerHTML = Object.values(seen).sort(function (a, b) { return a.localeCompare(b, 'cs'); })
+        .map(function (s) { return '<option value="' + escapeAttr(s) + '"></option>'; }).join('');
 }
 
 function updateLinkedInBadge() {
@@ -3700,6 +4206,12 @@ function populateForm(c) {
     document.getElementById('f-osloven_kdy').value = c.osloven_kdy || '';
     document.getElementById('f-osloven_kanal').value = c.osloven_kanal || '';
     document.getElementById('f-linkedinStav').value = c.linkedinStav || '';
+    populateSiteDatalist();
+    document.getElementById('f-vazba').value = c.vazba || '';
+    document.getElementById('f-sit').value = c.sit || '';
+    document.getElementById('f-neoslovovat').value = c.neoslovovat || '';
+    document.getElementById('f-neoslovovat-duvod').value = c.neoslovovat ? parseNeoslovovat(c.neoslovovat).reason : '';
+    document.getElementById('f-li-steps').textContent = liStepsText(c);
     document.getElementById('meta-created').textContent = c.createdAt ? formatDateTime(c.createdAt) : '—';
     document.getElementById('meta-updated').textContent = c.updatedAt ? formatDateTime(c.updatedAt) : '—';
     document.getElementById('meta-id').textContent = c.id || '—';
@@ -3726,8 +4238,20 @@ function collectForm() {
         poznamka: document.getElementById('f-poznamka').value.trim(),
         osloven_kdy: document.getElementById('f-osloven_kdy').value,
         osloven_kanal: document.getElementById('f-osloven_kanal').value,
-        linkedinStav: document.getElementById('f-linkedinStav').value
+        linkedinStav: document.getElementById('f-linkedinStav').value,
+        vazba: document.getElementById('f-vazba').value,
+        sit: document.getElementById('f-sit').value.trim(),
+        neoslovovat: collectNeoslovovat()
     };
+}
+
+function collectNeoslovovat() {
+    const reason = document.getElementById('f-neoslovovat-duvod').value;
+    const stored = document.getElementById('f-neoslovovat').value;
+    if (!reason) return '';
+    const p = parseNeoslovovat(stored);
+    if (stored && p.reason === reason) return stored;  // beze změny — zachovat původní datum
+    return localISODate() + ' ' + reason;
 }
 
 async function saveContact() {
@@ -3740,26 +4264,45 @@ async function saveContact() {
     const now = new Date().toISOString();
 
     if (state.selectedId) {
-        // UPDATE
+        // UPDATE — zapisuje se jen rozdíl proti snímku formuláře z openEditContact,
+        // do řádku nalezeného podle ID (patchContactById). Úpravy z jiné záložky
+        // nebo od asistentky v jiných buňkách téhož řádku se tak nepřepíšou.
         const c = state.contacts.find(x => x.id === state.selectedId);
         if (!c) { toast('error', 'Kontakt nenalezen.'); return; }
-        Object.assign(c, data);
-        c.updatedAt = now;
+        if (refuseIfMisaligned('Uložení kontaktu')) return;
+        const snap = state.formSnapshot || {};
+        const patch = {};
+        Object.keys(data).forEach(function (k) {
+            if (String(data[k] == null ? '' : data[k]) !== String(snap[k] == null ? '' : snap[k])) patch[k] = data[k];
+        });
+        if (Object.keys(patch).length === 0) {
+            toast('info', 'Beze změn.');
+            closeDetail();
+            return;
+        }
+        // Neoslovovat rozhoduje vždy — při jeho nastavení se přepne i LinkedIn stav
+        if (patch.neoslovovat && String(c.linkedinStav || '') !== 'Vymazáno') patch.linkedinStav = 'Neposílat';
         try {
-            await sheetsUpdateRow(SHEET_TABS.contacts, c._rowIndex, contactToRow(c));
-            await logActivity(c.id, 'update', 'Upraven kontakt');
+            await patchContactById(c.id, patch);
+            await logActivity(c.id, 'update', 'Upraven kontakt (' + Object.keys(patch).join(', ') + ')');
             toast('success', 'Uloženo.');
             renderAll();
             closeDetail();
         } catch (err) {
             console.error('Update error:', err);
-            toast('error', 'Uložení selhalo: ' + err.message);
+            if (err && err.code === 'NOT_FOUND') {
+                toast('error', 'Kontakt už v Sheetu není (mezitím smazán). Načítám data znovu.');
+                closeDetail();
+                await syncFromSheet();
+            } else {
+                toast('error', 'Uložení selhalo: ' + err.message);
+            }
         }
     } else {
         // CREATE
         if (refuseIfMisaligned('Přidání kontaktu')) return;
-        // LIMIT max 3/firma (tvrdě i pro ruční přidání).
-        if (hasCompanyIdentity(data.ico, data.firma) && companyCountInDb(data.ico, data.firma) >= MAX_PER_COMPANY) {
+        // LIMIT max 3/firma (tvrdě i pro ruční přidání). Výjimka: segmenty „Poradci – …" (sítě a pooly mají desítky poradců).
+        if (!isLiSegment(data.segment) && hasCompanyIdentity(data.ico, data.firma) && companyCountInDb(data.ico, data.firma) >= MAX_PER_COMPANY) {
             toast('error', 'Firma „' + (data.firma || '?') + '" už má ' + MAX_PER_COMPANY + ' kontakty v databázi (limit). Další nelze přidat.');
             return;
         }
@@ -3791,8 +4334,10 @@ async function deleteContact() {
     if (!confirm('Smazat tento kontakt? Akce je nevratná.')) return;
 
     try {
-        await sheetsClearRow(SHEET_TABS.contacts, c._rowIndex);
-        await logActivity(c.id, 'delete', 'Smazán kontakt: ' + (c.kontaktniOsoba || c.firma));
+        // Mazání podle ID (řádek se dohledá v aktuálním Sheetu), ne podle _rowIndex z paměti
+        await deleteContactById(c.id);
+        const name = isLinkedInSourced(c) ? '' : (': ' + (c.kontaktniOsoba || c.firma));
+        await logActivity(c.id, 'delete', 'Smazán kontakt' + name);
         // Re-fetch to get correct rowIndex for remaining contacts
         await syncFromSheet();
         toast('success', 'Smazáno.');
@@ -3883,6 +4428,7 @@ async function aresLookup() {
 function applyFilters() {
     const f = state.filters;
     state.filteredContacts = state.contacts.filter(c => {
+        if (isErasedRecord(c)) return false; // vymazané (jen otisk + datum) se v tabulce neukazují
         if (f.typ !== 'all' && c.typ !== f.typ) return false;
         if (f.prio !== 'all' && String(c.priorita) !== f.prio) return false;
         if (f.stav !== 'all' && c.stav !== f.stav) return false;
@@ -3974,6 +4520,7 @@ function renderAll() {
     renderSegmentMenu();
     updateSegmentTriggerLabel();
     populateVyhlSegmentSelect();
+    renderLinkedInToday();
 }
 
 function renderContacts() {
@@ -4021,10 +4568,11 @@ function renderContacts() {
 }
 
 function renderDashboard() {
-    const total = state.contacts.length;
-    const klienti = state.contacts.filter(c => c.typ === 'Klient').length;
-    const zprostredkovatele = state.contacts.filter(c => c.typ === 'Zprostředkovatel').length;
-    const prio1 = state.contacts.filter(c => String(c.priorita) === '1').length;
+    const live = state.contacts.filter(c => !isErasedRecord(c));
+    const total = live.length;
+    const klienti = live.filter(c => c.typ === 'Klient').length;
+    const zprostredkovatele = live.filter(c => c.typ === 'Zprostředkovatel').length;
+    const prio1 = live.filter(c => String(c.priorita) === '1').length;
 
     document.getElementById('dash-total').innerHTML = total === 0 ? '<em>0</em>' : String(total);
     document.getElementById('dash-total-meta').textContent = total === 0 ? 'začni přidáním' : 'aktivních záznamů';
@@ -4035,7 +4583,7 @@ function renderDashboard() {
     // Breakdown
     const breakdown = {};
     state.segments.forEach(s => { breakdown[s.nazev] = 0; });
-    state.contacts.forEach(c => {
+    live.forEach(c => {
         if (c.segment) breakdown[c.segment] = (breakdown[c.segment] || 0) + 1;
     });
     const sortedSegs = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
@@ -4198,6 +4746,9 @@ document.querySelectorAll('.section-tab').forEach(tab => {
         document.querySelectorAll('.db-section').forEach(s => s.classList.remove('active'));
         tab.classList.add('active');
         document.querySelector('.db-section[data-section="' + target + '"]').classList.add('active');
+        const layout = document.querySelector('.db-layout');
+        if (layout) layout.dataset.active = target;
+        if (target === 'linkedin') renderLinkedInToday();
     });
 });
 
@@ -4221,6 +4772,16 @@ function onCsvFileChosen(e) {
     const reader = new FileReader();
     reader.onload = function(ev) {
         const text = ev.target.result;
+        // Export z LinkedInu nebo dávka kandidátů patří do záložky LinkedIn dnes (vlastní párování a ochrana dat)
+        const liCls = liClassifyCsv(text, file.name);
+        const liKind = liCls.type;
+        if (liKind === 'invitations' || liKind === 'connections' || (liKind === 'candidates' && liCls.isBatch)) {
+            document.getElementById('csv-preview').innerHTML = '<div class="info-note warning">Tohle je ' +
+                (liKind === 'candidates' ? 'dávka kandidátů' : 'export z LinkedInu') +
+                '. Importujte ho v záložce <strong>LinkedIn dnes</strong> – tam se spáruje s pozvánkami a ohlídá „neoslovovat".</div>';
+            document.getElementById('btn-do-import').disabled = true;
+            return;
+        }
         const parsed = parseCSV(text);
         if (parsed.length < 2) {
             document.getElementById('csv-preview').innerHTML = '<span style="color:var(--danger);">CSV je prázdné nebo bez hlavičky.</span>';
@@ -4382,6 +4943,123 @@ function csvEscape(v) {
 }
 
 // ============================================================
+// LINKEDIN EVIDENCE — společné pomocné funkce (zadání 2026-10-13)
+// ============================================================
+// Normalizovaný klíč profilu: linkedin.com/in/<slug> (malá písmena, bez protokolu,
+// subdomény, parametrů, # a všeho za slugem). Pro jiné adresy (Google dotaz, /company/,
+// /search/) vrací ''. Používá import, ruční přidání, kontrola duplicit, deduplikace AI.
+function normLinkedInKey(url) {
+    let s = String(url || '').trim();
+    if (!s) return '';
+    try { s = decodeURIComponent(s); } catch (e) { /* ponechat */ }
+    s = s.toLowerCase().replace(/^https?:\/\//, '').replace(/^(www|cz|sk|m|[a-z]{2})\./, '');
+    const m = s.match(/^linkedin\.com\/in\/([^\/?#\s]+)/);
+    if (!m) return '';
+    return 'linkedin.com/in/' + m[1];
+}
+
+// Klíč kontaktu: li_klic (i otisk h:…) má přednost, jinak z linkedinUrl
+function contactLiKey(c) {
+    const k = String(c.li_klic || '').trim();
+    if (k) return k;
+    return normLinkedInKey(c.linkedinUrl);
+}
+
+// SHA-256 otisk normalizovaného klíče (po výmazu zůstane jen otisk, ne čitelná URL)
+async function hashLiKey(key) {
+    const bytes = new TextEncoder().encode(String(key || ''));
+    const buf = await crypto.subtle.digest('SHA-256', bytes);
+    return 'h:' + Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+
+// Kontakt vznikl z LinkedInu (vlastní pozvánka) nebo jako kandidát od Clauda → zvláštní
+// režim: do Activity jen ID, žádné AI nad ním, žádné jméno v promptech.
+function isLinkedInSourced(c) {
+    if (!c) return false;
+    const sp = String(c.spolehlivost || '').toLowerCase();
+    return sp === 'linkedin-export' || sp === 'linkedin-ručně' || sp === 'claude-kandidat'
+        || String(c.zdrojUrl || '') === 'LinkedIn – vlastní pozvánka'
+        || !!String(c.li_pozvanka_kdy || '').trim();
+}
+
+// Vymazaný / zkrácený záznam (zůstal jen klíč a datum) — neukazovat v běžných pohledech
+function isErasedRecord(c) {
+    return !!c && String(c.linkedinStav || '') === 'Vymazáno';
+}
+
+// Segmenty pro LinkedIn oslovování (prefix „Poradci – "; pomlčky a mezery se sjednocují)
+const LI_SEGMENT_PREFIX = 'Poradci – ';
+function isLiSegment(seg) {
+    const s = String(seg || '').replace(/[‐-―-]/g, '–').replace(/\s+/g, ' ').trim();
+    return s.indexOf('Poradci –') === 0;
+}
+
+// ---------- F3: jednorázové označení starých kontaktů ----------
+const OLD_CUTOFF_LOCAL = new Date(2026, 9, 13, 0, 0, 0); // 13. 10. 2026 00:00 místního času
+function oldContactCandidates(excludeFromOct1) {
+    const seedNames = (typeof SEGMENTS_SEED !== 'undefined' ? SEGMENTS_SEED : []).map(function (s) { return s.nazev; });
+    const oct1 = new Date(2026, 9, 1, 0, 0, 0);
+    return state.contacts.filter(function (c) {
+        if (isErasedRecord(c)) return false;
+        if (String(c.neoslovovat || '').trim()) return false;
+        if (isLiSegment(c.segment)) return false;
+        const t = c.createdAt ? new Date(c.createdAt) : null;
+        const old = !t || isNaN(t.getTime()) || t < OLD_CUTOFF_LOCAL || seedNames.indexOf(c.segment) !== -1;
+        if (!old) return false;
+        if (excludeFromOct1 && t && !isNaN(t.getTime()) && t >= oct1) return false;
+        return true;
+    });
+}
+
+function previewMarkOldContacts() {
+    const box = document.getElementById('old-mark-results');
+    box.style.display = 'block';
+    const excl = !!(document.getElementById('old-mark-excl') && document.getElementById('old-mark-excl').checked);
+    const list = oldContactCandidates(excl);
+    const fromOct1 = oldContactCandidates(false).length - oldContactCandidates(true).length;
+    if (list.length === 0 && fromOct1 === 0) {
+        box.innerHTML = '<div class="info-note success">Žádné neoznačené staré kontakty.</div>';
+        return;
+    }
+    const bySeg = {};
+    list.forEach(function (c) { const k = c.segment || '(bez segmentu)'; bySeg[k] = (bySeg[k] || 0) + 1; });
+    const rows = Object.entries(bySeg).sort(function (a, b) { return b[1] - a[1]; })
+        .map(function (e) { return '<div class="seg-row"><span class="seg-row-name">' + escapeHtml(e[0]) + '</span><span class="seg-row-count">' + e[1] + '</span></div>'; }).join('');
+    box.innerHTML = '<div class="info-note warning"><strong>Označí se ' + list.length + ' kontaktů</strong> jako „neoslovovat – starý kontakt". Nic se nemaže, datum úpravy se nemění.</div>' +
+        '<label style="display:flex;gap:8px;align-items:center;margin:12px 0;font-size:13px;color:var(--text-soft);"><input type="checkbox" id="old-mark-excl"' + (excl ? ' checked' : '') + ' onchange="previewMarkOldContacts()"> Vyjmout kontakty založené od 1. 10. 2026 (' + fromOct1 + ')</label>' +
+        '<div class="seg-list" style="max-height:260px;overflow-y:auto;">' + rows + '</div>' +
+        '<div style="margin-top:12px;display:flex;gap:10px;"><button class="btn btn-primary" onclick="executeMarkOldContacts()"' + (list.length ? '' : ' disabled') + '>Označit ' + list.length + ' kontaktů</button>' +
+        '<button class="btn btn-ghost" onclick="document.getElementById(\'old-mark-results\').style.display=\'none\'">Zrušit</button></div>';
+}
+
+async function executeMarkOldContacts() {
+    if (state.migrationIssue) { toast('error', 'Nejdřív je potřeba vyřešit doplnění sloupců: ' + state.migrationIssue); return; }
+    if (refuseIfMisaligned('Označení starých kontaktů')) return;
+    const excl = !!(document.getElementById('old-mark-excl') && document.getElementById('old-mark-excl').checked);
+    const list = oldContactCandidates(excl);
+    if (list.length === 0) return;
+    const reason = '2026-10-13 starý kontakt';
+    const patches = list.map(function (c) {
+        const f = { neoslovovat: reason };
+        const k = normLinkedInKey(c.linkedinUrl);
+        if (k && !c.li_klic) f.li_klic = k;
+        return { id: c.id, fields: f };
+    });
+    const box = document.getElementById('old-mark-results');
+    box.innerHTML = '<div style="font-size:13px;color:var(--text-mute);padding:8px;">Zapisuji…</div>';
+    try {
+        const r = await patchContactsBulk(patches, { keepUpdatedAt: true });
+        await logActivity('', 'mark-old', 'Označeno „neoslovovat – starý kontakt": ' + r.applied + (r.missing.length ? ' (nenalezeno ' + r.missing.length + ')' : ''));
+        box.innerHTML = '<div class="info-note success"><strong>Hotovo.</strong> Označeno ' + r.applied + ' kontaktů.' + (r.missing.length ? ' ' + r.missing.length + ' kontaktů už v Sheetu nebylo.' : '') + '</div>';
+        document.getElementById('old-mark-meta').textContent = 'Označeno ' + r.applied + ' · ' + formatDateTime(new Date().toISOString());
+        renderAll();
+    } catch (err) {
+        console.error('mark-old error:', err);
+        box.innerHTML = '<div class="info-note danger"><strong>Chyba:</strong> ' + escapeHtml(err.message || String(err)) + '</div>';
+    }
+}
+
+// ============================================================
 // DATABASE CHECK
 // ============================================================
 function checkDatabase() {
@@ -4393,6 +5071,7 @@ function checkDatabase() {
     const norm = function (s) { return (s || '').toString().normalize('NFC').trim().toLowerCase(); };
 
     state.contacts.forEach(c => {
+        if (isErasedRecord(c)) return; // vymazané/zkrácené záznamy (jen klíč + datum) nekontrolovat
         // Missing required
         if (!c.firma && !c.kontaktniOsoba) issues.missing.push({ id: c.id, why: 'Chybí firma i jméno' });
         // Duplicate detection — POUZE osobní identifikátory
@@ -4403,10 +5082,10 @@ function checkDatabase() {
                 else seen.email[e] = c.id;
             }
         }
-        if (c.linkedinUrl) {
-            const l = norm(c.linkedinUrl).replace(/\/$/, '');
-            // POUZE skutečný profil /in/, ne Google search ani LinkedIn /search/
-            if (l && /linkedin\.com\/in\//i.test(l)) {
+        {
+            // POUZE skutečný profil /in/ (normalizovaný klíč), ne Google search ani LinkedIn /search/
+            const l = contactLiKey(c);
+            if (l && !/^[hn]:/.test(l)) {
                 if (seen.linkedin[l]) issues.duplicates.push({ id: c.id, dupOf: seen.linkedin[l], why: 'LinkedIn profil' });
                 else seen.linkedin[l] = c.id;
             }
@@ -4487,15 +5166,16 @@ function analyzeDuplicates() {
     const norm = function (s) { return (s || '').toString().normalize('NFC').trim().toLowerCase(); };
     const groups = { email: {}, linkedin: {}, nameFirma: {}, nameIco: {} };
     state.contacts.forEach(function (c) {
+        if (isErasedRecord(c)) return; // vymazané záznamy (jen otisk) se neslučují ani nemažou
         // Email = osobní identifikátor
         if (c.email) {
             const e = norm(c.email);
             if (e && /@/.test(e)) (groups.email[e] = groups.email[e] || []).push(c.id);
         }
-        // LinkedIn POUZE skutečné profilové URLs (/in/slug) — ne Google search, ne LinkedIn /search/
-        if (c.linkedinUrl) {
-            const l = norm(c.linkedinUrl).replace(/\/$/, '');
-            if (l && /linkedin\.com\/in\//i.test(l)) {
+        // LinkedIn POUZE skutečné profily (/in/slug, normalizovaný klíč) — ne Google search, ne /search/
+        {
+            const l = contactLiKey(c);
+            if (l && !/^[hn]:/.test(l)) {
                 (groups.linkedin[l] = groups.linkedin[l] || []).push(c.id);
             }
         }
@@ -4540,9 +5220,15 @@ function pickKeeper(ids) {
     //   4) Nejnižší _rowIndex (= byl tu první v Sheetu, fallback)
     const arr = ids.map(function (id) { return state.contacts.find(function (c) { return c.id === id; }); }).filter(Boolean);
     arr.sort(function (a, b) {
-        // 1) Workflow active?
-        const aw = !!((a.linkedinStav || '').trim()) || !!((a.osloven_kdy || '').trim());
-        const bw = !!((b.linkedinStav || '').trim()) || !!((b.osloven_kdy || '').trim());
+        // 0) Neoslovovat má absolutní přednost (záznam o námitce nesmí zmizet)
+        const an = !!((a.neoslovovat || '').trim()), bn = !!((b.neoslovovat || '').trim());
+        if (an !== bn) return an ? -1 : 1;
+        // 1) Workflow active? (včetně kroků LinkedIn evidence)
+        const act = function (c) {
+            return !!((c.linkedinStav || '').trim()) || !!((c.osloven_kdy || '').trim())
+                || !!((c.li_pozvanka_kdy || '').trim()) || !!((c.li_zprava_kdy || '').trim());
+        };
+        const aw = act(a), bw = act(b);
         if (aw !== bw) return aw ? -1 : 1;
         // 2) Počet vyplněných polí
         const fields = ['firma', 'kontaktniOsoba', 'email', 'telefon', 'linkedinUrl', 'role', 'sidlo', 'web', 'ico'];
@@ -4557,6 +5243,28 @@ function pickKeeper(ids) {
         return (a._rowIndex || 99999) - (b._rowIndex || 99999);
     });
     return arr[0];
+}
+
+// Sloučí pole LinkedIn evidence z duplicit do ponechaného záznamu.
+// Vrací jen pole, která se na keeperu mají změnit.
+function mergeLiFields(keeper, dupes) {
+    const out = {};
+    const all = [keeper].concat(dupes);
+    // neoslovovat: nejstarší neprázdné (podle data na začátku)
+    const neo = all.map(function (c) { return (c.neoslovovat || '').trim(); }).filter(Boolean).sort();
+    if (neo.length && (keeper.neoslovovat || '').trim() !== neo[0]) out.neoslovovat = neo[0];
+    // data kroků: nejstarší neprázdné
+    ['li_pozvanka_kdy', 'li_prijato_kdy', 'li_zprava_kdy', 'li_odpoved_kdy'].forEach(function (f) {
+        const vals = all.map(function (c) { return (c[f] || '').trim(); }).filter(Boolean).sort();
+        if (vals.length && (keeper[f] || '').trim() !== vals[0]) out[f] = vals[0];
+    });
+    // ostatní: neprázdné vyhrává (keeper má přednost)
+    ['li_klic', 'sablona', 'vazba', 'sit'].forEach(function (f) {
+        if ((keeper[f] || '').trim()) return;
+        const d = dupes.find(function (c) { return (c[f] || '').trim(); });
+        if (d) out[f] = d[f];
+    });
+    return out;
 }
 
 function autoCleanupDuplicates() {
@@ -4669,6 +5377,22 @@ async function executeDuplicateCleanup() {
         if (mismatch) {
             container.innerHTML = '<div class="info-note warning"><strong>Cleanup zastaven:</strong> Sheet se mezitím změnil — řádky už nesedí na očekávané kontakty. Spusť kontrolu duplicit znovu.</div>';
             return;
+        }
+
+        // Před smazáním přenést na ponechaný záznam údaje LinkedIn evidence z duplicit
+        // (doklad o informování podle čl. 14, námitka, klíč profilu) — jinak by zmizely
+        // a příští import by kontakt založil znovu.
+        const mergePatches = [];
+        state.dupeCleanupData.forEach(function (g) {
+            const merged = mergeLiFields(g.keeper, g.dupes);
+            if (Object.keys(merged).length > 0) mergePatches.push({ id: g.keeper.id, fields: merged });
+        });
+        if (mergePatches.length > 0) {
+            const r = await patchContactsBulk(mergePatches);
+            if (r.missing && r.missing.length > 0) {
+                container.innerHTML = '<div class="info-note warning"><strong>Cleanup zastaven:</strong> některé ponechané záznamy už v Sheetu nejsou. Spusť kontrolu duplicit znovu.</div>';
+                return;
+            }
         }
 
         await sheetsDeleteRows(SHEET_TABS.contacts, rowIndexes);
@@ -4899,8 +5623,9 @@ function populateVyhlSegmentSelect() {
     const target = document.getElementById('vyhl-target-contact');
     if (target) {
         const current = target.value;
+        // Lidé z LinkedIn oslovování, vymazaní a „neoslovovat" do hloubkového průzkumu nepatří (ochrana osobních údajů)
         target.innerHTML = '<option value="">— vyber kontakt z DB —</option>' +
-            state.contacts.map(c => {
+            state.contacts.filter(c => !isLinkedInSourced(c) && !isErasedRecord(c) && !String(c.neoslovovat || '').trim()).map(c => {
                 const label = (c.kontaktniOsoba || c.firma || '?') +
                     (c.firma && c.kontaktniOsoba ? ' — ' + c.firma : '') +
                     (c.role ? ' (' + c.role + ')' : '');
@@ -4917,7 +5642,8 @@ function getExistingContactKeys() {
         icos: state.contacts.map(c => c.ico).filter(Boolean),
         emails: state.contacts.map(c => c.email).filter(Boolean),
         linkedins: state.contacts.map(c => c.linkedinUrl).filter(Boolean),
-        namesFirmas: state.contacts.filter(c => c.kontaktniOsoba && c.firma).map(c => c.kontaktniOsoba + '|' + c.firma)
+        // Jména kontaktů z LinkedInu (vlastní pozvánky, kandidáti) se AI nástrojům neposílají
+        namesFirmas: state.contacts.filter(c => c.kontaktniOsoba && c.firma && !isLinkedInSourced(c) && !isErasedRecord(c)).map(c => c.kontaktniOsoba + '|' + c.firma)
     };
 }
 
@@ -4975,13 +5701,15 @@ function buildAIPayload() {
         };
         const segKey = normalizeSeg(segmentNazev);
         // 1) Kontakty v tomto segmentu — priorita, ať AI ví, co je v hubu
+        // Kontakty z LinkedInu, vymazané a „neoslovovat" do promptu nejdou (ochrana osobních údajů)
+        const aiVisible = c => !isLinkedInSourced(c) && !isErasedRecord(c) && !String(c.neoslovovat || '').trim();
         const segmentContacts = state.contacts
-            .filter(c => (c.firma || c.kontaktniOsoba) && normalizeSeg(c.segment) === segKey)
+            .filter(c => aiVisible(c) && (c.firma || c.kontaktniOsoba) && normalizeSeg(c.segment) === segKey)
             .map(c => ({ firma: c.firma || '', kontaktniOsoba: c.kontaktniOsoba || '', ico: c.ico || '' }));
         // 2) Kontakty v JINÝCH segmentech — cross-dedup kontext (AI ne-suggestuje
         // duplicit přes segmenty). Cap 150 ať prompt nebobtná.
         const otherSegmentContacts = state.contacts
-            .filter(c => (c.firma || c.kontaktniOsoba) && normalizeSeg(c.segment) !== segKey)
+            .filter(c => aiVisible(c) && (c.firma || c.kontaktniOsoba) && normalizeSeg(c.segment) !== segKey)
             .slice(0, 150)
             .map(c => ({
                 firma: c.firma || '',
@@ -5450,8 +6178,14 @@ async function applyDeepFindings() {
         return;
     }
 
-    const contact = state.contacts.find(c => c.id === targetId);
-    if (!contact) { toast('error', 'Kontakt v DB nenalezen.'); return; }
+    const found = state.contacts.find(c => c.id === targetId);
+    if (!found) { toast('error', 'Kontakt v DB nenalezen.'); return; }
+    if (isLinkedInSourced(found)) {
+        toast('warning', 'Hloubkový průzkum se u kontaktů z LinkedInu nepoužívá (ochrana osobních údajů).');
+        return;
+    }
+    // Pracujeme na kopii; do Sheetu se zapíší jen změněná pole (patchContactById).
+    const contact = Object.assign({}, found);
 
     // Build aktualizace poznámky + případně doplnit chybějící strukturovaná pole
     const lines = toApply.map(f =>
@@ -5496,11 +6230,14 @@ async function applyDeepFindings() {
         }
     });
 
-    contact.updatedAt = new Date().toISOString();
+    const patch = {};
+    ['poznamka', 'linkedinUrl', 'email', 'telefon'].forEach(function (f) {
+        if ((contact[f] || '') !== (found[f] || '')) patch[f] = contact[f] || '';
+    });
 
     try {
         toast('info', 'Aktualizuji kontakt…');
-        await sheetsUpdateRow(SHEET_TABS.contacts, contact._rowIndex, contactToRow(contact));
+        await patchContactById(contact.id, patch);
         await logActivity(contact.id, 'ai-deep', 'AI hloubkový průzkum: ' + toApply.length + ' nálezů');
         toast('success', 'Kontakt aktualizován: ' + toApply.length + ' nálezů přidáno do poznámky.');
         resetVyhlResults();
@@ -6168,9 +6905,13 @@ async function executeRestoreSheetStructure() {
 // na kanonické CONTACTS_HEADER pole, přepíšeme Sheet od základu.
 // ============================================================
 
-const STAVY = ['Nový', 'Ověřený', 'Osloven', 'Reaguje', 'Klient', 'Odmítnut'];
+const STAVY = ['Nový', 'Ověřený', 'Osloven', 'Reaguje', 'Klient', 'Odmítnut', 'Partner'];
 const TYPY = ['Klient', 'Zprostředkovatel', 'Oboje'];
-const LINKEDIN_STAVY = ['Posláno', 'Přijato', 'Zpráva', 'Neposílat'];
+const LINKEDIN_STAVY = ['Posláno', 'Přijato', 'Zpráva', 'Neposílat', 'Odpověděl', 'Staženo', 'Vymazáno'];
+const VAZBY = ['nezávislý', 'vázaný zástupce', 'majitel sítě', 'podfirma poolu', 'realitka'];
+// Pole LinkedIn evidence — v detektorech posunu se přiřazují podle názvu v hlavičce (jejich
+// obsah, např. datum RRRR-MM-DD, by si jinak spletl s osloven_kdy apod.)
+const LI_FIELDS = ['li_pozvanka_kdy', 'li_prijato_kdy', 'li_zprava_kdy', 'li_odpoved_kdy', 'li_klic', 'sablona', 'sit', 'vazba', 'neoslovovat'];
 const KANALY = ['email', 'linkedin', 'telefon', 'osobně', 'doporučení', 'jiné'];
 
 // Silné heuristiky — jednoznačně rozpoznají pole z obsahu (nepotřebují header)
@@ -6189,7 +6930,11 @@ const STRONG_DETECTORS = {
     // Dřív bylo /(claude|openai|gemini)/i což matchovalo cokoli s těmi keywordy včetně
     // tagy ("AI-claude+openai") a poznámek ("AI návrh z DATE (claude+openai)..."). Teď
     // exact match anchored regexem.
-    spolehlivost:   s => /^(ručně|claude|openai|gemini)(\+(claude|openai|gemini))*$/i.test(s),
+    spolehlivost:   s => /^(ručně|claude|openai|gemini)(\+(claude|openai|gemini))*$/i.test(s) || /^(import-csv|linkedin-export|linkedin-ručně|claude-kandidat)$/i.test(s),
+    li_klic:        s => /^(linkedin\.com\/in\/[^\/?#\s]+|[hn]:[0-9a-f]{64})$/i.test(s),
+    neoslovovat:    s => /^\d{4}-\d{2}-\d{2}\s+(námitka|nemá zájem|odmítl|starý kontakt|blokovaná síť|nevhodný)$/i.test(s),
+    vazba:          s => VAZBY.indexOf(s) !== -1,
+    sablona:        s => /^[AR]-[a-z-]+-v\d+$/i.test(s),
     createdAt:      s => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s),
     osloven_kdy:    s => /^\d{4}-\d{2}-\d{2}$/.test(s),
     telefon:        s => /^\+?[\d][\d\s\-().\/]{8,}$/.test(s) && !/@/.test(s) && s.length < 25,
@@ -6271,6 +7016,33 @@ function detectColumnFields(dataRows, headerRow) {
     // Cache vzorků
     const colSamples = [];
     for (let c = 0; c < numCols; c++) colSamples.push(sampleCol(c));
+
+    // Pass 0: pole LinkedIn evidence + osloven_kdy přiřadit PODLE NÁZVU V HLAVIČCE, pokud
+    // data odpovídají (nebo je sloupec prázdný). Všechna li_*_kdy mají stejný tvar data
+    // RRRR-MM-DD jako osloven_kdy — podle obsahu by se navzájem spletla a „Přepsat Sheet
+    // kanonickým pořadím" by je přesunul.
+    const dateRx = /^\d{4}-\d{2}-\d{2}$/;
+    const byHeaderTests = {
+        osloven_kdy: s => dateRx.test(s),
+        li_pozvanka_kdy: s => dateRx.test(s),
+        li_prijato_kdy: s => dateRx.test(s),
+        li_zprava_kdy: s => dateRx.test(s),
+        li_odpoved_kdy: s => dateRx.test(s),
+        li_klic: STRONG_DETECTORS.li_klic,
+        neoslovovat: STRONG_DETECTORS.neoslovovat,
+        vazba: STRONG_DETECTORS.vazba,
+        sablona: STRONG_DETECTORS.sablona,
+        sit: () => true
+    };
+    Object.keys(byHeaderTests).forEach(function (field) {
+        const c = headerRow.indexOf(field);
+        if (c === -1 || fields[c]) return;
+        const samples = colSamples[c];
+        if (samples.length === 0 || ratio(samples, byHeaderTests[field]) >= 0.7) {
+            fields[c] = field;
+            usedFields.add(field);
+        }
+    });
 
     // Pass 1: silné heuristiky — ratio > 0.7 nutné aby přiřazení proběhlo
     // Pořadí: nejjednoznačnější první (id, ico) abychom je nezískali na jiném sloupci.
@@ -6493,7 +7265,7 @@ async function diagnoseAndRealignSheet() {
         const summary = mismatches.length === 0
             ? '<div class="info-note success"><strong>Žádné posuny zjištěny.</strong> Header odpovídá obsahu sloupců. Realign není potřeba.</div>'
             : '<div class="info-note warning"><strong>Detekováno ' + mismatches.length + ' posunutých sloupců.</strong> ' +
-              'Sheet se přepíše s kanonickým CONTACTS_HEADER (24 sloupců v původním pořadí). Data v ' + dataRows.length +
+              'Sheet se přepíše s kanonickým CONTACTS_HEADER (' + CONTACTS_HEADER.length + ' sloupců v původním pořadí). Data v ' + dataRows.length +
               ' kontaktech zachovaná, jen přemapovaná na správné sloupce.<br><br>' +
               '<strong>Drive History tě jistí</strong> — pokud něco bude blbě, vrátíš Sheet zpět (Soubor → Historie verzí).</div>';
 
@@ -6533,7 +7305,7 @@ async function executeRealignByContent() {
 
         await logActivity('', 'realign-content', 'Content-based realign: ' + count + ' kontaktů přemapováno na kanonický CONTACTS_HEADER');
 
-        resultEl.innerHTML = '<div class="info-note success"><strong>Hotovo.</strong> Sheet má teď kanonický header (24 sloupců A–X) a ' + count + ' kontaktů ve správných pozicích. Aplikace se obnoví…</div>';
+        resultEl.innerHTML = '<div class="info-note success"><strong>Hotovo.</strong> Sheet má teď kanonický header (' + CONTACTS_HEADER.length + ' sloupců) a ' + count + ' kontaktů ve správných pozicích. Aplikace se obnoví…</div>';
         toast('success', 'Realign hotový. ' + count + ' kontaktů.');
 
         state.realignData = null;
@@ -6737,10 +7509,11 @@ async function executeCleanupLinkedInUrls() {
             const note = '\n\n— LinkedIn cleanup ' + dateStr + ' —\n' +
                          'Původní AI návrh (' + oldReason + '): ' + oldUrl +
                          (newUrl ? '\nNahrazeno obyčejným Google dotazem (Jméno Firma LinkedIn) — klikni první výsledek = reálný profil.' : '\nNelze vytvořit search URL (chybí jméno osoby).');
-            c.poznamka = (c.poznamka || '').trim() + note;
-            c.linkedinUrl = newUrl;
-            c.updatedAt = now;
-            await sheetsUpdateRow(SHEET_TABS.contacts, c._rowIndex, contactToRow(c));
+            // Zápis jen dvou změněných polí do řádku nalezeného podle ID
+            await patchContactById(c.id, {
+                poznamka: (c.poznamka || '').trim() + note,
+                linkedinUrl: newUrl
+            });
             updated++;
         } catch (err) {
             console.error('Cleanup failed for ' + c.id + ':', err);
@@ -7411,6 +8184,14 @@ function formatDateTime(iso) {
     } catch (e) { return iso; }
 }
 
+// Jen datum (RRRR-MM-DD nebo ISO) → „13. 10. 2026". Bez převodu časového pásma u RRRR-MM-DD.
+function formatDate(v) {
+    if (!v) return '—';
+    const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return parseInt(m[3], 10) + '. ' + parseInt(m[2], 10) + '. ' + m[1];
+    return String(v);
+}
+
 // ============================================================
 // CUSTOM DROPDOWN CONVERSION
 // Convert native <select> elements to editorial dropdown widget
@@ -7433,10 +8214,14 @@ function rebuildDropdown(selectId) {
     }
 }
 
+// Form selecty se stálými hodnotami (custom dropdown z nav.js). Nové selecty přidávat SEM —
+// jinak widget po otevření kontaktu ukazuje hodnotu předchozího kontaktu.
+const FORM_STATIC_SELECTS = ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal', 'f-linkedinStav', 'f-vazba', 'f-neoslovovat-duvod'];
+
 function initStaticDropdowns() {
     if (!window.convertSelectsToDropdowns) return;
     // Static-options selects (form selecty se stálými hodnotami)
-    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal', 'f-linkedinStav'].forEach(id => {
+    FORM_STATIC_SELECTS.forEach(id => {
         window.convertSelectsToDropdowns('#' + id);
     });
 }
@@ -7461,7 +8246,7 @@ populateSegmentSelect = function(id) {
 const _origPopulateForm = populateForm;
 populateForm = function(c) {
     _origPopulateForm(c);
-    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal', 'f-linkedinStav'].forEach(id => {
+    FORM_STATIC_SELECTS.forEach(id => {
         if (window.syncCustomDropdown) window.syncCustomDropdown(id);
     });
     renderSearchableMenu('f-segment');
@@ -7471,16 +8256,1423 @@ populateForm = function(c) {
 const _origResetForm = resetForm;
 resetForm = function() {
     _origResetForm();
-    ['f-typ', 'f-priorita', 'f-stav', 'f-osloven_kanal', 'f-linkedinStav'].forEach(id => {
+    FORM_STATIC_SELECTS.forEach(id => {
         if (window.syncCustomDropdown) window.syncCustomDropdown(id);
     });
     renderSearchableMenu('f-segment');
 };
 
 // ============================================================
+// LINKEDIN DNES — denní oslovování poradců (zadání specs/2026-10-13-database-linkedin-poradci-design.md)
+// Aplikace NIC nedělá na LinkedInu sama: jen otevře odkaz, zkopíruje text do schránky
+// a eviduje, co Martin udělal. Žádná automatizace (smluvní podmínky LinkedInu čl. 8.2).
+// ============================================================
+const SPC_ICO = '';                 // TODO po zápisu do OR: IČO Spolumajitelé Private Credit a.s.
+const SPC_OR = '';                  // TODO po zápisu do OR: např. 'oddíl B, vložka 12345'
+const ZASADY_URL = 'privatecredit.spolumajitele.cz/ochrana-osobnich-udaju';
+const ZASADY_LIVE = false;          // true až budou upravené zásady na živém webu (podmínka zprávy A)
+const PARTNER_EMAIL = 'privatecredit@spolumajitele.cz';
+const BLOKOVANE_SITE = [];          // sítě, jejichž lidi neoslovovat (mění Claude na Martinův pokyn)
+const LI_TYDENNI_STROP = 100;       // neoficiální limit LinkedInu ~100 pozvánek / 7 dní
+const LI_DENNI_NORMAL = 15, LI_DENNI_MAX = 20;
+const LI_STAHNOUT_PO_DNECH = 21;    // nevyřízené pozvánky stáhnout
+const LI_VYMAZ_PO_DNECH = 21;       // bez představení → výmaz (do 28 dnů = měsíční lhůta čl. 14)
+const LI_KANDIDAT_PO_DNECH = 7;     // kandidát nepozvaný do 7 dní → výmaz
+const LI_BEZ_ODPOVEDI_PO_MESICICH = 6;
+const LI_KLIC_PO_MESICICH = 12;
+const LI_KAMPAN_OD = '2026-10-13';  // nejstarší datum, od kterého se pozvánky a spojení berou
+const LI_SABLONA_VERZE = 'v1';
+const LI_KARET_NA_SEKCI = 12;
+const LI_CHRANENE_STAVY = ['Reaguje', 'Klient', 'Partner'];   // aktivní vztah → nikdy automatický výmaz
+
+// (TEST_SHEET_REQUESTED / TEST_SHEET_ID jsou nahoře u konstant — čte je ensureSpreadsheet už při startu)
+async function liCreateTestCopy() {
+    if (!state.spreadsheetId) { toast('error', 'Nejdřív se připojte ke Google Sheets.'); return; }
+    if (TEST_SHEET_ID) { toast('info', 'Už běžíte nad testovací kopií.'); return; }
+    const meta = document.getElementById('li-testcopy-meta');
+    meta.textContent = 'Kopíruji…';
+    try {
+        const res = await gfetch('https://www.googleapis.com/drive/v3/files/' + state.spreadsheetId + '/copy?fields=id,name', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: 'TEST – ' + SHEET_TITLE + ' – ' + liToday(), parents: ['root'] })
+        });
+        await checkSheetsResponse(res, 'testCopy');
+        const f = await res.json();
+        const url = location.origin + location.pathname + '?testSheet=' + encodeURIComponent(f.id);
+        meta.innerHTML = 'Hotovo: <a href="' + escapeHtml(url) + '" target="_blank" rel="noopener">otevřít aplikaci nad kopií</a> (kopie „' + escapeHtml(f.name) + '" je v kořeni Disku; po zkoušení ji smažte).';
+    } catch (err) {
+        meta.textContent = 'Kopie selhala: ' + err.message;
+    }
+}
+
+// Stav záložky — jen v paměti, nic se neukládá do prohlížeče
+state.liUndo = {};              // id → { prev: {...pole}, code, day }
+state.liFailed = {};            // id → { fields, code } — zápis selhal, nabídnout „Zapsat znovu"
+state.liSal = {};               // id → ručně upravené oslovení
+state.liUrl = {};               // id → rozepsaný odkaz na profil
+state.liExpand = {};            // sekce → rozbaleno
+state.liImportPlan = null;      // náhled importu před zápisem
+state.liImportParts = null;
+state.liImportChoice = {};      // klíč položky náhledu → true/false (ruční volba; jinak výchozí stav položky)
+state.liSearch = '';
+
+function liToday() { return localISODate(); }
+function liDaysSince(isoDate, today) {
+    const m = String(isoDate || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    const t = (today || liToday()).split('-');
+    const a = new Date(+m[1], +m[2] - 1, +m[3]);
+    const b = new Date(+t[0], +t[1] - 1, +t[2]);
+    return Math.round((b - a) / 86400000);
+}
+function liMonthsSince(isoDate, today) {
+    const d = liDaysSince(isoDate, today);
+    return d === null ? null : d / 30.44;
+}
+function liShiftDate(iso, days) {
+    const p = String(iso).split('-');
+    const d = new Date(+p[0], +p[1] - 1, +p[2]);
+    d.setDate(d.getDate() + days);
+    return localISODate(d);
+}
+function _liNormName(s) {
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// ---------- Jména a oslovení (5. pád, bez titulů) ----------
+const LI_TITLES = /^(ing|mgr|bc|judr|mudr|mvdr|phdr|rndr|paeddr|thdr|ph\.?d|mba|emba|dis|ll\.?m|csc|drsc|doc|prof|dr|msc|ma|ba|bba|mpa|mga|bca|dba|acca|cfa|ing\.?arch|mgr\.?art|mudr\.?|ph\.d)\.?$/i;
+const LI_SUFFIX = /^(ml|st|jr|sr|jun|sen)\.?$/i;
+// „Jan Novák | Hypotéky", „Jan Novák – poradce", „Jan Novák (ABC)", „Ing. Jan Novák, MBA" → „Ing. Jan Novák"
+function liCleanName(full) {
+    const s = String(full || '').split(/\s[|–—-]\s|\||\(|,|;/)[0];
+    return s.replace(/[^\p{L}\p{M}\s.'’-]/gu, ' ').replace(/\s+/g, ' ').trim();
+}
+function liNameParts(full) {
+    const tokens = liCleanName(full).split(/\s+/).filter(Boolean)
+        .filter(function (t) { return !LI_TITLES.test(t.replace(/\.+$/, '')) && !LI_TITLES.test(t) && !LI_SUFFIX.test(t); });
+    if (tokens.length === 0) return { first: '', last: '' };
+    return { first: tokens.length > 1 ? tokens[0] : '', last: tokens[tokens.length - 1] };
+}
+function liNameKey(full) { const p = liNameParts(full); return _liNormName(p.first + ' ' + p.last); }
+
+const LI_MALE_FIRST = { honza: 1, jirka: 1, kuba: 1, ilja: 1, jarda: 1, franta: 1, pepa: 1, standa: 1, rene: 1, uwe: 1 };
+const LI_AMBIG_FIRST = { nikola: 1, sasa: 1, mila: 1, slava: 1, andrea: 1, luca: 1, misa: 1, dominik: 0 };
+// true = žena, false = muž, null = nejisté
+function liFirstIsFemale(first) {
+    const f = _liNormName(first);
+    if (!f) return null;
+    if (LI_MALE_FIRST[f]) return false;
+    if (LI_AMBIG_FIRST[f]) return null;
+    if (/a$/.test(f) || /ie$/.test(f) || /(ce|se|lle|ne|te|de)$/.test(f)) return true;
+    return false;
+}
+function liVocativeMale(s) {
+    if (!s || !/^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+$/.test(s)) return null;
+    const EXC = { 'Král': 'Králi', 'Pavel': 'Pavle', 'Karel': 'Karle', 'Orel': 'Orle', 'Kozel': 'Kozle', 'Petr': 'Petře', 'Švec': 'Ševče', 'Kotek': 'Kotku' };
+    if (EXC[s]) return EXC[s];
+    if (/(th|ff|tt|ss|w|y|q|x)$/.test(s)) return null;    // cizí příjmení → neutrálně
+    if (/[ýíé]$/.test(s)) return s;                       // Černý, Krejčí → beze změny
+    if (/a$/.test(s)) return s.slice(0, -1) + 'o';         // Svoboda → Svobodo
+    if (/[^ě]ek$/.test(s)) return s.slice(0, -2) + 'ku';   // Hájek → Hájku
+    if (/(ěk|ec|el|r)$/.test(s)) return null;             // nejisté (Vaněk, Němec, Havel, Petr…)
+    if (/(k|g|ch)$/.test(s)) return s + 'u';               // Novák → Nováku, Vlach → Vlachu
+    if (/[šžčřjcťďň]$/.test(s)) return s + 'i';            // Bartoš → Bartoši, Kovář → Kováři
+    if (/[bdflmnpstvz]$/.test(s)) return s + 'e';          // Zeman → Zemane, Musil → Musile
+    return null;
+}
+function liSalutation(full) {
+    const p = liNameParts(full);
+    if (!p.last) return 'Dobrý den,';
+    const femSurname = /(ová|á|ova)$/i.test(p.last);
+    const fem = p.first ? liFirstIsFemale(p.first) : null;
+    if (fem === true) return 'Dobrý den, paní ' + p.last + ',';
+    if (fem === null) return femSurname ? 'Dobrý den, paní ' + p.last + ',' : 'Dobrý den,';
+    if (femSurname) return 'Dobrý den,';               // mužské jméno + ženské příjmení → nejisté
+    const v = liVocativeMale(p.last);
+    return v ? 'Dobrý den, pane ' + v + ',' : 'Dobrý den,';
+}
+
+// ---------- Šablony ----------
+const LI_VARIANTY = {
+    poradce:  { label: 'Poradce',  kym: 'poradci, kteří pracují s firemními klienty', otazka: 'S jakými případy financování firem se u vás nejčastěji setkáváte?', vazba: '' },
+    majitel:  { label: 'Majitel',  kym: 'vedením poradenských firem', otazka: 'Jak u vás řešíte firemní klienty, kteří potřebují financování zajištěné nemovitostí?', vazba: 'majitel sítě' },
+    realitka: { label: 'Realitka', kym: 'realitními makléři', otazka: 'Řeší vaši klienti při koupi komerční nemovitosti nebo nemovitosti v dražbě financování přes firmu?', vazba: 'realitka' }
+};
+function liTextA(salutation, variant) {
+    const v = LI_VARIANTY[variant] || LI_VARIANTY.poradce;
+    return salutation + '\n' +
+        'děkuji za přijetí pozvánky. Jsem Martin Dlouhý ze společnosti Spolumajitelé Private Credit a.s., věnuji se financování firem zajištěnému nemovitostmi a rád se seznamuji s ' + v.kym + '. ' + v.otazka + '\n\n' +
+        'Martin Dlouhý\n' +
+        'Spolumajitelé Private Credit a.s., Pařížská 68/9, 110 00 Praha 1, IČO ' + SPC_ICO + ', zapsaná v obchodním rejstříku u Městského soudu v Praze, ' + SPC_OR + '\n\n' +
+        'Osobní údaje: vaše jméno, pozici, firmu a odkaz na profil mám z LinkedInu. Spolumajitelé Private Credit a.s. je jako správce eviduje z oprávněného zájmu kvůli možné spolupráci. Podrobnosti a vaše práva: ' + ZASADY_URL + '\n\n' +
+        'Proti tomuto zpracování můžete kdykoli vznést námitku. Stačí odepsat „ne“ nebo napsat na ' + PARTNER_EMAIL + '. Pak vám už nenapíšu a ponechám si jen záznam, abych vás znovu neoslovil.';
+}
+function liTextR() {
+    return 'Děkuji za odpověď, rád vám pošlu podrobnosti.\n\n' +
+        'Financujeme výhradně právnické osoby se sídlem v ČR – podnikatelské úvěry 3–100 mil. Kč zajištěné nemovitostmi v ČR:\n' +
+        '• úrok od 12 % p.a. podle rizika a zajištění, LTV standardně do 70 %,\n' +
+        '• indikativní nabídka do 48 hodin od dodání kompletních podkladů, od poptávky k čerpání obvykle 14 dní,\n' +
+        '• poplatek za zpracování od 1 % ze schválené výše úvěru, minimálně 100 000 Kč.\n' +
+        'Konkrétní podmínky podléhají individuálnímu schválení.\n\n' +
+        'Pokud máte konkrétní případ, stačí mi se souhlasem klienta poslat, kdo je žadatel, účel, požadovanou částku a zástavu, na ' + PARTNER_EMAIL + '. Podmínky spolupráce domlouvám individuálně.\n\n' +
+        'Hodil by se vám krátký 15minutový telefonát? Napište mi, kdy se vám to hodí.\n\n' +
+        'Martin Dlouhý\nSpolumajitelé Private Credit a.s.';
+}
+
+// ---------- Klíče, původ záznamu, blokace ----------
+// Čitelný klíč profilu (linkedin.com/in/…), ne otisk h:/n:
+function liRealKey(c) {
+    const k = contactLiKey(c);
+    return k && !/^[hn]:/.test(k) ? k : '';
+}
+// Náhradní otisk pro záznam bez odkazu na profil: jméno + firma (aby se nedal znovu navrhnout)
+async function liNameFingerprint(name, firma) {
+    const h = await hashLiKey('n|' + liNameKey(name) + '|' + _normFirmaCmp(firma || ''));
+    return 'n:' + h.slice(2);
+}
+// Záznam vznikl z LinkedIn evidence → smí se automaticky vymazat. Pozor: isLinkedInSourced()
+// vrací true i pro existující kontakt, kterému import jen doplnil datum pozvánky.
+function liIsCampaignRecord(c) {
+    const sp = String(c.spolehlivost || '').toLowerCase();
+    return sp === 'linkedin-export' || sp === 'linkedin-ručně' || sp === 'claude-kandidat'
+        || String(c.zdrojUrl || '') === 'LinkedIn – vlastní pozvánka';
+}
+function liIsProtected(c) { return LI_CHRANENE_STAVY.indexOf(String(c.stav || '')) !== -1; }
+function liNeoReason(c) { return String(c.neoslovovat || '').replace(/^\d{4}-\d{2}-\d{2}\s*/, '').trim(); }
+function liIsRefusal(c) { return /námitka|nemá zájem/i.test(liNeoReason(c)); }
+function liIsBlockedNetwork(c) {
+    if (!BLOKOVANE_SITE.length) return false;
+    const a = _normFirmaCmp(c.sit || ''), b = _normFirmaCmp(c.firma || '');
+    return BLOKOVANE_SITE.some(function (s) { const n = _normFirmaCmp(s); return n && (n === a || n === b); });
+}
+function liGlobalGate() {
+    if (state.migrationIssue) return 'Sheet nemá nové sloupce: ' + state.migrationIssue;
+    if (!SPC_ICO || !SPC_OR) return 'Chybí IČO a zápis v obchodním rejstříku (doplní Claude po zápisu firmy).';
+    if (!ZASADY_LIVE) return 'Zásady ochrany osobních údajů ještě nejsou na živém webu.';
+    return '';
+}
+function liCardGate(c) {
+    if (String(c.neoslovovat || '').trim()) return 'Kontakt má „neoslovovat" (' + c.neoslovovat + ').';
+    if (isErasedRecord(c)) return 'Záznam je vymazaný.';
+    if (liIsBlockedNetwork(c)) return 'Blokovaná síť.';
+    if (!liRealKey(c)) return 'Chybí odkaz na profil – vložte ho do pole níže.';
+    return '';
+}
+function liIntroGate(c) { return liGlobalGate() || (c ? liCardGate(c) : ''); }
+
+// ---------- Fronty (čistá funkce — testovatelná bez Sheetu) ----------
+function computeLiQueues(contacts, today) {
+    today = today || liToday();
+    const q = { pozvat: [], prijali: [], davka: [], odpoved: [], odpovedel: [], dnes: [], stahnout: [], omylem: [], vymaz: [], zkratit: [], otisky: [], kandidatiStari: [], zkontrolovat: [], site: {} };
+    contacts.forEach(function (c) {
+        const neo = !!String(c.neoslovovat || '').trim();
+        const st = String(c.linkedinStav || '');
+        const inv = String(c.li_pozvanka_kdy || '').trim();
+        const sp = String(c.spolehlivost || '').toLowerCase();
+        if (isErasedRecord(c)) {
+            if (inv && liMonthsSince(inv, today) >= LI_KLIC_PO_MESICICH) q.otisky.push(c);
+            return;
+        }
+        // Kandidáti od Clauda (ještě nepozvaní — pozvánku eviduje až import exportu)
+        if (!inv && sp === 'claude-kandidat') {
+            const age = liDaysSince(String(c.createdAt || '').slice(0, 10), today);
+            const untouched = !liIsProtected(c) && ['', 'Nový'].indexOf(String(c.stav || '')) !== -1;
+            // Upravené kandidáty (jiný stav než Nový) Martin používá jako běžný kontakt → žádná fronta
+            if (age !== null && age >= LI_KANDIDAT_PO_DNECH) { if (untouched) q.kandidatiStari.push(c); return; }
+            if (!neo) q.pozvat.push(c);
+            return;
+        }
+        if (!inv) return;   // mimo kampaň (staré kontakty) — fronty se jich netýkají
+        const sitKey = String(c.sit || '').trim() || '(nezjištěno)';
+        q.site[sitKey] = q.site[sitKey] || { pozvano: 0, prijato: 0, zprava: 0, odpoved: 0, partner: 0 };
+        q.site[sitKey].pozvano++;
+        if (c.li_prijato_kdy || ['Přijato', 'Zpráva', 'Odpověděl'].indexOf(st) !== -1) q.site[sitKey].prijato++;
+        if (c.li_zprava_kdy) q.site[sitKey].zprava++;
+        if (c.li_odpoved_kdy) q.site[sitKey].odpoved++;
+        if (String(c.stav || '') === 'Partner') q.site[sitKey].partner++;
+        if (c.li_zprava_kdy === today || c.li_odpoved_kdy === today) q.dnes.push(c);
+        const invAge = liDaysSince(inv, today);
+        const prot = liIsProtected(c);
+        const campaign = liIsCampaignRecord(c);
+        // Kam s propadlým záznamem: z LinkedIn evidence → výmaz; existující kontakt → jen zrušit LinkedIn evidenci
+        const expire = function (list) { if (prot) return; (campaign ? list : q.zkontrolovat).push(c); };
+        const accepted = !!(c.li_prijato_kdy || c.li_zprava_kdy || ['Přijato', 'Zpráva', 'Odpověděl'].indexOf(st) !== -1);
+        if (neo) {
+            if (!accepted) { q.stahnout.push(c); q.omylem.push(c); }
+            expire(q.zkratit);   // neoslovovat (tlačítko i formulář, jakýkoli důvod) → zkrátit při nejbližším výmazu
+            return;
+        }
+        if (!c.li_zprava_kdy) {
+            if (invAge !== null && invAge >= LI_VYMAZ_PO_DNECH) {
+                expire(q.vymaz);
+                if (st === 'Posláno') q.stahnout.push(c);
+                if (!prot) return;
+            }
+            if (st === 'Přijato') q.prijali.push(c);
+            else if (st === 'Posláno' || st === '' || st === 'Staženo') q.davka.push(c);
+            return;
+        }
+        if (st === 'Zpráva' && !c.li_odpoved_kdy) {
+            if (liMonthsSince(c.li_zprava_kdy, today) >= LI_BEZ_ODPOVEDI_PO_MESICICH) expire(q.zkratit);
+            else q.odpoved.push(c);
+            return;
+        }
+        if (st === 'Odpověděl' && liDaysSince(c.li_odpoved_kdy, today) !== null && liDaysSince(c.li_odpoved_kdy, today) <= 60) q.odpovedel.push(c);
+    });
+    const byDateDesc = function (f) { return function (a, b) { return String(b[f] || '').localeCompare(String(a[f] || '')); }; };
+    q.pozvat.sort(function (a, b) { return (parseInt(a.priorita) || 9) - (parseInt(b.priorita) || 9) || String(a.createdAt).localeCompare(String(b.createdAt)); });
+    q.prijali.sort(byDateDesc('li_prijato_kdy'));
+    q.davka.sort(byDateDesc('li_pozvanka_kdy'));
+    q.odpoved.sort(byDateDesc('li_zprava_kdy'));
+    q.odpovedel.sort(byDateDesc('li_odpoved_kdy'));
+    return q;
+}
+
+function computeLiStats(contacts, today) {
+    today = today || liToday();
+    let last7 = 0, pending = 0, introToday = 0, repliesWeek = 0, accBase = 0, accHit = 0;
+    contacts.forEach(function (c) {
+        const d = liDaysSince(c.li_pozvanka_kdy, today);
+        if (d !== null && d < 7) last7++;
+        const r = liDaysSince(c.li_odpoved_kdy, today);
+        if (r !== null && r < 7) repliesWeek++;
+        if (isErasedRecord(c)) {
+            // Vymazané v okně 7–37 dní: nepřijaté (výmaz po 21 dnech), přijaté jen ty s odmítnutím
+            if (d !== null && d >= 7 && d < 37) { accBase++; if (c.li_odpoved_kdy || String(c.neoslovovat || '').trim()) accHit++; }
+            return;
+        }
+        if (c.li_pozvanka_kdy && !String(c.neoslovovat || '').trim() && String(c.linkedinStav || '') === 'Posláno') pending++;
+        if (c.li_zprava_kdy === today) introToday++;
+        if (d !== null && d >= 7 && d < 37) {
+            accBase++;
+            if (c.li_prijato_kdy || c.li_zprava_kdy || ['Přijato', 'Zpráva', 'Odpověděl'].indexOf(String(c.linkedinStav || '')) !== -1) accHit++;
+        }
+    });
+    const acc = accBase ? Math.round(100 * accHit / accBase) : null;
+    const tempo = (acc !== null && acc < 30) || pending > 200 ? String(LI_DENNI_NORMAL) : (LI_DENNI_NORMAL + '–' + LI_DENNI_MAX);
+    return { last7: last7, pending: pending, introToday: introToday, repliesWeek: repliesWeek, acc: acc, tempo: tempo };
+}
+
+// ---------- Vykreslení ----------
+function liPeopleSearchUrl(c) {
+    const name = stripAcademicTitles(liCleanName(c.kontaktniOsoba || ''));
+    if (!name) return '';
+    const nameTokens = new Set(_normPersonName(name).split(' ').filter(Boolean));
+    const rawCompany = String(c.firma || '').trim();
+    const disambig = looksLikeRealFirma(rawCompany) ? pickFirmaDisambiguator(rawCompany, nameTokens) : '';
+    return 'https://www.linkedin.com/search/results/people/?keywords=' + encodeURIComponent((name + ' ' + (disambig || '')).trim());
+}
+function liProfileHref(c) {
+    const u = String(c.linkedinUrl || '').trim();
+    if (normLinkedInKey(u) && /^https?:\/\//i.test(u)) return sanitizeUrl(u);
+    const k = liRealKey(c);
+    if (k) return 'https://www.' + k;
+    return liPeopleSearchUrl(c) || '#';
+}
+
+function liAgoText(n) {
+    if (n <= 0) return 'dnes';
+    if (n === 1) return 'včera';
+    return 'před ' + n + ' dny';
+}
+
+function liNegButtons(id) {
+    return '<button class="btn btn-ghost li-btn li-btn-small" onclick="liNegative(\'' + id + '\', \'nemá zájem\')">Nemá zájem</button>' +
+        '<button class="btn btn-ghost li-btn li-btn-small" onclick="liNegative(\'' + id + '\', \'námitka\')">Ne / námitka</button>';
+}
+
+// Odkazy na LinkedIn otevírají novou záložku (LinkedIn a Google kvůli COOP znovupoužití pojmenované záložky nedovolí)
+function liCardHtml(c, kind) {
+    const id = escapeAttr(c.id);
+    const name = escapeHtml(c.kontaktniOsoba || '(bez jména)');
+    const sub = [c.role, c.firma].filter(Boolean).map(escapeHtml).join(' · ') || '<span class="li-muted">Firma neznámá – ověřte na profilu</span>';
+    const badges = [];
+    if (c.segment) badges.push('<span class="li-badge">' + escapeHtml(c.segment.replace(LI_SEGMENT_PREFIX, '')) + '</span>');
+    if (c.sit) badges.push('<span class="li-badge li-badge-sit">' + escapeHtml(c.sit) + '</span>');
+    const inv = liDaysSince(c.li_pozvanka_kdy);
+    if ((kind === 'prijali' || kind === 'davka') && inv !== null) {
+        const warn = inv >= 14 && !liIsProtected(c);
+        badges.push('<span class="li-badge' + (warn ? ' li-badge-warn' : '') + '">pozván ' + liAgoText(inv) +
+            (warn ? (kind === 'prijali' ? ' – poslat dnes' : (liIsCampaignRecord(c) ? ' – výmaz za ' : ' – LinkedIn údaje se zruší za ') + Math.max(0, LI_VYMAZ_PO_DNECH - inv) + ' d') : '') + '</span>');
+    }
+    if (kind === 'odpoved' && c.li_zprava_kdy) badges.push('<span class="li-badge">představení ' + formatDate(c.li_zprava_kdy) + '</span>');
+    if (kind === 'odpovedel' && c.li_odpoved_kdy) badges.push('<span class="li-badge li-badge-sit">podrobnosti poslány ' + formatDate(c.li_odpoved_kdy) + '</span>');
+    if (c.poznamka && kind === 'pozvat') badges.push('<span class="li-badge li-badge-note" title="' + escapeHtml(c.poznamka) + '">' + escapeHtml(String(c.poznamka).slice(0, 80)) + '</span>');
+    const undo = state.liUndo[c.id] && state.liUndo[c.id].day === liToday() ? state.liUndo[c.id] : null;
+    const failed = state.liFailed[c.id];
+    let actions = '';
+    if (kind === 'pozvat') {
+        const g = buildLinkedInSearchUrl(c.kontaktniOsoba, c.firma, c.role);
+        actions =
+            '<a class="btn btn-primary li-btn" href="' + escapeHtml(liPeopleSearchUrl(c) || '#') + '" target="_blank" rel="noopener noreferrer">Hledat na LinkedInu</a>' +
+            (g ? '<a class="btn btn-ghost li-btn li-btn-small" href="' + escapeHtml(g) + '" target="_blank" rel="noopener noreferrer">Google</a>' : '') +
+            '<button class="btn btn-ghost li-btn li-btn-small" onclick="liDropCandidate(\'' + id + '\')">Nehodí se</button>' +
+            '<div class="li-hint">Pozvěte bez poznámky. Pozvánka se zapíše sama zítřejším importem exportu.</div>';
+    } else if (kind === 'prijali' || kind === 'davka') {
+        const cardGate = liCardGate(c);
+        const blocked = !!(liGlobalGate() || cardGate);
+        const sal = (state.liSal[c.id] != null) ? state.liSal[c.id] : liSalutation(c.kontaktniOsoba);
+        actions = '<input class="form-input li-salut" value="' + escapeHtml(sal) + '" aria-label="Oslovení pro ' + name + '" oninput="state.liSal[\'' + id + '\']=this.value">' +
+            (!liRealKey(c) ? '<div class="li-keyrow"><input class="form-input li-url-input" value="' + escapeHtml(state.liUrl[c.id] || '') + '" placeholder="linkedin.com/in/…" aria-label="Odkaz na profil" oninput="state.liUrl[\'' + id + '\']=this.value"><button class="btn btn-secondary li-btn li-btn-small" onclick="liSaveKey(\'' + id + '\')">Uložit odkaz</button></div>' : '') +
+            Object.keys(LI_VARIANTY).map(function (v) {
+                return '<a class="btn ' + (v === 'poradce' ? 'btn-primary' : 'btn-secondary') + ' li-btn' + (blocked ? ' li-disabled' : '') + '" href="' + escapeHtml(liProfileHref(c)) + '" target="_blank" rel="noopener noreferrer"' +
+                    ' onclick="return liSendIntro(event, \'' + id + '\', \'' + v + '\')">Představení – ' + LI_VARIANTY[v].label + '</a>';
+            }).join('') +
+            liNegButtons(id) +
+            (cardGate ? '<div class="li-gate">' + escapeHtml(cardGate) + '</div>' : '');
+    } else if (kind === 'odpoved') {
+        actions =
+            '<a class="btn btn-primary li-btn" href="' + escapeHtml(liProfileHref(c)) + '" target="_blank" rel="noopener noreferrer" onclick="return liInterest(event, \'' + id + '\')">Zájem (zkopíruje podrobnosti)</a>' +
+            liNegButtons(id) +
+            (undo && undo.code === 'intro' ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + id + '\')">Vrátit představení</button>' : '');
+    } else if (kind === 'odpovedel') {
+        actions = '<a class="btn btn-secondary li-btn" href="' + escapeHtml(liProfileHref(c)) + '" target="_blank" rel="noopener noreferrer">Otevřít konverzaci</a>' +
+            liNegButtons(id) +
+            (undo && undo.code === 'zajem' ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + id + '\')">Vrátit</button>' : '');
+    }
+    if (failed) actions += '<div class="li-gate li-red">Zápis selhal. <button class="btn btn-secondary li-btn li-btn-small" onclick="liRetry(\'' + id + '\')">Zapsat znovu</button></div>';
+    return '<div class="li-card' + (failed ? ' li-card-error' : '') + '" data-id="' + id + '">' +
+        '<div class="li-card-head"><div><div class="li-name">' + name + '</div><div class="li-sub">' + sub + '</div></div>' +
+        '<button class="li-open" onclick="openEditContact(\'' + id + '\')" title="Otevřít detail" aria-label="Otevřít detail ' + name + '">⋯</button></div>' +
+        (badges.length ? '<div class="li-badges">' + badges.join('') + '</div>' : '') +
+        '<div class="li-actions">' + actions + '</div>' +
+    '</div>';
+}
+
+function liSectionHtml(key, title, list, kind, emptyText, opts) {
+    opts = opts || {};
+    const expanded = !!state.liExpand[key];
+    const collapsed = opts.collapsed && !expanded;
+    const shown = collapsed ? [] : (expanded ? list : list.slice(0, LI_KARET_NA_SEKCI));
+    const more = list.length - shown.length;
+    const toggle = list.length && (collapsed || more > 0)
+        ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="state.liExpand[\'' + key + '\']=true;renderLinkedInToday()">' + (collapsed ? 'Zobrazit (' + list.length + ')' : 'Zobrazit všech ' + list.length) + '</button>'
+        : (expanded && list.length > LI_KARET_NA_SEKCI || (expanded && opts.collapsed) ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="state.liExpand[\'' + key + '\']=false;renderLinkedInToday()">Sbalit</button>' : '');
+    return '<div class="li-section">' +
+        '<div class="li-section-head"><h4>' + escapeHtml(title) + ' <span class="li-count">' + list.length + '</span></h4>' + toggle + '</div>' +
+        (list.length === 0
+            ? '<div class="li-empty">' + escapeHtml(emptyText) + '</div>'
+            : (shown.length ? '<div class="li-cards">' + shown.map(function (c) { return liCardHtml(c, kind); }).join('') + '</div>' : '')) +
+    '</div>';
+}
+
+// Dnes odesláno: kompaktní přehled
+function liTodayListHtml(list) {
+    const today = liToday();
+    const rows = list.map(function (c) {
+        const u = state.liUndo[c.id];
+        const code = u && u.day === today ? u.code : '';
+        const what = String(c.neoslovovat || '').trim() && c.li_odpoved_kdy === today ? 'odmítnutí zapsáno' : (code === 'zajem' || (!code && c.li_odpoved_kdy === today) ? 'podrobnosti' : 'představení');
+        const undo = code ? ' <button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + escapeAttr(c.id) + '\')">Vrátit</button>' : '';
+        return '<div class="li-today-row">' + escapeHtml(c.kontaktniOsoba || '(bez jména)') + ' <span class="li-muted">· ' + what + '</span>' + undo + '</div>';
+    }).join('');
+    return '<div class="li-section"><div class="li-section-head"><h4>Dnes odesláno <span class="li-count">' + list.length + '</span></h4></div>' +
+        (list.length ? '<div class="li-today">' + rows + '</div>' : '<div class="li-empty">Dnes zatím nic.</div>') + '</div>';
+}
+
+function liSearchKind(c) {
+    const st = String(c.linkedinStav || '');
+    if (!c.li_pozvanka_kdy) return 'pozvat';
+    if (st === 'Zpráva' && !c.li_odpoved_kdy) return 'odpoved';
+    if (!c.li_zprava_kdy) return st === 'Přijato' ? 'prijali' : 'davka';
+    return 'odpovedel';
+}
+
+function renderLinkedInToday() {
+    const host = document.getElementById('li-sections');
+    if (!host) return;
+    const blocker = document.getElementById('li-blocker');
+    if (state.migrationIssue) {
+        blocker.style.display = 'block';
+        blocker.innerHTML = '<strong>Záložka je zablokovaná:</strong> ' + escapeHtml(state.migrationIssue);
+        host.innerHTML = '';
+        document.getElementById('li-stats').innerHTML = '';
+        return;
+    }
+    const gate = liGlobalGate();
+    blocker.style.display = gate ? 'block' : 'none';
+    blocker.className = 'info-note warning';
+    blocker.innerHTML = gate ? '<strong>Představení zatím nejde poslat:</strong> ' + escapeHtml(gate) + ' Pozvánky a evidence fungují.' : '';
+
+    const contacts = state.contacts;
+    const q = computeLiQueues(contacts);
+    const s = computeLiStats(contacts);
+    const strop = s.last7 >= LI_TYDENNI_STROP ? 'li-stat-bad' : s.last7 > 75 ? 'li-stat-warn' : '';
+    document.getElementById('li-stats').innerHTML =
+        '<div class="li-stat ' + strop + '"><div class="li-stat-val">' + s.last7 + ' / ' + LI_TYDENNI_STROP + '</div><div class="li-stat-lbl">pozvánky za 7 dní</div></div>' +
+        '<div class="li-stat"><div class="li-stat-val">Dnes ' + s.tempo + '</div><div class="li-stat-lbl">doporučené tempo</div></div>' +
+        '<div class="li-stat' + (s.pending >= 200 ? ' li-stat-bad' : '') + '"><div class="li-stat-val">' + s.pending + '</div><div class="li-stat-lbl">nevyřízené pozvánky</div></div>' +
+        '<div class="li-stat"><div class="li-stat-val">' + (s.acc === null ? '—' : s.acc + ' %') + '</div><div class="li-stat-lbl">přijetí (30 dní)</div></div>' +
+        '<div class="li-stat"><div class="li-stat-val">' + s.introToday + '</div><div class="li-stat-lbl">představení dnes</div></div>' +
+        '<div class="li-stat"><div class="li-stat-val">' + s.repliesWeek + '</div><div class="li-stat-lbl">odpovědi (7 dní)</div></div>' +
+        (BLOKOVANE_SITE.length ? '<div class="li-stat li-stat-wide"><div class="li-stat-lbl">Nezvat lidi z: ' + BLOKOVANE_SITE.map(escapeHtml).join(', ') + '</div></div>' : '') +
+        '<div class="li-hint li-stat-wide">Tlačítka zkopírují text do schránky a otevřou profil v nové záložce – zprávu vložte, odešlete a záložku zavřete.</div>';
+
+    // Vyhledávání přes všechny lidi z LinkedIn evidence
+    const sq = (state.liSearch || '').trim();
+    let searchHtml = '';
+    if (sq) {
+        const nq = _liNormName(sq);
+        const hits = contacts.filter(function (c) {
+            if (isErasedRecord(c)) return false;
+            if (!(c.li_pozvanka_kdy || String(c.spolehlivost || '').toLowerCase() === 'claude-kandidat')) return false;
+            return _liNormName(c.kontaktniOsoba + ' ' + c.firma).indexOf(nq) !== -1;
+        }).slice(0, 20);
+        searchHtml = '<div class="li-section"><div class="li-section-head"><h4>Výsledky hledání <span class="li-count">' + hits.length + '</span></h4></div>' +
+            (hits.length === 0 ? '<div class="li-empty">V LinkedIn evidenci nikdo takový není. Pokud vás přijal a chybí, přidejte ho výše „Ruční přidání" (aplikace pohlídá, jestli dříve neodmítl).</div>'
+                : '<div class="li-cards">' + hits.map(function (c) { return liCardHtml(c, liSearchKind(c)); }).join('') + '</div>') + '</div>';
+    }
+
+    // Stáhnout: staré nevyřízené + pozvaní omylem (neoslovovat) + pozvánky lidem, kteří dříve odmítli (jen počet a data)
+    const omylemNames = q.omylem.map(function (c) { return escapeHtml(c.kontaktniOsoba || '(bez jména)') + ' (' + formatDate(c.li_pozvanka_kdy) + ')'; });
+    const stale = q.stahnout.filter(function (c) { return q.omylem.indexOf(c) === -1; });
+    const omylemSeen = {};
+    const odmitliDates = (state.activity || []).filter(function (a) {
+        if (a.what !== 'li-omylem' || !a.detail) return false;
+        const d = liDaysSince(String(a.when || '').slice(0, 10));
+        if (d === null || d > LI_STAHNOUT_PO_DNECH) return false;
+        if (contacts.some(function (c) { return c.id === a.kontaktId && !isErasedRecord(c); })) return false;
+        const k = a.kontaktId + '|' + a.detail;
+        if (omylemSeen[k]) return false;
+        omylemSeen[k] = true;
+        return true;
+    }).map(function (a) { return formatDate(a.detail); });
+    const stahnoutCount = stale.length + q.omylem.length + odmitliDates.length;
+    const stahnoutHtml = !stahnoutCount ? 'Nic ke stažení.' :
+        'Na LinkedInu v Moje síť → Spravovat → Odeslané stáhněte:' +
+        (q.omylem.length ? '<div class="li-red" style="margin-top:4px;">hned – pozváni omylem (neoslovovat): ' + omylemNames.join(', ') + '</div>' : '') +
+        (odmitliDates.length ? '<div class="li-red" style="margin-top:4px;">hned – ' + odmitliDates.length + ' pozvánek lidem, kteří dříve odmítli (jméno je vymazané, poznáte je podle data odeslání: ' + odmitliDates.join(', ') + ')</div>' : '') +
+        (stale.length ? '<div style="margin-top:4px;">pozvánky starší než 3 týdny (' + stale.length + ').</div>' : '') +
+        '<div class="li-muted" style="margin-top:4px;">V aplikaci se nic nezapisuje.</div>';
+
+    const vymazTotal = q.vymaz.length + q.zkratit.length + q.otisky.length + q.kandidatiStari.length + q.zkontrolovat.length;
+    const siteRows = Object.entries(q.site).sort(function (a, b) { return b[1].pozvano - a[1].pozvano; }).slice(0, 30);
+    host.innerHTML = searchHtml +
+        liSectionHtml('prijali', 'Přijali – poslat představení', q.prijali, 'prijali', 'Nikdo nový. Po importu spojení nebo ručním přidání se tu objeví.') +
+        liSectionHtml('pozvat', 'Dnes pozvat', q.pozvat, 'pozvat', 'Žádní kandidáti. Přetáhněte dávku od Clauda do zóny nahoře.') +
+        liTodayListHtml(q.dnes) +
+        liSectionHtml('odpoved', 'Čekají na odpověď', q.odpoved, 'odpoved', 'Žádné představení nečeká na odpověď.') +
+        liSectionHtml('odpovedel', 'Mají zájem – rozhovor běží (60 dní)', q.odpovedel, 'odpovedel', 'Zatím nikdo.', { collapsed: true }) +
+        liSectionHtml('davka', 'Pozvaní, zatím bez přijetí', q.davka, 'davka', 'Žádné nevyřízené pozvánky.', { collapsed: true }) +
+        '<div class="li-section"><div class="li-section-head"><h4>Stáhnout na LinkedInu <span class="li-count">' + stahnoutCount + '</span></h4></div>' +
+            '<div class="li-empty">' + stahnoutHtml + '</div></div>' +
+        '<div class="li-section"><div class="li-section-head"><h4>K výmazu <span class="li-count">' + vymazTotal + '</span></h4>' +
+            (vymazTotal ? '<button class="btn btn-secondary li-btn" onclick="liPreviewErase()">Náhled a výmaz</button>' : '') + '</div>' +
+            '<div class="li-empty">' + (vymazTotal
+                ? 'Bez představení déle než ' + LI_VYMAZ_PO_DNECH + ' dní: ' + q.vymaz.length + ' · kandidáti nepozvaní ' + LI_KANDIDAT_PO_DNECH + '+ dní: ' + q.kandidatiStari.length + ' · zkrátit (odmítli nebo bez odpovědi ' + LI_BEZ_ODPOVEDI_PO_MESICICH + '+ měsíců): ' + q.zkratit.length + ' · otisky starší ' + LI_KLIC_PO_MESICICH + ' měsíců: ' + q.otisky.length + (q.zkontrolovat.length ? ' · existující kontakty ke kontrole: ' + q.zkontrolovat.length : '')
+                : 'Nic.') + '</div><div id="li-erase-preview"></div></div>' +
+        '<div class="li-section"><div class="li-section-head"><h4>Sítě a pooly</h4></div>' +
+            (siteRows.length === 0 ? '<div class="li-empty">Zatím žádná data.</div>'
+                : '<div class="li-site-table"><div class="li-site-row li-site-hdr"><span>Síť / pool</span><span>pozváno</span><span>přijato</span><span>představení</span><span>odpovědi</span><span>partneři</span></div>' +
+                    siteRows.map(function (e) { const v = e[1]; return '<div class="li-site-row"><span>' + escapeHtml(e[0]) + '</span><span>' + v.pozvano + '</span><span>' + v.prijato + '</span><span>' + v.zprava + '</span><span>' + v.odpoved + '</span><span>' + v.partner + '</span></div>'; }).join('') + '</div>' +
+                    '<div class="li-muted" style="font-size:12px;margin-top:6px;">Počítá jen nevymazané záznamy.</div>') +
+        '</div>';
+}
+
+function onLiSearch() {
+    state.liSearch = document.getElementById('li-search').value;
+    renderLinkedInToday();
+}
+
+// ---------- Kopírování (synchronně v onclick odkazu, kvůli blokování vyskakovacích oken) ----------
+function liCopy(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+    return Promise.reject(new Error('clipboard nedostupný'));
+}
+function liShowCopyFallback(text, onDone) {
+    const box = document.getElementById('li-copy-fallback');
+    box.style.display = 'block';
+    box.innerHTML = '<div class="info-note warning"><strong>Text se nepodařilo zkopírovat automaticky.</strong> Označte ho a zkopírujte (Ctrl+C), vložte na LinkedInu a pak klikněte „Hotovo".</div>' +
+        '<textarea class="form-textarea" id="li-copy-ta" style="min-height:220px;margin-top:10px;" aria-label="Text zprávy"></textarea>' +
+        '<div style="margin-top:10px;display:flex;gap:10px;"><button class="btn btn-primary" id="li-copy-done">Hotovo – zapsat</button><button class="btn btn-ghost" onclick="document.getElementById(\'li-copy-fallback\').style.display=\'none\'">Zrušit</button></div>';
+    const ta = document.getElementById('li-copy-ta');
+    ta.value = text;
+    ta.focus();
+    ta.select();
+    document.getElementById('li-copy-done').onclick = function () { box.style.display = 'none'; onDone(); };
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function liSendIntro(ev, id, variant) {
+    const c = state.contacts.find(function (x) { return x.id === id; });
+    if (!c) { ev.preventDefault(); return false; }
+    const gate = liIntroGate(c);
+    if (gate) { ev.preventDefault(); toast('warning', gate); return false; }
+    const card = ev.currentTarget && ev.currentTarget.closest ? ev.currentTarget.closest('.li-card') : null;
+    const salEl = card ? card.querySelector('.li-salut') : null;
+    const sal = String(state.liSal[id] != null ? state.liSal[id] : (salEl ? salEl.value : liSalutation(c.kontaktniOsoba))).trim() || 'Dobrý den,';
+    const text = liTextA(sal, variant);
+    // Odkaz se otevře (výchozí chování), kopírování běží souběžně; zapisuje se až po úspěchu
+    liCopy(text).then(function () {
+        toast('success', 'Představení je ve schránce – vložte ho na LinkedInu a odešlete.');
+        liRecordIntro(id, variant);
+    }, function () {
+        liShowCopyFallback(text, function () { liRecordIntro(id, variant); });
+    });
+    return true;
+}
+
+async function liPatchWithUndo(id, fields, code) {
+    const c = state.contacts.find(function (x) { return x.id === id; });
+    if (!c) return;
+    const prev = {};
+    Object.keys(fields).forEach(function (f) { prev[f] = c[f] || ''; });
+    try {
+        await patchContactById(id, fields);
+        delete state.liFailed[id];
+        if (code === 'intro') delete state.liSal[id];
+        state.liUndo[id] = { prev: prev, code: code, day: liToday() };
+        await logActivity(id, 'li-' + code, '');
+    } catch (err) {
+        console.error('LinkedIn zápis selhal:', err);
+        state.liFailed[id] = { fields: fields, code: code };
+        const sent = code === 'intro' || code === 'zajem';
+        toast('error', (sent ? 'Zprávu jste možná už odeslali, ale zápis do databáze selhal. Na kartě klikněte „Zapsat znovu" (nic se znovu nekopíruje). ' : 'Zápis selhal. ') + err.message, 12000);
+    }
+    renderLinkedInToday();
+    renderContacts();
+}
+
+function liRetry(id) {
+    const f = state.liFailed[id];
+    if (f) liPatchWithUndo(id, f.fields, f.code);
+}
+
+function liRecordIntro(id, variant) {
+    const c = state.contacts.find(function (x) { return x.id === id; });
+    if (!c) return;
+    const today = liToday();
+    const fields = { linkedinStav: 'Zpráva', li_zprava_kdy: today, sablona: 'A-' + variant + '-' + LI_SABLONA_VERZE };
+    if (!c.li_prijato_kdy) fields.li_prijato_kdy = today;
+    const vz = (LI_VARIANTY[variant] || {}).vazba;
+    if (vz && !c.vazba) fields.vazba = vz;
+    if (String(c.stav || '') === 'Nový' || !c.stav) fields.stav = 'Osloven';
+    return liPatchWithUndo(id, fields, 'intro');
+}
+
+function liInterest(ev, id) {
+    const text = liTextR();
+    const fields = { linkedinStav: 'Odpověděl', stav: 'Reaguje', li_odpoved_kdy: liToday(), sablona: 'R-podrobnosti-' + LI_SABLONA_VERZE };
+    liCopy(text).then(function () {
+        toast('success', 'Podrobnosti jsou ve schránce – vložte je na LinkedInu.');
+        liPatchWithUndo(id, fields, 'zajem');
+    }, function () {
+        liShowCopyFallback(text, function () { liPatchWithUndo(id, fields, 'zajem'); });
+    });
+    return true;
+}
+
+// Doplní chybějící odkaz na profil (kontrola, že stejný profil není jinde a neodmítl)
+async function liSaveKey(id) {
+    const key = normLinkedInKey(state.liUrl[id] || '');
+    if (!key) { toast('warning', 'Vložte adresu profilu ve tvaru linkedin.com/in/…'); return; }
+    const hk = await hashLiKey(key);
+    const other = state.contacts.find(function (c) { const k = contactLiKey(c); return c.id !== id && (k === key || k === hk); });
+    if (other) {
+        if (String(other.neoslovovat || '').trim()) { toast('error', 'Tento profil dříve odmítl (' + liNeoReason(other) + ') – nepsat. Kartu označte „Ne / námitka" nebo ji odstraňte.', 12000); return; }
+        toast('warning', 'Tento profil už je v evidenci jako jiný záznam – zkontrolujte duplicitu.', 10000);
+        return;
+    }
+    delete state.liUrl[id];
+    await liPatchWithUndo(id, { li_klic: key, linkedinUrl: 'https://www.' + key }, 'odkaz');
+}
+
+// Nemá zájem / námitka: zapsat neoslovovat a záznam z LinkedIn evidence hned zkrátit na otisk + datum (čl. 21 odst. 3)
+async function liNegative(id, reason) {
+    let c = state.contacts.find(function (x) { return x.id === id; });
+    if (!c) return;
+    const today = liToday();
+    const label = reason === 'námitka' ? 'námitku (odpověděl „ne")' : '„nemá zájem"';
+    if (!liIsCampaignRecord(c)) {
+        if (!confirm('Zapsat ' + label + ' u ' + (c.kontaktniOsoba || 'kontaktu') + '?\n\nKontakt nevznikl z LinkedInu, proto se nemaže – jen se trvale označí „neoslovovat".')) return;
+        await liPatchWithUndo(id, { neoslovovat: today + ' ' + reason, linkedinStav: 'Neposílat', li_odpoved_kdy: c.li_odpoved_kdy || today }, reason === 'námitka' ? 'namitka' : 'nezajem');
+        return;
+    }
+    if (!liRealKey(c)) {
+        const u = prompt('U kontaktu chybí odkaz na profil. Vložte adresu linkedin.com/in/…, aby se člověk nedal znovu oslovit.\nBez odkazu (nechat prázdné a OK) se uloží jen otisk jména a firmy.', '');
+        if (u === null) return;
+        const k = normLinkedInKey(u);
+        if (u.trim() && !k) { toast('warning', 'To není adresa profilu ve tvaru linkedin.com/in/…'); return; }
+        if (k) c = Object.assign({}, c, { li_klic: k });
+    }
+    if (!confirm('Zapsat ' + label + ' u ' + (c.kontaktniOsoba || 'kontaktu') + '?\n\nOsobní údaje se hned vymažou, zůstane jen otisk profilu a datum, aby se nedal znovu oslovit. Nelze vrátit.')) return;
+    try {
+        const fields = await liEraseFields(c, true);
+        fields.neoslovovat = today + ' ' + reason;
+        fields.li_odpoved_kdy = c.li_odpoved_kdy || today;
+        await patchContactById(id, fields);
+        delete state.liUndo[id]; delete state.liFailed[id]; delete state.liSal[id];
+        await liScrubActivity([id]);
+        await logActivity(id, 'li-' + (reason === 'námitka' ? 'namitka' : 'nezajem'), '');
+        toast('success', 'Zapsáno. Kontakt už nikdo neosloví.');
+    } catch (err) {
+        console.error(err);
+        toast('error', 'Zápis selhal: ' + err.message);
+    }
+    renderLinkedInToday();
+    renderContacts();
+}
+
+async function liUndo(id) {
+    const u = state.liUndo[id];
+    if (!u) return;
+    if ((u.code === 'namitka' || u.code === 'nezajem') && !confirm('Opravdu zrušit zapsané odmítnutí? Kontakt pak půjde znovu oslovit.')) return;
+    try {
+        await patchContactById(id, u.prev);
+        delete state.liUndo[id];
+        await logActivity(id, 'li-undo', u.code);
+        toast('info', 'Vráceno.');
+    } catch (err) {
+        toast('error', 'Vrácení selhalo: ' + err.message);
+    }
+    renderLinkedInToday();
+    renderContacts();
+}
+
+async function liDropCandidate(id) {
+    const c = state.contacts.find(function (x) { return x.id === id; });
+    if (!c) return;
+    if (!confirm('Odstranit kandidáta ' + (c.kontaktniOsoba || '') + (c.firma ? ' (' + c.firma + ')' : '') + '?\n\nNikdo ho nekontaktoval, smaže se celý záznam.')) return;
+    try {
+        await deleteContactById(id);
+        await logActivity(id, 'li-kandidat-smazan', '');
+        toast('success', 'Kandidát odstraněn.');
+    } catch (err) {
+        toast('error', 'Smazání selhalo: ' + err.message);
+    }
+    renderLinkedInToday();
+    renderContacts();
+}
+
+// ---------- Výmaz / zkrácení ----------
+// Vyprázdní celý řádek (i vlastní sloupce) kromě id, data vzniku, data pozvánky a otisku klíče.
+// keepNeo: ponechá „neoslovovat" a datum odpovědi (záznam o odmítnutí).
+async function liEraseFields(c, keepNeo) {
+    const keep = { id: 1, createdAt: 1, updatedAt: 1, li_pozvanka_kdy: 1, li_klic: 1 };
+    if (keepNeo) { keep.neoslovovat = 1; keep.li_odpoved_kdy = 1; }
+    const fields = CONTACTS_HEADER.slice();
+    (state.headerOrders.contacts || []).forEach(function (h) {
+        h = String(h == null ? '' : h);   // přesný název (patch hledá sloupec podle přesné shody)
+        if (h.trim() && fields.indexOf(h) === -1) fields.push(h);
+    });
+    const out = {};
+    fields.forEach(function (f) { if (!keep[f]) out[f] = ''; });
+    const key = liRealKey(c);
+    if (key) out.li_klic = await hashLiKey(key);
+    else if (!/^[hn]:/.test(String(c.li_klic || ''))) out.li_klic = c.kontaktniOsoba ? await liNameFingerprint(c.kontaktniOsoba, c.firma) : '';
+    out.linkedinStav = 'Vymazáno';
+    return out;
+}
+
+// Zruší jen údaje o LinkedIn pozvánce u existujícího kontaktu (kontakt sám zůstane)
+function liClearEvidenceFields(c) {
+    return { li_pozvanka_kdy: '', li_prijato_kdy: '', li_zprava_kdy: '', li_odpoved_kdy: '', sablona: '', linkedinStav: String(c.neoslovovat || '').trim() ? 'Neposílat' : '' };
+}
+
+// Vymaže texty (detail) v listu Activity u daných kontaktů — jména tam smí zůstat jen u běžných kontaktů
+async function liScrubActivity(ids) {
+    if (!ids || !ids.length) return;
+    const want = {};
+    ids.forEach(function (i) { want[String(i)] = true; });
+    try {
+        await enqueueWrite(async function () {
+            const tab = SHEET_TABS.activity;
+            const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values/';
+            const resH = await gfetch(base + encodeURIComponent(tab + '!1:1'));
+            await checkSheetsResponse(resH, 'scrub.header');
+            const header = ((await resH.json()).values || [[]])[0] || [];
+            const ci = header.indexOf('kontaktId'), di = header.indexOf('detail');
+            if (ci === -1 || di === -1) return;
+            const Lc = colLetter(ci + 1), Ld = colLetter(di + 1);
+            const resC = await gfetch(base + encodeURIComponent(tab + '!' + Lc + ':' + Lc));
+            await checkSheetsResponse(resC, 'scrub.ids');
+            const idsCol = (await resC.json()).values || [];
+            const resD = await gfetch(base + encodeURIComponent(tab + '!' + Ld + ':' + Ld));
+            await checkSheetsResponse(resD, 'scrub.detail');
+            const detCol = (await resD.json()).values || [];
+            const data = [];
+            for (let i = 1; i < idsCol.length; i++) {
+                if (want[String((idsCol[i] || [])[0] || '')] && String((detCol[i] || [])[0] || '').trim()) data.push({ range: tab + '!' + Ld + (i + 1), values: [['']] });
+            }
+            if (!data.length) return;
+            const up = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values:batchUpdate', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ valueInputOption: 'RAW', data: data })
+            });
+            await checkSheetsResponse(up, 'scrub.update');
+        });
+        (state.activity || []).forEach(function (a) { if (want[String(a.kontaktId)]) a.detail = ''; });
+    } catch (e) {
+        console.warn('Vyčištění Activity selhalo:', e);
+    }
+}
+
+function liPreviewErase() {
+    const q = computeLiQueues(state.contacts);
+    const box = document.getElementById('li-erase-preview');
+    const lines = [];
+    const add = function (title, list, note) {
+        if (!list.length) return;
+        lines.push('<div style="margin-top:10px;"><strong>' + escapeHtml(title) + ' (' + list.length + ')</strong>' + (note ? '<div class="li-muted" style="font-size:12px;">' + escapeHtml(note) + '</div>' : '') + '<div class="li-muted" style="font-size:12px;">' +
+            list.slice(0, 60).map(function (c) { return escapeHtml(c.kontaktniOsoba || c.firma || formatDate(c.li_pozvanka_kdy) || c.id); }).join(', ') + (list.length > 60 ? '…' : '') + '</div></div>');
+    };
+    add('Vymazat – bez představení ' + LI_VYMAZ_PO_DNECH + '+ dní', q.vymaz);
+    add('Smazat – kandidáti nepozvaní ' + LI_KANDIDAT_PO_DNECH + '+ dní', q.kandidatiStari, 'Nikdo je nekontaktoval, smaže se celý řádek.');
+    add('Zkrátit na otisk – odmítli nebo bez odpovědi ' + LI_BEZ_ODPOVEDI_PO_MESICICH + '+ měsíců', q.zkratit);
+    add('Smazat úplně – otisky starší ' + LI_KLIC_PO_MESICICH + ' měsíců', q.otisky);
+    add('Existující kontakty mimo LinkedIn evidenci', q.zkontrolovat, 'Kontakt zůstane, zruší se jen údaje o LinkedIn pozvánce.');
+    box.innerHTML = '<div class="info-note warning" style="margin-top:10px;">U vymazaných zůstane jen otisk profilu a datum pozvánky, aby se člověk nepozval znovu. Nelze vrátit (Drive Historie verzí tě jistí). Kontakty ve stavu Reaguje, Klient a Partner se nikdy nemažou.</div>' +
+        lines.join('') +
+        '<div style="margin-top:12px;display:flex;gap:10px;"><button class="btn btn-primary" onclick="liExecuteErase()" style="background:var(--danger);">Provést</button>' +
+        '<button class="btn btn-ghost" onclick="document.getElementById(\'li-erase-preview\').innerHTML=\'\'">Zrušit</button></div>';
+}
+
+async function liExecuteErase() {
+    const q = computeLiQueues(state.contacts);
+    const box = document.getElementById('li-erase-preview');
+    box.innerHTML = '<div class="li-muted" style="padding:8px;">Provádím…</div>';
+    try {
+        const patches = [];
+        for (const c of q.vymaz) patches.push({ id: c.id, fields: await liEraseFields(c, !!String(c.neoslovovat || '').trim()) });
+        for (const c of q.zkratit) patches.push({ id: c.id, fields: await liEraseFields(c, true) });
+        q.zkontrolovat.forEach(function (c) { if (c.li_pozvanka_kdy || c.linkedinStav) patches.push({ id: c.id, fields: liClearEvidenceFields(c) }); });
+        let applied = 0;
+        if (patches.length) applied = (await patchContactsBulk(patches)).applied;
+        const toDelete = q.kandidatiStari.concat(q.otisky).map(function (c) { return c.id; });
+        let deleted = 0;
+        if (toDelete.length) deleted = await liDeleteMany(toDelete);
+        await liScrubActivity(q.vymaz.concat(q.zkratit).map(function (c) { return c.id; }).concat(toDelete));
+        await logActivity('', 'li-vymaz', 'vymazáno/zkráceno/upraveno ' + applied + ', smazáno ' + deleted);
+        toast('success', 'Hotovo: vymazáno, zkráceno nebo upraveno ' + applied + ', smazáno ' + deleted + '.', 10000);
+        box.innerHTML = '';
+        await syncFromSheet();
+    } catch (err) {
+        console.error(err);
+        box.innerHTML = '<div class="info-note danger"><strong>Chyba:</strong> ' + escapeHtml(err.message || String(err)) + '</div>';
+    }
+}
+
+// Smaže více řádků podle ID (dohledá je v aktuálním Sheetu, jeden zápis)
+async function liDeleteMany(ids) {
+    return enqueueWrite(async function () {
+        const tab = SHEET_TABS.contacts;
+        const base = 'https://sheets.googleapis.com/v4/spreadsheets/' + state.spreadsheetId + '/values/';
+        const resH = await gfetch(base + encodeURIComponent(tab + '!1:1'));
+        await checkSheetsResponse(resH, 'deleteMany.header');
+        const header = ((await resH.json()).values || [[]])[0] || [];
+        const idCol = header.indexOf('id');
+        if (idCol === -1) throw new Error('V listu ' + tab + ' chybí sloupec id.');
+        const L = colLetter(idCol + 1);
+        const resI = await gfetch(base + encodeURIComponent(tab + '!' + L + ':' + L));
+        await checkSheetsResponse(resI, 'deleteMany.ids');
+        const col = (await resI.json()).values || [];
+        const want = {}; ids.forEach(function (i) { want[String(i)] = true; });
+        const rows = [];
+        for (let i = 1; i < col.length; i++) if (want[String((col[i] || [])[0] || '')]) rows.push(i + 1);
+        if (rows.length) await _sheetsDeleteRowsRaw(tab, rows);
+        state.contacts = state.contacts.filter(function (c) { return !want[String(c.id)]; });
+        return rows.length;
+    });
+}
+
+// ---------- Ruční přidání (záložní cesta bez exportu) ----------
+async function liManualAdd() {
+    const url = document.getElementById('li-man-url').value.trim();
+    const name = document.getElementById('li-man-name').value.trim();
+    const key = normLinkedInKey(url);
+    if (!key) { toast('warning', 'Vložte adresu profilu ve tvaru linkedin.com/in/…'); return; }
+    if (!name) { toast('warning', 'Doplňte jméno.'); return; }
+    if (state.migrationIssue) { toast('error', state.migrationIssue); return; }
+    if (refuseIfMisaligned('Přidání')) return;
+    const hk = await hashLiKey(key);
+    const existing = state.contacts.find(function (c) { const k = contactLiKey(c); return k === key || k === hk; });
+    if (existing) {
+        const neo = String(existing.neoslovovat || '').trim();
+        if (isErasedRecord(existing)) {
+            if (neo) { toast('error', 'Tento člověk dříve odmítl (' + liNeoReason(existing) + ', ' + formatDate(String(existing.neoslovovat).slice(0, 10)) + ') – nepřidávat ani nepsat.', 12000); return; }
+            if (!confirm('Tohoto člověka jste pozvali ' + formatDate(existing.li_pozvanka_kdy) + ', tehdy nereagoval a údaje byly vymazány.\n\nPřesto ho přidat jako nové spojení?')) return;
+        } else if (neo) {
+            toast('warning', 'Kontakt má „neoslovovat" (' + existing.neoslovovat + ') – otevírám detail.', 10000);
+            openEditContact(existing.id);
+            return;
+        } else if (existing.li_pozvanka_kdy || String(existing.spolehlivost || '').toLowerCase() === 'claude-kandidat') {
+            toast('info', 'Tento profil už v evidenci je.');
+            state.liSearch = existing.kontaktniOsoba || '';
+            document.getElementById('li-search').value = state.liSearch;
+            renderLinkedInToday();
+            return;
+        } else {
+            toast('info', 'Profil už je v databázi jako běžný kontakt – otevírám detail.');
+            openEditContact(existing.id);
+            return;
+        }
+    }
+    const today = liToday();
+    // Kandidát od Clauda se stejným jménem (bez odkazu na profil) → spárovat místo nového řádku
+    const nk = liNameKey(name);
+    const cands = state.contacts.filter(function (c) {
+        return String(c.spolehlivost || '').toLowerCase() === 'claude-kandidat' && !isErasedRecord(c) && !liRealKey(c) && liNameKey(c.kontaktniOsoba) === nk;
+    });
+    try {
+        if (cands.length === 1) {
+            const cd = cands[0];
+            if (String(cd.neoslovovat || '').trim()) { toast('warning', 'Kandidát ' + cd.kontaktniOsoba + ' má „neoslovovat".'); openEditContact(cd.id); return; }
+            await patchContactById(cd.id, {
+                li_klic: key, linkedinUrl: 'https://www.' + key, linkedinStav: 'Přijato', li_pozvanka_kdy: cd.li_pozvanka_kdy || today, li_prijato_kdy: today,
+                osloven_kdy: cd.osloven_kdy || today, osloven_kanal: cd.osloven_kanal || 'LinkedIn', stav: (!cd.stav || cd.stav === 'Nový') ? 'Osloven' : cd.stav
+            });
+            await logActivity(cd.id, 'li-rucne', 'spárováno s kandidátem');
+            toast('success', 'Spárováno s kandidátem ' + cd.kontaktniOsoba + (cd.firma ? ' (' + cd.firma + ')' : '') + ' – je v „Přijali".');
+        } else {
+            const now = new Date().toISOString();
+            // Stejné jméno se záznamem s „neoslovovat" (např. starý kontakt bez odkazu na profil) → založit s blokací
+            const neoMatch = state.contacts.find(function (x) { return !isErasedRecord(x) && String(x.neoslovovat || '').trim() && liNameKey(x.kontaktniOsoba) === nk; });
+            const c = {
+                id: generateId(), createdAt: now, updatedAt: now, typ: 'Zprostředkovatel', segment: liLastBatchSegment(), priorita: '2', stav: 'Osloven',
+                kontaktniOsoba: name, linkedinUrl: 'https://www.' + key, li_klic: key, linkedinStav: 'Přijato',
+                li_pozvanka_kdy: today, li_prijato_kdy: today, osloven_kdy: today, osloven_kanal: 'LinkedIn',
+                spolehlivost: 'linkedin-ručně', zdrojUrl: 'LinkedIn – vlastní pozvánka'
+            };
+            if (neoMatch) { c.neoslovovat = neoMatch.neoslovovat; c.poznamka = 'Možná shoda se záznamem ' + neoMatch.id + ' – ověřit'; }
+            await sheetsAppend(SHEET_TABS.contacts, [contactToRow(c)]);
+            state.contacts.push(c);
+            await logActivity(c.id, 'li-rucne', '');
+            if (neoMatch) toast('warning', 'Přidáno s blokací: v databázi je ' + neoMatch.kontaktniOsoba + ' s „neoslovovat" (' + liNeoReason(neoMatch) + '). Pokud jde o jiného člověka, zrušte blokaci v detailu.', 12000);
+            else toast('success', 'Přidáno do „Přijali" – pošlete představení.');
+        }
+        document.getElementById('li-man-url').value = '';
+        document.getElementById('li-man-name').value = '';
+    } catch (err) {
+        toast('error', 'Přidání selhalo: ' + err.message);
+    }
+    renderLinkedInToday();
+    renderContacts();
+}
+
+function liLastBatchSegment() {
+    const withSeg = state.contacts.filter(function (c) { return isLiSegment(c.segment) && c.li_pozvanka_kdy; })
+        .sort(function (a, b) { return String(b.li_pozvanka_kdy).localeCompare(String(a.li_pozvanka_kdy)); });
+    if (withSeg.length) return withSeg[0].segment;
+    const seg = state.segments.find(function (s) { return isLiSegment(s.nazev); });
+    return seg ? seg.nazev : '';
+}
+
+// ============================================================
+// IMPORT: export z LinkedInu (Invitations.csv / Connections.csv, i celý zip) a dávka kandidátů
+// Vlastní mapování sloupců (ne CSV_HEADER_MAP). E-maily a texty zpráv se ignorují.
+// ============================================================
+let _jszipPromise = null;
+function liLoadJSZip() {
+    if (window.JSZip) return Promise.resolve(window.JSZip);
+    if (_jszipPromise) return _jszipPromise;
+    _jszipPromise = new Promise(function (resolve, reject) {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        s.integrity = 'sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==';
+        s.crossOrigin = 'anonymous';
+        s.referrerPolicy = 'no-referrer';
+        s.onload = function () { resolve(window.JSZip); };
+        s.onerror = function () { _jszipPromise = null; reject(new Error('Nepodařilo se načíst JSZip – rozbalte zip a přetáhněte CSV.')); };
+        document.head.appendChild(s);
+    });
+    return _jszipPromise;
+}
+
+function liParseAnyDate(s) {
+    s = String(s || '').trim();
+    if (!s) return '';
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return m[1] + '-' + m[2] + '-' + m[3];
+    m = s.match(/^(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{4})/);
+    if (m) return m[3] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[1]).padStart(2, '0');
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);   // M/D/RR[RR][, h:mm AM]
+    if (m) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; return y + '-' + String(m[1]).padStart(2, '0') + '-' + String(m[2]).padStart(2, '0'); }
+    const months = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+    m = s.match(/^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})/);   // 13 Oct 2026
+    if (m && months[m[2].toLowerCase()]) return m[3] + '-' + String(months[m[2].toLowerCase()]).padStart(2, '0') + '-' + String(m[1]).padStart(2, '0');
+    m = s.match(/^([A-Za-z]{3})[a-z]*\s+(\d{1,2}),?\s+(\d{4})/); // Oct 13, 2026
+    if (m && months[m[1].toLowerCase()]) return m[3] + '-' + String(months[m[1].toLowerCase()]).padStart(2, '0') + '-' + String(m[2]).padStart(2, '0');
+    return '';
+}
+
+// Najde řádek hlavičky (přeskočí úvodní „Notes:" a prázdné řádky) a vrátí { header, rows }
+function liFindHeader(parsed, testFn) {
+    for (let i = 0; i < Math.min(parsed.length, 15); i++) {
+        const low = parsed[i].map(function (h) { return String(h || '').trim().toLowerCase(); });
+        if (testFn(low)) return { header: low, rows: parsed.slice(i + 1) };
+    }
+    return null;
+}
+
+function liClassifyCsv(text, fileName) {
+    const parsed = parseCSV(String(text || '').replace(/^\uFEFF/, ''));
+    const inv = liFindHeader(parsed, function (h) { return h.some(function (x) { return x === 'direction' || /invitee/.test(x) || x === 'sent at'; }); });
+    if (inv) return { type: 'invitations', header: inv.header, rows: inv.rows };
+    const con = liFindHeader(parsed, function (h) { return h.indexOf('connected on') !== -1; });
+    if (con) return { type: 'connections', header: con.header, rows: con.rows };
+    const cand = liFindHeader(parsed, function (h) { return h.indexOf('kontaktniosoba') !== -1 && h.indexOf('firma') !== -1; });
+    if (cand) {
+        const si = cand.header.indexOf('spolehlivost');
+        const isBatch = si !== -1 && cand.rows.some(function (r) { return String(r[si] || '').trim().toLowerCase() === 'claude-kandidat'; });
+        return { type: 'candidates', header: cand.header, rows: cand.rows, isBatch: isBatch || /kandidat/i.test(String(fileName || '')) };
+    }
+    return { type: 'unknown', fileName: fileName };
+}
+
+async function liHandleFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    if (state.migrationIssue) { toast('error', 'Import je zablokovaný: ' + state.migrationIssue); return; }
+    if (refuseIfMisaligned('Import')) return;
+    const parts = [];
+    try {
+        for (const f of files) {
+            if (/\.zip$/i.test(f.name)) {
+                const JSZip = await liLoadJSZip();
+                const zip = await JSZip.loadAsync(f);
+                const names = Object.keys(zip.files).filter(function (n) { return /(^|\/)(invitations|connections)\.csv$/i.test(n); });
+                if (!names.length) { toast('warning', 'V zipu ' + f.name + ' není Invitations.csv ani Connections.csv.'); continue; }
+                for (const n of names) parts.push(liClassifyCsv(await zip.files[n].async('string'), n));
+            } else {
+                parts.push(liClassifyCsv(await f.text(), f.name));
+            }
+        }
+    } catch (err) {
+        toast('error', 'Soubor se nepodařilo přečíst: ' + err.message);
+        return;
+    }
+    const unknown = parts.filter(function (p) { return p.type === 'unknown'; });
+    if (unknown.length) toast('warning', 'Neznámý soubor: ' + unknown.map(function (p) { return p.fileName; }).join(', ') + ' (čekám Invitations.csv, Connections.csv nebo dávku kandidátů).');
+    const known = parts.filter(function (p) { return p.type !== 'unknown'; });
+    if (!known.length) return;
+    // Rozpracovaný náhled → soubory se přidají k němu (např. dávka kandidátů + export)
+    if (state.liImportPlan && state.liImportParts) {
+        state.liImportParts = state.liImportParts.concat(known);
+        toast('info', 'Přidáno k rozpracovanému náhledu.');
+    } else {
+        state.liImportParts = known;
+        state.liImportChoice = {};
+    }
+    await liBuildImportPlan();
+}
+
+function liLastImportDate(code) {
+    const a = (state.activity || []).filter(function (x) { return x.what === code; });
+    return a.length ? String(a[a.length - 1].when || '').slice(0, 10) : '';
+}
+// Pozvánky: od posledního importu pozvánek s rezervou 7 dní (párování je opakovatelné, překryv nevadí)
+function liDefaultFromDate() {
+    const d = liLastImportDate('li-import-pozvanky');
+    if (!d) return LI_KAMPAN_OD;
+    const s = liShiftDate(d, -7);
+    return s < LI_KAMPAN_OD ? LI_KAMPAN_OD : s;
+}
+// Nová spojení mimo evidenci: jen od posledního importu spojení (s rezervou), aby se odškrtnutá nevracela
+function liDefaultConnFrom() {
+    const d = liLastImportDate('li-import-spojeni');
+    if (!d) return LI_KAMPAN_OD;
+    const s = liShiftDate(d, -3);
+    return s < LI_KAMPAN_OD ? LI_KAMPAN_OD : s;
+}
+
+function _liCol(header, rx) {
+    for (let i = 0; i < header.length; i++) if (rx.test(header[i])) return i;
+    return -1;
+}
+
+function liImpChecked(k, def) { return Object.prototype.hasOwnProperty.call(state.liImportChoice, k) ? state.liImportChoice[k] : def !== false; }
+function liImpToggle(k, checked) { state.liImportChoice[k] = !!checked; }
+
+async function liBuildImportPlan() {
+    const fromEl = document.getElementById('li-imp-from');
+    const fromDate = (fromEl && fromEl.value) || liDefaultFromDate();
+    const connFrom = liDefaultConnFrom();
+    const plan = { fromDate: fromDate, connFrom: connFrom, olderThanFrom: 0, skippedBefore: 0, create: [], pair: [], skip: [], maybe: [], newConn: [], cand: [], candSkip: [], vanished: [], omylem: [],
+        hasInv: false, hasConn: false };
+    const nameKey = liNameKey;
+    // Otisky položek, které Martin v dřívějším náhledu odškrtl (pozvali jeho / nezakládat)
+    const skippedBefore = {};
+    (state.activity || []).forEach(function (a) { if (a.what === 'li-imp-skip' && a.detail) skippedBefore[a.detail] = true; });
+    // Klíč profilu → záznam (u spárovaných v tomto importu „virtuální" záznam s plánovanými poli)
+    const byKey = {};
+    state.contacts.forEach(function (c) { const k = contactLiKey(c); if (k) byKey[k] = c; });
+    // Kandidáti od Clauda bez známého profilu
+    const openCands = state.contacts.filter(function (c) {
+        return String(c.spolehlivost || '').toLowerCase() === 'claude-kandidat' && !isErasedRecord(c) && !liRealKey(c);
+    });
+    const byName = {};
+    state.contacts.forEach(function (c) {
+        if (isErasedRecord(c) || !c.kontaktniOsoba) return;
+        const n = nameKey(c.kontaktniOsoba);
+        (byName[n] = byName[n] || []).push(c);
+    });
+    const pairById = {};
+    const usedCand = {};
+    const plannedByKey = {};   // nové řádky z tohoto importu (create / maybe) podle klíče
+    function addPair(c, name, fields, key) {
+        const p = pairById[c.id] || (pairById[c.id] = { id: c.id, name: name, fields: {} });
+        Object.keys(fields).forEach(function (f) {
+            if (f === 'li_pozvanka_kdy' && p.fields.li_pozvanka_kdy && p.fields.li_pozvanka_kdy <= fields[f]) return;
+            p.fields[f] = fields[f];
+        });
+        if (key) byKey[key] = Object.assign({}, c, p.fields);
+    }
+    function candMatches(name) {
+        const nn = nameKey(name);
+        if (!nn) return [];
+        return openCands.filter(function (c) { return !usedCand[c.id] && nameKey(c.kontaktniOsoba) === nn; });
+    }
+    function candSurnameMatches(name) {
+        const last = _liNormName(liNameParts(name).last);
+        if (!last) return [];
+        return openCands.filter(function (c) { return !usedCand[c.id] && _liNormName(liNameParts(c.kontaktniOsoba).last) === last; });
+    }
+    function candFields(cand, key, url, sent) {
+        const st = String(cand.linkedinStav || '');
+        return {
+            li_pozvanka_kdy: cand.li_pozvanka_kdy && cand.li_pozvanka_kdy < sent ? cand.li_pozvanka_kdy : sent,
+            osloven_kdy: cand.osloven_kdy || sent, osloven_kanal: cand.osloven_kanal || 'LinkedIn', stav: cand.stav && cand.stav !== 'Nový' ? cand.stav : 'Osloven',
+            linkedinStav: st && st !== 'Posláno' ? st : 'Posláno', li_klic: key, linkedinUrl: url
+        };
+    }
+    function neoNameMatch(name) {
+        return (byName[nameKey(name)] || []).find(function (c) { return !c.li_pozvanka_kdy && String(c.neoslovovat || '').trim(); }) || null;
+    }
+    const seenInFile = {};
+    const invitedKeysInFile = {};
+
+    for (const part of state.liImportParts || []) {
+        if (part.type !== 'invitations') continue;
+        const h = part.header;
+        const cDir = _liCol(h, /^direction$/), cTo = _liCol(h, /^to$/), cSent = _liCol(h, /sent at|^date/), cUrl = _liCol(h, /invitee.*url/);
+        if (cUrl === -1) { plan.blocked = 'V Invitations.csv chybí sloupec s adresou pozvaného (inviteeProfileUrl) – pozvánky nejde spárovat. Pošlete mi prosím první řádky souboru, mezitím použijte ruční přidání.'; continue; }
+        plan.hasInv = true;
+        for (const r of part.rows) {
+            if (cDir !== -1 && String(r[cDir] || '').trim().toUpperCase() !== 'OUTGOING') continue;
+            const key = normLinkedInKey(r[cUrl]);
+            const name = liCleanName(cTo !== -1 ? r[cTo] : '');
+            const sent = liParseAnyDate(cSent !== -1 ? r[cSent] : '');
+            if (!key) { plan.skip.push({ name: name, why: 'adresa není profil /in/' }); continue; }
+            invitedKeysInFile[key] = true;
+            if (!sent) { plan.skip.push({ name: name, why: 'nerozpoznané datum' }); continue; }
+            if (sent < fromDate) { plan.olderThanFrom++; continue; }
+            if (seenInFile[key]) continue;
+            const row = { key: key, name: name, sent: sent, url: String(r[cUrl] || '').trim() };
+            seenInFile[key] = row;
+            const ex = byKey[key];
+            if (ex) {
+                if (isErasedRecord(ex)) {
+                    if (String(ex.neoslovovat || '').trim()) plan.omylem.push({ id: ex.id, name: name, sent: sent, why: 'dříve odmítl (' + liNeoReason(ex) + ') – pozvánku stáhněte hned' });
+                    else plan.skip.push({ name: name, why: 'dříve pozván ' + formatDate(ex.li_pozvanka_kdy) + ', nereagoval – údaje vymazány' });
+                    continue;
+                }
+                if (String(ex.neoslovovat || '').trim()) {
+                    plan.omylem.push({ id: ex.id, name: name, sent: sent, why: 'neoslovovat (' + liNeoReason(ex) + ') – pozvánku stáhněte hned' });
+                    if (!ex.li_pozvanka_kdy) addPair(ex, name, { li_pozvanka_kdy: sent, li_klic: key }, key);
+                    continue;
+                }
+                if (!ex.li_pozvanka_kdy) addPair(ex, name, { li_pozvanka_kdy: sent, osloven_kdy: ex.osloven_kdy || sent, osloven_kanal: ex.osloven_kanal || 'LinkedIn', linkedinStav: ex.linkedinStav || 'Posláno', li_klic: key }, key);
+                continue;
+            }
+            const hk = await hashLiKey(key);
+            if (byKey[hk]) {
+                const er = byKey[hk];
+                if (String(er.neoslovovat || '').trim()) plan.omylem.push({ id: er.id, name: name, sent: sent, why: 'dříve odmítl (' + liNeoReason(er) + ') – pozvánku stáhněte hned' });
+                else plan.skip.push({ name: name, why: 'dříve pozván ' + formatDate(er.li_pozvanka_kdy) + ', nereagoval – údaje vymazány' });
+                continue;
+            }
+            const exact = candMatches(name);
+            if (exact.length === 1) {
+                usedCand[exact[0].id] = true;
+                addPair(exact[0], name, candFields(exact[0], key, row.url, sent), key);
+                continue;
+            }
+            const loose = exact.length > 1 ? exact : candSurnameMatches(name);
+            if (loose.length) {
+                const m = { type: 'kandidat', row: row, match: loose[0], k: 'mk:' + key, def: false };   // jen příjmení nebo víc shod → ve výchozím stavu nový záznam
+                usedCand[loose[0].id] = true;
+                plan.maybe.push(m);
+                plannedByKey[key] = m;
+                continue;
+            }
+            const others = (byName[nameKey(name)] || []).filter(function (c) { return !c.li_pozvanka_kdy && !usedCand[c.id]; });
+            if (others.length) {
+                const m = { type: 'jmeno', row: row, match: others[0], neo: !!String(others[0].neoslovovat || '').trim(), k: 'mj:' + key, h: hk, def: !skippedBefore[hk] };
+                plan.maybe.push(m);
+                plannedByKey[key] = m;
+                continue;
+            }
+            plan.create.push(row);
+            plannedByKey[key] = { type: 'create', row: row };
+        }
+    }
+
+    const seenConn = {};
+    for (const part of state.liImportParts || []) {
+        if (part.type !== 'connections') continue;
+        const h = part.header;
+        const cF = _liCol(h, /^first name$/), cL = _liCol(h, /^last name$/), cU = _liCol(h, /^url$|profile url/), cC = _liCol(h, /^company$/), cP = _liCol(h, /^position$/), cO = _liCol(h, /connected on/);
+        if (cU === -1) { plan.blocked = 'V Connections.csv chybí sloupec URL – spojení nejde spárovat. Pošlete mi prosím první řádky souboru, mezitím použijte ruční přidání.'; continue; }
+        plan.hasConn = true;
+        for (const r of part.rows) {
+            const key = normLinkedInKey(r[cU]);
+            if (!key || seenConn[key]) continue;
+            seenConn[key] = true;
+            const on = liParseAnyDate(cO !== -1 ? r[cO] : '');
+            const name = liCleanName([cF !== -1 ? r[cF] : '', cL !== -1 ? r[cL] : ''].join(' '));
+            const company = String(cC !== -1 ? r[cC] : '').trim(), position = String(cP !== -1 ? r[cP] : '').trim();
+            const url = String(r[cU] || '').trim();
+            const accFields = function (c) {
+                const f = {};
+                const st = String(c.linkedinStav || '');
+                if (['Posláno', 'Staženo', ''].indexOf(st) !== -1) f.linkedinStav = 'Přijato';
+                if (!c.li_prijato_kdy && on) f.li_prijato_kdy = on;
+                if (!c.firma && company) f.firma = company;
+                if (!c.role && position) f.role = position;
+                return f;
+            };
+            // Řádek, který tento import teprve zakládá z Pozvánek → rovnou jako přijatý
+            if (plannedByKey[key]) { Object.assign(plannedByKey[key].row, { acceptedOn: on, company: company, position: position }); continue; }
+            const ex = byKey[key];
+            if (ex) {
+                // Jen záznamy z kampaně (s datem pozvánky); staré kontakty, vymazané a neoslovovat se nemění
+                if (isErasedRecord(ex) || !ex.li_pozvanka_kdy || String(ex.neoslovovat || '').trim()) continue;
+                const f = accFields(ex);
+                if (Object.keys(f).length) addPair(ex, name, f, key);
+                continue;
+            }
+            if (!on || on < connFrom) continue;
+            const hk = await hashLiKey(key);
+            if (byKey[hk]) continue;
+            const exact = candMatches(name);
+            if (exact.length === 1) {
+                usedCand[exact[0].id] = true;
+                addPair(exact[0], name, Object.assign(candFields(exact[0], key, url, on), accFields(exact[0]), { li_prijato_kdy: on }), key);
+                continue;
+            }
+            if (skippedBefore[hk]) { plan.skippedBefore++; continue; }   // dříve odškrtnuto (pozvali Martina)
+            const looseC = exact.length > 1 ? exact : candSurnameMatches(name);
+            if (looseC.length) {
+                usedCand[looseC[0].id] = true;
+                plan.maybe.push({ type: 'kandidat', row: { key: key, name: name, sent: on, url: url, acceptedOn: on, company: company, position: position }, match: looseC[0], k: 'mk:' + key, def: false });
+                continue;
+            }
+            plan.newConn.push({ key: key, name: name, on: on, url: url, company: company, position: position, neoMatch: neoNameMatch(name), k: 'nc:' + key, h: hk });
+        }
+    }
+
+    for (const part of state.liImportParts || []) {
+        if (part.type !== 'candidates') continue;
+        const h = part.header;
+        const col = function (name) { return h.indexOf(name.toLowerCase()); };
+        const idx = { firma: col('firma'), ico: col('ico'), web: col('web'), kontaktniOsoba: col('kontaktniosoba'), role: col('role'), segment: col('segment'), zdroj: col('zdroj'), poznamka: col('poznamka'), priorita: col('priorita'), sit: col('sit'), sidlo: col('adresa') };
+        for (const r of part.rows) {
+            const g = function (k) { return idx[k] >= 0 ? String(r[idx[k]] || '').replace(/^="?|"$/g, '').trim() : ''; };
+            const name = g('kontaktniOsoba');
+            if (!name) continue;
+            const nn = nameKey(name);
+            const dup = (byName[nn] || []).find(function (c) {
+                return (g('ico') && c.ico === g('ico')) || _normFirmaCmp(c.firma) === _normFirmaCmp(g('firma'));
+            });
+            if (dup) { plan.candSkip.push({ name: name, why: 'už v databázi' + (dup.neoslovovat ? ' (neoslovovat)' : '') }); continue; }
+            const invitedNoFirm = (byName[nn] || []).find(function (c) { return (c.li_pozvanka_kdy || liRealKey(c)) && !c.firma; });
+            if (invitedNoFirm) { plan.candSkip.push({ name: name, why: 'možná už pozván (v evidenci bez firmy)' }); continue; }
+            const fp = await liNameFingerprint(name, g('firma'));
+            if (byKey[fp]) { plan.candSkip.push({ name: name, why: 'dříve osloven, údaje vymazány' }); continue; }
+            const seg = isLiSegment(g('segment')) ? g('segment') : (LI_SEGMENT_PREFIX + 'menší sítě');
+            const cand = { firma: g('firma'), ico: g('ico'), web: g('web'), kontaktniOsoba: name, role: g('role'), segment: seg, zdrojUrl: g('zdroj'), poznamka: g('poznamka'), priorita: g('priorita') || '1', sit: g('sit'), sidlo: g('sidlo') };
+            plan.cand.push(cand);
+            (byName[nn] = byName[nn] || []).push(cand);
+        }
+    }
+
+    // Pozvánky, které z exportu zmizely (pokud export obsahuje jen nevyřízené)
+    if (plan.hasInv) {
+        state.contacts.forEach(function (c) {
+            if (isErasedRecord(c) || String(c.linkedinStav || '') !== 'Posláno' || !c.li_pozvanka_kdy || pairById[c.id]) return;
+            if (c.li_pozvanka_kdy < fromDate) return;
+            const k = liRealKey(c);
+            if (k && !invitedKeysInFile[k]) plan.vanished.push(c);
+        });
+    }
+    plan.pair = Object.keys(pairById).map(function (id) { return pairById[id]; });
+    state.liImportPlan = plan;
+    liRenderImportPlan();
+}
+
+function liRenderImportPlan() {
+    const p = state.liImportPlan;
+    const box = document.getElementById('li-import-preview');
+    if (!p) { box.innerHTML = ''; return; }
+    const list = function (arr, fmt) { return arr.slice(0, 40).map(fmt).join(', ') + (arr.length > 40 ? '…' : ''); };
+    const cb = function (k, label, def) {
+        return '<label><input type="checkbox"' + (liImpChecked(k, def) ? ' checked' : '') + ' onchange="liImpToggle(\'' + escapeAttr(k) + '\', this.checked)"><span class="li-imp-lbl">' + label + '</span></label>';
+    };
+    const accepted = function (r) { return r.acceptedOn ? ' <span class="li-muted">(už přijal ' + formatDate(r.acceptedOn) + ')</span>' : ''; };
+    box.innerHTML = '<div class="settings-panel" style="margin-top:12px;">' +
+        '<h4>Náhled importu</h4>' +
+        (p.hasInv ? '<div class="settings-row"><div><div class="settings-row-label"><label for="li-imp-from">Od data (pozvánky)</label></div><div class="settings-row-meta">Starší pozvánky se přeskočí' + (p.olderThanFrom ? ' – teď ' + p.olderThanFrom : '') + '. Výchozí je týden před posledním importem pozvánek.</div></div>' +
+            '<div style="display:flex;gap:6px;"><input type="date" class="form-input" id="li-imp-from" value="' + escapeHtml(p.fromDate) + '" style="max-width:170px;"><button class="btn btn-secondary li-btn li-btn-small" onclick="liBuildImportPlan()">Přepočítat</button></div></div>' : '') +
+        (p.blocked ? '<div class="info-note danger" style="margin:10px 0;"><strong>Import nejde zapsat:</strong> ' + escapeHtml(p.blocked) + '</div>' : '') +
+        '<div class="li-imp-sum">' +
+            (p.omylem.length ? '<div class="li-maybe li-maybe-red"><strong class="li-red">Pozváni omylem – na LinkedInu pozvánku stáhněte hned (' + p.omylem.length + '):</strong>' +
+                p.omylem.map(function (o) { return '<div>' + escapeHtml(o.name) + ' <span class="li-muted">' + formatDate(o.sent) + ' · ' + escapeHtml(o.why) + '</span></div>'; }).join('') + '</div>' : '') +
+            (p.hasInv || p.hasConn ? '<div>Založím nové: <strong>' + p.create.length + '</strong>' + (p.create.length ? ' <span class="li-muted">' + list(p.create, function (r) { return escapeHtml(r.name) + (r.acceptedOn ? ' (přijal)' : ''); }) + '</span>' : '') + '</div>' +
+            '<div>Spáruji / doplním: <strong>' + p.pair.length + '</strong></div>' : '') +
+            (p.cand.length || p.candSkip.length ? '<div>Kandidáti od Clauda: <strong>' + p.cand.length + '</strong>' + (p.candSkip.length ? ' · přeskočeno ' + p.candSkip.length + ': <span class="li-muted">' + list(p.candSkip, function (s) { return escapeHtml(s.name + ' – ' + s.why); }) + '</span>' : '') + '</div>' : '') +
+            (p.maybe.length ? '<div class="li-maybe"><strong>Možná shoda (' + p.maybe.length + '):</strong>' +
+                p.maybe.map(function (m) {
+                    const who = escapeHtml(m.match.kontaktniOsoba + (m.match.firma ? ', ' + m.match.firma : ''));
+                    if (m.type === 'kandidat') return cb(m.k, 'spárovat ' + escapeHtml(m.row.name) + accepted(m.row) + ' s kandidátem <span class="li-muted">' + who + '</span> (shoda jen podle příjmení – zaškrtněte, jen pokud jde o stejného člověka; jinak se založí nový záznam)', m.def);
+                    if (m.neo) return cb(m.k, 'založit ' + escapeHtml(m.row.name) + accepted(m.row) + ' <span class="li-red">s blokací – v databázi je ' + who + ' s NEOSLOVOVAT</span> (pozvánku stáhněte; odškrtnuto = nezakládat)', m.def);
+                    return cb(m.k, 'založit jako nový: ' + escapeHtml(m.row.name) + accepted(m.row) + ' <span class="li-muted">(v databázi: ' + who + ')</span>', m.def);
+                }).join('') + '</div>' : '') +
+            (p.newConn.length ? '<div class="li-maybe"><strong>Nová spojení mimo Database (' + p.newConn.length + ', od ' + formatDate(p.connFrom) + ')</strong> – odškrtněte ty, kdo pozvali vás:' +
+                p.newConn.map(function (n) {
+                    return cb(n.k, escapeHtml(n.name) + ' <span class="li-muted">' + escapeHtml([n.position, n.company].filter(Boolean).join(', ')) + ' · ' + formatDate(n.on) + '</span>' +
+                        (n.neoMatch ? ' <span class="li-red">– v databázi je ' + escapeHtml(n.neoMatch.kontaktniOsoba) + ' s NEOSLOVOVAT, založí se s blokací</span>' : ''), true);
+                }).join('') + '</div>' : '') +
+            (p.skippedBefore ? '<div class="li-muted">Dříve odškrtnutá spojení se nenabízejí znovu: ' + p.skippedBefore + '.</div>' : '') +
+            (p.vanished.length ? '<div class="li-maybe">' + cb('vanished', p.vanished.length + ' pozvánek z exportu zmizelo – označit jako pravděpodobně přijaté', false) + '<div class="li-muted" style="font-size:12px;">Zaškrtněte jen pokud víte, že export obsahuje jen nevyřízené pozvánky (ověříme na prvních exportech).</div></div>' : '') +
+            (p.skip.length ? '<div class="li-muted">Přeskočeno ' + p.skip.length + ': ' + list(p.skip, function (s) { return escapeHtml(s.name + ' – ' + s.why); }) + '</div>' : '') +
+        '</div>' +
+        '<div style="margin-top:12px;display:flex;gap:10px;">' + (p.blocked ? '' : '<button class="btn btn-primary" onclick="liApplyImport()">Zapsat</button>') + '<button class="btn btn-ghost" onclick="state.liImportPlan=null;state.liImportParts=null;liRenderImportPlan()">Zrušit</button></div>' +
+    '</div>';
+}
+
+async function liApplyImport() {
+    const p = state.liImportPlan;
+    if (!p) return;
+    if (p.blocked) { toast('error', p.blocked, 10000); return; }
+    if (refuseIfMisaligned('Import')) return;
+    const now = new Date().toISOString();
+    const seg = liLastBatchSegment();
+    const newRows = [];
+    const mk = function (o) { return Object.assign({ id: generateId(), createdAt: now, updatedAt: now, typ: 'Zprostředkovatel', priorita: '2', osloven_kanal: 'LinkedIn', zdrojUrl: 'LinkedIn – vlastní pozvánka', spolehlivost: 'linkedin-export' }, o); };
+    const fromRow = function (r, extra) {
+        const o = { segment: seg, stav: 'Osloven', kontaktniOsoba: r.name, linkedinUrl: r.url || ('https://www.' + r.key), li_klic: r.key, li_pozvanka_kdy: r.sent, osloven_kdy: r.sent, linkedinStav: 'Posláno' };
+        if (r.acceptedOn) Object.assign(o, { linkedinStav: 'Přijato', li_prijato_kdy: r.acceptedOn, firma: r.company || '', role: r.position || '' });
+        return mk(Object.assign(o, extra || {}));
+    };
+    const patches = p.pair.slice();
+    const skipLogs = [];      // otisky odškrtnutých položek (příště se nenabídnou znovu)
+    const neoCreated = [];    // nové záznamy s převzatou blokací → připomínka „stáhnout"
+    p.create.forEach(function (r) { newRows.push(fromRow(r)); });
+    p.maybe.forEach(function (m) {
+        const on = liImpChecked(m.k, m.def);
+        if (m.type === 'kandidat') {
+            if (on) {
+                const f = { li_pozvanka_kdy: m.match.li_pozvanka_kdy && m.match.li_pozvanka_kdy < m.row.sent ? m.match.li_pozvanka_kdy : m.row.sent, osloven_kdy: m.match.osloven_kdy || m.row.sent, osloven_kanal: m.match.osloven_kanal || 'LinkedIn',
+                    stav: m.match.stav && m.match.stav !== 'Nový' ? m.match.stav : 'Osloven', linkedinStav: 'Posláno', li_klic: m.row.key, linkedinUrl: m.row.url || ('https://www.' + m.row.key) };
+                if (m.row.acceptedOn) Object.assign(f, { linkedinStav: 'Přijato', li_prijato_kdy: m.row.acceptedOn });
+                patches.push({ id: m.match.id, fields: f });
+            } else newRows.push(fromRow(m.row));
+            return;
+        }
+        if (!on) { if (m.h) skipLogs.push(m.h); return; }
+        const row = fromRow(m.row, m.neo ? { neoslovovat: m.match.neoslovovat, poznamka: 'Možná shoda se záznamem ' + m.match.id + ' – ověřit' } : { poznamka: 'Možná shoda se záznamem ' + m.match.id });
+        newRows.push(row);
+        if (m.neo && !m.row.acceptedOn) neoCreated.push({ id: row.id, sent: m.row.sent });
+    });
+    p.newConn.forEach(function (n) {
+        if (!liImpChecked(n.k, true)) { if (n.h) skipLogs.push(n.h); return; }
+        const extra = n.neoMatch ? { neoslovovat: n.neoMatch.neoslovovat, poznamka: 'Možná shoda se záznamem ' + n.neoMatch.id + ' – ověřit' } : {};
+        newRows.push(mk(Object.assign({ segment: seg, stav: 'Osloven', kontaktniOsoba: n.name, firma: n.company, role: n.position, linkedinUrl: n.url || ('https://www.' + n.key), li_klic: n.key, li_pozvanka_kdy: n.on, li_prijato_kdy: n.on, osloven_kdy: n.on, linkedinStav: 'Přijato' }, extra)));
+    });
+    p.cand.forEach(function (c) {
+        newRows.push(Object.assign({ id: generateId(), createdAt: now, updatedAt: now, typ: 'Zprostředkovatel', stav: 'Nový', spolehlivost: 'claude-kandidat' }, c, {
+            linkedinUrl: buildLinkedInSearchUrl(c.kontaktniOsoba, c.firma, c.role) || ''
+        }));
+    });
+    if (p.vanished.length && liImpChecked('vanished', false)) p.vanished.forEach(function (c) { patches.push({ id: c.id, fields: { linkedinStav: 'Přijato', li_prijato_kdy: liToday() } }); });
+    const box = document.getElementById('li-import-preview');
+    box.innerHTML = '<div class="li-muted" style="padding:8px;">Zapisuji…</div>';
+    let appended = false;
+    try {
+        if (newRows.length) {
+            await sheetsAppend(SHEET_TABS.contacts, newRows.map(contactToRow));
+            appended = true;
+            newRows.forEach(function (c) { state.contacts.push(c); });
+        }
+        let pr = { applied: 0, missing: [] };
+        if (patches.length) pr = await patchContactsBulk(patches);
+        // Připomínky „stáhnout" jen jednou na pozvánku (stejný kontakt + datum odeslání)
+        const omylemLogged = {};
+        (state.activity || []).forEach(function (a) { if (a.what === 'li-omylem') omylemLogged[a.kontaktId + '|' + a.detail] = true; });
+        for (const o of p.omylem.concat(neoCreated)) {
+            if (omylemLogged[o.id + '|' + o.sent]) continue;
+            omylemLogged[o.id + '|' + o.sent] = true;
+            await logActivity(o.id, 'li-omylem', o.sent);
+        }
+        for (const h of skipLogs) await logActivity('', 'li-imp-skip', h);
+        await logActivity('', 'li-import', 'nové ' + newRows.length + ', doplněno ' + pr.applied);
+        if (p.hasInv) await logActivity('', 'li-import-pozvanky', '');
+        if (p.hasConn) await logActivity('', 'li-import-spojeni', '');
+        state.liImportPlan = null;
+        state.liImportParts = null;
+        state.liImportChoice = {};
+        toast('success', 'Import hotový: založeno ' + newRows.length + ', doplněno ' + pr.applied + (pr.missing.length ? ', nenalezeno ' + pr.missing.length : '') + '. Soubor z LinkedInu můžete smazat ze Stažených.', 10000);
+        box.innerHTML = '';
+        await syncFromSheet();
+    } catch (err) {
+        console.error(err);
+        state.liImportPlan = null;
+        state.liImportParts = null;
+        box.innerHTML = '<div class="info-note danger"><strong>Import selhal:</strong> ' + escapeHtml(err.message || String(err)) +
+            (appended ? '<br>Nové záznamy už jsou zapsané, nepodařilo se jen doplnit stávající. Data jsem znovu načetl – přetáhněte soubor znovu, nic se nezdvojí.' : '<br>Nic se nezapsalo, zkuste to znovu.') + '</div>';
+        try { await syncFromSheet(); } catch (e) { /* hláška už je zobrazená */ }
+    }
+}
+
+function liSetupDropZone() {
+    const z = document.getElementById('li-drop');
+    if (!z || z.dataset.init) return;
+    z.dataset.init = '1';
+    ['dragenter', 'dragover'].forEach(function (ev) { z.addEventListener(ev, function (e) { e.preventDefault(); z.classList.add('li-drop-over'); }); });
+    ['dragleave', 'drop'].forEach(function (ev) { z.addEventListener(ev, function (e) { e.preventDefault(); z.classList.remove('li-drop-over'); }); });
+    z.addEventListener('drop', function (e) { liHandleFiles(e.dataTransfer.files); });
+    // Soubor puštěný mimo zónu by prohlížeč otevřel nebo stáhl (další kopie exportu ve Stažených)
+    ['dragover', 'drop'].forEach(function (ev) {
+        window.addEventListener(ev, function (e) {
+            if (e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') !== -1 && !z.contains(e.target)) e.preventDefault();
+        });
+    });
+}
+
+// Založí v listu Segments chybějící segmenty pro LinkedIn oslovování (nový list se nezakládá)
+async function liEnsureSegments() {
+    const want = ['Poradci – menší sítě', 'Poradci – nezávislí brokeři', 'Poradci – pooly', 'Poradci – realitky'];
+    const have = state.segments.map(function (s) { return String(s.nazev || '').replace(/[\u2010-\u2015-]/g, '–').trim(); });
+    const missing = want.filter(function (w) { return have.indexOf(w) === -1; });
+    if (!missing.length) { toast('info', 'Segmenty už existují.'); return; }
+    const header = (state.headerOrders.segments && state.headerOrders.segments.length) ? state.headerOrders.segments : SEGMENTS_HEADER;
+    const rows = missing.map(function (n) { return objectToRow({ nazev: n, typ: 'Zprostředkovatel', priorita: '1', useCase: 'Oslovování poradců přes LinkedIn (zadání 13. 10. 2026)', pocetZdroju: 0 }, header, SEGMENTS_HEADER); });
+    try {
+        await sheetsAppend(SHEET_TABS.segments, rows);
+        await logActivity('', 'li-segmenty', missing.join(', '));
+        toast('success', 'Založeno: ' + missing.join(', '));
+        await syncFromSheet();
+    } catch (err) {
+        toast('error', 'Založení segmentů selhalo: ' + err.message);
+    }
+}
+
+// ============================================================
 // INIT
 // ============================================================
 window.addEventListener('load', () => {
+    if (TEST_SHEET_REQUESTED) {
+        const bar = document.createElement('div');
+        bar.className = 'info-note danger';
+        bar.style.cssText = 'margin:0 0 14px;font-weight:600;color:var(--danger);background:var(--danger-tint);';
+        bar.textContent = TEST_SHEET_ID
+            ? 'TESTOVACÍ KOPIE – zápisy jdou jen do kopie databáze, ostrá databáze se nemění.'
+            : 'NEPLATNÝ ODKAZ TESTOVACÍHO REŽIMU – databáze se nepřipojí. Použijte odkaz z Nastavení → Testovací kopie.';
+        const main = document.querySelector('.db-main');
+        if (main) main.insertBefore(bar, main.firstChild);
+    }
+    liSetupDropZone();
     initTokenClient();
     setupFilterPills();
     // Init static-options dropdowns (form selecty) — segment + filter dropdowns
