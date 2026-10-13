@@ -107,14 +107,37 @@
             gap: 0.5rem;
             align-items: center;
         }
+        /* Pole tranší ve stylu polí formuláře (rámeček, jantarové zvýraznění) */
         .tranche-row input {
-            padding: 0.5rem 0.625rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--bg-secondary);
+            width: 100%;
+            min-width: 0;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--r-sm);
+            background: var(--bg-surface);
             color: var(--text-primary);
+            font-family: inherit;
             font-size: 0.875rem;
+            font-variant-numeric: tabular-nums;
+            transition: var(--transition);
         }
+        .tranche-row input:hover { border-color: var(--line-strong); }
+        .tranche-row input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        /* Číselná pole bez nativních šipek; datum s tmavým výběrem a světlou ikonou (jako Dashboard) */
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+        input[type=date] { color-scheme: dark; }
         .tranche-row button.remove-tranche {
             background: transparent;
             border: 1px solid var(--border);
@@ -128,17 +151,18 @@
             justify-content: center;
         }
         .tranche-row button.remove-tranche:hover {
-            border-color: #ef4444;
-            color: #ef4444;
+            border-color: var(--danger);
+            color: var(--danger);
         }
         .tranches-sum-status {
             margin-top: 0.5rem;
             font-size: 0.8125rem;
             color: var(--text-secondary);
         }
-        .tranches-sum-status.ok { color: #10b981; }
-        .tranches-sum-status.warn { color: #f59e0b; }
-        .tranches-sum-status.err { color: #ef4444; }
+        /* Stejné barvy jako součet částí čerpání ve formuláři */
+        .tranches-sum-status.ok { color: var(--success); }
+        .tranches-sum-status.warn { color: var(--warning); }
+        .tranches-sum-status.err { color: var(--warning); }
         /* Firemní šablona splátkového kalendáře (Excel) — info v okně + poplatek z 1. čerpání */
         .schedule-template-info {
             margin: 0 0 1rem;
@@ -3771,14 +3795,27 @@
             var row = document.createElement('div');
             row.className = 'tranche-row';
             var dateVal = date || '';
-            var amountVal = (amount != null && amount !== '') ? amount : '';
+            var amountNum = (amount != null && amount !== '') ? parseCzAmount(amount) : 0;
+            var amountVal = amountNum > 0 ? formatTrancheAmountValue(amountNum) : '';
             row.innerHTML =
                 '<input type="date" class="tranche-date" value="' + escapeHtml(dateVal) + '" oninput="updateTranchesSumStatus()">' +
-                '<input type="number" class="tranche-amount" placeholder="Částka" step="0.01" min="0" value="' + escapeHtml(String(amountVal)) + '" oninput="updateTranchesSumStatus()">' +
+                '<input type="text" inputmode="decimal" class="tranche-amount" placeholder="Částka, např. 10 000 000" value="' + escapeHtml(amountVal) + '" oninput="updateTranchesSumStatus()" onchange="formatTrancheAmountInput(this)">' +
                 '<button type="button" class="remove-tranche" title="Odebrat" onclick="removeTrancheRow(this)">' +
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
                 '</button>';
             container.appendChild(row);
+            updateTranchesSumStatus();
+        }
+
+        // Částka tranše s mezerami mezi tisíci (jako ve formuláři), nejvýš 2 desetinná místa
+        function formatTrancheAmountValue(n) {
+            return n.toLocaleString('cs-CZ', { maximumFractionDigits: 2 });
+        }
+
+        // Po opuštění pole: „10000000“ → „10 000 000“
+        function formatTrancheAmountInput(input) {
+            var n = parseCzAmount(input.value);
+            if (n > 0) input.value = formatTrancheAmountValue(n);
             updateTranchesSumStatus();
         }
 
