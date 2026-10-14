@@ -8299,8 +8299,8 @@ resetForm = function() {
 // Aplikace NIC nedělá na LinkedInu sama: jen otevře odkaz, zkopíruje text do schránky
 // a eviduje, co Martin udělal. Žádná automatizace (smluvní podmínky LinkedInu čl. 8.2).
 // ============================================================
-const SPC_ICO = '';                 // TODO po zápisu do OR: IČO Spolumajitelé Private Credit a.s.
-const SPC_OR = '';                  // TODO po zápisu do OR: např. 'oddíl B, vložka 12345'
+const SPC_ICO = '30147778';         // Spolumajitelé Private Credit a.s., zapsána 13. 10. 2026
+const SPC_OR = 'oddíl B, vložka 31031';   // obchodní rejstřík vedený Městským soudem v Praze
 const ZASADY_URL = 'privatecredit.spolumajitele.cz/ochrana-osobnich-udaju';
 const ZASADY_LIVE = false;          // true až budou upravené zásady na živém webu (podmínka zprávy A)
 const PARTNER_EMAIL = 'privatecredit@spolumajitele.cz';
@@ -8436,7 +8436,7 @@ function liTextA(salutation, variant) {
     return salutation + '\n' +
         'děkuji za přijetí pozvánky. Jsem Martin Dlouhý ze společnosti Spolumajitelé Private Credit a.s., věnuji se financování firem zajištěnému nemovitostmi a rád se seznamuji s ' + v.kym + '. ' + v.otazka + '\n\n' +
         'Martin Dlouhý\n' +
-        'Spolumajitelé Private Credit a.s., Pařížská 68/9, 110 00 Praha 1, IČO ' + SPC_ICO + ', zapsaná v obchodním rejstříku u Městského soudu v Praze, ' + SPC_OR + '\n\n' +
+        'Spolumajitelé Private Credit a.s., Pařížská 68/9, 110 00 Praha 1, IČO ' + SPC_ICO + ', zapsaná v obchodním rejstříku vedeném Městským soudem v Praze, ' + SPC_OR + '\n\n' +
         'Osobní údaje: vaše jméno, pozici, firmu a odkaz na profil mám z LinkedInu. Spolumajitelé Private Credit a.s. je jako správce eviduje z oprávněného zájmu kvůli možné spolupráci. Podrobnosti a vaše práva: ' + ZASADY_URL + '\n\n' +
         'Proti tomuto zpracování můžete kdykoli vznést námitku. Stačí odepsat „ne“ nebo napsat na ' + PARTNER_EMAIL + '. Pak vám už nenapíšu a ponechám si jen záznam, abych vás znovu neoslovil.';
 }
