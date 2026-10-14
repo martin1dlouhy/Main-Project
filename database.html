@@ -2252,8 +2252,8 @@
                 <p class="panel-desc">Denní dávky lidí k pozvání, segmenty pro poradce a bezpečné zkoušení na kopii databáze. Testovací kopie má vlastní odkaz; ostrá databáze se při zkoušení nemění.</p>
                 <div class="settings-row">
                     <div style="flex:1;min-width:0;">
-                        <div class="settings-row-label">Dávky od Clauda (odkaz na tabulku)</div>
-                        <div class="settings-row-meta" id="li-batch-meta">Vložte odkaz na Google tabulku s dávkami, kterou připravil Claude. Stačí jednou, platí na všech zařízeních.</div>
+                        <div class="settings-row-label">Dávky od Clauda – nastavuje Claude automaticky</div>
+                        <div class="settings-row-meta" id="li-batch-meta">Odkaz na dávky si aplikace bere sama. Ruční odkaz níže jen v nouzi, když o to Claude požádá.</div>
                         <input type="text" class="form-input" id="li-batch-url" placeholder="https://docs.google.com/spreadsheets/d/…" aria-label="Odkaz na tabulku s dávkami" style="margin-top:8px;">
                     </div>
                     <button class="btn btn-secondary" onclick="liSaveBatchSource()">Uložit</button>
@@ -3826,7 +3826,7 @@ async function bootstrapApp() {
 }
 
 async function syncFromSheet() {
-    state.liBatchLoadedId = '';   // tabulku s dávkami při synchronizaci načíst znovu
+    state.liBatchLoadedId = ''; state.liMailboxChecked = false;   // dávky i odkaz na ně při synchronizaci načíst znovu
     if (!state.spreadsheetId) {
         toast('error', 'Sheet neexistuje, nejprve se připoj.');
         return;
@@ -8765,9 +8765,58 @@ function liParseSheetId(s) {
     if (m) return m[1];
     return /^[A-Za-z0-9_-]{20,}$/.test(s) ? s : '';
 }
+// Odkaz na dávky nastavuje Claude, Martin nic nevkládá:
+// 1) „schránka“ = soubor, který si aplikace sama založí na Disku (vidí jen soubory, které vytvořila);
+//    Claude mu u každé nové vlny přejmenuje název na ID nové hlavní tabulky,
+// 2) ruční odkaz z Nastavení (Activity li-zdroj-davek) – jen záloha,
+// 3) výchozí hlavní tabulka 1. vlny v kódu.
+const LI_DAVKY_VYCHOZI = '1j9lsIa1wVWFdLxlw51GkGT2gVyHt4FK7HyUAjzcrDNk';   // vlna 1: 14. 10.–6. 11. 2026
+const LI_SCHRANKA_NAZEV = 'LinkedIn dávky – odkaz (nemazat, spravuje Claude)';
+state.liMailbox = null;            // { fileId, src } — načteno z Disku
+state.liMailboxChecked = false;
 function liBatchSourceId() {
+    if (state.liMailbox && state.liMailbox.src) return state.liMailbox.src;
     const a = (state.activity || []).filter(function (x) { return x.what === 'li-zdroj-davek' && x.detail; });
-    return a.length ? String(a[a.length - 1].detail) : '';
+    return a.length ? String(a[a.length - 1].detail) : LI_DAVKY_VYCHOZI;
+}
+// Najde (případně založí) schránku a přečte z jejího názvu ID hlavní tabulky
+async function liResolveMailbox() {
+    if (state.liMailboxChecked) return;
+    state.liMailboxChecked = true;
+    try {
+        const q = encodeURIComponent("name contains 'LinkedIn dávky – odkaz' and trashed=false");
+        const res = await gfetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&spaces=drive');
+        const files = ((await res.json()).files || []);
+        if (files.length) {
+            const m = String(files[0].name || '').match(/([A-Za-z0-9_-]{30,})\s*$/);
+            state.liMailbox = { fileId: files[0].id, src: m ? m[1] : '' };
+            return;
+        }
+        if (TEST_SHEET_REQUESTED) return;          // v testovacím režimu nic nezakládat
+        const src = liBatchSourceId();
+        const parent = await ensureFolders();
+        const cr = await gfetch('https://www.googleapis.com/drive/v3/files?fields=id,name', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: LI_SCHRANKA_NAZEV + ' – ' + src, mimeType: 'application/vnd.google-apps.document', parents: [parent] })
+        });
+        const f = await cr.json();
+        if (f && f.id) state.liMailbox = { fileId: f.id, src: src };
+    } catch (err) {
+        console.warn('Schránku s odkazem na dávky se nepodařilo načíst:', err);
+    }
+}
+// Ruční změna odkazu (záloha): přejmenuje schránku, aby platila všude
+async function liWriteMailbox(src) {
+    if (!state.liMailbox || !state.liMailbox.fileId || TEST_SHEET_REQUESTED) return;
+    try {
+        const res = await gfetch('https://www.googleapis.com/drive/v3/files/' + state.liMailbox.fileId, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: LI_SCHRANKA_NAZEV + ' – ' + src })
+        });
+        if (res.ok) state.liMailbox.src = src;
+    } catch (err) {
+        console.warn('Schránku se nepodařilo přejmenovat:', err);
+    }
 }
 // Značky z Activity spočítané jednou (podle délky Activity): dny hotovo/přeskočeno, Nenašel, otevřeno (s datem)
 function liMarks() {
@@ -8857,10 +8906,12 @@ async function liFetchBatchSheet(id) {
 }
 
 async function liLoadBatches(force) {
-    const id = liBatchSourceId();
-    if (!id || !state.spreadsheetId) return;
-    if (!force && (state.liBatchState === 'loading' || state.liBatchLoadedId === id)) return;
+    if (!state.spreadsheetId) return;
+    if (!force && state.liBatchState === 'loading') return;
     state.liBatchState = 'loading';
+    await liResolveMailbox();
+    const id = liBatchSourceId();
+    if (!force && state.liBatchLoadedId === id && state.liBatches) { state.liBatchState = 'ok'; renderLinkedInToday(); return; }
     try {
         const r = await liFetchBatchSheet(id);
         state.liBatches = r.rows;
@@ -8893,7 +8944,8 @@ async function liSaveBatchSource() {
         return;
     }
     await logActivity('', 'li-zdroj-davek', id);
-    if (liBatchSourceId() !== id) { toast('error', 'Odkaz se nepodařilo uložit do databáze – zkuste to znovu.'); return; }
+    await liWriteMailbox(id);
+    if (liBatchSourceId() !== id) { toast('error', 'Odkaz se nepodařilo uložit – zkuste to znovu.'); return; }
     if (el) el.value = '';
     state.liBatches = r.rows;
     state.liBatchWarn = r.failed.length ? 'Některé části se nenačetly – ' + r.failed.join('; ') : '';
@@ -8909,11 +8961,9 @@ async function liSaveBatchSource() {
 function liRenderBatchMeta() {
     const m = document.getElementById('li-batch-meta');
     if (!m) return;
-    const id = liBatchSourceId();
-    if (!id) { m.textContent = 'Vložte odkaz na Google tabulku s dávkami, kterou připravil Claude. Stačí jednou, platí na všech zařízeních.'; return; }
     if (state.liBatchState === 'ok' && state.liBatches) {
         const days = state.liBatches.map(function (r) { return r.den; }).sort();
-        m.textContent = 'Propojeno: ' + liNames(state.liBatches.length) + (days.length ? ', dávky ' + formatDate(days[0]) + ' – ' + formatDate(days[days.length - 1]) : '') + '. Nový odkaz stačí vložit, starý se nahradí.' + (state.liBatchWarn ? ' ' + state.liBatchWarn : '');
+        m.textContent = 'Nastavuje Claude automaticky. Načteno: ' + liNames(state.liBatches.length) + (days.length ? ', dávky ' + formatDate(days[0]) + ' – ' + formatDate(days[days.length - 1]) : '') + '. Vkládat nic nemusíte.' + (state.liBatchWarn ? ' ' + state.liBatchWarn : '');
     } else if (state.liBatchState === 'error') {
         m.textContent = 'Tabulku se nepodařilo načíst: ' + state.liBatchError;
     } else {
@@ -9082,7 +9132,7 @@ function liBatchesHtml(today) {
     const box = function (inner, extraHead) {
         return '<div class="li-section li-day li-day-today"><div class="li-section-head"><h4>Dnes pozvat – ' + escapeHtml(liDayLabel(today)) + '</h4>' + (extraHead || '') + '</div>' + inner + '</div>';
     };
-    if (!id) return box('<div class="li-empty">Dávky zatím nejsou propojené. V Nastavení → LinkedIn oslovování vložte odkaz na tabulku s dávkami od Clauda.</div>');
+    if (!id) return box('<div class="li-empty">Dávky zatím nejsou připravené – řekněte Claudovi.</div>');
     if (state.liBatchState === 'loading' || state.liBatchState === '') return box('<div class="li-empty">Načítám dávky…</div>');
     if (state.liBatchState === 'error') {
         return box('<div class="li-empty li-red">Tabulku s dávkami se nepodařilo načíst: ' + escapeHtml(state.liBatchError) + '</div>',
