@@ -2477,6 +2477,7 @@
                     <select class="form-input" id="f-osloven_kanal">
                         <option value="">—</option>
                         <option value="Email">Email</option>
+                        <option value="Web formulář">Web formulář</option>
                         <option value="LinkedIn">LinkedIn</option>
                         <option value="Telefon">Telefon</option>
                         <option value="Dopis">Dopis</option>
@@ -6942,7 +6943,7 @@ const VAZBY = ['nezávislý', 'vázaný zástupce', 'majitel sítě', 'podfirma 
 // Pole LinkedIn evidence — v detektorech posunu se přiřazují podle názvu v hlavičce (jejich
 // obsah, např. datum RRRR-MM-DD, by si jinak spletl s osloven_kdy apod.)
 const LI_FIELDS = ['li_pozvanka_kdy', 'li_prijato_kdy', 'li_zprava_kdy', 'li_odpoved_kdy', 'li_klic', 'sablona', 'sit', 'vazba', 'neoslovovat', 'li_otisk'];
-const KANALY = ['email', 'linkedin', 'telefon', 'osobně', 'doporučení', 'jiné'];
+const KANALY = ['email', 'linkedin', 'telefon', 'osobně', 'doporučení', 'jiné', 'web formulář'];
 
 // Silné heuristiky — jednoznačně rozpoznají pole z obsahu (nepotřebují header)
 const STRONG_DETECTORS = {
@@ -8429,7 +8430,7 @@ function liSalutation(full) {
 const LI_VARIANTY = {
     poradce:  { label: 'Poradce',  kym: 'poradci, kteří pracují s firemními klienty', otazka: 'S jakými případy financování firem se u vás nejčastěji setkáváte?', vazba: '' },
     majitel:  { label: 'Majitel',  kym: 'vedením poradenských firem', otazka: 'Jak u vás řešíte firemní klienty, kteří potřebují financování zajištěné nemovitostí?', vazba: 'majitel sítě' },
-    realitka: { label: 'Realitka', kym: 'realitními makléři', otazka: 'Řeší vaši klienti při koupi komerční nemovitosti nebo nemovitosti v dražbě financování přes firmu?', vazba: 'realitka' }
+    realitka: { label: 'Realitka', kym: 'realitními makléři', otazka: 'Řeší vaši klienti při koupi komerční nemovitosti financování přes firmu?', vazba: 'realitka' }
 };
 function liTextA(salutation, variant) {
     const v = LI_VARIANTY[variant] || LI_VARIANTY.poradce;
@@ -8507,6 +8508,14 @@ function computeLiQueues(contacts, today) {
         }
         // Kandidáti od Clauda (ještě nepozvaní — pozvánku eviduje až import exportu)
         if (!inv && sp === 'claude-kandidat') {
+            // Oslovený e-mailem nebo přes web: mimo LinkedIn fronty. Zpráva neobsahovala informace podle čl. 14 GDPR,
+            // proto jako u LinkedInu: bez odpovědi 21+ dní → výmaz; odmítl → zkrátit na otisk
+            if (liIsOtherChannel(c)) {
+                if (liIsProtected(c)) return;
+                if (neo || String(c.stav || '') === 'Odmítnut') q.zkratit.push(c);
+                else if ((liDaysSince(c.osloven_kdy, today) || 0) >= LI_VYMAZ_PO_DNECH) q.vymaz.push(c);
+                return;
+            }
             const age = liDaysSince(String(c.createdAt || '').slice(0, 10), today);
             const untouched = !liIsProtected(c) && ['', 'Nový'].indexOf(String(c.stav || '')) !== -1;
             // Upravené kandidáty (jiný stav než Nový) Martin používá jako běžný kontakt → žádná fronta
@@ -8675,6 +8684,20 @@ function liCardHtml(c, kind) {
             liNegButtons(id) +
             (undo && undo.code === 'zajem' ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + id + '\')">Vrátit</button>' : '');
     }
+    else if (kind === 'jinak') {
+        badges.push('<span class="li-badge">' + (/^web/i.test(String(c.osloven_kanal || '')) ? 'web' : 'e-mail') + ' ' + formatDate(c.osloven_kdy) + '</span>');
+        actions = (liIsProtected(c) ? '<span class="li-badge li-badge-sit">' + escapeHtml(c.stav) + '</span>'
+                : '<button class="btn btn-secondary li-btn li-btn-small" onclick="liOtherReplied(\'' + id + '\')">Odpověděl</button>') +
+            liNegButtons(id) +
+            (undo && (undo.code === 'jinak' || undo.code === 'reaguje') ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + id + '\')">Vrátit</button>' : '');
+    }
+    // Z dávky zapsaný jako LinkedIn, ale ve skutečnosti oslovený jinak → přesunout
+    if (kind === 'davka' && liIsBatchRecord(c) && !c.li_prijato_kdy) {
+        actions += '<div class="li-hint">Nepozval jste ho na LinkedInu?' +
+            Object.keys(LI_JINE_KANALY).map(function (k) {
+                return ' <button class="btn btn-ghost li-btn li-btn-small" onclick="liMoveChannel(\'' + id + '\', \'' + k + '\')">Byl to ' + LI_JINE_KANALY[k].label + '</button>';
+            }).join('') + '</div>';
+    }
     if (failed) actions += '<div class="li-gate li-red">Zápis selhal. <button class="btn btn-secondary li-btn li-btn-small" onclick="liRetry(\'' + id + '\')">Zapsat znovu</button></div>';
     return '<div class="li-card' + (failed ? ' li-card-error' : '') + '" data-id="' + id + '">' +
         '<div class="li-card-head"><div><div class="li-name">' + name + '</div><div class="li-sub">' + sub + '</div></div>' +
@@ -8717,6 +8740,7 @@ function liTodayListHtml(list) {
 
 function liSearchKind(c) {
     const st = String(c.linkedinStav || '');
+    if (liIsOtherChannel(c)) return 'jinak';
     if (!c.li_pozvanka_kdy) return 'pozvat';
     if (st === 'Zpráva' && !c.li_odpoved_kdy) return 'odpoved';
     if (!c.li_zprava_kdy) return st === 'Přijato' ? 'prijali' : 'davka';
@@ -8736,9 +8760,15 @@ state.liBatchState = '';           // '', 'loading', 'ok', 'error'
 state.liBatchError = '';
 state.liBatchWarn = '';            // části, které se nepodařilo načíst, nebo neúspěšný úklid
 state.liBatchLoadedId = '';
-state.liBatchBusy = {};            // den → probíhá zápis „Hotovo“
+state.liBatchWriting = false;      // probíhá zápis „Zapsat“
 state.liHidden = {};               // otisk řádku → skryto (Nenašel) v této relaci
 state.liOpened = {};               // otisk řádku → kliknuto „Hledat“ v této relaci
+state.liChannel = {};              // otisk řádku → 'email' / 'web' / '' (vráceno) v této relaci
+// Lidé bez LinkedInu: Martin jim napíše e-mailem nebo přes kontaktní formulář na webu firmy
+const LI_JINE_KANALY = {
+    email: { label: 'e-mail', zapis: 'Email', tlacitko: 'Poslal e-mail' },
+    web:   { label: 'web', zapis: 'Web formulář', tlacitko: 'Napsal přes web' }
+};
 state._liMarks = null;             // mezipaměť značek z Activity
 
 // Čeština podle čísla
@@ -8747,7 +8777,6 @@ function liPeopleAcc(n) { return n + (n === 1 ? ' člověka' : n >= 2 && n <= 4 
 function liNames(n) { return n + (n === 1 ? ' jméno' : n >= 2 && n <= 4 ? ' jména' : ' jmen'); }
 function liSkipped(n) { return n === 1 ? 'vynechán 1 člověk' : n >= 2 && n <= 4 ? 'vynecháni ' + n + ' lidé' : 'vynecháno ' + n + ' lidí'; }
 function liWaits(n) { return n === 1 ? 'čeká 1 člověk' : n >= 2 && n <= 4 ? 'čekají ' + n + ' lidé' : 'čeká ' + n + ' lidí'; }
-function liWontWrite(n) { return liPeople(n) + (n >= 2 && n <= 4 ? ' bez kliknutí se nezapíšou a z dávky zmizí.' : ' bez kliknutí se nezapíše a z dávky zmizí.'); }
 
 function liDayLabel(iso) {
     const p = String(iso || '').split('-');
@@ -8818,25 +8847,55 @@ async function liWriteMailbox(src) {
         console.warn('Schránku se nepodařilo přejmenovat:', err);
     }
 }
-// Značky z Activity spočítané jednou (podle délky Activity): dny hotovo/přeskočeno, Nenašel, otevřeno (s datem)
+// Značky z Activity spočítané jednou (podle délky Activity): dny hotovo/přeskočeno, Nenašel, otevřeno (s datem),
+// kanál u lidí bez LinkedInu (li-kanal „otisk|email“, „otisk|web“, „otisk|“ = vráceno; platí poslední)
 function liMarks() {
     const act = state.activity || [];
     if (state._liMarks && state._liMarks.len === act.length && state._liMarks.ref === act) return state._liMarks;
-    const m = { len: act.length, ref: act, days: {}, nenasel: {}, otevreno: {} };
+    const m = { len: act.length, ref: act, days: {}, nenasel: {}, otevreno: {}, kanal: {} };
     act.forEach(function (a) {
         if (!a.detail) return;
         if (a.what === 'li-davka-hotova' || a.what === 'li-davka-preskocena') m.days[a.detail] = a.what;
-        else if (a.what === 'li-nenasel') m.nenasel[a.detail] = true;
+        else if (a.what === 'li-nenasel') m.nenasel[a.detail] = String(a.when || '').slice(0, 10) || true;
         else if (a.what === 'li-nenasel-zpet') delete m.nenasel[a.detail];
         else if (a.what === 'li-otevreno' && !m.otevreno[a.detail]) m.otevreno[a.detail] = String(a.when || '').slice(0, 10);
+        else if (a.what === 'li-kanal') {
+            const i = a.detail.lastIndexOf('|');
+            if (i <= 0) return;
+            const h = a.detail.slice(0, i), code = a.detail.slice(i + 1);
+            const when = new Date(a.when);
+            if (LI_JINE_KANALY[code]) m.kanal[h] = { code: code, date: isNaN(when) ? String(a.when || '').slice(0, 10) : localISODate(when) };
+            else delete m.kanal[h];
+        }
     });
     state._liMarks = m;
     return m;
 }
 function liBatchDays() { return liMarks().days; }
 function liIsHidden(r) { return state.liHidden[r.h] != null ? !!state.liHidden[r.h] : !!liMarks().nenasel[r.h]; }
+function liHiddenDate(r) { return state.liHidden[r.h] ? liToday() : (state.liHidden[r.h] == null && typeof liMarks().nenasel[r.h] === 'string' ? liMarks().nenasel[r.h] : ''); }
 function liIsOpened(r) { return !!(state.liOpened[r.h] || liMarks().otevreno[r.h]); }
 function liOpenedDate(r) { return liMarks().otevreno[r.h] || (state.liOpened[r.h] ? liToday() : ''); }
+function liRowChannel(r) {
+    if (state.liChannel[r.h] != null) return state.liChannel[r.h];
+    const k = liMarks().kanal[r.h];
+    return k ? k.code : '';
+}
+function liRowChannelDate(r) {
+    const k = liMarks().kanal[r.h];
+    return k && k.code === liRowChannel(r) ? k.date : liToday();
+}
+// Vyřízený řádek: pozvaný na LinkedInu (klik „Hledat“) nebo oslovený e-mailem / přes web
+function liIsHandled(r) { return liIsOpened(r) || !!liRowChannel(r); }
+function liHandledDate(r) { return liRowChannel(r) ? liRowChannelDate(r) : liOpenedDate(r); }
+// Záznam zapsaný z dávky, oslovený e-mailem nebo přes web (bez LinkedIn pozvánky)
+function liIsBatchRecord(c) {
+    return String(c.spolehlivost || '').toLowerCase() === 'claude-kandidat' && String(c.zdrojUrl || '').indexOf('Claude – dávka') === 0;
+}
+function liIsOtherChannel(c) {
+    return !String(c.li_pozvanka_kdy || '').trim() && String(c.spolehlivost || '').toLowerCase() === 'claude-kandidat'
+        && /^(email|web formulář)$/i.test(String(c.osloven_kanal || '').trim());
+}
 
 function liSheetError(err) {
     const m = String(err && err.message || err || '');
@@ -8971,13 +9030,13 @@ function liRenderBatchMeta() {
     }
 }
 
-// Den se smí z tabulek dávek smazat: je hotový/přeskočený, nebo propadlý a bez otevřených řádků
+// Den se smí z tabulek dávek smazat: je hotový/přeskočený, nebo propadlý a bez vyřízených (nezapsaných) řádků
 function liDayExpired(den, today, rowsOfDay) {
     const age = liDaysSince(den, today);
     if (liBatchDays()[den]) return true;
     if (age === null || age <= LI_DAVKA_MAX_STARI) return false;
     if (age > 21) return true;
-    return !rowsOfDay.some(liIsOpened);
+    return !rowsOfDay.some(liIsHandled);
 }
 
 // Z tabulek dávek smaže řádky hotových, přeskočených a propadlých dnů. Před smazáním každou část
@@ -8986,9 +9045,9 @@ async function liCleanupBatchSheet() {
     // V testovacím režimu nikdy nemazat: tabulky s dávkami jsou sdílené s ostrou databází
     if (!state.liBatchLoadedId || !state.liBatches || TEST_SHEET_REQUESTED) return;
     const today = liToday();
-    const byDay = {};
-    state.liBatches.forEach(function (r) { (byDay[r.den] = byDay[r.den] || []).push(r); });
-    const old = state.liBatches.filter(function (r) { return liDayExpired(r.den, today, byDay[r.den]); });
+    // Bez lidí, kteří už jsou zapsaní v databázi (zapsaný řádek den naživu nedrží)
+    const view = liBatchView(state.liBatches, state.contacts, liBatchDays());
+    const old = state.liBatches.filter(function (r) { return liDayExpired(r.den, today, view[r.den] ? view[r.den].rows : []); });
     if (!old.length) return;
     const bySrc = {};
     old.forEach(function (r) { if (r.src && r.src !== state.spreadsheetId) (bySrc[r.src] = bySrc[r.src] || {})[r.key] = true; });
@@ -9072,65 +9131,106 @@ function liInviteRoom() {
     return Math.max(0, Math.min(LI_TYDENNI_STROP - s.last7, LI_DENNI_LIMIT - liInvitedToday(liToday())));
 }
 
-function liBatchRowHtml(r) {
+// Kolik lidí z dávek Martin dnes vyřídil: zapsaní, vyřízení a nezapsaní, „Nenašel“ (denně nejvýš LI_DENNI_LIMIT)
+function liHandledToday(today, rows, hidden) {
+    let n = 0;
+    rows.forEach(function (r) { if (liIsHandled(r) && liHandledDate(r) === today) n++; });
+    hidden.forEach(function (r) { if (liHiddenDate(r) === today) n++; });
+    state.contacts.forEach(function (c) {
+        if (!liIsBatchRecord(c)) return;
+        if (c.li_pozvanka_kdy === today || (liIsOtherChannel(c) && c.osloven_kdy === today)) n++;
+    });
+    return n;
+}
+
+// Fronta na dnešek: nejdřív nevyřízení z minulých dnů (nejvýš LI_DAVKA_MAX_STARI dní po plánovaném dni – lhůta
+// podle čl. 14 GDPR), pak dnešní dávka. Kdo se dnes nestihne, posune se na další den.
+function liQueue(today) {
+    const days = liPendingBatches(today).slice().sort(function (a, b) { return a.den.localeCompare(b.den); });
+    const q = { days: days, rows: [], linkedin: 0, jinak: 0, waiting: 0, more: 0, hidden: [], known: 0, neo: 0, handledToday: 0 };
+    const all = [];
+    days.forEach(function (b) {
+        const age = liDaysSince(b.den, today);
+        b.rows.forEach(function (r) { if (liIsHandled(r) || age <= LI_DAVKA_MAX_STARI) all.push(r); });
+        q.hidden = q.hidden.concat(b.hidden);
+        if (b.den === today) { q.known = b.skippedKnown; q.neo = b.skippedNeo; }
+    });
+    q.handledToday = liHandledToday(today, all, q.hidden);
+    let room = Math.max(0, LI_DENNI_LIMIT - q.handledToday);
+    all.forEach(function (r) {
+        if (liIsHandled(r)) { q.rows.push(r); if (liRowChannel(r)) q.jinak++; else q.linkedin++; return; }
+        if (room > 0) { q.rows.push(r); q.waiting++; room--; } else q.more++;
+    });
+    return q;
+}
+
+function liBatchRowHtml(r, today) {
     const h = escapeAttr(r.h);
     const fake = { kontaktniOsoba: r.kontaktniOsoba, firma: r.firma };
     const g = buildLinkedInSearchUrl(r.kontaktniOsoba, r.firma, r.role);
-    const opened = liIsOpened(r);
+    const ch = liRowChannel(r);
+    const opened = liIsOpened(r) && !ch;
     const mark = ' onclick="liBatchOpened(\'' + h + '\')" onauxclick="liBatchOpened(\'' + h + '\')"';
-    return '<div class="li-batch-row' + (opened ? ' li-batch-opened' : '') + '">' +
-        '<div class="li-batch-who">' + (opened ? '<span class="li-check" aria-label="otevřeno">✓</span> ' : '') +
+    const late = r.den < today ? liDaysSince(r.den, today) : 0;
+    const left = LI_DAVKA_MAX_STARI - late;
+    const lateBadge = late && !ch && !opened
+        ? ' <span class="li-badge' + (left <= 1 ? ' li-badge-warn' : '') + '" title="Odloženo z dávky ' + escapeHtml(liDayLabel(r.den)) + '">z ' + escapeHtml(liDayLabel(r.den)) + (left <= 0 ? ' – dnes naposledy' : left === 1 ? ' – zítra naposledy' : '') + '</span>' : '';
+    const status = ch ? '<span class="li-check" aria-label="osloven">✓</span> ' : opened ? '<span class="li-check" aria-label="otevřeno">✓</span> ' : '';
+    let actions;
+    if (ch) {
+        actions = '<span class="li-badge li-badge-sit">' + escapeHtml(LI_JINE_KANALY[ch].label) + '</span>' +
+            (g ? '<a class="btn btn-ghost li-btn li-btn-small" href="' + escapeHtml(g) + '" target="_blank" rel="noopener noreferrer">Google</a>' : '') +
+            '<button class="btn btn-ghost li-btn li-btn-small" onclick="liBatchSetChannel(\'' + h + '\', \'\')">Vrátit</button>';
+    } else {
+        actions = '<a class="btn ' + (opened ? 'btn-ghost' : 'btn-secondary') + ' li-btn li-btn-small" href="' + escapeHtml(liPeopleSearchUrl(fake) || '#') + '" target="_blank" rel="noopener noreferrer"' + mark + '>' + (opened ? 'Otevřít znovu' : 'Hledat na LinkedInu') + '</a>' +
+            (g ? '<a class="btn btn-ghost li-btn li-btn-small" href="' + escapeHtml(g) + '" target="_blank" rel="noopener noreferrer"' + mark + '>Google</a>' : '') +
+            Object.keys(LI_JINE_KANALY).map(function (k) {
+                return '<button class="btn btn-ghost li-btn li-btn-small" onclick="liBatchSetChannel(\'' + h + '\', \'' + k + '\')">' + LI_JINE_KANALY[k].tlacitko + '</button>';
+            }).join('') +
+            '<button class="btn btn-ghost li-btn li-btn-small" onclick="liBatchNotFound(\'' + h + '\')">Nenašel</button>';
+    }
+    return '<div class="li-batch-row' + (opened || ch ? ' li-batch-opened' : '') + '">' +
+        '<div class="li-batch-who">' + status +
             '<span class="li-name">' + escapeHtml(r.kontaktniOsoba) + '</span> <span class="li-batch-sub">· ' + escapeHtml([r.role, r.firma].filter(Boolean).join(', ')) + '</span>' +
-            (r.sit ? ' <span class="li-badge li-badge-sit">' + escapeHtml(r.sit) + '</span>' : '') +
+            (r.sit ? ' <span class="li-badge li-badge-sit">' + escapeHtml(r.sit) + '</span>' : '') + lateBadge +
             (r.maybeKnown ? ' <button class="li-badge li-badge-warn li-badge-btn" onclick="openEditContact(\'' + escapeAttr(r.maybeKnown.id) + '\')" title="Otevřít kontakt se stejným jménem">možná už v databázi – ověřte</button>' : '') +
             (r.poznamka ? ' <span class="li-badge" title="' + escapeHtml(r.poznamka) + '">' + escapeHtml(String(r.poznamka).slice(0, 60)) + '</span>' : '') + '</div>' +
-        '<div class="li-actions">' +
-            '<a class="btn ' + (opened ? 'btn-ghost' : 'btn-secondary') + ' li-btn li-btn-small" href="' + escapeHtml(liPeopleSearchUrl(fake) || '#') + '" target="_blank" rel="noopener noreferrer"' + mark + '>' + (opened ? 'Otevřít znovu' : 'Hledat na LinkedInu') + '</a>' +
-            (g ? '<a class="btn btn-ghost li-btn li-btn-small" href="' + escapeHtml(g) + '" target="_blank" rel="noopener noreferrer"' + mark + '>Google</a>' : '') +
-            '<button class="btn btn-ghost li-btn li-btn-small" onclick="liBatchNotFound(\'' + h + '\')">Nenašel</button>' +
-        '</div></div>';
+        '<div class="li-actions">' + actions + '</div></div>';
 }
 
-function liBatchBlockHtml(b, today, isMain) {
-    const isToday = b.den === today;
-    const d = escapeAttr(b.den);
-    const opened = b.rows.filter(liIsOpened).length;
-    const busy = !!state.liBatchBusy[b.den];
+function liQueueHtml(qd, today) {
+    const busy = !!state.liBatchWriting;
     const room = liInviteRoom();
-    const title = (isToday ? 'Dnes pozvat' : 'Nedokončená dávka') + ' – ' + liDayLabel(b.den);
+    const toWrite = qd.linkedin + qd.jinak;
     const notes = [];
-    if (b.skippedKnown) notes.push(liSkipped(b.skippedKnown) + ' už v databázi');
-    if (b.skippedNeo) notes.push(liSkipped(b.skippedNeo) + ' s „neoslovovat“');
-    const hidden = b.hidden.length
-        ? '<details class="li-hidden-list"><summary>Nenašel: ' + b.hidden.length + '</summary>' + b.hidden.map(function (r) {
+    if (qd.known) notes.push(liSkipped(qd.known) + ' už v databázi');
+    if (qd.neo) notes.push(liSkipped(qd.neo) + ' s „neoslovovat“');
+    const hidden = qd.hidden.length
+        ? '<details class="li-hidden-list"><summary>Nenašel: ' + qd.hidden.length + '</summary>' + qd.hidden.map(function (r) {
             return '<div class="li-today-row">' + escapeHtml(r.kontaktniOsoba) + ' <span class="li-muted">· ' + escapeHtml(r.firma) + '</span> <button class="btn btn-ghost li-btn li-btn-small" onclick="liBatchUndoNotFound(\'' + escapeAttr(r.h) + '\')">Vrátit</button></div>';
         }).join('') + '</details>' : '';
-    if (!isMain) {
-        return '<div class="li-section li-day li-day-old"><div class="li-section-head"><h4>' + escapeHtml(title) + ' <span class="li-count">' + b.rows.length + '</span></h4>' +
-            '<span class="li-actions">' +
-                (opened ? '<button class="btn btn-secondary li-btn li-btn-small"' + (busy ? ' disabled' : '') + ' onclick="liBatchDone(\'' + d + '\')">' + (busy ? 'Zapisuji…' : 'Zapsat otevřené (' + opened + ')') + '</button>' : '') +
-                '<button class="btn btn-ghost li-btn li-btn-small" onclick="liBatchSkip(\'' + d + '\')">Přeskočit</button>' +
-            '</span></div>' +
-            '<div class="li-hint">' + (opened ? 'Otevřel jste tu ' + liPeopleAcc(opened) + ' – zapište je, ať se pozvánky neztratí. ' : '') + 'Dnes stihnete jednu dávku – starší přeskočte.</div></div>';
-    }
-    return '<div class="li-section li-day' + (isToday ? ' li-day-today' : ' li-day-old') + '">' +
-        '<div class="li-section-head"><h4>' + escapeHtml(title) + ' <span class="li-count">' + b.rows.length + '</span></h4>' +
-            '<span class="li-muted" style="font-size:12.5px;">otevřeno ' + opened + ' z ' + b.rows.length + '</span></div>' +
-        '<div class="li-hint" style="margin-bottom:8px;">U každého klikněte „Hledat na LinkedInu“ a pozvěte bez poznámky. Koho nenajdete, označte „Nenašel“. Dnes můžete pozvat ještě asi ' + liPeopleAcc(room) + ' (LinkedIn pouští zhruba ' + LI_TYDENNI_STROP + ' pozvánek za 7 dní). Když práci přerušíte, nic se neztratí – stačí pokračovat později.' +
+    const later = qd.more ? '<div class="li-hint" style="margin-top:8px;">Na další dny ' + liWaits(qd.more) + '.</div>' : '';
+    const list = qd.rows.length
+        ? '<div class="li-batch">' + qd.rows.map(function (r) { return liBatchRowHtml(r, today); }).join('') + '</div>'
+        : '<div class="li-empty">Dnešních ' + LI_DENNI_LIMIT + ' lidí je vyřízeno.</div>';
+    return '<div class="li-section li-day li-day-today">' +
+        '<div class="li-section-head"><h4>Dnes oslovit – ' + escapeHtml(liDayLabel(today)) + ' <span class="li-count">' + qd.rows.length + '</span></h4>' +
+            '<span class="li-muted" style="font-size:12.5px;">dnes vyřízeno ' + qd.handledToday + ' z ' + LI_DENNI_LIMIT + '</span></div>' +
+        '<div class="li-hint" style="margin-bottom:8px;">„Hledat na LinkedInu“ a pozvat bez poznámky. Kdo LinkedIn nemá, tomu napište e-mailem nebo přes formulář na webu a klikněte „Poslal e-mail“ nebo „Napsal přes web“. Koho nenajdete vůbec, označte „Nenašel“. Průběžně nebo na konci klikněte „Zapsat“. Kdo se dnes nestihne, přesune se na další den. Na LinkedInu dnes ještě asi ' + liPeopleAcc(room) + ' (zhruba ' + LI_TYDENNI_STROP + ' pozvánek za 7 dní).' +
             (notes.length ? ' (' + notes.join(', ') + ')' : '') + '</div>' +
-        (b.rows.length ? '<div class="li-batch">' + b.rows.map(liBatchRowHtml).join('') + '</div>' : '<div class="li-empty">V dávce nikdo nezbyl.</div>') +
-        hidden +
-        '<div class="li-actions" style="margin-top:10px;">' +
-            '<button class="btn btn-primary li-btn"' + (busy ? ' disabled' : '') + ' onclick="liBatchDone(\'' + d + '\')">' +
-                (busy ? 'Zapisuji…' : opened ? 'Hotovo – zapsat pozvané (' + opened + ')' : 'Uzavřít dávku') + '</button>' +
-            (!isToday ? '<button class="btn btn-ghost li-btn" onclick="liBatchSkip(\'' + d + '\')">Přeskočit dávku</button>' : '') +
-        '</div></div>';
+        list + later + hidden +
+        (toWrite ? '<div class="li-actions" style="margin-top:10px;">' +
+            '<button class="btn btn-primary li-btn"' + (busy ? ' disabled' : '') + ' onclick="liBatchDone()">' +
+                (busy ? 'Zapisuji…' : 'Zapsat (' + toWrite + ')') + '</button>' +
+            '<span class="li-muted" style="font-size:12.5px;">' + [qd.linkedin ? 'LinkedIn ' + qd.linkedin : '', qd.jinak ? 'e-mail / web ' + qd.jinak : ''].filter(Boolean).join(' · ') + '</span>' +
+        '</div>' : '') +
+    '</div>';
 }
 
 function liBatchesHtml(today) {
     const id = liBatchSourceId();
     const box = function (inner, extraHead) {
-        return '<div class="li-section li-day li-day-today"><div class="li-section-head"><h4>Dnes pozvat – ' + escapeHtml(liDayLabel(today)) + '</h4>' + (extraHead || '') + '</div>' + inner + '</div>';
+        return '<div class="li-section li-day li-day-today"><div class="li-section-head"><h4>Dnes oslovit – ' + escapeHtml(liDayLabel(today)) + '</h4>' + (extraHead || '') + '</div>' + inner + '</div>';
     };
     if (!id) return box('<div class="li-empty">Dávky zatím nejsou připravené – řekněte Claudovi.</div>');
     if (state.liBatchState === 'loading' || state.liBatchState === '') return box('<div class="li-empty">Načítám dávky…</div>');
@@ -9138,21 +9238,19 @@ function liBatchesHtml(today) {
         return box('<div class="li-empty li-red">Tabulku s dávkami se nepodařilo načíst: ' + escapeHtml(state.liBatchError) + '</div>',
             '<button class="btn btn-secondary li-btn li-btn-small" onclick="liLoadBatches(true)">Načíst znovu</button>');
     }
-    const pending = liPendingBatches(today);
-    const main = pending.find(function (b) { return b.den === today; }) || null;
-    const others = pending.filter(function (b) { return b !== main; });
+    const qd = liQueue(today);
     const warn = state.liBatchWarn ? '<div class="li-empty li-red" style="margin-top:6px;">' + escapeHtml(state.liBatchWarn) + '</div>' : '';
     let html = '';
-    if (main) html = liBatchBlockHtml(main, today, true);
+    if (qd.rows.length || qd.more || qd.hidden.length) html = liQueueHtml(qd, today);
     else {
         const future = (state.liBatches || []).map(function (r) { return r.den; }).filter(function (d) { return d > today; }).sort();
-        const doneToday = liBatchDays()[today] === 'li-davka-hotova';
+        const doneToday = qd.handledToday > 0 || liBatchDays()[today] === 'li-davka-hotova';
         const isDec = today.slice(5, 7) === '12';
-        html = box('<div class="li-empty">' + (doneToday ? 'Dnešní dávka je hotová.' : 'Na dnešek dávka není.') +
+        html = box('<div class="li-empty">' + (doneToday ? 'Na dnešek je hotovo.' : 'Na dnešek nikdo nečeká.') +
             (future.length ? ' Další dávka: ' + escapeHtml(liDayLabel(future[0])) + '.' : isDec ? ' Další dávky připraví Claude v lednu.' : ' Další dávky zatím nejsou – řekněte Claudovi.') + '</div>',
             '<button class="btn btn-ghost li-btn li-btn-small" onclick="liLoadBatches(true)">Načíst znovu</button>');
     }
-    return html + warn + others.map(function (b) { return liBatchBlockHtml(b, today, false); }).join('');
+    return html + warn;
 }
 
 function liBatchFind(h) { return (state.liBatches || []).find(function (x) { return x.h === h; }); }
@@ -9179,71 +9277,130 @@ async function liBatchUndoNotFound(h) {
     await logActivity('', 'li-nenasel-zpet', h);
 }
 
-async function liBatchDone(day) {
-    if (state.liBatchBusy[day]) return;
+// E-mail / web u řádku dávky (značka v Activity, bez jmen); prázdný kód = vrátit
+async function liBatchSetChannel(h, code) {
+    if (state.liBatchWriting || !liBatchFind(h)) return;
+    if (code && !LI_JINE_KANALY[code]) return;
+    state.liChannel[h] = code;
+    renderLinkedInToday();
+    await logActivity('', 'li-kanal', h + '|' + code);
+}
+
+// Zapíše vyřízené řádky (pozvaní na LinkedInu i oslovení e-mailem / přes web). Nevyřízení zůstávají
+// v dávce na další dny; den se uzavře (a smaže z tabulek dávek), až v něm nikdo nečeká.
+async function liBatchDone() {
+    if (state.liBatchWriting) return;
     if (state.migrationIssue) { toast('error', state.migrationIssue); return; }
     if (refuseIfMisaligned('Zápis dávky')) return;
     const today = liToday();
-    let b = liPendingBatches(today).find(function (x) { return x.den === day; });
-    if (!b) return;
-    const pre = b.rows.filter(liIsOpened).length;
+    let qd = liQueue(today);
+    if (!qd.linkedin && !qd.jinak) return;
     const s0 = computeLiStats(state.contacts);
     const warn = [];
-    if (s0.last7 + pre > LI_TYDENNI_STROP) warn.push('Za 7 dní by to bylo ' + (s0.last7 + pre) + ' pozvánek (LinkedIn pouští zhruba ' + LI_TYDENNI_STROP + ').');
-    if (liInvitedToday(today) + pre > LI_DENNI_LIMIT) warn.push('Dnes by to bylo ' + (liInvitedToday(today) + pre) + ' pozvánek – víc než jedna dávka.');
-    const rest0 = b.rows.length - pre;
-    const msg = pre
-        ? 'Zapsat ' + liPeopleAcc(pre) + ', u kterých jste klikl „Hledat“, jako pozvané?' + (rest0 ? '\n\n' + liWontWrite(rest0) : '')
-        : 'V dávce jste u nikoho neklikl „Hledat“. Uzavřít ji bez zápisu?';
+    if (s0.last7 + qd.linkedin > LI_TYDENNI_STROP) warn.push('Za 7 dní by to bylo ' + (s0.last7 + qd.linkedin) + ' pozvánek (LinkedIn pouští zhruba ' + LI_TYDENNI_STROP + ').');
+    if (liInvitedToday(today) + qd.linkedin > LI_DENNI_LIMIT) warn.push('Dnes by to bylo ' + (liInvitedToday(today) + qd.linkedin) + ' pozvánek na LinkedInu – víc než jedna dávka.');
+    const lines = [];
+    if (qd.linkedin) lines.push('– pozvaní na LinkedInu: ' + qd.linkedin);
+    if (qd.jinak) lines.push('– oslovení e-mailem nebo přes web: ' + qd.jinak);
+    const msg = 'Zapsat do databáze:\n' + lines.join('\n') + (qd.waiting || qd.more ? '\n\nOstatní zůstanou v dávce na další dny.' : '');
     if (!confirm(msg + (warn.length ? '\n\nPozor: ' + warn.join(' ') : ''))) return;
-    state.liBatchBusy[day] = true;
+    state.liBatchWriting = true;
     renderLinkedInToday();
     try {
-        // Načíst čerstvá data (jiné zařízení mohlo dávku mezitím uzavřít nebo lidi zapsat)
+        // Načíst čerstvá data (jiné zařízení mohlo lidi mezitím zapsat – zapsaní z fronty zmizí)
         await syncFromSheet();
-        b = liPendingBatches(today).find(function (x) { return x.den === day; });
-        if (!b) { toast('info', 'Dávku už mezitím někdo uzavřel – nic se nezapsalo znovu.'); return; }
-        const rows = b.rows.filter(liIsOpened);
+        qd = liQueue(today);
+        const rows = qd.rows.filter(liIsHandled);
+        if (!rows.length) { toast('info', 'Nic k zápisu – lidé už jsou v databázi (nejspíš z jiného zařízení).'); return; }
         const now = new Date().toISOString();
+        let nLi = 0, nJ = 0;
         const recs = rows.map(function (r) {
-            const inv = liOpenedDate(r) || today;
-            return {
+            const c = {
                 id: generateId(), createdAt: now, updatedAt: now, typ: 'Zprostředkovatel',
                 segment: isLiSegment(r.segment) ? r.segment : (LI_SEGMENT_PREFIX + 'menší sítě'), priorita: r.priorita || '1', stav: 'Osloven',
                 kontaktniOsoba: r.kontaktniOsoba, role: r.role, firma: r.firma, ico: r.ico, web: r.web, sit: r.sit, poznamka: r.poznamka,
-                li_pozvanka_kdy: inv, osloven_kdy: inv, osloven_kanal: 'LinkedIn', linkedinStav: 'Posláno',
+                li_otisk: r.fp,   // dávka člověka pozná i po úpravě jména nebo firmy
                 spolehlivost: 'claude-kandidat', zdrojUrl: 'Claude – dávka ' + r.den
             };
+            const ch = liRowChannel(r);
+            if (ch) {
+                nJ++;
+                c.osloven_kdy = liRowChannelDate(r);
+                c.osloven_kanal = LI_JINE_KANALY[ch].zapis;
+            } else {
+                nLi++;
+                const inv = liOpenedDate(r) || today;
+                c.li_pozvanka_kdy = inv; c.osloven_kdy = inv; c.osloven_kanal = 'LinkedIn'; c.linkedinStav = 'Posláno';
+            }
+            return c;
         });
-        if (recs.length) {
-            await sheetsAppend(SHEET_TABS.contacts, recs.map(contactToRow));
-            recs.forEach(function (c) { state.contacts.push(c); });
+        await sheetsAppend(SHEET_TABS.contacts, recs.map(contactToRow));
+        recs.forEach(function (c) { state.contacts.push(c); });
+        // Uzavřít dny, ve kterých už nikdo nečeká
+        const written = {};
+        rows.forEach(function (r) { written[r.h] = true; });
+        for (const b of qd.days) {
+            const age = liDaysSince(b.den, today);
+            const left = b.rows.some(function (r) { return !written[r.h] && (liIsHandled(r) || age <= LI_DAVKA_MAX_STARI); });
+            if (!left) await logActivity('', 'li-davka-hotova', b.den);
         }
-        await logActivity('', 'li-davka-hotova', day);
-        toast('success', recs.length ? 'Zapsáno: ' + liPeopleAcc(recs.length) + '. Zítra je najdete v „Pozvaní – kdo přijal“.' : 'Dávka uzavřena.');
+        toast('success', 'Zapsáno' + (nLi ? ' – na LinkedInu ' + nLi + ' (přijetí zkontrolujte zítra v „Pozvaní – kdo přijal“)' : '') +
+            (nJ ? (nLi ? ',' : ' –') + ' e-mailem / přes web ' + nJ + ' (najdete je v „Oslovení e-mailem / přes web“)' : '') + '.', 9000);
         liCleanupBatchSheet();
     } catch (err) {
         console.error(err);
         toast('error', 'Zápis dávky selhal: ' + err.message + ' Než to zkusíte znovu, obnovte stránku, ať se nikdo nezapíše dvakrát.', 14000);
     } finally {
-        delete state.liBatchBusy[day];
+        state.liBatchWriting = false;
         renderLinkedInToday();
         renderContacts();
     }
 }
 
-async function liBatchSkip(day) {
-    const b = liPendingBatches(liToday()).find(function (x) { return x.den === day; });
-    const opened = b ? b.rows.filter(liIsOpened).length : 0;
-    if (!confirm('Přeskočit dávku ' + liDayLabel(day) + '? Nikdo z ní se nezapíše.' + (opened ? '\n\nPozor: otevřel jste v ní ' + liPeopleAcc(opened) + ' – pokud jste je pozval, dejte místo toho „Zapsat otevřené“.' : ''))) return;
-    await logActivity('', 'li-davka-preskocena', day);
-    renderLinkedInToday();
-    liCleanupBatchSheet();
-}
-
 // Přijal (bez představení – to je zablokované do IČO): jen zapíše přijetí
 async function liMarkAccepted(id) {
     await liPatchWithUndo(id, { linkedinStav: 'Přijato', li_prijato_kdy: liToday() }, 'prijal');
+}
+
+// Zapsaný jako pozvaný na LinkedInu, ale ve skutečnosti oslovený e-mailem / přes web → přesunout (jde vrátit)
+async function liMoveChannel(id, code) {
+    const c = state.contacts.find(function (x) { return x.id === id; });
+    const k = LI_JINE_KANALY[code];
+    if (!c || !k) return;
+    await liPatchWithUndo(id, { li_pozvanka_kdy: '', linkedinStav: '', osloven_kanal: k.zapis, osloven_kdy: c.osloven_kdy || c.li_pozvanka_kdy || liToday() }, 'jinak');
+}
+
+async function liOtherReplied(id) {
+    await liPatchWithUndo(id, { stav: 'Reaguje' }, 'reaguje');
+}
+
+// Lidé z dávek oslovení e-mailem nebo přes web – odpovědi chodí do e-mailu, tady jen evidence
+function liOtherChannelHtml(today) {
+    const list = state.contacts.filter(function (c) { return !isErasedRecord(c) && liIsOtherChannel(c); })
+        .sort(function (a, b) { return String(b.osloven_kdy || '').localeCompare(String(a.osloven_kdy || '')); });
+    const expanded = !!state.liExpand.jinak;
+    const shown = expanded ? list : list.slice(0, LI_KARET_NA_SEKCI);
+    const toggle = list.length > LI_KARET_NA_SEKCI
+        ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="state.liExpand.jinak=' + (expanded ? 'false' : 'true') + ';renderLinkedInToday()">' + (expanded ? 'Sbalit' : 'Zobrazit všech ' + list.length) + '</button>' : '';
+    const rows = shown.map(function (c) {
+        const id = escapeAttr(c.id);
+        const u = state.liUndo[c.id] && state.liUndo[c.id].day === today ? state.liUndo[c.id] : null;
+        const kanal = /^web/i.test(String(c.osloven_kanal || '')) ? 'web' : 'e-mail';
+        const neo = String(c.neoslovovat || '').trim();
+        const age = liDaysSince(c.osloven_kdy, today);
+        const soon = !liIsProtected(c) && !neo && age !== null && age >= 14 ? ' <span class="li-badge li-badge-warn">výmaz za ' + Math.max(0, LI_VYMAZ_PO_DNECH - age) + ' d</span>' : '';
+        const act = liIsProtected(c) ? '<span class="li-badge li-badge-sit">' + escapeHtml(c.stav) + '</span>'
+            : neo ? '<span class="li-badge li-badge-warn">neoslovovat</span>'
+            : '<button class="btn btn-ghost li-btn li-btn-small" onclick="liOtherReplied(\'' + id + '\')">Odpověděl</button>' +
+              '<button class="btn btn-ghost li-btn li-btn-small" onclick="liNegative(\'' + id + '\', \'nemá zájem\')">Nemá zájem</button>';
+        return '<div class="li-today-row">' + escapeHtml(c.kontaktniOsoba || '(bez jména)') +
+            ' <span class="li-muted">· ' + escapeHtml([c.firma, kanal + ' ' + formatDate(c.osloven_kdy)].filter(Boolean).join(' · ')) + '</span>' + soon + ' ' + act +
+            (u && (u.code === 'jinak' || u.code === 'reaguje') ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + id + '\')">Vrátit</button>' : '') +
+            '<button class="li-open" onclick="openEditContact(\'' + id + '\')" title="Otevřít detail" aria-label="Otevřít detail ' + escapeHtml(c.kontaktniOsoba || '') + '">⋯</button></div>';
+    }).join('');
+    return '<div class="li-section"><div class="li-section-head"><h4>Oslovení e-mailem / přes web <span class="li-count">' + list.length + '</span></h4>' + toggle + '</div>' +
+        '<div class="li-hint" style="margin-bottom:6px;">Odpovědi přijdou e-mailem. Kdo odpoví, tomu klikněte „Odpověděl“ – kontakt pak zůstane natrvalo. Kdo do ' + LI_VYMAZ_PO_DNECH + ' dní neodpoví, toho aplikace navrhne k výmazu (stejně jako u LinkedInu).</div>' +
+        (list.length ? '<div class="li-today">' + rows + '</div>' : '<div class="li-empty">Zatím nikdo. U lidí bez LinkedInu klikněte v dávce „Poslal e-mail“ nebo „Napsal přes web“.</div>') + '</div>';
 }
 
 // Pozvaní seskupení po dnech pozvánky: rozbalený nejnovější den před dneškem, dnešní pozvaní sbalení
@@ -9263,7 +9420,7 @@ function liInvitedGroupsHtml(q, today) {
         '<div class="li-hint" style="margin-bottom:8px;">' + (gate
             ? 'Na LinkedInu se podívejte, kdo pozvánku přijal (Moje síť nebo oznámení), a klikněte u něj „Přijal“. Představení pošlete, jakmile ho aplikace odblokuje (IČO a zásady). Kdo do ' + LI_VYMAZ_PO_DNECH + ' dní od pozvánky představení nedostane, toho aplikace navrhne k výmazu.'
             : 'Na LinkedInu se podívejte, kdo pozvánku přijal (Moje síť nebo oznámení), a jen u něj klikněte „Poslat představení“. Ostatní nechte – zůstanou tu až ' + LI_VYMAZ_PO_DNECH + ' dní.') + '</div>';
-    if (!days.length) return head + '<div class="li-empty">Zatím nikdo. Po prvním „Hotovo“ u dávky se tu lidé objeví den po dni.</div></div>';
+    if (!days.length) return head + '<div class="li-empty">Zatím nikdo. Po prvním „Zapsat“ u dávky se tu lidé objeví den po dni.</div></div>';
     return head + days.map(function (d) {
         const rows = groups[d];
         const key = 'g:' + d;
@@ -9370,6 +9527,7 @@ function renderLinkedInToday() {
     host.innerHTML =
         liBatchesHtml(today) +
         liInvitedGroupsHtml(q, today) +
+        liOtherChannelHtml(today) +
         liTodayListHtml(q.dnes) +
         liSectionHtml('odpoved', 'Čekají na odpověď', q.odpoved, 'odpoved', 'Žádné představení nečeká na odpověď.') +
         liSectionHtml('odpovedel', 'Mají zájem – rozhovor běží (60 dní)', q.odpovedel, 'odpovedel', 'Zatím nikdo.', { collapsed: true }) +
