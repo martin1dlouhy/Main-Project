@@ -8303,7 +8303,7 @@ resetForm = function() {
 const SPC_ICO = '30147778';         // Spolumajitelé Private Credit a.s., zapsána 13. 10. 2026
 const SPC_OR = 'oddíl B, vložka 31031';   // obchodní rejstřík vedený Městským soudem v Praze
 const ZASADY_URL = 'privatecredit.spolumajitele.cz/ochrana-osobnich-udaju';
-const ZASADY_LIVE = false;          // true až budou upravené zásady na živém webu (podmínka zprávy A)
+const ZASADY_LIVE = true;           // zásady jsou na živém webu (od 14. 10. 2026); odstavec o oslovování přes LinkedIn doplní právník
 const PARTNER_EMAIL = 'privatecredit@spolumajitele.cz';
 const BLOKOVANE_SITE = [];          // sítě, jejichž lidi neoslovovat (mění Claude na Martinův pokyn)
 const LI_TYDENNI_STROP = 100;       // neoficiální limit LinkedInu ~100 pozvánek / 7 dní
@@ -8432,13 +8432,22 @@ const LI_VARIANTY = {
     majitel:  { label: 'Majitel',  kym: 'vedením poradenských firem', otazka: 'Jak u vás řešíte firemní klienty, kteří potřebují financování zajištěné nemovitostí?', vazba: 'majitel sítě' },
     realitka: { label: 'Realitka', kym: 'realitními makléři', otazka: 'Řeší vaši klienti při koupi komerční nemovitosti financování přes firmu?', vazba: 'realitka' }
 };
-function liTextA(salutation, variant) {
+// Zdroj údajů (čl. 14 GDPR) a kód zdroje do pole sablona: dávky od Clauda = obchodní rejstřík,
+// jiní kandidáti od Clauda = veřejné zdroje, ostatní = LinkedIn; spárovaný profil se uvede navíc
+function liIntroSource(c) {
+    const profil = c && liRealKey(c) ? ' a odkaz na váš profil z LinkedInu' : '';
+    if (c && liIsBatchRecord(c)) return { text: 'vaše jméno, funkci a firmu mám z obchodního rejstříku' + profil, code: '-or' };
+    if (c && String(c.spolehlivost || '').toLowerCase() === 'claude-kandidat') return { text: 'vaše jméno, pozici a firmu mám z veřejných zdrojů (web vaší firmy nebo obchodní rejstřík)' + profil, code: '-vz' };
+    return { text: 'vaše jméno, pozici, firmu a odkaz na profil mám z LinkedInu', code: '' };
+}
+function liTextA(salutation, variant, c) {
     const v = LI_VARIANTY[variant] || LI_VARIANTY.poradce;
+    const zdroj = liIntroSource(c).text;
     return salutation + '\n' +
         'děkuji za přijetí pozvánky. Jsem Martin Dlouhý ze společnosti Spolumajitelé Private Credit a.s., věnuji se financování firem zajištěnému nemovitostmi a rád se seznamuji s ' + v.kym + '. ' + v.otazka + '\n\n' +
         'Martin Dlouhý\n' +
         'Spolumajitelé Private Credit a.s., Pařížská 68/9, 110 00 Praha 1, IČO ' + SPC_ICO + ', zapsaná v obchodním rejstříku vedeném Městským soudem v Praze, ' + SPC_OR + '\n\n' +
-        'Osobní údaje: vaše jméno, pozici, firmu a odkaz na profil mám z LinkedInu. Spolumajitelé Private Credit a.s. je jako správce eviduje z oprávněného zájmu kvůli možné spolupráci. Podrobnosti a vaše práva: ' + ZASADY_URL + '\n\n' +
+        'Osobní údaje: ' + zdroj + '. Spolumajitelé Private Credit a.s. je jako správce eviduje z oprávněného zájmu kvůli možné spolupráci. Podrobnosti a vaše práva: ' + ZASADY_URL + '\n\n' +
         'Proti tomuto zpracování můžete kdykoli vznést námitku. Stačí odepsat „ne“ nebo napsat na ' + PARTNER_EMAIL + '. Pak vám už nenapíšu a ponechám si jen záznam, abych vás znovu neoslovil.';
 }
 function liTextR() {
@@ -8503,7 +8512,8 @@ function computeLiQueues(contacts, today) {
         const inv = String(c.li_pozvanka_kdy || '').trim();
         const sp = String(c.spolehlivost || '').toLowerCase();
         if (isErasedRecord(c)) {
-            if (inv && liMonthsSince(inv, today) >= LI_KLIC_PO_MESICICH) q.otisky.push(c);
+            // Otisk po námitce nebo „nemá zájem“ zůstává: zpráva slibuje, že dotyčného už neoslovíme
+            if (inv && liMonthsSince(inv, today) >= LI_KLIC_PO_MESICICH && !liIsRefusal(c)) q.otisky.push(c);
             return;
         }
         // Kandidáti od Clauda (ještě nepozvaní — pozvánku eviduje až import exportu)
@@ -9579,7 +9589,7 @@ function liSendIntro(ev, id, variant) {
     const card = ev.currentTarget && ev.currentTarget.closest ? ev.currentTarget.closest('.li-card') : null;
     const salEl = card ? card.querySelector('.li-salut') : null;
     const sal = String(state.liSal[id] != null ? state.liSal[id] : (salEl ? salEl.value : liSalutation(c.kontaktniOsoba))).trim() || 'Dobrý den,';
-    const text = liTextA(sal, variant);
+    const text = liTextA(sal, variant, c);
     // Odkaz se otevře (výchozí chování), kopírování běží souběžně; zapisuje se až po úspěchu
     liCopy(text).then(function () {
         toast('success', 'Představení je ve schránce – vložte ho na LinkedInu a odešlete.');
@@ -9620,7 +9630,7 @@ function liRecordIntro(id, variant) {
     const c = state.contacts.find(function (x) { return x.id === id; });
     if (!c) return;
     const today = liToday();
-    const fields = { linkedinStav: 'Zpráva', li_zprava_kdy: today, sablona: 'A-' + variant + '-' + LI_SABLONA_VERZE };
+    const fields = { linkedinStav: 'Zpráva', li_zprava_kdy: today, sablona: 'A-' + variant + liIntroSource(c).code + '-' + LI_SABLONA_VERZE };
     if (!c.li_prijato_kdy) fields.li_prijato_kdy = today;
     const vz = (LI_VARIANTY[variant] || {}).vazba;
     if (vz && !c.vazba) fields.vazba = vz;
