@@ -165,9 +165,10 @@
         }
 
         /* Property Type Cards */
+        /* 9 typů = mřížka 3 × 3 (dřív auto-fit — při 4 sloupcích zbyla v posledním řádku 1 karta) */
         .property-type-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 25px;
             margin-bottom: 30px;
         }
@@ -213,34 +214,33 @@
             outline-offset: 2px;
         }
 
+        /* Ikony typů a účelů — line art jako zbytek webu (apps.html .app-mark: 32 × 32, tah 1.4, amber-warm) */
         .property-icon {
             width: 56px;
             height: 56px;
-            margin: 0 auto 20px;
+            margin: 0 auto 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 16px;
-            background: var(--accent-light);
+            color: var(--amber-warm);
+            transition: color 0.25s ease, transform 0.25s ease;
         }
 
+        .property-type-card:hover .property-icon,
         .property-type-card.selected .property-icon {
-            background: rgba(56, 189, 248, 0.25);
+            color: var(--amber);
+            transform: scale(1.04);
         }
 
         .property-icon svg {
-            width: 28px;
-            height: 28px;
-            stroke: var(--accent);
+            width: 42px;
+            height: 42px;
+            stroke: currentColor;
             fill: none;
-            stroke-width: 1.5;
-        }
-
-        /* Purpose cards používají filled Material Design ikony */
-        .purpose-card .property-icon svg {
-            fill: var(--accent);
-            stroke: none;
-            stroke-width: 0;
+            stroke-width: 1.4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.92;
         }
 
         .property-type-card h3 {
@@ -1058,6 +1058,11 @@
             .property-type-grid,
             .purpose-grid {
                 grid-template-columns: repeat(2, 1fr);
+            }
+
+            /* Lichý počet typů — poslední karta přes celou šířku, ať v mřížce nezůstane díra */
+            .property-type-grid > .property-type-card:last-child:nth-child(odd) {
+                grid-column: 1 / -1;
             }
         }
 
@@ -2179,59 +2184,75 @@
             <div class="property-type-grid">
                 <div class="property-type-card" onclick="selectPropertyType('land')" role="button" tabindex="0" aria-label="Vybrat typ: Pozemek" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('land');}">
                     <div class="property-icon">
-                        <svg viewBox="0 0 24 24"><path d="M2 22L12 2l10 20H2z" stroke-linejoin="round"/><path d="M7 22v-4h10v4" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 10v4" stroke-linecap="round"/></svg>
+                        <!-- Parcela s bodem na mapě -->
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M19.8 17H29l-6 8H3l6-8h3.2"/><path d="M16 21.5C13.6 18.3 11 14.4 11 9a5 5 0 0 1 10 0c0 5.4-2.6 9.3-5 12.5z"/><circle cx="16" cy="9" r="1.9"/></svg>
                     </div>
                     <h3>Pozemek</h3>
                     <p>Stavební parcela nebo developerský projekt</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('apartment')" role="button" tabindex="0" aria-label="Vybrat typ: Byt" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('apartment');}">
                     <div class="property-icon">
-                        <svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22V18h6v4"/><rect x="8" y="6" width="3" height="3" rx="0.5"/><rect x="13" y="6" width="3" height="3" rx="0.5"/><rect x="8" y="11" width="3" height="3" rx="0.5"/><rect x="13" y="11" width="3" height="3" rx="0.5"/></svg>
+                        <!-- Půdorys bytu se dveřmi -->
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="6" width="22" height="20" rx="1.5"/><path d="M13 6v20M13 17h6M23 17h4M23 17v-4M5 14h4"/><path d="M19 17a4 4 0 0 1 4-4"/></svg>
                     </div>
                     <h3>Byt</h3>
                     <p>Bytová jednotka</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('house')" role="button" tabindex="0" aria-label="Vybrat typ: Rodinný dům" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('house');}">
                     <div class="property-icon">
-                        <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><rect x="9" y="14" width="6" height="7" rx="0.5"/><path d="M9 6l3-2 3 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <!-- Dům se sedlovou střechou a komínem -->
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3.5 15.5 16 5l12.5 10.5"/><path d="M7 12.6V27h18V12.6"/><path d="M13.5 27v-6.5h5V27"/><path d="M21 9.2V5.5h2.5v5.8"/></svg>
                     </div>
                     <h3>Rodinný dům</h3>
                     <p>Samostatný dům s pozemkem</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('commercial')" role="button" tabindex="0" aria-label="Vybrat typ: Komerční objekt" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('commercial');}">
                     <div class="property-icon">
-                        <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="16" rx="2"/><path d="M6 6V4a2 2 0 012-2h8a2 2 0 012 2v2"/><path d="M2 12h20"/><path d="M10 12v2h4v-2"/></svg>
+                        <!-- Kancelářská budova s nižším křídlem -->
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3.5 27h25"/><path d="M6 27V6a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v21"/><path d="M18 13h7a1 1 0 0 1 1 1v13"/><path d="M9 9.5h6M9 13.5h6M9 17.5h6M9 21.5h6M21 17.5h2M21 21.5h2"/></svg>
                     </div>
                     <h3>Komerční objekt</h3>
                     <p>Kanceláře, sklady, retail</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('mixed_use')" role="button" tabindex="0" aria-label="Vybrat typ: Polyfunkční dům" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('mixed_use');}">
                     <div class="property-icon">
-                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 12h18"/><rect x="7" y="7" width="3" height="2" rx="0.5"/><rect x="14" y="7" width="3" height="2" rx="0.5"/><rect x="7" y="15" width="3" height="4" rx="0.5"/><rect x="14" y="15" width="3" height="2" rx="0.5"/></svg>
+                        <!-- Dům s obchodem v přízemí (markýza) -->
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3.5 27h25"/><path d="M6.5 27V7a1 1 0 0 1 1-1h17a1 1 0 0 1 1 1v20"/><path d="M10 10h2.5M14.75 10h2.5M19.5 10h2.5M10 14h2.5M14.75 14h2.5M19.5 14h2.5"/><path d="M5.5 17.5h21v2a2.1 2.1 0 0 1-4.2 0a2.1 2.1 0 0 1-4.2 0a2.1 2.1 0 0 1-4.2 0a2.1 2.1 0 0 1-4.2 0a2.1 2.1 0 0 1-4.2 0z"/><path d="M13.5 27v-4h5v4"/></svg>
                     </div>
                     <h3>Polyfunkční dům</h3>
                     <p>Bydlení + komerční prostor</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('recreation')" role="button" tabindex="0" aria-label="Vybrat typ: Rekreační objekt" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('recreation');}">
                     <div class="property-icon">
-                        <svg viewBox="0 0 24 24"><path d="M8 21V11l-5 4V21h5z"/><path d="M8 11l8-8 8 8v10H8z"/><rect x="13" y="15" width="4" height="6" rx="0.5"/><circle cx="15" cy="10" r="1.5" fill="var(--accent)" stroke="none"/></svg>
+                        <!-- Chata (A-frame) a smrk -->
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2.5 27h27"/><path d="M3.5 27 12 9.5 20.5 27"/><circle cx="12" cy="16.5" r="1.5"/><path d="M10.25 27v-4.5h3.5V27"/><path d="M25 9.5 21.6 15h1.7l-2.7 6h8.8l-2.7-6h1.7z"/><path d="M25 21v6"/></svg>
                     </div>
                     <h3>Rekreační objekt</h3>
                     <p>Chata, chalupa, rekreační dům</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('apartment_building')" role="button" tabindex="0" aria-label="Vybrat typ: Bytový dům" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('apartment_building');}">
                     <div class="property-icon">
-                        <svg viewBox="0 0 24 24"><rect x="3" y="2" width="18" height="20" rx="2"/><rect x="6" y="5" width="3" height="2.5" rx="0.5"/><rect x="10.5" y="5" width="3" height="2.5" rx="0.5"/><rect x="15" y="5" width="3" height="2.5" rx="0.5"/><rect x="6" y="9.5" width="3" height="2.5" rx="0.5"/><rect x="10.5" y="9.5" width="3" height="2.5" rx="0.5"/><rect x="15" y="9.5" width="3" height="2.5" rx="0.5"/><rect x="6" y="14" width="3" height="2.5" rx="0.5"/><rect x="10.5" y="14" width="3" height="2.5" rx="0.5"/><rect x="15" y="14" width="3" height="2.5" rx="0.5"/><rect x="9.5" y="18.5" width="5" height="3.5" rx="0.5"/></svg>
+                        <!-- Činžovní dům s okny ve třech patrech -->
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3.5 27h25"/><path d="M6.5 27V6a1 1 0 0 1 1-1h17a1 1 0 0 1 1 1v21"/><path d="M9.5 8.5h3v3h-3zM14.5 8.5h3v3h-3zM19.5 8.5h3v3h-3zM9.5 13.5h3v3h-3zM14.5 13.5h3v3h-3zM19.5 13.5h3v3h-3z"/><path d="M13.5 27v-6h5v6"/></svg>
                     </div>
                     <h3>Bytový dům</h3>
                     <p>Celý bytový dům jako investice</p>
                 </div>
                 <div class="property-type-card" onclick="selectPropertyType('industrial')" role="button" tabindex="0" aria-label="Vybrat typ: Průmyslový objekt" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('industrial');}">
                     <div class="property-icon">
-                        <svg viewBox="0 0 24 24"><path d="M2 20V10l5-3v5l5-3v5l5-3v6H2z"/><rect x="19" y="4" width="3" height="16" rx="0.5"/><circle cx="20.5" cy="5.5" r="1" fill="var(--accent)" stroke="none"/><path d="M19 8h3" stroke-linecap="round"/><path d="M19 12h3" stroke-linecap="round"/></svg>
+                        <!-- Hala se šedovou střechou a komínem -->
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2.5 27h27"/><path d="M3.5 27V16l6-4v4l6-4v4l6-4v15"/><path d="M21.5 27V6h4v21M21.5 9.5h4"/><path d="M7 27v-5h5v5M15 22h3"/></svg>
                     </div>
                     <h3>Průmyslový objekt</h3>
                     <p>Výrobní haly, logistické areály</p>
+                </div>
+                <div class="property-type-card" onclick="selectPropertyType('under_construction')" role="button" tabindex="0" aria-label="Vybrat typ: Rozestavěný projekt" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('under_construction');}">
+                    <div class="property-icon">
+                        <!-- Jeřáb nad rozestavěnou konstrukcí -->
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2.5 27h27"/><path d="M8 27V4.5M3.5 8.5H28M3.5 8.5 8 4.5l14 4"/><path d="M8 8.5h3v3H8"/><path d="M24 8.5V15a1.5 1.5 0 0 1-3 0"/><path d="M13 27v-8.5M20 27v-8.5M27 27v-8.5M13 18.5h14M13 23h14"/></svg>
+                    </div>
+                    <h3>Rozestavěný projekt</h3>
+                    <p>Nedokončené domy a stavby</p>
                 </div>
             </div>
 
@@ -2283,7 +2304,7 @@
                     <div class="property-type-card purpose-card" onclick="selectLoanPurpose('general')" role="button" tabindex="0" aria-label="Vybrat účel: Bezúčelový" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectLoanPurpose('general');}">
                         <div class="property-icon">
                             <!-- Štít s fajfkou — standardní ocenění / bezpečnost -->
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4 26 7.5V15c0 6-4.2 10.5-10 13-5.8-2.5-10-7-10-13V7.5z"/><path d="m11.5 15.8 3.1 3.1 5.9-5.9"/></svg>
                         </div>
                         <h3>Bezúčelový</h3>
                         <p>Standardní ocenění bez speciálních podmínek</p>
@@ -2291,7 +2312,7 @@
                     <div class="property-type-card purpose-card" onclick="selectLoanPurpose('refinancing')" role="button" tabindex="0" aria-label="Vybrat účel: Refinancování" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectLoanPurpose('refinancing');}">
                         <div class="property-icon">
                             <!-- Cyklické šipky — refinancování / obměna dluhu -->
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6.55 15A9.5 9.5 0 0 1 22.72 9.28"/><path d="M18.72 9.28h4v-4"/><path d="M25.45 17A9.5 9.5 0 0 1 9.28 22.72"/><path d="M13.28 22.72h-4v4"/></svg>
                         </div>
                         <h3>Refinancování</h3>
                         <p>Vyplacení stávajícího věřitele, nové financování</p>
@@ -2299,7 +2320,7 @@
                     <div class="property-type-card purpose-card" onclick="selectLoanPurpose('acquisition')" role="button" tabindex="0" aria-label="Vybrat účel: Akvizice" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectLoanPurpose('acquisition');}">
                         <div class="property-icon">
                             <!-- Klíč — akvizice / pořízení nemovitosti -->
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+                            <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="10" cy="16" r="5.5"/><circle cx="10" cy="16" r="1.6"/><path d="M15.5 16H28M23.5 16v3.5M27.5 16v4.5"/></svg>
                         </div>
                         <h3>Akvizice</h3>
                         <p>Pořízení nemovitosti, ověření kupní ceny</p>
@@ -2654,7 +2675,8 @@
             mixed_use: 0.70,
             recreation: 0.55,
             apartment_building: 0.75,
-            industrial: 0.65
+            industrial: 0.65,
+            under_construction: 0.50 // rozestavěný projekt: nižší likvidita a riziko dokončení
         };
         let aiParsedData = {
             chatgpt: null,
@@ -2668,14 +2690,23 @@
         // v datech zůstává kvůli starším uloženým oceněním, jen se nezobrazuje ani nepočítá do průměrů.
         const AI_SOURCES = ['chatgpt', 'claude'];
         const AI_LABELS = { chatgpt: 'ChatGPT', claude: 'Claude' };
-        // Plochy rodinného domu ze shrnutí AI (m²) — řádky se ukážou, jen když je má aspoň jedna AI
-        const AI_AREA_FIELDS = [
-            { key: 'podlahovaPlocha', label: 'Podlahová plocha', short: 'Podlahová' },
-            { key: 'uzitnaPlocha', label: 'Užitná plocha', short: 'Užitná' },
-            { key: 'plochaPozemku', label: 'Plocha pozemku', short: 'Pozemek' }
+        // Doplňkové údaje ze shrnutí AI — řádek se ukáže, jen když ho má aspoň jedna AI.
+        // Plochy: rodinný dům a rozestavěný projekt; hodnota po dokončení a stupeň dokončení: rozestavěný projekt.
+        const AI_EXTRA_FIELDS = [
+            { key: 'hodnotaPoDokonceni', label: 'Hodnota po dokončení', short: 'Po dokončení', fmt: formatKc },
+            { key: 'stupenDokonceni', label: 'Stupeň dokončení', short: 'Dokončeno', fmt: formatPct },
+            { key: 'podlahovaPlocha', label: 'Podlahová plocha', short: 'Podlahová', fmt: formatM2 },
+            { key: 'uzitnaPlocha', label: 'Užitná plocha', short: 'Užitná', fmt: formatM2 },
+            { key: 'plochaPozemku', label: 'Plocha pozemku', short: 'Pozemek', fmt: formatM2 }
         ];
         function formatM2(n) {
             return n ? new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 1 }).format(n) + ' m²' : '—';
+        }
+        function formatKc(n) {
+            return n ? new Intl.NumberFormat('cs-CZ').format(Math.round(n)) + ' Kč' : '—';
+        }
+        function formatPct(n) {
+            return n ? new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 0 }).format(n) + ' %' : '—';
         }
 
         const propertyConfigs = {
@@ -2904,6 +2935,38 @@
                     ekologicka_zatez: { type: 'select', label: 'Ekologická zátěž', options: ['Bez zátěže - audit OK', 'Drobná - řešitelná', 'Významná', 'Nezjištěno'] },
                     dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Technické vybavení, inženýrské sítě, kapacita elektro přípojky, kvalita nájemníků, délka smluv, BREEAM/LEED certifikace...' }
                 }
+            },
+            // Zahájená, nedokončená výstavba — oceňuje se současný stav (as-is), hodnota po dokončení jen informativně
+            under_construction: {
+                name: 'Rozestavěný projekt',
+                inputs: [
+                    { id: 'znalecky_posudek', label: 'Znalecký posudek', icon: '◆' },
+                    { id: 'lv', label: 'List vlastnictví (LV)', icon: '◆' },
+                    { id: 'adresa', label: 'Adresa', icon: '◆' },
+                    { id: 'stavebni_povoleni', label: 'Stavební povolení / povolení záměru', icon: '◆' },
+                    { id: 'projektova_dokumentace', label: 'Projektová dokumentace', icon: '◆' },
+                    { id: 'rozpocet', label: 'Rozpočet stavby / náklady na dokončení', icon: '◆' },
+                    { id: 'soupis_praci', label: 'Soupis provedených prací / stavební deník', icon: '◆' },
+                    { id: 'smlouvy_o_dilo', label: 'Smlouvy o dílo se zhotoviteli', icon: '◆' },
+                    { id: 'cenik_rezervace', label: 'Ceník / rezervační a budoucí kupní smlouvy', icon: '◆' },
+                    { id: 'fotografie', label: 'Fotografie stavby', icon: '◆' }
+                ],
+                fields: {
+                    adresa: { type: 'text', label: 'Adresa / lokalita projektu', placeholder: 'např. ul. Lipová, Černošice' },
+                    typ_projektu: { type: 'select', label: 'Typ projektu', options: ['Rodinné domy', 'Řadové domy / dvojdomy', 'Bytový dům', 'Polyfunkční / komerční objekt', 'Jiný'] },
+                    pocet_jednotek: { type: 'number', label: 'Počet domů / jednotek', placeholder: 'např. 4', min: 1 },
+                    faze_vystavby: { type: 'select', label: 'Fáze výstavby', options: ['Základy / spodní stavba', 'Hrubá stavba bez střechy', 'Hrubá stavba se střechou', 'Uzavřená hrubá stavba (okna, dveře)', 'Rozvody a vnitřní práce', 'Dokončovací práce / před kolaudací', 'Každá stavba v jiné fázi'] },
+                    stupen_dokonceni: { type: 'number', label: 'Stupeň dokončení (%)', placeholder: 'např. 60', min: 0, max: 100 },
+                    prubeh_vystavby: { type: 'select', label: 'Průběh výstavby', options: ['Stavba probíhá', 'Stavba stojí', 'Stavba stojí, je zakonzervovaná'] },
+                    povoleni_stavby: { type: 'select', label: 'Povolení stavby', options: ['Platné', 'V řízení / změna stavby', 'Propadlé', 'Nezjištěno'] },
+                    uzitna_plocha: { type: 'number', label: 'Užitná plocha po dokončení (m², celkem)', placeholder: 'např. 520', min: 1 },
+                    plocha_pozemku: { type: 'number', label: 'Plocha pozemků (m², celkem)', placeholder: 'např. 2400', min: 1 },
+                    gdv_ocekavane: { type: 'number', label: 'Očekávaná prodejní cena po dokončení (Kč, celkem)', placeholder: 'např. 48000000', min: 0 },
+                    naklady_vynalozene: { type: 'number', label: 'Dosud vynaložené náklady (Kč)', placeholder: 'např. 15000000', min: 0 },
+                    naklady_dokonceni: { type: 'number', label: 'Náklady na dokončení podle klienta (Kč)', placeholder: 'např. 12000000', min: 0 },
+                    termin_dokonceni: { type: 'text', label: 'Plánovaný termín dokončení', placeholder: 'např. 06/2027' },
+                    dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Zhotovitel, neuhrazené faktury, přípojky a komunikace, rezervace kupujících, důvod přerušení stavby, věcná břemena...' }
+                }
             }
         };
 
@@ -3005,10 +3068,11 @@
                 selectedInputs = [];
             }
             propertyType = type;
-            document.querySelectorAll('.property-type-card').forEach(card => {
+            // Jen karty typů — karty účelu (krok 2) mají stejnou třídu a jejich výběr zůstává
+            document.querySelectorAll('.property-type-card:not(.purpose-card)').forEach(card => {
                 card.classList.remove('selected');
             });
-            const cards = document.querySelectorAll('.property-type-card');
+            const cards = document.querySelectorAll('.property-type-card:not(.purpose-card)');
             cards.forEach(card => {
                 if (card.getAttribute('onclick').includes("'" + type + "'")) {
                     card.classList.add('selected');
@@ -3145,7 +3209,7 @@
                 const isRequired = fieldId.includes('adresa') || fieldId.includes('plocha') || fieldId.includes('parcelni') || fieldId === 'stav' || fieldId === 'typ_vlastnictvi';
 
                 let label = field.label;
-                const tooltipFields = ['kzp', 'kpp', 'gdv_ocekavane', 'najemne_rocni', 'noi', 'obsazenost_komercni'];
+                const tooltipFields = ['kzp', 'kpp', 'gdv_ocekavane', 'najemne_rocni', 'noi', 'obsazenost_komercni', 'stupen_dokonceni', 'naklady_dokonceni'];
                 if (tooltipFields.includes(fieldId)) {
                     const tooltips = {
                         'kzp': 'Koeficient zastavěné plochy definuje max. procento plochy pozemku, které lze zastavět',
@@ -3153,7 +3217,9 @@
                         'gdv_ocekavane': 'GDV (Gross Development Value) - celková předpokládaná tržní hodnota všech prodaných jednotek',
                         'najemne_rocni': 'Roční nájemný příjem z komerčních prostor',
                         'noi': 'Net Operating Income - příjem po odečtení provozních nákladů',
-                        'obsazenost_komercni': 'Procento obsazených komerčních prostor (0-100%)'
+                        'obsazenost_komercni': 'Procento obsazených komerčních prostor (0-100%)',
+                        'stupen_dokonceni': 'Kolik procent stavby je hotovo — z posudku, rozpočtu nebo podle fáze výstavby',
+                        'naklady_dokonceni': 'Kolik bude stát dokončení podle klienta — AI je ověří proti aktuálním cenám stavebních prací'
                     };
                     label = `<div class="label-with-tooltip"><span>${field.label}</span><div class="tooltip-icon" data-tooltip="${tooltips[fieldId] || ''}">i</div></div>`;
                 }
@@ -3851,6 +3917,109 @@
                 prompt += `   - Specializované výrobní haly jsou těžko pronajmout jinému nájemci — nízká likvidita\n\n`;
             }
 
+            // Rozestavěný projekt — oceňuje se současný stav (as-is); výstavbu věřitel nefinancuje
+            if (propertyType === 'under_construction') {
+                prompt += `## METODIKA OCENĚNÍ ROZESTAVĚNÉHO PROJEKTU\n\n`;
+                prompt += `**KRITICKÉ**: Oceňuješ projekt v **současném, nedokončeném stavu** (as-is). **Tržní hodnota = cena, za kterou by rozestavěný projekt dnes koupil investor, který ho dokončí.** Hodnotu po dokončení počítáš jen jako mezikrok a uvádíš ji zvlášť. Věřitel půjčuje proti současnému stavu — dokončení stavby nefinancuje a nesmí s ním počítat.\n`;
+                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, ceníky developerů, cenové mapy) podle pravidel pro srovnatelné nemovitosti výše. Nepoužívej pouze svá tréninková data.\n\n`;
+
+                prompt += `### 1. STAV VÝSTAVBY (podklad pro všechny metody)\n`;
+                prompt += `U každé stavby (každého domu) zjisti z podkladů:\n`;
+                prompt += `- **Fázi výstavby a stupeň dokončení v %** — podle obvyklých podílů konstrukcí a prací (základy, hrubá stavba, střecha, okna a dveře, rozvody, omítky, podlahy, vybavení, venkovní úpravy); uveď, jak jsi ho určil\n`;
+                prompt += `- Zda stavba probíhá, nebo stojí (od kdy a proč) a zda je zastřešená a zakonzervovaná\n`;
+                prompt += `- Povolení stavby (stavební povolení / povolení záměru) — platnost, lhůty, změny stavby — a zda provedená stavba odpovídá projektu\n`;
+                prompt += `- Přípojky sítí a příjezdovou komunikaci — co je hotové a co chybí\n`;
+                prompt += `- Stavby, které jsou už dokončené a zkolaudované, oceň jako hotové nemovitosti porovnávací metodou — bez nákladů na dokončení a bez zisku investora\n`;
+                if (selectedInputs.includes('soupis_praci')) {
+                    prompt += `- Stupeň dokončení ověř podle přiloženého soupisu provedených prací / stavebního deníku\n`;
+                }
+                if (selectedInputs.includes('smlouvy_o_dilo')) {
+                    prompt += `- Ze smluv o dílo zjisti cenu díla, co je zaplaceno a co zbývá doplatit, termíny a sankce\n`;
+                }
+                prompt += `\nÚdaje od klienta (stupeň dokončení, náklady, termíny) ověř podle fotografií a dokumentace; při rozporu použij konzervativnější hodnotu.\n\n`;
+
+                prompt += `### 2. REZIDUÁLNÍ METODA (Primární)\n`;
+                prompt += `Hodnota rozestavěného projektu = co investorovi zbude z hodnoty po dokončení po odečtení nákladů na dokončení, rizik a jeho zisku.\n\n`;
+                prompt += `**Krok 1 - Hodnota po dokončení (GDV)**:\n`;
+                prompt += `- Oceň každý dům / jednotku v dokončeném stavu porovnávací metodou — srovnávej s novostavbami v lokalitě (realizované prodeje, ceníky developerů, inzeráty)\n`;
+                prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
+                prompt += `- GDV = součet hodnot všech domů / jednotek po dokončení\n`;
+                if (formData.gdv_ocekavane) {
+                    prompt += `- Uživatel uvádí očekávanou prodejní cenu po dokončení: ${formData.gdv_ocekavane} Kč — OVĚŘ, zda odpovídá tržním cenám v lokalitě!\n`;
+                }
+                if (selectedInputs.includes('cenik_rezervace')) {
+                    prompt += `- Přiložený ceník a rezervační / budoucí kupní smlouvy ber jako doklad poptávky; ceny z nich použij, jen pokud odpovídají trhu\n`;
+                }
+                prompt += `\n**Krok 2 - Náklady na dokončení**:\n`;
+                prompt += `- Rozsah zbývajících prací urči podle stupně dokončení a projektové dokumentace\n`;
+                prompt += `- Oceň je aktuálními stavebními náklady k datu ocenění pro daný typ stavby (dohledej je a uveď zdroj)\n`;
+                if (formData.naklady_dokonceni) {
+                    prompt += `- Klient uvádí náklady na dokončení: ${formData.naklady_dokonceni} Kč — OVĚŘ je proti aktuálním cenám; rozpočty klientů bývají podhodnocené\n`;
+                } else if (selectedInputs.includes('rozpocet')) {
+                    prompt += `- Přiložený rozpočet ověř proti aktuálním cenám; rozpočty klientů bývají podhodnocené\n`;
+                }
+                prompt += `- Zahrň i nedokončené přípojky, komunikace a venkovní úpravy\n\n`;
+                prompt += `**Krok 3 - Rezerva na nepředvídané náklady**:\n`;
+                prompt += `- Minimálně 10 % z nákladů na dokončení; 15–20 %, pokud chybí rozpočet nebo soupis prací, stavba dlouho stojí nebo ji bude dokončovat jiný zhotovitel (skryté vady, chybějící dokumentace, záruky)\n\n`;
+                prompt += `**Krok 4 - Vedlejší, finanční a prodejní náklady**:\n`;
+                prompt += `- Projekt, technický dozor, kolaudace, poplatky — obvykle 5–10 % z nákladů na dokončení, pokud nejsou v rozpočtu\n`;
+                prompt += `- Finanční náklady po dobu dokončení a prodeje (aktuální sazby developerského financování v ČR — dohledej je a uveď zdroj)\n`;
+                prompt += `- Prodejní náklady (provize, marketing, právní služby): 3–5 % z GDV\n\n`;
+                prompt += `**Krok 5 - Zisk investora**:\n`;
+                prompt += `- Investor, který projekt koupí a dokončí, požaduje zisk obvykle 15–20 % z celkových nákladů (kupní cena rozestavěného projektu + náklady na dokončení); u stavby těsně před kolaudací lze jít níž, nejméně na 10 %. Zvolenou marži zdůvodni.\n\n`;
+                prompt += `**Krok 6 - Hodnota v současném stavu**:\n`;
+                prompt += `Hodnota = (GDV - prodejní náklady) / (1 + marže) - (náklady na dokončení + rezerva + vedlejší a finanční náklady)\n`;
+                prompt += `Uveď výpočet krok po kroku.\n\n`;
+                prompt += `**STRESS TEST** — jak se změní hodnota v současném stavu, pokud:\n`;
+                prompt += `- klesne GDV o 10 %?\n`;
+                prompt += `- vzrostou náklady na dokončení o 15 %?\n`;
+                prompt += `- se dokončení a prodej zpozdí o 12 měsíců?\n\n`;
+
+                prompt += `### 3. NÁKLADOVÁ METODA (Kontrolní)\n`;
+                prompt += `- **Pozemky**: hodnota porovnávací metodou (srovnatelné stavební pozemky v lokalitě, haircut na inzeráty jako výše)\n`;
+                prompt += `- **Provedené práce**: aktuální stavební náklady na už provedený rozsah (stupeň dokončení × náklady na celou stavbu)\n`;
+                prompt += `- **Srážka za nedokončený stav**: obvykle 10–30 % z hodnoty provedených prací (skryté vady, chybějící záruky zhotovitele, degradace nezakonzervovaných konstrukcí, úpravy projektu) — výši zdůvodni\n`;
+                if (formData.naklady_vynalozene) {
+                    prompt += `- Klient uvádí dosud vynaložené náklady ${formData.naklady_vynalozene} Kč — použij je jen pro kontrolu; vynaložené náklady NEJSOU tržní hodnota\n`;
+                } else {
+                    prompt += `- Vynaložené náklady klienta (účetnictví, faktury) použij jen pro kontrolu — NEJSOU tržní hodnota\n`;
+                }
+                prompt += `- Výsledek = hodnota pozemků + hodnota provedených prací po srážce\n\n`;
+
+                prompt += `### 4. SROVNÁNÍ S ROZESTAVĚNÝMI STAVBAMI (pokud najdeš data)\n`;
+                prompt += `- Hledej nabídky a prodeje rozestavěných domů a hrubých staveb v lokalitě a okolí (realitní servery, dražby)\n`;
+                prompt += `- Pokud najdeš méně než 3 srovnatelné, napiš to a výsledek ber jen orientačně\n\n`;
+
+                prompt += `### 5. VÝSLEDNÁ TRŽNÍ HODNOTA (v současném stavu)\n`;
+                prompt += `- **Finální tržní hodnota = nižší z výsledků reziduální a nákladové metody** (princip opatrnosti): rozestavěný projekt nikdo nekoupí dráž, než kolik mu po dokončení zbude, a provedené práce nemají vyšší hodnotu, než kolik by dnes stály\n`;
+                prompt += `- Liší-li se metody o více než 20 %, vysvětli proč (nadsazená GDV, podhodnocený rozpočet, předražené práce)\n`;
+                prompt += `- Hodnotu po dokončení (GDV) uveď zvlášť a jen informativně — pro zástavu se nepoužívá\n`;
+                prompt += `- Uvádí-li posudek hodnotu v současném stavu i po dokončení, porovnej každou s odpovídající hodnotou (sekce Srovnání s hodnotou z podkladů)\n\n`;
+
+                prompt += `## RED FLAGS - ROZESTAVĚNÝ PROJEKT\n`;
+                prompt += `1. **Vlastnictví a katastr**:\n`;
+                prompt += `   - Pozemky pod stavbami a přístupové cesty musí patřit zástavci — stavba je pak součástí pozemku a zástavní právo k pozemku ji zahrnuje\n`;
+                prompt += `   - Stavba na cizím pozemku nebo na základě práva stavby → VYSOKÉ RIZIKO\n`;
+                prompt += `   - Je-li rozestavěná budova nebo jednotka zapsaná v katastru samostatně, musí být zastavená i ona\n`;
+                prompt += `2. **Povolení stavby**:\n`;
+                prompt += `   - Propadlé povolení nebo stavba v rozporu s povolením (černá stavba) → FATÁLNÍ RIZIKO\n`;
+                prompt += `   - Lhůta pro dokončení, probíhající změny stavby\n`;
+                prompt += `3. **Zhotovitelé a peníze na dokončení**:\n`;
+                prompt += `   - Neuhrazené faktury, spory se zhotoviteli, insolvence developera nebo zhotovitele\n`;
+                prompt += `   - Má investor zajištěné peníze na dokončení? Věřitel dokončení nefinancuje.\n`;
+                prompt += `4. **Technický stav**:\n`;
+                prompt += `   - Jak dlouho stavba stojí — nezastřešená nebo nezakonzervovaná stavba degraduje (vlhkost, mráz)\n`;
+                prompt += `   - Kvalita provedených prací, vady, chybějící stavební deník a dokumentace\n`;
+                prompt += `5. **Infrastruktura**:\n`;
+                prompt += `   - Přípojky a komunikace — hotové, povolené, kdo je zaplatí (plánovací smlouva s obcí)\n`;
+                prompt += `6. **Likvidita**:\n`;
+                prompt += `   - Rozestavěné stavby kupují hlavně developeři a investoři; prodej trvá déle a v nuceném prodeji (dražba) jsou srážky vysoké\n`;
+                prompt += `   - U více domů: dají se prodat jednotlivě, nebo jen jako celek?\n`;
+                prompt += `7. **Právní vady**:\n`;
+                prompt += `   - Zástavy, exekuce, věcná břemena, předkupní práva\n`;
+                prompt += `   - Rezervační a budoucí kupní smlouvy se zálohami kupujících — jejich nároky při zastavení stavby\n\n`;
+            }
+
             // Závěrečné instrukce
             prompt += `## ZÁVĚREČNÝ VÝSTUP\n\n`;
             prompt += `Strukturuj svou odpověď následovně:\n\n`;
@@ -3858,6 +4027,10 @@
             prompt += `- Typ, lokalita, klíčové parametry\n`;
             if (propertyType === 'house') {
                 prompt += `- **Plochy domu v m²**: podlahová plocha (součet podlahových ploch všech podlaží), užitná plocha (ta, se kterou počítáš cenu za m²) a plocha pozemku (výměra pozemků domu podle LV) — u každé uveď, z čeho vychází (podklad, nebo odhad ze zastavěné plochy)\n`;
+            }
+            if (propertyType === 'under_construction') {
+                prompt += `- **Stav výstavby**: fáze a stupeň dokončení v % u každé stavby; zda stavba probíhá, nebo stojí\n`;
+                prompt += `- **Plochy v m²** (po dokončení podle projektu, součet za všechny stavby): podlahová plocha, užitná plocha a plocha pozemků podle LV — u každé uveď, z čeho vychází\n`;
             }
             prompt += `- Tabulka údajů z podkladů se zdrojem (viz Postup práce, bod 1) a označené rozpory\n\n`;
 
@@ -3872,6 +4045,8 @@
             prompt += `- Tabulka výsledků všech použitých metod\n`;
             if (propertyType === 'apartment_building') {
                 prompt += `- **PRAVIDLO pro bytový dům**: Obě metody (výnosová i porovnávací) jsou primární a rovnocenné. Výslednou hodnotu stanov jako vážený průměr — pokud se výsledky liší o méně než 15 %, použi 50/50. Při větší odchylce zdůvodni, které metodě dáváš vyšší váhu a proč.\n`;
+            } else if (propertyType === 'under_construction') {
+                prompt += `- **PRAVIDLO pro rozestavěný projekt**: Finální tržní hodnota (v současném stavu) = nižší z výsledků reziduální a nákladové metody. Srovnání s rozestavěnými stavbami slouží jen jako kontrola. Hodnota po dokončení se do tržní hodnoty nepromítá — uveď ji zvlášť.\n`;
             } else {
                 prompt += `- **PRAVIDLO**: Finální tržní hodnotu stanov výhradně na základě **primární metody** pro daný typ nemovitosti. Sekundární metody slouží pouze jako kontrolní validace — uveď jejich výsledky, ale neprůměruj je s primární metodou.\n`;
                 prompt += `- Pokud sekundární metoda ukazuje výrazně odlišný výsledek (odchylka > 20%), uveď důvod odchylky.\n`;
@@ -3925,7 +4100,11 @@
             prompt += `**NA ÚPLNÝ KONEC své odpovědi** vlož tento strukturovaný blok. Dodržuj přesně tento formát — bude strojově zpracován:\n\n`;
             prompt += '```\n';
             prompt += `===SHRNUTÍ===\n`;
-            prompt += `TRŽNÍ_HODNOTA: [číslo v Kč, pouze číslo bez mezer a jednotek, např. 8200000]\n`;
+            if (propertyType === 'under_construction') {
+                prompt += `TRŽNÍ_HODNOTA: [číslo v Kč — hodnota v SOUČASNÉM rozestavěném stavu, ne po dokončení; pouze číslo bez mezer a jednotek, např. 8200000]\n`;
+            } else {
+                prompt += `TRŽNÍ_HODNOTA: [číslo v Kč, pouze číslo bez mezer a jednotek, např. 8200000]\n`;
+            }
             prompt += `ZÁSTAVNÍ_HODNOTA: [číslo v Kč, pouze číslo]\n`;
             prompt += `BEZPEČNOSTNÍ_KOEFICIENT: [desetinné číslo, např. 0.80]\n`;
             prompt += `LTV_DOPORUČENÍ: [procento, např. 80]\n`;
@@ -3938,6 +4117,14 @@
                 prompt += `PODLAHOVÁ_PLOCHA: [m², pouze číslo — součet podlahových ploch všech podlaží]\n`;
                 prompt += `UŽITNÁ_PLOCHA: [m², pouze číslo — plocha, se kterou počítáš cenu za m²]\n`;
                 prompt += `PLOCHA_POZEMKU: [m², pouze číslo — výměra pozemků domu podle LV]\n`;
+            }
+            if (propertyType === 'under_construction') {
+                // Aplikace ukazuje i hodnotu po dokončení, stupeň dokončení a plochy (AI_EXTRA_FIELDS)
+                prompt += `HODNOTA_PO_DOKONČENÍ: [číslo v Kč, pouze číslo — tržní hodnota po dokončení (GDV), jen informativně]\n`;
+                prompt += `STUPEŇ_DOKONČENÍ: [procento, pouze číslo, např. 60 — za celý projekt]\n`;
+                prompt += `PODLAHOVÁ_PLOCHA: [m², pouze číslo — po dokončení podle projektu, součet za všechny stavby]\n`;
+                prompt += `UŽITNÁ_PLOCHA: [m², pouze číslo — po dokončení, součet; plocha, se kterou počítáš hodnotu po dokončení]\n`;
+                prompt += `PLOCHA_POZEMKU: [m², pouze číslo — výměra pozemků projektu podle LV]\n`;
             }
             prompt += `===KONEC===\n`;
             prompt += '```\n\n';
@@ -4127,14 +4314,17 @@
                 }
                 const trzni = parseAiCzk(data['TRŽNÍ_HODNOTA']);
                 const zastavni = parseAiCzk(data['ZÁSTAVNÍ_HODNOTA']);
-                // Plochy RD (m²) — volitelné, jen u rodinných domů; „186 m²", „1 250", „cca 186,5".
-                // Klíč i bez diakritiky — AI ji občas vynechá.
-                function parseAiArea(...keys) {
+                // Plochy (m²) a stupeň dokončení (%) — volitelné (rodinný dům, rozestavěný projekt);
+                // „186 m²", „1 250", „cca 186,5", „60 %". Klíč i bez diakritiky — AI ji občas vynechá.
+                function parseAiNumber(...keys) {
                     const raw = keys.map(k => data[k]).find(v => v != null && v !== '');
                     const m = String(raw || '').replace(/m²|m2/gi, '').match(/\d[\d\s.,]*/);
                     const n = m ? parseAiCzk(m[0]) : NaN;
                     return !isNaN(n) && n > 0 ? n : null;
                 }
+                // Rozestavěný projekt — hodnota po dokončení (Kč), jen informativně
+                const poDokonceni = parseAiCzk(data['HODNOTA_PO_DOKONČENÍ'] || data['HODNOTA_PO_DOKONCENI']);
+                const stupen = parseAiNumber('STUPEŇ_DOKONČENÍ', 'STUPEN_DOKONCENI');
 
                 // Nemovitost pod 100 000 Kč = téměř jistě chyba parsování (useknutá hodnota) —
                 // radši spadnout do manuálního režimu než tiše protáhnout špatné číslo do LTV.
@@ -4150,9 +4340,11 @@
                         riziko1: data['HLAVNÍ_RIZIKO'] || '',
                         riziko2: data['SEKUNDÁRNÍ_RIZIKO'] || '',
                         hodnoceni: data['HODNOCENÍ_ZÁSTAVY'] || '',
-                        podlahovaPlocha: parseAiArea('PODLAHOVÁ_PLOCHA', 'PODLAHOVA_PLOCHA'),
-                        uzitnaPlocha: parseAiArea('UŽITNÁ_PLOCHA', 'UZITNA_PLOCHA'),
-                        plochaPozemku: parseAiArea('PLOCHA_POZEMKU')
+                        hodnotaPoDokonceni: sane(poDokonceni) ? poDokonceni : null,
+                        stupenDokonceni: stupen != null && stupen <= 100 ? stupen : null,
+                        podlahovaPlocha: parseAiNumber('PODLAHOVÁ_PLOCHA', 'PODLAHOVA_PLOCHA'),
+                        uzitnaPlocha: parseAiNumber('UŽITNÁ_PLOCHA', 'UZITNA_PLOCHA'),
+                        plochaPozemku: parseAiNumber('PLOCHA_POZEMKU')
                     };
 
                     statusEl.className = 'parse-status success';
@@ -4237,7 +4429,7 @@
                 <tbody>
                     ${row('Tržní hodnota', s => fmt(gn(s, 'trzniHodnota')), 'highlight-row')}
                     ${row('Zástavní hodnota', s => fmt(gn(s, 'zastavniHodnota')), 'highlight-row')}
-                    ${AI_AREA_FIELDS.filter(f => sources.some(s => gn(s, f.key))).map(f => row(f.label, s => formatM2(gn(s, f.key)))).join('')}
+                    ${AI_EXTRA_FIELDS.filter(f => sources.some(s => gn(s, f.key))).map(f => row(f.label, s => f.fmt(gn(s, f.key)))).join('')}
                     ${row('Bezp. koeficient', s => g(s, 'koeficient'))}
                     ${row('LTV doporučení', s => g(s, 'ltv') + (g(s, 'ltv') !== '—' ? '%' : ''))}
                     ${row('Primární metoda', s => g(s, 'metoda'))}
@@ -4325,10 +4517,10 @@
                             <span class="ai-summary-label">Zástavní hodnota</span>
                             <span class="ai-summary-value highlight">${fmt(data.zastavniHodnota)}</span>
                         </div>
-                        ${AI_AREA_FIELDS.filter(f => data[f.key]).map(f => `
+                        ${AI_EXTRA_FIELDS.filter(f => data[f.key]).map(f => `
                         <div class="ai-summary-row">
                             <span class="ai-summary-label">${f.label}</span>
-                            <span class="ai-summary-value">${formatM2(data[f.key])}</span>
+                            <span class="ai-summary-value">${f.fmt(data[f.key])}</span>
                         </div>`).join('')}
                         ${data.koeficient ? `
                         <div class="ai-summary-row">
@@ -4482,8 +4674,8 @@
             md += `|---|${sources.map(() => '---').join('|')}|\n`;
             md += mdRow('**Tržní hodnota**', s => fmt(aiParsedData[s]?.trzniHodnota));
             md += mdRow('**Zástavní hodnota**', s => fmt(aiParsedData[s]?.zastavniHodnota));
-            AI_AREA_FIELDS.filter(f => sources.some(s => aiParsedData[s]?.[f.key])).forEach(f => {
-                md += mdRow(f.label, s => formatM2(aiParsedData[s]?.[f.key]));
+            AI_EXTRA_FIELDS.filter(f => sources.some(s => aiParsedData[s]?.[f.key])).forEach(f => {
+                md += mdRow(f.label, s => f.fmt(aiParsedData[s]?.[f.key]));
             });
             md += mdRow('Hlavní riziko', s => aiParsedData[s]?.riziko1 || '—');
             md += mdRow('Hodnocení', s => aiParsedData[s]?.hodnoceni || '—');
@@ -4927,7 +5119,7 @@
                 `<div></div>` + data.map(x => `<div class="rx-h">${x.label}</div>`).join('') +
                 cmpRow('Tržní', x => x.d.trzniHodnota ? kc(x.d.trzniHodnota) : '—') +
                 cmpRow('Zástavní', x => x.d.zastavniHodnota ? kc(x.d.zastavniHodnota) : '—') +
-                AI_AREA_FIELDS.filter(f => data.some(x => x.d[f.key])).map(f => cmpRow(f.short, x => formatM2(x.d[f.key]))).join('') +
+                AI_EXTRA_FIELDS.filter(f => data.some(x => x.d[f.key])).map(f => cmpRow(f.short, x => f.fmt(x.d[f.key]))).join('') +
                 cmpRow('Metoda', x => esc(metoda(x.d.metoda))) +
                 cmpRow('Hodnocení', x => x.d.hodnoceni
                     ? `<span class="rx-badge ${badgeClass(x.d.hodnoceni)}">${esc(hodnoceni(x.d.hodnoceni))}</span>` : '—') +
