@@ -900,7 +900,7 @@
         }
         .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
 
-        /* Volba v dialogu: indikativní nabídka / nabídka + formulář pro klienta */
+        /* Volba v dialogu: indikativní Term Sheet / Term Sheet + formulář pro klienta */
         .gen-mode-options { display: flex; flex-direction: column; gap: 0.625rem; margin-bottom: 1.5rem; }
         .gen-mode {
             display: flex;
@@ -1483,7 +1483,7 @@
                         Údaje od klienta
                     </h2>
                     <div class="checkbox-group">
-                        <label class="checkbox-item" title="Za nabídku se na novou stranu vloží formulář, který klient po odsouhlasení vyplní ve Wordu (šedá pole, rozbalovací seznamy). Vrácený Word pak načteš v aplikaci Úvěrová dokumentace.">
+                        <label class="checkbox-item" title="Za podmínky se na novou stranu vloží formulář, který klient po odsouhlasení vyplní ve Wordu (šedá pole, rozbalovací seznamy). Vrácený Word pak načteš v aplikaci Úvěrová dokumentace.">
                             <input type="checkbox" id="cd-enabled" checked onchange="toggleClientDataOptions()">
                             <span class="check-visual"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
                             <span>Vložit formulář „Údaje pro smluvní dokumentaci"</span>
@@ -1568,7 +1568,7 @@
                         <input type="radio" name="gen-mode" value="indicative">
                         <span class="gen-mode-dot"></span>
                         <span>
-                            <span class="gen-mode-title">Indikativní nabídka</span>
+                            <span class="gen-mode-title">Indikativní Term Sheet</span>
                             <span class="gen-mode-desc">Jen podmínky úvěru — údaje od klienta zatím nechceme.</span>
                         </span>
                     </label>
@@ -1576,8 +1576,8 @@
                         <input type="radio" name="gen-mode" value="form">
                         <span class="gen-mode-dot"></span>
                         <span>
-                            <span class="gen-mode-title">Nabídka + formulář pro klienta</span>
-                            <span class="gen-mode-desc">Za nabídkou formulář „Údaje pro smluvní dokumentaci“ — klient vyplní šedá pole a vrátí Word.</span>
+                            <span class="gen-mode-title">Term Sheet + formulář pro klienta</span>
+                            <span class="gen-mode-desc">Za podmínkami formulář „Údaje pro smluvní dokumentaci“ — klient vyplní šedá pole a vrátí Word.</span>
                         </span>
                     </label>
                 </div>
@@ -2495,7 +2495,7 @@
        dokumentaci“ z obsahových prvků Wordu: textová pole, rozbalovací seznamy, kalendář a opakovací
        sekce (klient přidá nemovitost, vlastníka, část čerpání nebo věřitele tlačítkem +).
        Dokument je zamčený pro „vyplňování formulářů“ — klient mění jen pole formuláře.
-       Indikativní varianta (volba v dialogu generování) = jen nabídka, bez formuláře a bez zámku;
+       Indikativní varianta (volba v dialogu generování) = jen podmínky, bez formuláře a bez zámku;
        proměnná dokumentu spcIndicative=1 (Úvěrová dokumentace podle ní pozná, že formulář chybí záměrně).
        Pole mají tag „spc:…“. Aplikace Úvěrová dokumentace je čte podle tagů a pořadí položek
        (importFilledTermSheet v loan-documentation.html) — při změně tagu upravit mapování i tam.
@@ -2653,7 +2653,7 @@
                 if (selected && items[i].v === selected) shown = items[i].t;
             }
             list += '</w:dropDownList>';
-            return sdtField(tag, alias, list, sdtRun(shown || 'Vyberte z nabídky', !shown), !shown);
+            return sdtField(tag, alias, list, sdtRun(shown || 'Vyberte ze seznamu', !shown), !shown);
         }
         // Rozbalovací seznam, do kterého jde i psát (např. „Stejný jako u Úvěrovaného“ nebo vlastní text)
         function fieldCombo(tag, alias, items, placeholder) {
@@ -2773,10 +2773,11 @@
             var meta = [];
             if (d.issueDate) meta.push('Vystaveno ' + fmtDate(d.issueDate));
             if (d.validityDate) meta.push('Platnost do ' + fmtDate(d.validityDate));
-            return para(run('Indikativní nabídka financování', { b: true, caps: true, spacing: 30, color: C.sage }), { after: 40 }) +
-                   para(run('Term Sheet', { b: true, sz: 26, color: C.green }), { after: 30, line: 240 }) +
+            // mezera pod hlavičkou s logem jako v Martinově úpravě (16. 10.)
+            return para(run('Term Sheet', { b: true, sz: 26, color: C.green }), { before: 660, after: 30, line: 240 }) +
                    para(run(d.borrower || '', { sz: 13 }) + (d.ico ? run('   ·   IČO ' + d.ico, { sz: 11, color: C.sage }) : ''), { after: 40 }) +
-                   para(run(meta.join('   ·   '), { color: C.sage }), { after: 180, borderBottom: { color: C.gold, sz: 12, space: 8 } });
+                   // bez zlaté linky — zlatá jen pod dlaždicemi (přehlednější strana, Martin 16. 10.)
+                   para(run(meta.join('   ·   '), { color: C.sage }), { after: 300 });
         }
 
         function keyFigures(d) {
@@ -2806,18 +2807,24 @@
             return row([cell(para(run(label, { color: C.sage })), { w: LABEL_W }), cell(content, { w: PAGE_W - LABEL_W })]);
         }
 
-        // Nadpis oddílu nabídky (malé verzálky, šedozelená)
+        // Nadpis oddílu nabídky (malé verzálky, zelená)
         function offerSection(title) {
-            return para(run(title, { b: true, caps: true, spacing: 30, color: C.sage, sz: 9.5 }), { before: 200, after: 60, keepNext: true });
+            return para(run(title, { b: true, caps: true, spacing: 30, color: C.green, sz: 9.5 }), { before: 300, after: 80, keepNext: true });
+        }
+        // Tabulka popisek | hodnota na první straně — bez čar, řádky odděluje mezera
+        function offerTable(rows) {
+            return table([LABEL_W, PAGE_W - LABEL_W], rows, { cellMar: { top: 50, bottom: 50, left: 110, right: 110 } });
         }
         // Zajištění: označení LV tučně, podrobnosti (parcely, jednotka) drobně šedě
-        function collateralRow(item, first) {
+        function collateralRow(item, first, multi) {
             var s = capFirst(item);
             var cut = s.indexOf('—');
             var main = cut > 0 ? s.slice(0, cut).trim() : s;
             var detail = cut > 0 ? capFirst(s.slice(cut + 1)) : '';
-            var content = para(run(main, { b: true })) + (detail ? para(run(detail, { color: C.sage, sz: 9.5 }), { before: 20 }) : '');
-            return row([cell(para(run(first ? 'Nemovitost' : '', { color: C.sage })), { w: LABEL_W }), cell(content, { w: PAGE_W - LABEL_W })]);
+            // další nemovitost odsadit, ať se bloky bez čar neslévají
+            var content = para(run(main, { b: true }), { before: first ? 0 : 100 }) + (detail ? para(run(detail, { color: C.sage, sz: 9.5 }), { before: 20 }) : '');
+            var label = first ? (multi ? 'Nemovitosti' : 'Nemovitost') : '';
+            return row([cell(para(run(label, { color: C.sage }), { before: first ? 0 : 100 }), { w: LABEL_W }), cell(content, { w: PAGE_W - LABEL_W })]);
         }
         // Dokumenty ke smlouvě ve dvou sloupcích (úvěrová smlouva první)
         function docsGrid(docs) {
@@ -2844,21 +2851,21 @@
                 pointRow('Ostatní náklady', capFirst(d.otherCosts)),
                 pointRow('Poznámka', d.clientNote ? capFirst(d.clientNote) : '')
             ].filter(function (r) { return r; });
-            x += offerSection('Podmínky úvěru') + table([LABEL_W, PAGE_W - LABEL_W], terms, { borders: 'rows' });
+            x += offerSection('Podmínky úvěru') + offerTable(terms);
             // Zajištění
             var col = nonEmpty(d.collateralItems);
-            var colRows = col.map(function (item, i) { return collateralRow(item, i === 0); });
+            var colRows = col.map(function (item, i) { return collateralRow(item, i === 0, col.length > 1); });
             if (d.collateralValue) colRows.push(pointRow('Hodnota zajištění', fmtMoney(d.collateralValue, d.currency) + (ltvText(d) ? '   ·   LTV ' + ltvText(d) : '')));
-            if (colRows.length) x += offerSection('Zajištění') + table([LABEL_W, PAGE_W - LABEL_W], colRows, { borders: 'rows' });
+            if (colRows.length) x += offerSection('Zajištění') + offerTable(colRows);
             // Smluvní dokumentace
             var docs = nonEmpty(d.documentation);
             if (docs.length) x += offerSection('Smluvní dokumentace') + docsGrid(docs);
-            x += spacer(220);
-            x += noticeBox(run('Upozornění: ', { b: true, color: C.green }) +
+            // upozornění drobným písmem bez rámečku (jako poznámka pod čarou)
+            x += spacer(360);
+            x += para(run('Upozornění: ', { b: true, color: C.green, sz: 9.5 }) +
                 run('Finální schválení financování závisí na interním ocenění nemovitosti ze strany Spolumajitelé Private Credit a.s. ' +
-                    'Uvedené podmínky jsou předběžné a mohou být upraveny na základě výsledků ocenění.', { color: C.sage }));
-            x += para(run('Kontakt: ', { b: true, color: C.green }) +
-                run('Martin Dlouhý   ·   +420 721 847 777   ·   martin.dlouhy@spolumajitele.cz', { color: C.sage }), { before: 180 });
+                    'Uvedené podmínky jsou předběžné a mohou být upraveny na základě výsledků ocenění.', { color: C.sage, sz: 9.5 }));
+            // bez kontaktu — Term Sheet často jde přes zprostředkovatele (Martin 16. 10.)
             return x;
         }
 
@@ -3232,6 +3239,18 @@
         }
     }
 
+    // Logo v hlavičce: Martin ho 16. 10. posunul o 3,4 mm doleva a dolů (srovnání s adresou vpravo).
+    // Šablona na Drive má ještě původní polohu → upraví se při generování. Šablonu s jinou polohou
+    // loga (nahranou později) nechá beze změny.
+    function alignTemplateLogo(zip) {
+        var RE = /(<wp:positionH relativeFrom="margin">\s*<wp:posOffset>)-180975(<\/wp:posOffset>\s*<\/wp:positionH>\s*<wp:positionV relativeFrom="paragraph">\s*<wp:posOffset>)-108585(<\/wp:posOffset>)/;
+        zip.file(/^word\/header\d*\.xml$/).forEach(function (f) {
+            var xml = f.asText();
+            var moved = xml.replace(RE, function (m, a, b, c) { return a + '-304800' + b + '15240' + c; });
+            if (moved !== xml) zip.file(f.name, moved);
+        });
+    }
+
     // ===== GENERATE DOCX =====
     // Šablona (Drive / lokální složka) dává hlavičku s logem, zápatí a okraje; tělo skládá TermSheetDocx.
     // Bez šablony vznikne stejný dokument bez loga a zápatí (náhradní balíček).
@@ -3245,6 +3264,7 @@
             var pkg = TermSheetDocx.minimalPackage();
             Object.keys(pkg).forEach(function (p) { zip.file(p, pkg[p]); });
         }
+        if (fromTemplate) alignTemplateLogo(zip);
         var docFile = zip.file('word/document.xml');
         if (!docFile) throw new Error('Šablona neobsahuje word/document.xml — nahrajte ji prosím znovu.');
         // applyToDocumentXml při neočekávané struktuře šablony vyhodí chybu (zachytí ji generateTermSheet),
@@ -3290,7 +3310,7 @@
             }
         }
 
-        // Volba z dialogu: indikativní nabídka (bez formuláře) / nabídka + formulář pro klienta.
+        // Volba z dialogu: indikativní Term Sheet (bez formuláře) / Term Sheet + formulář pro klienta.
         // Propíše se do sekce „Údaje od klienta“ a uloží se s případem → příště se předvolí.
         var modeInput = document.querySelector('#format-modal input[name="gen-mode"]:checked');
         var withForm = modeInput ? modeInput.value === 'form' : data.clientChecklist.enabled;
@@ -3311,7 +3331,8 @@
             console.error('Save before generate failed:', e);
         }
 
-        var fileName = 'Term Sheet ' + sanitizeFileName(data.borrower) + (withForm ? ' - financov\u00e1n\u00ed' : ' - indikativn\u00ed nab\u00eddka');
+        // Názvy souborů určil Martin (16. 10.): „Termsheet <klient> - indikace“ a „Termsheet <klient> - financování“
+        var fileName = 'Termsheet ' + sanitizeFileName(data.borrower) + (withForm ? ' - financov\u00e1n\u00ed' : ' - indikace');
 
         try {
             var blob = await generateDOCX(data);

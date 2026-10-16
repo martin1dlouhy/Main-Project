@@ -7026,7 +7026,7 @@
             if (!Object.keys(form.fields).length && !Object.keys(form.repeats).length) {
                 if (vars.spcIndicative === '1') {
                     // indikativní Term Sheet (volba při generování) formulář záměrně nemá
-                    showToast('Tohle je indikativní Term Sheet — údaje od klienta v něm nejsou. Klientovi pošlete Term Sheet s formulářem (Term Sheet → Vygenerovat → Nabídka + formulář pro klienta). Podmínky úvěru načtete tlačítkem Importovat term sheet.', 'info');
+                    showToast('Tohle je indikativní Term Sheet — údaje od klienta v něm nejsou. Klientovi pošlete Term Sheet s formulářem (Term Sheet → Vygenerovat → Term Sheet + formulář pro klienta). Podmínky úvěru načtete tlačítkem Importovat term sheet.', 'info');
                     return;
                 }
                 showToast('Formulář v dokumentu chybí nebo je poškozený — klient ho asi upravoval v jiném programu než Word. Požádejte ho o vyplnění ve Wordu.', 'error');
