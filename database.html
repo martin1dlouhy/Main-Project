@@ -8557,6 +8557,12 @@ function computeLiQueues(contacts, today) {
             expire(q.zkratit);   // neoslovovat (tlačítko i formulář, jakýkoli důvod) → zkrátit při nejbližším výmazu
             return;
         }
+        // „Ozval se“ po obecné zprávě (zprávu Database neeviduje) → Mají zájem
+        if (!c.li_zprava_kdy && st === 'Odpověděl' && c.li_odpoved_kdy) {
+            const ra = liDaysSince(c.li_odpoved_kdy, today);
+            if (ra !== null && ra <= 60) q.odpovedel.push(c);
+            return;
+        }
         if (!c.li_zprava_kdy) {
             const limit = LI_VYMAZ_PO_DNECH;   // i přijatí: informovat do měsíce od získání údajů (čl. 14 GDPR)
             if (invAge !== null && invAge >= limit) {
@@ -8667,7 +8673,7 @@ function liCardHtml(c, kind) {
     } else if (kind === 'prijali' || kind === 'davka') {
         // Zprávu Martin posílá ručně (obecná zpráva v „Pozvaní“); tady jen zapsat, kdo se ozval
         const cardGate = liCardGate(c);
-        actions = '<button class="btn btn-secondary li-btn li-btn-small" onclick="liReplied(\'' + id + '\')">Ozval se</button>' +
+        actions = (cardGate ? '' : '<button class="btn btn-secondary li-btn li-btn-small" onclick="liReplied(\'' + id + '\')">Ozval se</button>') +
             liNegButtons(id) +
             (cardGate ? '<div class="li-gate">' + escapeHtml(cardGate) + '</div>' : '');
     } else if (kind === 'odpoved') {
@@ -9414,7 +9420,7 @@ function liTextObecna() {
     return 'Dobrý den,\n\n' +
         'děkuji za spojení.\n\n' +
         'V rámci nově vytvořené společnosti financujeme firmy: poskytujeme podnikatelské úvěry 3–100 mil. Kč zajištěné nemovitostmi v ČR, na nákup nemovitosti, uvolnění kapitálu nebo refinancování. Indikativní nabídku připravíme do 48 hodin od dodání kompletních podkladů.\n\n' +
-        'Hledáme spolupráci s poradci, kteří pracují s firemními klienty. Pokud by vás spolupráce zajímala nebo řešíte klienta, který takové financování potřebuje, stačí mi odepsat.\n\n' +
+        'Hledáme spolupráci s poradci, kteří pracují s firemními klienty. Pokud by vás spolupráce zajímala nebo máte klienta, který takové financování poptává, budu rád, když dáte vědět.\n\n' +
         'Martin Dlouhý';
 }
 function liCopyObecna() {
@@ -9425,14 +9431,17 @@ function liCopyObecna() {
         liShowCopyFallback(text, function () {}, 'Hotovo');
     });
 }
-// Ozval se po obecné zprávě → stav Reaguje (nikdy se nemaže), dál „Mají zájem“; jde vrátit
+// Ozval se po obecné zprávě → stav Reaguje (nikdy se nemaže), dál „Mají zájem“; jde vrátit.
+// Klient a Partner si stav nechají; kontakt s blokací („neoslovovat“, blokovaná síť) se nezapisuje.
 async function liReplied(id) {
     const c = state.contacts.find(function (x) { return x.id === id; });
     if (!c) return;
+    const gate = liCardGate(c);
+    if (gate) { toast('warning', gate); return; }
     const today = liToday();
-    const f = { linkedinStav: 'Odpověděl', stav: 'Reaguje', li_odpoved_kdy: today };
+    const f = { linkedinStav: 'Odpověděl', li_odpoved_kdy: today };
+    if (['Klient', 'Partner'].indexOf(String(c.stav || '')) === -1) f.stav = 'Reaguje';
     if (!c.li_prijato_kdy) f.li_prijato_kdy = today;
-    if (!c.li_zprava_kdy) { f.li_zprava_kdy = today; f.sablona = 'A-obecna-' + LI_SABLONA_VERZE; }
     await liPatchWithUndo(id, f, 'ozval');
 }
 function liInvitedRowHtml(c) {
@@ -9445,7 +9454,7 @@ function liInvitedRowHtml(c) {
     return '<div class="li-batch-row">' +
         '<div class="li-batch-who"><span class="li-name">' + escapeHtml(c.kontaktniOsoba || '(bez jména)') + '</span> <span class="li-batch-sub">· ' + escapeHtml([c.role, c.firma].filter(Boolean).join(', ')) + '</span>' + badges + '</div>' +
         '<div class="li-actions">' +
-            '<button class="btn btn-ghost li-btn li-btn-small" onclick="liReplied(\'' + id + '\')">Ozval se</button>' +
+            (gate ? '' : '<button class="btn btn-ghost li-btn li-btn-small" onclick="liReplied(\'' + id + '\')">Ozval se</button>') +
             '<button class="btn btn-ghost li-btn li-btn-small" onclick="liNegative(\'' + id + '\', \'nemá zájem\')">Nemá zájem</button>' +
             '<button class="li-open" onclick="openEditContact(\'' + id + '\')" title="Otevřít detail" aria-label="Otevřít detail ' + escapeHtml(c.kontaktniOsoba || '') + '">⋯</button>' +
         '</div></div>';
@@ -9516,10 +9525,8 @@ function renderLinkedInToday() {
     document.getElementById('li-stats').innerHTML =
         '<div class="li-stat ' + strop + '"><div class="li-stat-val">' + s.last7 + ' / ' + LI_TYDENNI_STROP + '</div><div class="li-stat-lbl">pozvánky za 7 dní</div></div>' +
         '<div class="li-stat"><div class="li-stat-val">' + room + '</div><div class="li-stat-lbl">dnes ještě pozvat (limit)</div></div>' +
-        '<div class="li-stat' + (s.pending >= 200 ? ' li-stat-bad' : '') + '"><div class="li-stat-val">' + s.pending + '</div><div class="li-stat-lbl">nevyřízené pozvánky</div></div>' +
-        '<div class="li-stat"><div class="li-stat-val">' + (s.acc === null ? '—' : s.acc + ' %') + '</div><div class="li-stat-lbl">přijetí (30 dní)</div></div>' +
-        '<div class="li-stat"><div class="li-stat-val">' + s.introToday + '</div><div class="li-stat-lbl">představení dnes</div></div>' +
-        '<div class="li-stat"><div class="li-stat-val">' + s.repliesWeek + '</div><div class="li-stat-lbl">odpovědi (7 dní)</div></div>' +
+        // Přijetí a zprávy Database neeviduje (Martin je posílá ručně) → jen pozvánky a kdo se ozval
+        '<div class="li-stat"><div class="li-stat-val">' + s.repliesWeek + '</div><div class="li-stat-lbl">ozvali se (7 dní)</div></div>' +
         (BLOKOVANE_SITE.length ? '<div class="li-stat li-stat-wide"><div class="li-stat-lbl">Nezvat lidi z: ' + BLOKOVANE_SITE.map(escapeHtml).join(', ') + '</div></div>' : '') +
         '<div class="li-hint li-stat-wide">Zprávu pro ty, kdo přijali, zkopírujete v „Pozvaní – kdo přijal“.</div>';
 
@@ -9557,7 +9564,7 @@ function renderLinkedInToday() {
         'Na LinkedInu v Moje síť → Spravovat → Odeslané stáhněte:' +
         (q.omylem.length ? '<div class="li-red" style="margin-top:4px;">hned – pozváni omylem (neoslovovat): ' + omylemNames.join(', ') + '</div>' : '') +
         (odmitliDates.length ? '<div class="li-red" style="margin-top:4px;">hned – ' + odmitliDates.length + ' pozvánek lidem, kteří dříve odmítli (jméno je vymazané, poznáte je podle data odeslání: ' + odmitliDates.join(', ') + ')</div>' : '') +
-        (stale.length ? '<div style="margin-top:4px;">pozvánky starší než 3 týdny (' + stale.length + ').</div>' : '') +
+        (stale.length ? '<div style="margin-top:4px;">pozvánky starší než 3 týdny, které tam pořád čekají.</div>' : '') +
         '<div class="li-muted" style="margin-top:4px;">V aplikaci se nic nezapisuje.</div>';
 
     const vymazTotal = q.vymaz.length + q.zkratit.length + q.otisky.length + q.kandidatiStari.length + q.zkontrolovat.length;
