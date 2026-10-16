@@ -527,6 +527,10 @@
         .li-manual-box summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
         .li-today { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text); }
         .li-today-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .li-msg { border: 1px solid var(--line-faint); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+        .li-msg-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+        .li-msg summary { cursor: pointer; font-size: 12.5px; color: var(--text-soft); margin-top: 6px; }
+        .li-msg-text { white-space: pre-wrap; font: inherit; font-size: 12.5px; color: var(--text-soft); margin: 8px 0 0; }
         .li-imp-sum { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-soft); }
         .li-maybe { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--line-faint); border-radius: 6px; max-height: 260px; overflow: auto; }
         .li-maybe label { display: flex; gap: 6px; align-items: baseline; font-size: 12.5px; }
@@ -8648,7 +8652,7 @@ function liCardHtml(c, kind) {
             (kind === 'prijali' && !liGlobalGate() ? ' – poslat dnes' : (kind === 'prijali' ? ' – čeká na odblokování, výmaz za ' : liIsCampaignRecord(c) ? ' – výmaz za ' : ' – LinkedIn údaje se zruší za ') + Math.max(0, LI_VYMAZ_PO_DNECH - inv) + ' d') + '</span>');
     }
     if (kind === 'odpoved' && c.li_zprava_kdy) badges.push('<span class="li-badge">představení ' + formatDate(c.li_zprava_kdy) + '</span>');
-    if (kind === 'odpovedel' && c.li_odpoved_kdy) badges.push('<span class="li-badge li-badge-sit">podrobnosti poslány ' + formatDate(c.li_odpoved_kdy) + '</span>');
+    if (kind === 'odpovedel' && c.li_odpoved_kdy) badges.push('<span class="li-badge li-badge-sit">' + (/^R-/.test(String(c.sablona || '')) ? 'podrobnosti poslány ' : 'ozval se ') + formatDate(c.li_odpoved_kdy) + '</span>');
     if (c.poznamka && kind === 'pozvat') badges.push('<span class="li-badge li-badge-note" title="' + escapeHtml(c.poznamka) + '">' + escapeHtml(String(c.poznamka).slice(0, 80)) + '</span>');
     const undo = state.liUndo[c.id] && state.liUndo[c.id].day === liToday() ? state.liUndo[c.id] : null;
     const failed = state.liFailed[c.id];
@@ -8661,29 +8665,11 @@ function liCardHtml(c, kind) {
             '<button class="btn btn-ghost li-btn li-btn-small" onclick="liDropCandidate(\'' + id + '\')">Nehodí se</button>' +
             '<div class="li-hint">Pozvěte bez poznámky. Pozvánku pak zapíše import exportu z LinkedInu.</div>';
     } else if (kind === 'prijali' || kind === 'davka') {
+        // Zprávu Martin posílá ručně (obecná zpráva v „Pozvaní“); tady jen zapsat, kdo se ozval
         const cardGate = liCardGate(c);
-        const blocked = !!(liGlobalGate() || cardGate);
-        const sal = (state.liSal[c.id] != null) ? state.liSal[c.id] : liSalutation(c.kontaktniOsoba);
-        const prim = liPrimaryVariant(c);
-        const order = [prim].concat(Object.keys(LI_VARIANTY).filter(function (v) { return v !== prim; }));
-        const globalGate = liGlobalGate();
-        if (globalGate) {
-            // Představení zatím nejde: jen zapsat přijetí (statistiky a lhůty pak sedí)
-            actions = (kind === 'davka'
-                    ? '<button class="btn btn-primary li-btn" onclick="liMarkAccepted(\'' + id + '\')">Přijal</button>'
-                    : '<span class="li-muted" style="font-size:12.5px;">Přijal – představení pošlete po odblokování (IČO a zásady).</span>' +
-                      (state.liUndo[c.id] && state.liUndo[c.id].code === 'prijal' ? ' <button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + id + '\')">Vrátit</button>' : '')) +
-                liNegButtons(id) +
-                (cardGate ? '<div class="li-gate">' + escapeHtml(cardGate) + '</div>' : '');
-        } else {
-            actions = '<input class="form-input li-salut" value="' + escapeHtml(sal) + '" aria-label="Oslovení pro ' + name + '" oninput="state.liSal[\'' + id + '\']=this.value">' +
-                order.map(function (v, i) {
-                    return '<a class="btn ' + (i === 0 ? 'btn-primary li-btn' : 'btn-ghost li-btn li-btn-small') + (blocked ? ' li-disabled' : '') + '" href="' + escapeHtml(liProfileHref(c)) + '" target="_blank" rel="noopener noreferrer"' +
-                        ' onclick="return liSendIntro(event, \'' + id + '\', \'' + v + '\')">' + (i === 0 ? 'Poslat představení (' + LI_VARIANTY[v].label.toLowerCase() + ')' : 'jako ' + LI_VARIANTY[v].label.toLowerCase()) + '</a>';
-                }).join('') +
-                liNegButtons(id) +
-                (cardGate ? '<div class="li-gate">' + escapeHtml(cardGate) + '</div>' : '');
-        }
+        actions = '<button class="btn btn-secondary li-btn li-btn-small" onclick="liReplied(\'' + id + '\')">Ozval se</button>' +
+            liNegButtons(id) +
+            (cardGate ? '<div class="li-gate">' + escapeHtml(cardGate) + '</div>' : '');
     } else if (kind === 'odpoved') {
         actions =
             '<a class="btn btn-primary li-btn" href="' + escapeHtml(liProfileHref(c)) + '" target="_blank" rel="noopener noreferrer" onclick="return liInterest(event, \'' + id + '\')">Zájem (zkopíruje podrobnosti)</a>' +
@@ -8692,7 +8678,7 @@ function liCardHtml(c, kind) {
     } else if (kind === 'odpovedel') {
         actions = '<a class="btn btn-secondary li-btn" href="' + escapeHtml(liProfileHref(c)) + '" target="_blank" rel="noopener noreferrer">Otevřít konverzaci</a>' +
             liNegButtons(id) +
-            (undo && undo.code === 'zajem' ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + id + '\')">Vrátit</button>' : '');
+            (undo && (undo.code === 'zajem' || undo.code === 'ozval') ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + id + '\')">Vrátit</button>' : '');
     }
     else if (kind === 'jinak') {
         badges.push('<span class="li-badge">' + (/^web/i.test(String(c.osloven_kanal || '')) ? 'web' : 'e-mail') + ' ' + formatDate(c.osloven_kdy) + '</span>');
@@ -8734,18 +8720,21 @@ function liSectionHtml(key, title, list, kind, emptyText, opts) {
     '</div>';
 }
 
-// Dnes odesláno: kompaktní přehled
+// Dnes zapsáno: kompaktní přehled (jen když něco je)
 function liTodayListHtml(list) {
+    if (!list.length) return '';
     const today = liToday();
     const rows = list.map(function (c) {
         const u = state.liUndo[c.id];
         const code = u && u.day === today ? u.code : '';
-        const what = String(c.neoslovovat || '').trim() && c.li_odpoved_kdy === today ? 'odmítnutí zapsáno' : (code === 'zajem' || (!code && c.li_odpoved_kdy === today) ? 'podrobnosti' : 'představení');
+        const what = String(c.neoslovovat || '').trim() && c.li_odpoved_kdy === today ? 'odmítnutí zapsáno'
+            : code === 'ozval' || (!code && c.li_odpoved_kdy === today && !/^R-/.test(String(c.sablona || ''))) ? 'ozval se'
+            : (code === 'zajem' || (!code && c.li_odpoved_kdy === today) ? 'podrobnosti' : 'představení');
         const undo = code ? ' <button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + escapeAttr(c.id) + '\')">Vrátit</button>' : '';
         return '<div class="li-today-row">' + escapeHtml(c.kontaktniOsoba || '(bez jména)') + ' <span class="li-muted">· ' + what + '</span>' + undo + '</div>';
     }).join('');
-    return '<div class="li-section"><div class="li-section-head"><h4>Dnes odesláno <span class="li-count">' + list.length + '</span></h4></div>' +
-        (list.length ? '<div class="li-today">' + rows + '</div>' : '<div class="li-empty">Dnes zatím nic.</div>') + '</div>';
+    return '<div class="li-section"><div class="li-section-head"><h4>Dnes zapsáno <span class="li-count">' + list.length + '</span></h4></div>' +
+        '<div class="li-today">' + rows + '</div></div>';
 }
 
 function liSearchKind(c) {
@@ -9419,31 +9408,74 @@ function liPrimaryVariant(c) {
     if (/jednatel|majitel|ředitel|předsed|člen představenstva|vedoucí|ceo|owner|founder|partner/i.test(String(c.role || ''))) return 'majitel';
     return 'poradce';
 }
+// Obecná zpráva pro lidi z dávek, kteří přijali pozvánku. Martin ji pošle ručně, dál už píše individuálně.
+// Text podle Martina (16. 10. 2026), bez údajů o firmě a o zpracování osobních údajů – posoudí právník.
+function liTextObecna() {
+    return 'Dobrý den,\n\n' +
+        'děkuji za spojení.\n\n' +
+        'V rámci nově vytvořené společnosti financujeme firmy: poskytujeme podnikatelské úvěry 3–100 mil. Kč zajištěné nemovitostmi v ČR, na nákup nemovitosti, uvolnění kapitálu nebo refinancování. Indikativní nabídku připravíme do 48 hodin od dodání kompletních podkladů.\n\n' +
+        'Hledáme spolupráci s poradci, kteří pracují s firemními klienty. Pokud by vás spolupráce zajímala nebo řešíte klienta, který takové financování potřebuje, stačí mi odepsat.\n\n' +
+        'Martin Dlouhý';
+}
+function liCopyObecna() {
+    const text = liTextObecna();
+    liCopy(text).then(function () {
+        toast('success', 'Zpráva je ve schránce – vložte ji na LinkedInu a odešlete.');
+    }, function () {
+        liShowCopyFallback(text, function () {}, 'Hotovo');
+    });
+}
+// Ozval se po obecné zprávě → stav Reaguje (nikdy se nemaže), dál „Mají zájem“; jde vrátit
+async function liReplied(id) {
+    const c = state.contacts.find(function (x) { return x.id === id; });
+    if (!c) return;
+    const today = liToday();
+    const f = { linkedinStav: 'Odpověděl', stav: 'Reaguje', li_odpoved_kdy: today };
+    if (!c.li_prijato_kdy) f.li_prijato_kdy = today;
+    if (!c.li_zprava_kdy) { f.li_zprava_kdy = today; f.sablona = 'A-obecna-' + LI_SABLONA_VERZE; }
+    await liPatchWithUndo(id, f, 'ozval');
+}
+function liInvitedRowHtml(c) {
+    const id = escapeAttr(c.id);
+    const inv = liDaysSince(c.li_pozvanka_kdy);
+    const gate = liCardGate(c);
+    const badges = (String(c.linkedinStav || '') === 'Přijato' ? ' <span class="li-badge li-badge-sit">přijal</span>' : '') +
+        (inv !== null && inv >= 14 && !liIsProtected(c) ? ' <span class="li-badge li-badge-warn">' + (liIsCampaignRecord(c) ? 'výmaz za ' : 'LinkedIn údaje se zruší za ') + Math.max(0, LI_VYMAZ_PO_DNECH - inv) + ' d</span>' : '') +
+        (gate ? ' <span class="li-badge li-badge-warn">' + escapeHtml(gate) + '</span>' : '');
+    return '<div class="li-batch-row">' +
+        '<div class="li-batch-who"><span class="li-name">' + escapeHtml(c.kontaktniOsoba || '(bez jména)') + '</span> <span class="li-batch-sub">· ' + escapeHtml([c.role, c.firma].filter(Boolean).join(', ')) + '</span>' + badges + '</div>' +
+        '<div class="li-actions">' +
+            '<button class="btn btn-ghost li-btn li-btn-small" onclick="liReplied(\'' + id + '\')">Ozval se</button>' +
+            '<button class="btn btn-ghost li-btn li-btn-small" onclick="liNegative(\'' + id + '\', \'nemá zájem\')">Nemá zájem</button>' +
+            '<button class="li-open" onclick="openEditContact(\'' + id + '\')" title="Otevřít detail" aria-label="Otevřít detail ' + escapeHtml(c.kontaktniOsoba || '') + '">⋯</button>' +
+        '</div></div>';
+}
 function liInvitedGroupsHtml(q, today) {
     const list = q.prijali.concat(q.davka);
     const groups = {};
     list.forEach(function (c) { (groups[c.li_pozvanka_kdy] = groups[c.li_pozvanka_kdy] || []).push(c); });
     const days = Object.keys(groups).sort().reverse();
-    const firstPast = days.find(function (d) { return d < today; });
-    const gate = liGlobalGate();
+    const recent = days.filter(function (d) { return d < today; }).slice(0, 2);   // poslední 2 dny rozbalené
+    const msg = '<div class="li-msg"><div class="li-msg-head"><strong>Zpráva pro ty, kdo přijali</strong>' +
+            '<button class="btn btn-primary li-btn li-btn-small" onclick="liCopyObecna()">Zkopírovat zprávu</button></div>' +
+        '<details><summary>Zobrazit text</summary><pre class="li-msg-text">' + escapeHtml(liTextObecna()) + '</pre></details></div>';
     const head = '<div class="li-section"><div class="li-section-head"><h4>Pozvaní – kdo přijal <span class="li-count">' + list.length + '</span></h4></div>' +
-        '<div class="li-hint" style="margin-bottom:8px;">' + (gate
-            ? 'Na LinkedInu se podívejte, kdo pozvánku přijal (Moje síť nebo oznámení), a klikněte u něj „Přijal“. Představení pošlete, jakmile ho aplikace odblokuje (IČO a zásady). Kdo do ' + LI_VYMAZ_PO_DNECH + ' dní od pozvánky představení nedostane, toho aplikace navrhne k výmazu.'
-            : 'Na LinkedInu se podívejte, kdo pozvánku přijal (Moje síť nebo oznámení), a jen u něj klikněte „Poslat představení“. Ostatní nechte – zůstanou tu až ' + LI_VYMAZ_PO_DNECH + ' dní.') + '</div>';
+        '<div class="li-hint" style="margin-bottom:8px;">Ráno se na LinkedInu podívejte, kdo přijal (Moje síť → Spojení → seřadit „Nedávno přidaní“), a pošlete mu zprávu níže. Dál pokračujte individuálně. Kdo se ozve, klikněte „Ozval se“ – zůstane v databázi. Kdo nemá zájem, „Nemá zájem“. Ostatní nechte, po ' + LI_VYMAZ_PO_DNECH + ' dnech je aplikace navrhne k výmazu.</div>' + msg;
     if (!days.length) return head + '<div class="li-empty">Zatím nikdo. Po prvním „Zapsat“ u dávky se tu lidé objeví den po dni.</div></div>';
     return head + days.map(function (d) {
         const rows = groups[d];
         const key = 'g:' + d;
-        const open = state.liExpand[key] != null ? state.liExpand[key] : d === firstPast;
+        const isRecent = recent.indexOf(d) !== -1;
+        const open = state.liExpand[key] != null ? state.liExpand[key] : isRecent;
         const accepted = rows.filter(function (c) { return String(c.linkedinStav || '') === 'Přijato'; }).length;
         const rel = liRelDay(d, today);
         const age = liDaysSince(d, today);
         const label = d === today ? 'Dnes pozvaní – přijetí zkontrolujte zítra' : (rel ? rel + ' · ' : '') + 'pozváni ' + liDayLabel(d);
-        return '<div class="li-day' + (d === firstPast ? ' li-day-today' : ' li-day-old') + '">' +
+        return '<div class="li-day' + (isRecent ? ' li-day-today' : ' li-day-old') + '">' +
             '<button class="li-day-head" onclick="state.liExpand[\'' + escapeAttr(key) + '\']=' + (open ? 'false' : 'true') + ';renderLinkedInToday()" aria-expanded="' + open + '">' +
                 '<span><strong>' + escapeHtml(label) + '</strong> <span class="li-muted">· ' + liPeople(rows.length) + (accepted ? ', přijali: ' + accepted : '') + (age !== null && age >= 14 ? ' · výmaz za ' + Math.max(0, LI_VYMAZ_PO_DNECH - age) + ' d' : '') + '</span></span>' +
                 '<span class="li-muted">' + (open ? 'sbalit' : 'rozbalit') + '</span></button>' +
-            (open ? '<div class="li-cards" style="margin-top:8px;">' + rows.map(function (c) { return liCardHtml(c, String(c.linkedinStav || '') === 'Přijato' ? 'prijali' : 'davka'); }).join('') + '</div>' : '') +
+            (open ? '<div class="li-batch" style="margin-top:6px;">' + rows.map(liInvitedRowHtml).join('') + '</div>' : '') +
         '</div>';
     }).join('') + '</div>';
 }
@@ -9489,7 +9521,7 @@ function renderLinkedInToday() {
         '<div class="li-stat"><div class="li-stat-val">' + s.introToday + '</div><div class="li-stat-lbl">představení dnes</div></div>' +
         '<div class="li-stat"><div class="li-stat-val">' + s.repliesWeek + '</div><div class="li-stat-lbl">odpovědi (7 dní)</div></div>' +
         (BLOKOVANE_SITE.length ? '<div class="li-stat li-stat-wide"><div class="li-stat-lbl">Nezvat lidi z: ' + BLOKOVANE_SITE.map(escapeHtml).join(', ') + '</div></div>' : '') +
-        '<div class="li-hint li-stat-wide">Tlačítka zkopírují text do schránky a otevřou profil v nové záložce – zprávu vložte, odešlete a záložku zavřete.</div>';
+        '<div class="li-hint li-stat-wide">Zprávu pro ty, kdo přijali, zkopírujete v „Pozvaní – kdo přijal“.</div>';
 
     // Vyhledávání přes všechny lidi z LinkedIn evidence
     const sq = (state.liSearch || '').trim();
@@ -9539,7 +9571,7 @@ function renderLinkedInToday() {
         liInvitedGroupsHtml(q, today) +
         liOtherChannelHtml(today) +
         liTodayListHtml(q.dnes) +
-        liSectionHtml('odpoved', 'Čekají na odpověď', q.odpoved, 'odpoved', 'Žádné představení nečeká na odpověď.') +
+        (q.odpoved.length ? liSectionHtml('odpoved', 'Čekají na odpověď', q.odpoved, 'odpoved', '') : '') +
         liSectionHtml('odpovedel', 'Mají zájem – rozhovor běží (60 dní)', q.odpovedel, 'odpovedel', 'Zatím nikdo.', { collapsed: true }) +
         (q.pozvat.length ? liSectionHtml('pozvat', 'Kandidáti z importu – pozvat', q.pozvat, 'pozvat', '') : '') +
         '<div class="li-section"><div class="li-section-head"><h4>Stáhnout na LinkedInu <span class="li-count">' + stahnoutCount + '</span></h4></div>' +
@@ -9567,12 +9599,12 @@ function liCopy(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
     return Promise.reject(new Error('clipboard nedostupný'));
 }
-function liShowCopyFallback(text, onDone) {
+function liShowCopyFallback(text, onDone, doneLabel) {
     const box = document.getElementById('li-copy-fallback');
     box.style.display = 'block';
     box.innerHTML = '<div class="info-note warning"><strong>Text se nepodařilo zkopírovat automaticky.</strong> Označte ho a zkopírujte (Ctrl+C), vložte na LinkedInu a pak klikněte „Hotovo".</div>' +
         '<textarea class="form-textarea" id="li-copy-ta" style="min-height:220px;margin-top:10px;" aria-label="Text zprávy"></textarea>' +
-        '<div style="margin-top:10px;display:flex;gap:10px;"><button class="btn btn-primary" id="li-copy-done">Hotovo – zapsat</button><button class="btn btn-ghost" onclick="document.getElementById(\'li-copy-fallback\').style.display=\'none\'">Zrušit</button></div>';
+        '<div style="margin-top:10px;display:flex;gap:10px;"><button class="btn btn-primary" id="li-copy-done">' + escapeHtml(doneLabel || 'Hotovo – zapsat') + '</button><button class="btn btn-ghost" onclick="document.getElementById(\'li-copy-fallback\').style.display=\'none\'">Zrušit</button></div>';
     const ta = document.getElementById('li-copy-ta');
     ta.value = text;
     ta.focus();
