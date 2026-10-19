@@ -8769,6 +8769,7 @@ state.liBatchWriting = false;      // probíhá zápis „Zapsat“
 state.liHidden = {};               // otisk řádku → skryto (Nenašel) v této relaci
 state.liOpened = {};               // otisk řádku → kliknuto „Hledat“ v této relaci
 state.liChannel = {};              // otisk řádku → 'email' / 'web' / '' (vráceno) v této relaci
+state.liExtra = { day: '', n: 0 }; // „Načíst další“: kolik lidí navíc ukázat dnes (jen v této relaci)
 // Lidé bez LinkedInu: Martin jim napíše e-mailem nebo přes kontaktní formulář na webu firmy
 const LI_JINE_KANALY = {
     email: { label: 'e-mail', zapis: 'Email', tlacitko: 'Poslal e-mail' },
@@ -9148,6 +9149,20 @@ function liHandledToday(today, rows, hidden) {
     return n;
 }
 
+// Denní dávka: LI_DENNI_LIMIT lidí, navíc kolik si Martin dnes dotáhl tlačítkem „Načíst další“
+function liDailyCap(today) { return LI_DENNI_LIMIT + (state.liExtra.day === today ? state.liExtra.n : 0); }
+// Kolik dalších lidí ještě dnes nabídnout: volné místo na LinkedInu po odečtení otevřených (nezapsaných) a ukázaných
+function liMoreOffer(qd, today) {
+    if (!qd.more) return 0;
+    const openedToday = qd.rows.filter(function (r) { return liIsOpened(r) && !liRowChannel(r) && liOpenedDate(r) === today; }).length;
+    return Math.min(qd.more, Math.max(0, liInviteRoom() - openedToday - qd.waiting));
+}
+function liLoadMore(n) {
+    const today = liToday();
+    state.liExtra = { day: today, n: (state.liExtra.day === today ? state.liExtra.n : 0) + Math.max(0, n | 0) };
+    renderLinkedInToday();
+}
+
 // Fronta na dnešek: nejdřív nevyřízení z minulých dnů (nejvýš LI_DAVKA_MAX_STARI dní po plánovaném dni – lhůta
 // podle čl. 14 GDPR), pak dnešní dávka. Kdo se dnes nestihne, posune se na další den.
 function liQueue(today) {
@@ -9161,7 +9176,8 @@ function liQueue(today) {
         if (b.den === today) { q.known = b.skippedKnown; q.neo = b.skippedNeo; }
     });
     q.handledToday = liHandledToday(today, all, q.hidden);
-    let room = Math.max(0, LI_DENNI_LIMIT - q.handledToday);
+    q.cap = liDailyCap(today);
+    let room = Math.max(0, q.cap - q.handledToday);
     all.forEach(function (r) {
         if (liIsHandled(r)) { q.rows.push(r); if (liRowChannel(r)) q.jinak++; else q.linkedin++; return; }
         if (room > 0) { q.rows.push(r); q.waiting++; room--; } else q.more++;
@@ -9214,13 +9230,16 @@ function liQueueHtml(qd, today) {
         ? '<details class="li-hidden-list"><summary>Nenašel: ' + qd.hidden.length + '</summary>' + qd.hidden.map(function (r) {
             return '<div class="li-today-row">' + escapeHtml(r.kontaktniOsoba) + ' <span class="li-muted">· ' + escapeHtml(r.firma) + '</span> <button class="btn btn-ghost li-btn li-btn-small" onclick="liBatchUndoNotFound(\'' + escapeAttr(r.h) + '\')">Vrátit</button></div>';
         }).join('') + '</details>' : '';
-    const later = qd.more ? '<div class="li-hint" style="margin-top:8px;">Na další dny ' + liWaits(qd.more) + '.</div>' : '';
+    const offer = liMoreOffer(qd, today);
+    const later = qd.more ? '<div class="li-actions" style="margin-top:8px;align-items:center;"><span class="li-hint" style="flex:0 1 auto;">Na další dny ' + liWaits(qd.more) + '.</span>' +
+        (offer ? '<button class="btn btn-secondary li-btn li-btn-small" onclick="liLoadMore(' + offer + ')">Načíst další (' + offer + ')</button>' +
+            '<span class="li-muted" style="font-size:12.5px;">na LinkedInu dnes ještě zbývá místo</span>' : '') + '</div>' : '';
     const list = qd.rows.length
         ? '<div class="li-batch">' + qd.rows.map(function (r) { return liBatchRowHtml(r, today); }).join('') + '</div>'
-        : '<div class="li-empty">Dnešních ' + LI_DENNI_LIMIT + ' lidí je vyřízeno.</div>';
+        : '<div class="li-empty">Dnešních ' + qd.cap + ' lidí je vyřízeno.</div>';
     return '<div class="li-section li-day li-day-today">' +
         '<div class="li-section-head"><h4>Dnes oslovit – ' + escapeHtml(liDayLabel(today)) + ' <span class="li-count">' + qd.rows.length + '</span></h4>' +
-            '<span class="li-muted" style="font-size:12.5px;">dnes vyřízeno ' + qd.handledToday + ' z ' + LI_DENNI_LIMIT + '</span></div>' +
+            '<span class="li-muted" style="font-size:12.5px;">dnes vyřízeno ' + qd.handledToday + ' z ' + qd.cap + '</span></div>' +
         '<div class="li-hint" style="margin-bottom:8px;">„Hledat na LinkedInu“ a pozvat bez poznámky. Kdo LinkedIn nemá, tomu napište e-mailem nebo přes formulář na webu a klikněte „Poslal e-mail“ nebo „Napsal přes web“. Koho nenajdete vůbec, označte „Nenašel“. Průběžně nebo na konci klikněte „Zapsat“. Kdo se dnes nestihne, přesune se na další den. Na LinkedInu dnes ještě asi ' + liPeopleAcc(room) + ' (zhruba ' + LI_TYDENNI_STROP + ' pozvánek za 7 dní).' +
             (notes.length ? ' (' + notes.join(', ') + ')' : '') + '</div>' +
         list + later + hidden +
