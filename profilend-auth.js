@@ -13,10 +13,15 @@
  *                                            nemá nastaveno → použij GIS fallback)
  *   await ProfilendAuth.getSessionToken()  → sessionToken pro AI endpointy | null
  *   ProfilendAuth.isDeviceRegistered()     → bool (lokální kontrola expirace)
+ *   ProfilendAuth.isLawyer()               → bool (přihlášen kódem advokáta)
  *   ProfilendAuth.reset()                  → odhlásí toto zařízení (smaže tokeny)
  *
+ * Advokát (token 'exp.lawyer.sig', jen Úvěrová dokumentace): Google token ani AI relaci
+ * nedostane — getGoogleToken/getSessionToken vrací rovnou null, bez dotazu na server
+ * (odpověď 401 by jinak jeho přihlášení smazala).
+ *
  * Sdílené klíče (jedno přihlášení pro celý web — stejná doména):
- *   localStorage 'profilend-device-token'  — deviceToken (formát 'exp.sig')
+ *   localStorage 'profilend-device-token'  — deviceToken (formát 'exp.sig', advokát 'exp.lawyer.sig')
  *   localStorage 'gdrive-shared-token' / 'gdrive-shared-token-expiry' — Google token
  *   sessionStorage 'profilend-session-token' — sessionToken (per tab)
  *
@@ -42,6 +47,10 @@
             if (!exp || exp <= Date.now()) { localStorage.removeItem(DEVICE_KEY); return null; }
             return t;
         } catch (e) { return null; }
+    }
+
+    function isLawyer() {
+        return /^\d+\.lawyer\./.test(getStoredDevice() || '');
     }
 
     function clearDevice() {
@@ -243,6 +252,7 @@
     function getGoogleToken(opts) {
         opts = opts || {};
         var interactive = opts.interactive !== false;
+        if (isLawyer()) return Promise.resolve(null); // advokát nemá přístup k Martinovu Drive
         var cached = cachedGoogleToken();
         if (cached) return Promise.resolve(cached);
         if (pendingGoogle) return pendingGoogle;
@@ -285,6 +295,7 @@
     //  Session token pro AI endpointy (X-Database-Token)
     // ──────────────────────────────────────────────────────────
     function getSessionToken() {
+        if (isLawyer()) return Promise.resolve(null); // advokát nemá AI relaci (kredity)
         var cached = null;
         try { cached = sessionStorage.getItem(SESSION_KEY); } catch (e) { /* no-op */ }
         var device = getStoredDevice();
@@ -317,6 +328,7 @@
         getGoogleToken: getGoogleToken,
         getSessionToken: getSessionToken,
         isDeviceRegistered: function () { return !!getStoredDevice(); },
+        isLawyer: isLawyer,
         getDeviceToken: getStoredDevice,
         reset: function () { clearDevice(); },
         RAILWAY: RAILWAY

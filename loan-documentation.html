@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Úvěrová dokumentace | Investment Tools</title>
+    <script>
+        // Režim advokáta hned při načtení (bez probliknutí menu) — přesnou kontrolu dělá skript níže (LAWYER_MODE)
+        try { if (/^\d+\.lawyer\./.test(localStorage.getItem('profilend-device-token') || '')) document.documentElement.classList.add('lawyer-mode'); } catch (e) { /* no-op */ }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="design-system/tokens.css">
@@ -1750,6 +1754,20 @@
             .nav-menu { display: none !important; }
             .main-content { padding: 24px 20px 60px; }
         }
+        /* Režim advokáta (přihlášení kódem advokáta) — jen tato aplikace, šablony jen ke čtení, bez AI API.
+           Přístup hlídá server; tady se jen schovají ovládací prvky, které advokát nepoužije. */
+        html:not(.lawyer-mode) .lawyer-only { display: none !important; }
+        html.lawyer-mode .owner-only,
+        html.lawyer-mode .nav .nav-menu,
+        html.lawyer-mode .app-meta .crumbs a,
+        html.lawyer-mode .app-meta .crumbs .sep,
+        html.lawyer-mode .category-manager,
+        html.lawyer-mode .template-delete,
+        html.lawyer-mode .template-category-dropdown,
+        html.lawyer-mode .action-bar-api,
+        html.lawyer-mode #gdriveBtn { display: none !important; }
+        html.lawyer-mode .nav a.logo { pointer-events: none; }
+        .lawyer-templates-note { margin: 1rem 0 0.5rem; font-size: 0.8125rem; line-height: 1.5; color: var(--text-mute); }
     </style>
 </head>
 <body>
@@ -1819,7 +1837,7 @@
 
     <div class="app-head">
       <div class="app-head-left">
-        <div class="eyebrow">Private Credit · Dokumentace</div>
+        <div class="eyebrow">Private Credit · Dokumentace<span class="lawyer-only"> · Režim advokáta</span></div>
         <h1 class="app-title">Úvěrová <em>dokumentace</em></h1>
         <p class="app-sub">Generování úvěrových a zástavních smluv ze šablon na Google Drive pomocí Claude AI. Mapování dat z LV, validace tranší, export DOCX.</p>
       </div>
@@ -1856,6 +1874,10 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Nová sada
                     </button>
+                    <button class="btn btn-outline lawyer-only" onclick="lawyerLogout()" title="Odhlásit tento počítač (např. sdílený počítač)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Odhlásit
+                    </button>
                 </div>
             </div>
 
@@ -1889,13 +1911,14 @@
                             <div class="upload-zone-hint">Údaje se doplní do formuláře a případ se uloží do Přehledu. Soubor se čte jen v prohlížeči.</div>
                         </div>
                         <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.75rem;">
-                            <button type="button" class="btn btn-outline" onclick="openImportModal()" title="Načte uložená data případu z Term Sheet Generátoru (Drive / lokální)">
+                            <button type="button" class="btn btn-outline owner-only" onclick="openImportModal()" title="Načte uložená data případu z Term Sheet Generátoru (Drive / lokální)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                 Importovat term sheet
                             </button>
                             <input type="file" id="filledTsInput" accept=".docx" style="display:none;" onchange="importFilledTermSheet(this.files[0]); this.value='';">
                         </div>
-                        <div style="margin-top: 1rem;">
+                        <div class="lawyer-templates-note lawyer-only">Šablony nahrává Martin — stahují se samy z jeho složky a jsou jen ke čtení. Nové verze zkontrolujete tlačítkem Šablony nahoře.</div>
+                        <div class="owner-only" style="margin-top: 1rem;">
                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem;">
                                 <label class="form-label" style="margin: 0;">Nahrát šablony (Word, Excel)</label>
                                 <button type="button" class="btn btn-outline btn-small" onclick="pushAllTemplatesToDrive()" id="btn-push-all-templates" title="Nahraje všechny lokální šablony na Google Drive (přepíše stejně pojmenované)">
@@ -2640,6 +2663,13 @@
 
     <script>
         var LOAN_API_BASE = 'https://main-project-production-b048.up.railway.app';
+        /* ─── REŽIM ADVOKÁTA — přihlášení kódem advokáta (token 'exp.lawyer.sig'), jen tato aplikace ───
+         * Šablony jen ke čtení: stahují se z Martinovy složky na Drive přes Railway /api/lawyer/*
+         * (Martinův Google token advokát nikdy nedostane), bez AI API, Term Sheet se dohledá podle
+         * čísla v dokumentu. Vlastní IndexedDB 'loanDocDB-advokat' — Martinova data se nesmíchají.
+         * Přístup hlídá server (proxy.ts + Railway); tady jde jen o vzhled a pohodlí. */
+        var LAWYER_MODE = !!(window.ProfilendAuth && ProfilendAuth.isLawyer && ProfilendAuth.isLawyer());
+        document.documentElement.classList.toggle('lawyer-mode', LAWYER_MODE);
         /* PIN is verified server-side — no client-side secret */
         var db = null;
         var generatedDocuments = {};
@@ -2838,11 +2868,19 @@
 
             function startDeviceUnlock() {
                 ProfilendAuth.ensureDevice()
-                    .then(function() { return ProfilendAuth.getSessionToken(); })
-                    .then(function(token) {
-                        if (token) {
+                    .then(function(device) {
+                        var lawyer = ProfilendAuth.isLawyer();
+                        // Kód advokáta zadaný až v okně PINu (nebo naopak PIN v režimu advokáta)
+                        // → stránka se otevře znovu ve správném režimu
+                        if (device && lawyer !== LAWYER_MODE) { location.reload(); return { reload: true }; }
+                        if (lawyer) return { lawyer: true }; // advokát: bez AI relace (kredity)
+                        return ProfilendAuth.getSessionToken().then(function(token) { return { token: token }; });
+                    })
+                    .then(function(r) {
+                        if (r.reload) return;
+                        if (r.token || r.lawyer) {
                             // Stejné klíče + success cesta jako dnešní úspěšný 4místný PIN
-                            sessionStorage.setItem('ld-token', token);
+                            if (r.token) sessionStorage.setItem('ld-token', r.token);
                             document.getElementById('pinOverlay').classList.add('hidden');
                             document.getElementById('appContainer').style.display = '';
                             // Init v try/catch MIMO auth logiku — chyba inicializace nesmí
@@ -3015,7 +3053,9 @@
         }
 
         function openDB() {
-            var request = indexedDB.open('loanDocDB', 3);
+            // Advokát má vlastní databázi — i kdyby se kód advokáta použil v Martinově prohlížeči,
+            // jeho šablony a případy se nikdy nepřepíšou
+            var request = indexedDB.open(LAWYER_MODE ? 'loanDocDB-advokat' : 'loanDocDB', 3);
             request.onerror = function() {
                 showToast('Chyba připojení k databázi', 'error');
             };
@@ -3023,6 +3063,7 @@
                 db = event.target.result;
                 ensureDefaultCategories(function() {
                     renderTemplateList();
+                    if (LAWYER_MODE) syncLawyerTemplates(false);
                 });
             };
             request.onupgradeneeded = function(event) {
@@ -3187,6 +3228,7 @@
         }
 
         function addCategory() {
+            if (lawyerReadOnly()) return;
             var name = prompt('Název nové kategorie:');
             if (!name || !name.trim()) return;
             name = name.trim();
@@ -3212,6 +3254,7 @@
         }
 
         function renameCategory(id) {
+            if (lawyerReadOnly()) return;
             getAllFromDB('categories', function(cats) {
                 var cat = cats.find(function(c) { return c.id === id; });
                 if (!cat) return;
@@ -3249,6 +3292,7 @@
         }
 
         function deleteCategory(id) {
+            if (lawyerReadOnly()) return;
             getAllFromDB('categories', function(cats) {
                 var cat = cats.find(function(c) { return c.id === id; });
                 if (!cat) return;
@@ -3281,6 +3325,7 @@
         }
 
         function changeTemplateCategory(templateId, newCategoryName) {
+            if (lawyerReadOnly()) { renderTemplateList(); return; }
             getAllFromDB('templates', function(templates) {
                 var t = templates.find(function(x) { return x.id === templateId; });
                 if (!t) return;
@@ -3422,6 +3467,7 @@
         /* ─── TEMPLATES ─── */
         // Šablony Word (.docx) + Excel jen jako šablona splátkového kalendáře (.xlsx)
         function uploadTemplateFiles(files) {
+            if (lawyerReadOnly()) return;
             Array.from(files || []).forEach(function(file) {
                 if (/\.(docx|xlsx)$/i.test(file.name)) {
                     uploadTemplate(file);
@@ -3432,6 +3478,7 @@
         }
 
         function uploadTemplate(file) {
+            if (lawyerReadOnly()) return;
             var isSheet = isXlsxName(file.name);
             var reader = new FileReader();
             reader.onload = function(e) {
@@ -3449,6 +3496,7 @@
         }
 
         function storeTemplateFile(name, data, isSheet) {
+            if (lawyerReadOnly()) return;
             // Auto-detekce kategorie + dedup podle name (jinak druhý drag&drop stejné
             // šablony vytvořil další entry s autoIncrement id — typický původ duplikátů
             // mezi "Úvěrové smlouvy" a "Nezařazeno").
@@ -3507,6 +3555,7 @@
 
         /* ─── BULK PUSH TEMPLATES TO DRIVE ─── */
         async function pushAllTemplatesToDrive() {
+            if (lawyerReadOnly()) return;
             if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) {
                 showToast('Nejdřív se přihlas do Google Drive', 'error');
                 return;
@@ -4762,6 +4811,7 @@
         }
 
         async function refreshTemplatesFromDrive() {
+            if (LAWYER_MODE) return syncLawyerTemplates(true); // advokát: šablony z Martinovy složky
             if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) {
                 showToast('Nejdřív se přihlas do Google Drive', 'error');
                 return;
@@ -4774,6 +4824,134 @@
                 console.warn('refreshTemplatesFromDrive:', e);
                 showToast('Synchronizace selhala', 'error');
             }
+        }
+
+        /* ─── REŽIM ADVOKÁTA — šablony jen ke čtení z Martinovy složky (Railway /api/lawyer/*) ─── */
+        var lawyerSyncAt = 0;          // poslední úspěšná synchronizace šablon
+        var lawyerSyncRunning = null;  // Promise běžící synchronizace
+
+        // Správa šablon a kategorií je v režimu advokáta vypnutá (tlačítka jsou skrytá, tohle je pojistka)
+        function lawyerReadOnly() {
+            if (!LAWYER_MODE) return false;
+            showToast('Šablony spravuje Martin — v režimu advokáta jsou jen ke čtení.', 'info');
+            return true;
+        }
+
+        function lawyerApi(path, body) {
+            var payload = Object.assign({ lawyerToken: ProfilendAuth.getDeviceToken() }, body || {});
+            return fetch(LOAN_API_BASE + path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(function(r) {
+                return r.json().catch(function() { return {}; }).then(function(data) {
+                    if (r.ok) return data || {};
+                    var err = new Error((data && data.error) || ('Server odpověděl chybou ' + r.status + '.'));
+                    err.status = r.status;
+                    throw err;
+                });
+            }, function() {
+                throw new Error('Server teď neodpovídá — zkontrolujte připojení a zkuste to znovu.');
+            });
+        }
+
+        // Náhled promptu / ruční chat: advokát se serveru prokáže svým tokenem (Martin relací v hlavičce)
+        function withLawyerToken(body) {
+            return LAWYER_MODE ? Object.assign({}, body, { lawyerToken: ProfilendAuth.getDeviceToken() }) : body;
+        }
+
+        function lawyerDb(op, store, arg) {
+            return new Promise(function(resolve) {
+                if (op === 'all') getAllFromDB(store, resolve);
+                else if (op === 'put') putToDb(store, arg, resolve);
+                else if (op === 'add') saveToDb(store, arg, resolve);
+                else deleteFromDB(store, arg, resolve);
+            });
+        }
+
+        function lawyerBase64ToBuffer(b64) {
+            var bin = atob(b64 || '');
+            var bytes = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            return bytes.buffer;
+        }
+
+        // Verze šablony pro advokáta = datum poslední změny u Martina (Drive modifiedTime)
+        function lawyerTemplateDate(t) {
+            var d = new Date(t.driveModified || t.uploadedAt || '');
+            return isNaN(d.getTime()) ? '' : 'verze z ' + d.toLocaleDateString('cs-CZ');
+        }
+
+        function setLawyerTemplatesStatus(text) {
+            var el = document.getElementById('drive-templates-status');
+            if (el) el.textContent = text;
+        }
+
+        // Zrcadlo Martinovy složky Šablony/Úvěrová dokumentace: nové a změněné šablony stáhne,
+        // šablony, které Martin smazal, odebere. force = tlačítko Šablony (server obejde minutovou cache).
+        function syncLawyerTemplates(force) {
+            if (!LAWYER_MODE || !db) return Promise.resolve();
+            if (lawyerSyncRunning) return lawyerSyncRunning;
+            setLawyerTemplatesStatus('Šablony: načítám…');
+            lawyerSyncRunning = (async function() {
+                var list = (await lawyerApi('/api/lawyer/templates', { refresh: !!force })).templates || [];
+                var cats = await lawyerDb('all', 'categories');
+                var local = await lawyerDb('all', 'templates');
+                var byName = {};
+                local.forEach(function(t) { byName[t.name] = t; });
+                var wanted = {};
+                var changed = 0;
+                for (var i = 0; i < list.length; i++) {
+                    var f = list[i];
+                    wanted[f.name] = true;
+                    var cur = byName[f.name];
+                    if (cur && cur.driveId === f.id && cur.driveMd5 === f.md5 && cur.driveModified === f.modifiedTime) continue;
+                    var file = await lawyerApi('/api/lawyer/template', { id: f.id });
+                    var detected = isXlsxName(f.name) ? null : detectCategory(f.name, cats);
+                    var rec = {
+                        name: f.name,
+                        data: lawyerBase64ToBuffer(file.data),
+                        category: cur ? cur.category : (detected ? detected.name : null),
+                        uploadedAt: f.modifiedTime || new Date().toISOString(),
+                        driveId: f.id,
+                        driveMd5: f.md5 || '',
+                        driveModified: f.modifiedTime || ''
+                    };
+                    if (cur) { rec.id = cur.id; await lawyerDb('put', 'templates', rec); }
+                    else await lawyerDb('add', 'templates', rec);
+                    changed++;
+                }
+                var removed = local.filter(function(t) { return !wanted[t.name]; });
+                for (var j = 0; j < removed.length; j++) await lawyerDb('delete', 'templates', removed[j].id);
+                lawyerSyncAt = Date.now();
+                if (changed || removed.length) renderTemplateList();
+                setLawyerTemplatesStatus('Šablony: ' + list.length + ' · ' + autosaveTime());
+                if (changed || removed.length) {
+                    showToast('Šablony od Martina aktualizovány' + (changed ? ' — nové nebo změněné: ' + changed : '') +
+                        (removed.length ? (changed ? ', ' : ' — ') + 'odebrané: ' + removed.length : ''), 'success');
+                }
+            })().catch(function(e) {
+                console.warn('syncLawyerTemplates:', e);
+                setLawyerTemplatesStatus('Šablony: chyba');
+                showToast((e && e.message) || 'Šablony se nepodařilo načíst — zkuste to znovu tlačítkem Šablony.', 'error');
+            }).then(function() { lawyerSyncRunning = null; });
+            return lawyerSyncRunning;
+        }
+
+        // Odhlášení (sdílený počítač) — login.html smaže tokeny i cookie zámku
+        function lawyerLogout() {
+            if (!confirm('Odhlásit tento počítač? Pro další práci bude potřeba znovu zadat kód.')) return;
+            try { flushAutosave(); } catch (e) { /* no-op */ }
+            location.href = '/login.html?odhlasit=1';
+        }
+
+        if (LAWYER_MODE) {
+            // Po návratu do záložky zkontrolovat nové verze šablon (nejvýš jednou za 5 minut)
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden && db && Date.now() - lawyerSyncAt > 5 * 60 * 1000) syncLawyerTemplates(false);
+            });
+            var lawyerTplBtn = document.getElementById('btn-templates-drive');
+            if (lawyerTplBtn) lawyerTplBtn.title = 'Šablony od Martina (jen ke čtení) — kliknutím zkontrolujete nové verze';
         }
 
         // Načtení šablon z Google Drive do IndexedDB (po přihlášení)
@@ -4909,6 +5087,7 @@
                                 s += '<div class="template-item">';
                                 s += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
                                 s += '<span class="template-name">' + escapeHtml(template.name) + '</span>';
+                                if (LAWYER_MODE) s += '<span class="template-note">' + escapeHtml(lawyerTemplateDate(template)) + '</span>';
                                 s += categoryDropdownMarkup(template.id, template.category);
                                 s += '<button type="button" class="template-delete" onclick="deleteTemplate(' + template.id + ')" title="Smazat šablonu">✕</button>';
                                 s += '</div>';
@@ -4931,7 +5110,7 @@
                             html += '<div class="template-item">';
                             html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
                             html += '<span class="template-name">' + escapeHtml(template.name) + '</span>';
-                            html += '<span class="template-note">Pro tlačítko Splátkový kalendář</span>';
+                            html += '<span class="template-note">Pro tlačítko Splátkový kalendář' + (LAWYER_MODE ? ' · ' + escapeHtml(lawyerTemplateDate(template)) : '') + '</span>';
                             html += '<button type="button" class="template-delete" onclick="deleteTemplate(' + template.id + ')" title="Smazat šablonu">✕</button>';
                             html += '</div>';
                         });
@@ -4969,7 +5148,9 @@
                     }
 
                     if (!checkboxHtml) {
-                        checkboxHtml = '<div class="checkbox-group-empty">Zatím nejsou nahrány žádné šablony.</div>';
+                        checkboxHtml = '<div class="checkbox-group-empty">' + (LAWYER_MODE
+                            ? 'Zatím žádné šablony — stáhnou se samy z Martinovy složky (tlačítko Šablony nahoře).'
+                            : 'Zatím nejsou nahrány žádné šablony.') + '</div>';
                     }
 
                     document.getElementById('templateList').innerHTML = html;
@@ -5038,6 +5219,7 @@
         }
 
         function deleteTemplate(id) {
+            if (lawyerReadOnly()) return;
             getAllFromDB('templates', function(all) {
                 var tpl = (all || []).find(function(t) { return t.id === id; });
                 var name = tpl ? tpl.name : '';
@@ -5350,7 +5532,7 @@
                 if (formData.pledgorSameAsBorrower) {
                     d += 'Zástavce = Dlužník (viz sekce DLUŽNÍK výše). Stejný subjekt vystupuje v zástavní smlouvě jako zástavce i v úvěrové smlouvě jako dlužník — POUŽÍVEJ stejné údaje (název, IČO, sídlo, jednatel, doručovací adresa) pro obě role.\n';
                 } else if (formData.pledgorFromLV) {
-                    d += 'Zástavce = vlastník nemovitosti uvedený v přiloženém výpisu z Katastru nemovitostí (LV). Martin přiložil LV jako další .pdf/obrázek v této konverzaci. VYTÁHNI ze sekce "Vlastníci" v LV: jméno/název, IČO/RČ, bydliště/sídlo, případně doručovací adresu (pokud LV uvádí jinou než bydliště). NEPOUŽÍVEJ údaje dlužníka — zástavce je jiná osoba (typicky příbuzný klienta zastavující své nemovitosti za úvěr klienta).\n';
+                    d += 'Zástavce = vlastník nemovitosti uvedený v přiloženém výpisu z Katastru nemovitostí (LV). Uživatel přiložil LV jako další .pdf/obrázek v této konverzaci. VYTÁHNI ze sekce "Vlastníci" v LV: jméno/název, IČO/RČ, bydliště/sídlo, případně doručovací adresu (pokud LV uvádí jinou než bydliště). NEPOUŽÍVEJ údaje dlužníka — zástavce je jiná osoba (typicky příbuzný klienta zastavující své nemovitosti za úvěr klienta).\n';
                 } else {
                     if (formData.pledgorName) d += 'Název / Jméno: ' + formData.pledgorName + '\n';
                     if (formData.pledgorIco) d += 'IČO / RČ: ' + formData.pledgorIco + '\n';
@@ -5416,7 +5598,7 @@
             }
 
             if (formData.notes) {
-                d += '\n=== DOPLŇUJÍCÍ POKYNY OD MARTINA (zohledni je) ===\n' + formData.notes + '\n';
+                d += '\n=== DOPLŇUJÍCÍ POKYNY OD UŽIVATELE (zohledni je) ===\n' + formData.notes + '\n';
             }
 
             if (formData.recapDrawdown) {
@@ -5467,7 +5649,7 @@
                 '=== ZÁSTAVCE (KDO PODEPISUJE ZÁSTAVNÍ SMLOUVU) ===\n' +
                 'DATA sekce "ZÁSTAVCE" určuje, kdo je zástavce v zástavní smlouvě (zástavní smlouvy k nemovitostem, podílům atd.):\n\n' +
                 '1. "Zástavce = Dlužník (viz DLUŽNÍK výše)" — v zástavní smlouvě použij STEJNÉ údaje jako u Dlužníka: název firmy, IČO, spisová značka, sídlo, jednatel, doručovací adresa. Smluvní strany jsou identický subjekt vystupující ve dvou rolích (úvěrovaný + zástavce). Údaje zástavce v šabloně („(Doplnit)“ nebo údaje jiného případu) nahraď údaji dlužníka.\n\n' +
-                '2. "Zástavce = vlastník z přiloženého LV výpisu" — Martin přiložil LV výpis jako další soubor v této konverzaci. VYTÁHNI z LV: jméno fyzické/právnické osoby ze sekce "Vlastníci", IČO/RČ, bydliště/sídlo, případně doručovací adresu, pokud ji LV uvádí odlišně. POZOR: zástavce NENÍ dlužník — jde o třetí osobu (např. matka klienta zastavující své nemovitosti za úvěr syna). Údaje zástavce v šabloně nahraď údaji vlastníka z LV na všech místech.\n\n' +
+                '2. "Zástavce = vlastník z přiloženého LV výpisu" — Uživatel přiložil LV výpis jako další soubor v této konverzaci. VYTÁHNI z LV: jméno fyzické/právnické osoby ze sekce "Vlastníci", IČO/RČ, bydliště/sídlo, případně doručovací adresu, pokud ji LV uvádí odlišně. POZOR: zástavce NENÍ dlužník — jde o třetí osobu (např. matka klienta zastavující své nemovitosti za úvěr syna). Údaje zástavce v šabloně nahraď údaji vlastníka z LV na všech místech.\n\n' +
                 '3. Explicitně vyplněná pole (Název / Jméno, IČO / RČ, Bydliště / Sídlo, Jednatel / Zástupce…) — použij doslovně na místa zástavce.\n\n' +
                 'Pokud DATA sekci ZÁSTAVCE neobsahují (starší případy), zástavce automaticky nepřiřazuj k dlužníkovi — jeho údaje ponech jako „(Doplnit)“.\n\n' +
                 '=== DORUČOVACÍ ADRESA (DLUŽNÍK / ZÁSTAVCE) ===\n' +
@@ -5477,7 +5659,7 @@
                 'Pokud šablona má v doručovací adrese „(Doplnit)“ nebo hodnoty jiného případu, vyplň je podle pravidel výše.\n\n' +
                 '=== CO NEMĚNIT ===\n' +
                 'Nesahej na právní text šablony: formulace („Smluvní strany se tímto dohodly…“), definice pojmů (např. „Den konečné splatnosti“), lhůty a hodnoty uvedené napevno (např. „10 (deseti) pracovních dnů“), hlavičky článků. Měníš jen místa „(Doplnit)“, údaje jiného případu a pasáže, které pro tento případ neplatí. U starší šablony bez „(Doplnit)“ platí: obsahuje-li věta jméno, IČO, adresu, částku nebo datum konkrétního případu, JSOU TO DATA k revizi.\n\n' +
-                '=== POZNÁMKY (notes) — MARTIN JE UVIDÍ ===\n' +
+                '=== POZNÁMKY (notes) — UŽIVATEL JE UVIDÍ ===\n' +
                 'V poznámkách stručně sděl, co jsi udělala. Sem patří:\n' +
                 '- Co jsi VYPUSTILA a proč (např. „Vypustila jsem podmínku výmazu stávajícího zástavního práva — DATA žádné neuvádějí.“).\n' +
                 '- Co jsi PŘIDALA (např. „Doplnila jsem druhou nemovitost do Přílohy 1A podle vzoru první.“).\n' +
@@ -5631,7 +5813,7 @@
                 'POKUD najdeš odchylku formátování nebo logický problém, OPRAV ho PŘED vrácením. Lepší dalších 30 sekund práce než hodina ručního formátování.\n\n' +
                 '=== SHRNUTÍ POD DOKUMENT (stručně, v bodech) ===\n' +
                 '1. Doplněno — hlavní vyplněné údaje.\n' +
-                '2. Zůstalo „(Doplnit)“ — co a kde (článek / příloha), aby to Martin doplnil ručně.\n' +
+                '2. Zůstalo „(Doplnit)“ — co a kde (článek / příloha), aby to uživatel doplnil ručně.\n' +
                 '3. Vypuštěno nebo přeformulováno — co a proč.\n' +
                 '4. Ke kontrole — kde si nejsi jistá, právní nejasnosti, rozpory v DATECH.\n\n' +
                 dataDescription;
@@ -5714,7 +5896,7 @@
             return fetch(LOAN_API_BASE + '/api/generate-loan-doc/preview', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Database-Token': sessionStorage.getItem('ld-token') || '' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(withLawyerToken(payload))
             }).then(function(resp) {
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 return resp.json();
@@ -6007,11 +6189,11 @@
                         var resp = await fetch(LOAN_API_BASE + '/api/generate-loan-doc/preview', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'X-Database-Token': sessionStorage.getItem('ld-token') || '' },
-                            body: JSON.stringify({
+                            body: JSON.stringify(withLawyerToken({
                                 formData: formData,
                                 templateText: plainText,
                                 templateName: template.name
-                            })
+                            }))
                         });
                         var data = await resp.json();
                         if (!data || !data.success) throw new Error('Preview endpoint vrátil neplatnou odpověď');
@@ -6992,6 +7174,15 @@
 
         // Uložený Term Sheet podle ID (Drive i lokální; novější verze vyhrává)
         async function findSavedTermSheet(id) {
+            if (LAWYER_MODE) {
+                // Advokát: Martinův uložený Term Sheet podle čísla z dokumentu (server vynechá interní poznámky)
+                try {
+                    return (await lawyerApi('/api/lawyer/termsheet', { id: id })).termSheet || null;
+                } catch (e) {
+                    if (e && e.status !== 404) showToast(e.message || 'Term Sheet se nepodařilo dohledat.', 'error');
+                    return null;
+                }
+            }
             var lists = await Promise.all([loadDriveTermSheets(), loadLocalTermSheets()]);
             var best = null;
             lists[0].concat(lists[1]).forEach(function(t) {
@@ -7025,8 +7216,23 @@
             var form = body ? tsFormRead(body) : { fields: {}, repeats: {} };
             if (!Object.keys(form.fields).length && !Object.keys(form.repeats).length) {
                 if (vars.spcIndicative === '1') {
-                    // indikativní Term Sheet (volba při generování) formulář záměrně nemá
-                    showToast('Tohle je indikativní Term Sheet — údaje od klienta v něm nejsou. Klientovi pošlete Term Sheet s formulářem (Term Sheet → Vygenerovat → Term Sheet + formulář pro klienta). Podmínky úvěru načtete tlačítkem Importovat term sheet.', 'info');
+                    // indikativní Term Sheet (volba při generování) formulář záměrně nemá →
+                    // podmínky úvěru podle čísla Term Sheetu (stejně jako výběr v Importovat term sheet)
+                    var its = vars.spcTermSheetId ? await findSavedTermSheet(vars.spcTermSheetId) : null;
+                    if (its) {
+                        var openBorrower = (document.getElementById('uvereovany').value || '').trim();
+                        if (currentDocSetId != null && openBorrower && normalizeTsLabel(openBorrower) !== normalizeTsLabel(its.borrower || its.borrowerName || '')) {
+                            currentDocSetId = null;
+                            currentDocSetUid = null;
+                        }
+                        populateFormFromTermSheet(its);
+                        showToast('Indikativní Term Sheet: podmínky úvěru načteny (' + (its.borrower || its.borrowerName || '') + '). Údaje klienta v něm nejsou — doplňte je ve formuláři, nebo klientovi pošlete Term Sheet s formulářem.', 'success');
+                        autosaveCase(); // případ hned do Přehledu
+                        return;
+                    }
+                    showToast(LAWYER_MODE
+                        ? 'Tohle je indikativní Term Sheet a jeho podmínky se nenašly — požádejte Martina, ať Term Sheet uloží (s připojeným Google Drive), a nahrajte ho znovu.'
+                        : 'Tohle je indikativní Term Sheet — údaje od klienta v něm nejsou. Klientovi pošlete Term Sheet s formulářem (Term Sheet → Vygenerovat → Term Sheet + formulář pro klienta). Podmínky úvěru načtete tlačítkem Importovat term sheet.', 'info');
                     return;
                 }
                 showToast('Formulář v dokumentu chybí nebo je poškozený — klient ho asi upravoval v jiném programu než Word. Požádejte ho o vyplnění ve Wordu.', 'error');
@@ -7048,7 +7254,9 @@
                     tsCompareTerms(ts, report);
                 }
             } else {
-                report.warnings.push({ label: 'Původní Term Sheet', value: vars.spcTermSheetId || 'bez ID', reason: 'nenašel se mezi uloženými — parametry úvěru načtěte tlačítkem Importovat term sheet' });
+                report.warnings.push({ label: 'Původní Term Sheet', value: vars.spcTermSheetId || 'bez ID', reason: LAWYER_MODE
+                    ? 'nenašel se — parametry úvěru chybí; požádejte Martina, ať Term Sheet uloží (s připojeným Google Drive), a nahrajte ho znovu'
+                    : 'nenašel se mezi uloženými — parametry úvěru načtěte tlačítkem Importovat term sheet' });
             }
 
             applyTsForm(form, report, ts);
@@ -9044,7 +9252,8 @@
 
         // ===== Google Drive Sync =====
         window.addEventListener('DOMContentLoaded', function() {
-            if (!window.GDriveSync) return;
+            // Advokát: žádný Google Drive (ani Martinův, ani vlastní) — šablony přes syncLawyerTemplates
+            if (!window.GDriveSync || LAWYER_MODE) return;
             GDriveSync.init({
                 appName: 'Úvěrová dokumentace',
                 onReady: async function() {

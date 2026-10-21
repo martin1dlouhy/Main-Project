@@ -59,13 +59,16 @@
 <script>
 // Přihlášení do zámku webu (proxy.mjs). Klíče úložiště jsou stejné jako v profilend-auth.js,
 // takže po přihlášení se Google Drive ani AI funkce na PIN znovu neptají.
+// Kód advokáta (role 'lawyer') vede vždy do Úvěrové dokumentace. ?odhlasit=1 = odhlášení.
 (function () {
     'use strict';
     var DEVICE_KEY = 'profilend-device-token';
     var SESSION_KEY = 'profilend-session-token';
+    var LAWYER_HOME = '/loan-documentation.html';
 
     // Návrat jen na stránku tohoto webu (ochrana proti přesměrování na cizí adresu)
-    var next = new URLSearchParams(location.search).get('next') || '/';
+    var params = new URLSearchParams(location.search);
+    var next = params.get('next') || '/';
     if (next.charAt(0) !== '/' || next.charAt(1) === '/' || next.charAt(1) === '\\' || next.indexOf('/login.html') === 0) {
         next = '/';
     }
@@ -77,7 +80,25 @@
     var digits = Array.prototype.slice.call(document.querySelectorAll('.digit'));
     var busy = false;
 
-    function go() { location.replace(next); }
+    // Odhlášení: smazat tokeny tohoto zařízení + cookie zámku (HttpOnly → jen přes /api/logout).
+    // Přihlášení počká, až server cookie smaže, aby pozdní odpověď nesmazala cookie nového přihlášení.
+    var loggingOut = params.get('odhlasit') === '1';
+    var ready = Promise.resolve();
+    if (loggingOut) {
+        try {
+            ['profilend-device-token', 'gdrive-shared-token', 'gdrive-shared-token-expiry'].forEach(function (k) { localStorage.removeItem(k); });
+            sessionStorage.removeItem(SESSION_KEY);
+            sessionStorage.removeItem('ld-token');
+        } catch (e) { /* no-op */ }
+        ready = fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () { /* no-op */ });
+        try { history.replaceState(null, '', '/login.html'); } catch (e) { /* no-op */ }
+        sub.textContent = 'Odhlášeno — pro nové přihlášení zadejte PIN';
+    }
+
+    function go(role) {
+        if (role === 'lawyer') location.replace(next.indexOf(LAWYER_HOME) === 0 ? next : LAWYER_HOME);
+        else location.replace(next);
+    }
 
     function resetDigits() {
         digits.forEach(function (d) { d.value = ''; });
@@ -103,11 +124,11 @@
         busy = true;
         btn.disabled = true;
         err.textContent = '';
-        post({ pin: pin }).then(function (res) {
+        ready.then(function () { return post({ pin: pin }); }).then(function (res) {
             if (res.ok && res.data.ok) {
                 try { if (res.data.deviceToken) localStorage.setItem(DEVICE_KEY, res.data.deviceToken); } catch (e) { /* no-op */ }
                 try { if (res.data.sessionToken) sessionStorage.setItem(SESSION_KEY, res.data.sessionToken); } catch (e) { /* no-op */ }
-                go();
+                go(res.data.role);
                 return;
             }
             err.textContent = res.data.error || 'Přihlášení se nepodařilo.';
@@ -146,13 +167,13 @@
 
     // Zařízení přihlášené už dřív (token z profilend-auth) → dovnitř bez PINu
     var stored = null;
-    try { stored = localStorage.getItem(DEVICE_KEY); } catch (e) { /* no-op */ }
+    try { stored = loggingOut ? null : localStorage.getItem(DEVICE_KEY); } catch (e) { /* no-op */ }
     var exp = stored ? parseInt(stored.split('.')[0], 10) : 0;
     if (stored && exp > Date.now()) {
         sub.textContent = 'Ověřuji zařízení…';
         form.classList.add('hidden');
         post({ deviceToken: stored }).then(function (res) {
-            if (res.ok && res.data.ok) { go(); return; }
+            if (res.ok && res.data.ok) { go(res.data.role); return; }
             sub.textContent = 'Zadejte PIN';
             form.classList.remove('hidden');
             if (res.status >= 500 && res.data.error) err.textContent = res.data.error;

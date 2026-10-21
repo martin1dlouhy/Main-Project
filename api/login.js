@@ -2,10 +2,18 @@
 // POST { deviceToken } — zařízení už přihlášené (token z localStorage) → cookie bez PINu
 // POST { pin }         — PIN se ověří na Railway (/api/device/register), kde platí brzdy proti
 //                        hádání (limit na IP, rostoucí čekání, globální denní strop chybných pokusů)
+// Kód advokáta (LAWYER_PIN_HASH) dá token exp + '.lawyer.' + podpis → proxy.ts ho pustí jen do
+// Úvěrové dokumentace. Odpověď nese role: 'owner' | 'lawyer'.
 const crypto = require('crypto');
 
 const RAILWAY = 'https://main-project-production-b048.up.railway.app';
 const COOKIE = 'it_auth';
+
+function safeEqualHex(sig, expected) {
+    const a = Buffer.from(sig, 'utf8');
+    const b = Buffer.from(expected, 'utf8');
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
 
 function isValidToken(token, pinHash) {
     if (!pinHash || typeof token !== 'string') return false;
@@ -15,9 +23,23 @@ function isValidToken(token, pinHash) {
     const sig = token.slice(dot + 1);
     if (!/^\d+$/.test(expStr) || Number(expStr) <= Date.now()) return false;
     const expected = crypto.createHmac('sha256', pinHash).update('device:' + expStr).digest('hex');
-    const a = Buffer.from(sig, 'utf8');
-    const b = Buffer.from(expected, 'utf8');
-    return a.length === b.length && crypto.timingSafeEqual(a, b);
+    return safeEqualHex(sig, expected);
+}
+
+// Token advokáta — jen když LAWYER_PIN_HASH existuje a liší se od PIN_HASH (jinak je přístup vypnutý)
+function isValidLawyerToken(token, pinHash) {
+    const lawyerHash = (process.env.LAWYER_PIN_HASH || '').trim();
+    if (!pinHash || !lawyerHash || lawyerHash === pinHash || typeof token !== 'string') return false;
+    const m = /^(\d+)\.lawyer\.([0-9a-f]+)$/.exec(token);
+    if (!m || Number(m[1]) <= Date.now()) return false;
+    const expected = crypto.createHmac('sha256', lawyerHash).update('lawyer:' + m[1]).digest('hex');
+    return safeEqualHex(m[2], expected);
+}
+
+function tokenRole(token, pinHash) {
+    if (isValidToken(token, pinHash)) return 'owner';
+    if (isValidLawyerToken(token, pinHash)) return 'lawyer';
+    return '';
 }
 
 function setAuthCookie(res, token) {
@@ -40,11 +62,12 @@ module.exports = async function handler(req, res) {
 
     // 1) Zařízení už přihlášené dřív (stejný podpis jako cookie)
     if (typeof body.deviceToken === 'string') {
-        if (!isValidToken(body.deviceToken, pinHash)) {
+        const role = tokenRole(body.deviceToken, pinHash);
+        if (!role) {
             return res.status(401).json({ error: 'Přihlášení vypršelo — zadejte PIN.' });
         }
         setAuthCookie(res, body.deviceToken);
-        return res.status(200).json({ ok: true });
+        return res.status(200).json({ ok: true, role: role });
     }
 
     // 2) PIN → Railway
@@ -65,13 +88,17 @@ module.exports = async function handler(req, res) {
     } catch (e) {
         return res.status(502).json({ error: 'Server pro ověření PINu neodpovídá. Zkuste to za chvíli.' });
     }
-    if (data && data.success && isValidToken(data.deviceToken, pinHash)) {
+    const role = data && data.success ? tokenRole(data.deviceToken, pinHash) : '';
+    if (role) {
         setAuthCookie(res, data.deviceToken);
-        return res.status(200).json({ ok: true, deviceToken: data.deviceToken, sessionToken: data.sessionToken || null });
+        return res.status(200).json({ ok: true, deviceToken: data.deviceToken, sessionToken: data.sessionToken || null, role: role });
     }
     if (data && data.success) {
-        // PIN sedí na Railway, ale podpis nesouhlasí → PIN_HASH ve Vercelu je jiný než na Railway
-        return res.status(500).json({ error: 'PIN_HASH ve Vercelu neodpovídá Railway — nastavte na obou místech stejnou hodnotu.' });
+        // PIN sedí na Railway, ale podpis nesouhlasí → hash ve Vercelu je jiný než na Railway
+        const lawyer = data.role === 'lawyer';
+        return res.status(500).json({
+            error: (lawyer ? 'LAWYER_PIN_HASH' : 'PIN_HASH') + ' ve Vercelu neodpovídá Railway — nastavte na obou místech stejnou hodnotu.'
+        });
     }
     return res.status(status >= 400 && status < 600 ? status : 401)
         .json({ error: (data && data.error) || 'Nesprávný PIN.' });
