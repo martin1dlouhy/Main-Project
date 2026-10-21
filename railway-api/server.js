@@ -240,6 +240,41 @@ function verifyDeviceToken(t) {
 }
 
 // =============================================
+// Přístup advokáta — jen Úvěrová dokumentace (vlastní kód, env LAWYER_PIN_HASH = SHA-256 kódu).
+// lawyerToken = exp + '.lawyer.' + HMAC-SHA256(key=LAWYER_PIN_HASH, msg='lawyer:'+exp)
+// verifyDeviceToken (a proxy.ts / api/login.js) ho jako Martinův token odmítne → advokát nikdy
+// nedostane Google token, AI relaci ani /api/google/setup. Smí jen endpointy, které volají
+// verifyLawyerToken. Chybí-li LAWYER_PIN_HASH nebo se rovná PIN_HASH → přístup advokáta vypnutý.
+// =============================================
+function lawyerPinHash() {
+    var lawyerHash = (process.env.LAWYER_PIN_HASH || '').trim();
+    var pinHash = (process.env.PIN_HASH || '').trim();
+    if (!lawyerHash || !pinHash || lawyerHash === pinHash) return '';
+    return lawyerHash;
+}
+
+function lawyerSignature(exp, lawyerHash) {
+    return crypto.createHmac('sha256', lawyerHash).update('lawyer:' + exp).digest('hex');
+}
+
+function verifyLawyerToken(t) {
+    try {
+        var lawyerHash = lawyerPinHash();
+        if (!lawyerHash || !t || typeof t !== 'string') return false;
+        var m = /^(\d+)\.lawyer\.([0-9a-f]+)$/.exec(t);
+        if (!m) return false;
+        var exp = parseInt(m[1], 10);
+        if (!exp || exp <= Date.now()) return false;
+        var sigBuf = Buffer.from(m[2], 'utf8');
+        var expBuf = Buffer.from(lawyerSignature(m[1], lawyerHash), 'utf8');
+        if (sigBuf.length !== expBuf.length) return false;
+        return crypto.timingSafeEqual(sigBuf, expBuf);
+    } catch (e) {
+        return false;
+    }
+}
+
+// =============================================
 // POST /api/device/register — registrace zařízení PIN kódem
 // Úspěch: deviceToken (90 dní) + sessionToken pro AI endpointy.
 // Brzdy: pinAttempts (5/5 min/IP) + exponenciální backoff + globální denní strop.
@@ -295,8 +330,12 @@ app.post('/api/device/register', function (req, res) {
     var inputHash = crypto.createHash('sha256').update(pin).digest('hex');
     var pinOk = inputHash.length === pinHash.length &&
         crypto.timingSafeEqual(Buffer.from(inputHash), Buffer.from(pinHash));
+    // Kód advokáta (jen Úvěrová dokumentace) — stejné brzdy jako PIN
+    var lawyerHash = pinOk ? '' : lawyerPinHash();
+    var lawyerOk = !!lawyerHash && inputHash.length === lawyerHash.length &&
+        crypto.timingSafeEqual(Buffer.from(inputHash), Buffer.from(lawyerHash));
 
-    if (!pinOk) {
+    if (!pinOk && !lawyerOk) {
         var fails = (deviceBackoff[ip] ? deviceBackoff[ip].fails : 0) + 1;
         deviceBackoff[ip] = { fails: fails, nextAllowedAt: now + Math.min(60, Math.pow(2, fails)) * 1000 };
         deviceGlobalFails.count++;
@@ -308,6 +347,15 @@ app.post('/api/device/register', function (req, res) {
     delete deviceBackoff[ip];
 
     var exp = now + DEVICE_TOKEN_TTL_MS;
+    if (lawyerOk) {
+        // Advokát: přihlášení jen do Úvěrové dokumentace — žádná AI relace
+        return res.status(200).json({
+            success: true,
+            deviceToken: exp + '.lawyer.' + lawyerSignature(exp, lawyerHash),
+            sessionToken: null,
+            role: 'lawyer'
+        });
+    }
     var deviceToken = exp + '.' + deviceSignature(exp, pinHash);
     var sessionToken = generateSessionToken();
     sessionTokens[sessionToken] = { ip: ip, createdAt: Date.now() };
@@ -358,6 +406,54 @@ function googleAuthPage(title, bodyHtml) {
         bodyHtml + '</div></body></html>';
 }
 
+// Čerstvý Google access token ze serverového refresh tokenu (sdílí /api/google/token a čtení
+// šablon pro advokáta). Z cache, dokud zbývá víc než 5 minut. Chyba nese err.code:
+// 'not_configured' | 'revoked' | 'refresh_failed' (err.detail = kód chyby od Googlu) | 'network'.
+function googleTokenError(code, detail) {
+    var err = new Error(code);
+    err.code = code;
+    err.detail = detail || '';
+    return err;
+}
+
+async function getGoogleAccessToken() {
+    var clientSecret = (process.env.GOOGLE_CLIENT_SECRET || '').trim();
+    var refreshToken = (process.env.GOOGLE_REFRESH_TOKEN || '').trim();
+    if (!clientSecret || !refreshToken) throw googleTokenError('not_configured');
+
+    if (googleTokenCache.token && googleTokenCache.exp - Date.now() > 5 * 60 * 1000) {
+        return { token: googleTokenCache.token, exp: googleTokenCache.exp };
+    }
+
+    var resp, data;
+    try {
+        var body = new URLSearchParams({
+            client_id: googleClientId(),
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token'
+        });
+        resp = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        });
+        data = await resp.json().catch(function () { return {}; });
+    } catch (e) {
+        throw googleTokenError('network');
+    }
+
+    if (!resp.ok || !data.access_token) {
+        if (data && data.error === 'invalid_grant') throw googleTokenError('revoked');
+        throw googleTokenError('refresh_failed', data && data.error ? String(data.error) : '');
+    }
+
+    var expiresAt = Date.now() + (data.expires_in || 3600) * 1000 - 60000;
+    googleTokenCache.token = data.access_token;
+    googleTokenCache.exp = expiresAt;
+    return { token: data.access_token, exp: expiresAt };
+}
+
 // =============================================
 // POST /api/google/token — čerstvý Google access token pro registrované zařízení
 // 503 not_configured → frontend použije GIS fallback.
@@ -368,45 +464,19 @@ app.post('/api/google/token', async function (req, res) {
         return res.status(401).json({ error: 'Neplatné nebo expirované zařízení. Zadejte PIN znovu.' });
     }
 
-    var clientSecret = (process.env.GOOGLE_CLIENT_SECRET || '').trim();
-    var refreshToken = (process.env.GOOGLE_REFRESH_TOKEN || '').trim();
-    if (!clientSecret || !refreshToken) {
-        return res.status(503).json({ error: 'not_configured' });
-    }
-
-    // Cache: vydávej stejný token, dokud zbývá víc než 5 minut
-    if (googleTokenCache.token && googleTokenCache.exp - Date.now() > 5 * 60 * 1000) {
-        return res.status(200).json({ accessToken: googleTokenCache.token, expiresAt: googleTokenCache.exp });
-    }
-
     try {
-        var body = new URLSearchParams({
-            client_id: googleClientId(),
-            client_secret: clientSecret,
-            refresh_token: refreshToken,
-            grant_type: 'refresh_token'
-        });
-        var resp = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: body.toString()
-        });
-        var data = await resp.json().catch(function () { return {}; });
-
-        if (!resp.ok || !data.access_token) {
-            if (data && data.error === 'invalid_grant') {
-                return res.status(502).json({ error: 'Google přístup byl odvolán — projděte znovu /api/google/setup.' });
-            }
+        var t = await getGoogleAccessToken();
+        return res.status(200).json({ accessToken: t.token, expiresAt: t.exp });
+    } catch (e) {
+        if (e.code === 'not_configured') return res.status(503).json({ error: 'not_configured' });
+        if (e.code === 'revoked') {
+            return res.status(502).json({ error: 'Google přístup byl odvolán — projděte znovu /api/google/setup.' });
+        }
+        if (e.code === 'refresh_failed') {
             return res.status(502).json({
-                error: 'Google token se nepodařilo obnovit' + (data && data.error ? ' (' + data.error + ')' : '') + '.'
+                error: 'Google token se nepodařilo obnovit' + (e.detail ? ' (' + e.detail + ')' : '') + '.'
             });
         }
-
-        var expiresAt = Date.now() + (data.expires_in || 3600) * 1000 - 60000;
-        googleTokenCache.token = data.access_token;
-        googleTokenCache.exp = expiresAt;
-        return res.status(200).json({ accessToken: data.access_token, expiresAt: expiresAt });
-    } catch (e) {
         return res.status(502).json({ error: 'Google token se nepodařilo obnovit (síťová chyba).' });
     }
 });
@@ -504,6 +574,206 @@ app.get('/api/google/callback', async function (req, res) {
         return res.status(502).send(googleAuthPage('Google — chyba',
             '<h2 ' + h2Style + '>Síťová chyba při výměně kódu</h2>' +
             '<p ' + pStyle + '>Zkuste /api/google/setup znovu za chvíli.</p>'));
+    }
+});
+
+// =============================================
+// Přístup advokáta — šablony a Term Sheety JEN KE ČTENÍ z Martinova Google Drive.
+// Server čte Martinovým Google tokenem (ten nikdy neopustí server); advokát dostane jen soubory
+// ze složky Investment Tools/Šablony/Úvěrová dokumentace a jednotlivý Term Sheet podle čísla.
+// Žádný zápis, nic se nevytváří. Dotazy stejné jako google-drive-sync.js (findFolder, findFile,
+// listFolderById) — drive.file vidí jen soubory, které vytvořily aplikace.
+// =============================================
+var DRIVE_FILES_API = 'https://www.googleapis.com/drive/v3/files';
+var DRIVE_ROOT_NAMES = ['Investment Tools', 'ProfiLend Investment Tools']; // druhý = původní název, záloha jako v GDriveSync
+var LAWYER_TEMPLATE_PATH = ['Šablony', 'Úvěrová dokumentace'];
+var LAWYER_TS_PATH = ['Term Sheet Generator'];
+var LAWYER_TS_FILE = 'termsheets.json';
+var LAWYER_TS_HIDDEN_FIELDS = ['notes', 'status']; // Interní poznámky a stav obchodu advokát nevidí
+var LAWYER_CACHE_MS = 60 * 1000;
+var lawyerCache = { templates: null, templatesAt: 0, termSheets: null, termSheetsAt: 0 };
+
+// Per-IP limit dotazů advokáta (okno 5 minut)
+var lawyerRate = {}; // { 'ip|druh': { count, start } }
+function lawyerRateOk(ip, kind, max) {
+    var key = ip + '|' + kind;
+    var now = Date.now();
+    var r = lawyerRate[key];
+    if (!r || now - r.start > 5 * 60 * 1000) r = lawyerRate[key] = { count: 0, start: now };
+    r.count++;
+    return r.count <= max;
+}
+setInterval(function () {
+    var now = Date.now();
+    Object.keys(lawyerRate).forEach(function (k) {
+        if (now - lawyerRate[k].start > 5 * 60 * 1000) delete lawyerRate[k];
+    });
+}, 10 * 60 * 1000);
+
+function lawyerGuard(req, res, kind, max) {
+    if (!verifyLawyerToken(req.body && req.body.lawyerToken)) {
+        res.status(401).json({ error: 'Přihlášení vypršelo nebo bylo zrušeno — přihlaste se znovu kódem.' });
+        return false;
+    }
+    var ip = req.ip || req.connection.remoteAddress || 'unknown';
+    if (!lawyerRateOk(ip, kind, max)) {
+        res.status(429).json({ error: 'Příliš mnoho požadavků — zkuste to za pár minut.' });
+        return false;
+    }
+    return true;
+}
+
+function lawyerDriveError(res, e) {
+    if (e && e.code === 'not_configured') return res.status(503).json({ error: 'Google Drive není na serveru nastavený — dejte vědět Martinovi.' });
+    if (e && e.code === 'revoked') return res.status(502).json({ error: 'Přístup k Martinovu Google Drive vypršel — dejte vědět Martinovi.' });
+    return res.status(502).json({ error: 'Google Drive teď neodpovídá — zkuste to za chvíli znovu.' });
+}
+
+async function driveGet(url, accessToken) {
+    var resp = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+    if (!resp.ok) {
+        var err = new Error('Google Drive chyba ' + resp.status);
+        err.status = resp.status;
+        throw err;
+    }
+    return resp;
+}
+
+async function driveFindFolder(accessToken, name, parentId) {
+    var q = "name='" + name.replace(/'/g, "\\'") + "' and mimeType='application/vnd.google-apps.folder' and trashed=false" +
+        (parentId ? " and '" + parentId + "' in parents" : '');
+    var resp = await driveGet(DRIVE_FILES_API + '?q=' + encodeURIComponent(q) + '&fields=files(id,name)&spaces=drive', accessToken);
+    var data = await resp.json();
+    return data.files && data.files.length > 0 ? data.files[0].id : null;
+}
+
+// Složka podle cesty pod kořenem (Investment Tools, záložně původní název) — nic nevytváří
+async function driveFolderByPath(accessToken, parts) {
+    var current = null;
+    for (var r = 0; r < DRIVE_ROOT_NAMES.length && !current; r++) {
+        current = await driveFindFolder(accessToken, DRIVE_ROOT_NAMES[r], null);
+    }
+    for (var i = 0; current && i < parts.length; i++) {
+        current = await driveFindFolder(accessToken, parts[i], current);
+    }
+    return current;
+}
+
+async function driveDownload(accessToken, fileId) {
+    var resp = await driveGet(DRIVE_FILES_API + '/' + encodeURIComponent(fileId) + '?alt=media', accessToken);
+    return Buffer.from(await resp.arrayBuffer());
+}
+
+// Šablony (.docx, .xlsx) ve složce Šablony/Úvěrová dokumentace; stejný název víckrát → nejnovější
+async function lawyerTemplateList(force) {
+    if (!force && lawyerCache.templates && Date.now() - lawyerCache.templatesAt < LAWYER_CACHE_MS) {
+        return lawyerCache.templates;
+    }
+    var t = await getGoogleAccessToken();
+    var folderId = await driveFolderByPath(t.token, LAWYER_TEMPLATE_PATH);
+    var files = [];
+    if (folderId) {
+        var q = "'" + folderId + "' in parents and trashed=false";
+        var resp = await driveGet(DRIVE_FILES_API + '?q=' + encodeURIComponent(q) +
+            '&fields=files(id,name,modifiedTime,mimeType,size,md5Checksum)&orderBy=modifiedTime desc&spaces=drive&pageSize=200', t.token);
+        files = (await resp.json()).files || [];
+    }
+    var seen = {};
+    var list = files.filter(function (f) {
+        if (!f.name || !/\.(docx|xlsx)$/i.test(f.name) || seen[f.name]) return false;
+        seen[f.name] = true;
+        return true;
+    }).map(function (f) {
+        return { id: f.id, name: f.name, modifiedTime: f.modifiedTime || '', md5: f.md5Checksum || '', size: Number(f.size) || 0 };
+    });
+    lawyerCache.templates = list;
+    lawyerCache.templatesAt = Date.now();
+    return list;
+}
+
+async function lawyerTermSheets(force) {
+    if (!force && lawyerCache.termSheets && Date.now() - lawyerCache.termSheetsAt < LAWYER_CACHE_MS) {
+        return lawyerCache.termSheets;
+    }
+    var t = await getGoogleAccessToken();
+    var folderId = await driveFolderByPath(t.token, LAWYER_TS_PATH);
+    var list = [];
+    if (folderId) {
+        var q = "name='" + LAWYER_TS_FILE + "' and '" + folderId + "' in parents and trashed=false";
+        var resp = await driveGet(DRIVE_FILES_API + '?q=' + encodeURIComponent(q) +
+            '&fields=files(id,name,modifiedTime,mimeType)&spaces=drive', t.token);
+        var file = ((await resp.json()).files || [])[0];
+        if (file) {
+            try { list = JSON.parse((await driveDownload(t.token, file.id)).toString('utf8')); } catch (e) { list = []; }
+            if (!Array.isArray(list)) list = [];
+        }
+    }
+    lawyerCache.termSheets = list;
+    lawyerCache.termSheetsAt = Date.now();
+    return list;
+}
+
+// Stejné ID víckrát → novější verze (jako findSavedTermSheet v Úvěrové dokumentaci)
+function pickTermSheet(list, id) {
+    var best = null;
+    list.forEach(function (t) {
+        if (t && t.id === id && (!best || String(t.updatedAt || '') > String(best.updatedAt || ''))) best = t;
+    });
+    return best;
+}
+
+// POST /api/lawyer/templates — seznam šablon { lawyerToken, refresh? }
+app.post('/api/lawyer/templates', async function (req, res) {
+    if (!lawyerGuard(req, res, 'files', 120)) return;
+    try {
+        var list = await lawyerTemplateList(req.body && req.body.refresh === true);
+        return res.status(200).json({ templates: list });
+    } catch (e) {
+        return lawyerDriveError(res, e);
+    }
+});
+
+// POST /api/lawyer/template — obsah jedné šablony { lawyerToken, id } (jen id ze seznamu výše)
+app.post('/api/lawyer/template', async function (req, res) {
+    if (!lawyerGuard(req, res, 'files', 120)) return;
+    var id = req.body && req.body.id;
+    if (!id || typeof id !== 'string') return res.status(400).json({ error: 'Chybí šablona.' });
+    try {
+        var match = function (f) { return f.id === id; };
+        var file = (await lawyerTemplateList(false)).filter(match)[0] ||
+            (await lawyerTemplateList(true)).filter(match)[0];
+        if (!file) return res.status(404).json({ error: 'Šablona už ve složce není — obnovte seznam šablon.' });
+        var t = await getGoogleAccessToken();
+        var buf = await driveDownload(t.token, file.id);
+        return res.status(200).json({
+            id: file.id, name: file.name, modifiedTime: file.modifiedTime, md5: file.md5,
+            data: buf.toString('base64')
+        });
+    } catch (e) {
+        return lawyerDriveError(res, e);
+    }
+});
+
+// POST /api/lawyer/termsheet — uložený Term Sheet podle čísla z dokumentu { lawyerToken, id }
+// (bez interních poznámek a stavu; seznam ostatních Term Sheetů advokát nedostane)
+app.post('/api/lawyer/termsheet', async function (req, res) {
+    if (!lawyerGuard(req, res, 'ts', 20)) return;
+    var id = req.body && req.body.id;
+    if (!id || typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) {
+        return res.status(400).json({ error: 'Neplatné číslo Term Sheetu.' });
+    }
+    try {
+        var ts = pickTermSheet(await lawyerTermSheets(false), id);
+        // Čerstvě uložený Term Sheet může chybět v cache → jednou načíst znovu
+        if (!ts && Date.now() - lawyerCache.termSheetsAt > 5000) ts = pickTermSheet(await lawyerTermSheets(true), id);
+        if (!ts) return res.status(404).json({ error: 'Term Sheet se nenašel.' });
+        var out = {};
+        Object.keys(ts).forEach(function (k) {
+            if (LAWYER_TS_HIDDEN_FIELDS.indexOf(k) === -1) out[k] = ts[k];
+        });
+        return res.status(200).json({ termSheet: out });
+    } catch (e) {
+        return lawyerDriveError(res, e);
     }
 });
 
@@ -981,7 +1251,7 @@ function buildLoanDocSystemPrompt(templateName, passNumber, mode) {
         '=== ZÁSTAVCE (KDO PODEPISUJE ZÁSTAVNÍ SMLOUVU) ===\n' +
         'DATA sekce "ZÁSTAVCE" určuje, kdo je zástavce v zástavní smlouvě (zástavní smlouvy k nemovitostem, podílům atd.):\n\n' +
         '1. "Zástavce = Dlužník (viz DLUŽNÍK výše)" — v zástavní smlouvě použij STEJNÉ údaje jako u Dlužníka: název firmy, IČO, spisová značka, sídlo, jednatel, doručovací adresa. Smluvní strany jsou identický subjekt vystupující ve dvou rolích (úvěrovaný + zástavce). Údaje zástavce v šabloně („(Doplnit)“ nebo údaje jiného případu) nahraď údaji dlužníka.\n\n' +
-        '2. "Zástavce = vlastník z přiloženého LV výpisu" — Martin přiložil LV výpis jako další soubor v této konverzaci. VYTÁHNI z LV: jméno fyzické/právnické osoby ze sekce "Vlastníci", IČO/RČ, bydliště/sídlo, případně doručovací adresu, pokud ji LV uvádí odlišně. POZOR: zástavce NENÍ dlužník — jde o třetí osobu (např. matka klienta zastavující své nemovitosti za úvěr syna). Údaje zástavce v šabloně nahraď údaji vlastníka z LV na všech místech.\n\n' +
+        '2. "Zástavce = vlastník z přiloženého LV výpisu" — Uživatel přiložil LV výpis jako další soubor v této konverzaci. VYTÁHNI z LV: jméno fyzické/právnické osoby ze sekce "Vlastníci", IČO/RČ, bydliště/sídlo, případně doručovací adresu, pokud ji LV uvádí odlišně. POZOR: zástavce NENÍ dlužník — jde o třetí osobu (např. matka klienta zastavující své nemovitosti za úvěr syna). Údaje zástavce v šabloně nahraď údaji vlastníka z LV na všech místech.\n\n' +
         '3. Explicitně vyplněná pole (Název / Jméno, IČO / RČ, Bydliště / Sídlo, Jednatel / Zástupce…) — použij doslovně na místa zástavce.\n\n' +
         'Pokud DATA sekci ZÁSTAVCE neobsahují (starší případy), zástavce automaticky nepřiřazuj k dlužníkovi — jeho údaje ponech jako „(Doplnit)“.\n\n' +
         '=== DORUČOVACÍ ADRESA (DLUŽNÍK / ZÁSTAVCE) ===\n' +
@@ -991,7 +1261,7 @@ function buildLoanDocSystemPrompt(templateName, passNumber, mode) {
         'Pokud šablona má v doručovací adrese „(Doplnit)“ nebo hodnoty jiného případu, vyplň je podle pravidel výše.\n\n' +
         '=== CO NEMĚNIT ===\n' +
         'Nesahej na právní text šablony: formulace („Smluvní strany se tímto dohodly…“), definice pojmů (např. „Den konečné splatnosti“), lhůty a hodnoty uvedené napevno (např. „10 (deseti) pracovních dnů“), hlavičky článků. Měníš jen místa „(Doplnit)“, údaje jiného případu a pasáže, které pro tento případ neplatí. U starší šablony bez „(Doplnit)“ platí: obsahuje-li věta jméno, IČO, adresu, částku nebo datum konkrétního případu, JSOU TO DATA k revizi.\n\n' +
-        '=== POZNÁMKY (notes) — MARTIN JE UVIDÍ ===\n' +
+        '=== POZNÁMKY (notes) — UŽIVATEL JE UVIDÍ ===\n' +
         'V poznámkách stručně sděl, co jsi udělala. Sem patří:\n' +
         '- Co jsi VYPUSTILA a proč (např. „Vypustila jsem podmínku výmazu stávajícího zástavního práva — DATA žádné neuvádějí.“).\n' +
         '- Co jsi PŘIDALA (např. „Doplnila jsem druhou nemovitost do Přílohy 1A podle vzoru první.“).\n' +
@@ -1180,7 +1450,7 @@ function buildLoanDocDataDescription(formData) {
         if (formData.pledgorSameAsBorrower) {
             d += 'Zástavce = Dlužník (viz sekce DLUŽNÍK výše). Stejný subjekt vystupuje v zástavní smlouvě jako zástavce i v úvěrové smlouvě jako dlužník — POUŽÍVEJ stejné údaje (název, IČO, sídlo, jednatel, doručovací adresa) pro obě role.\n';
         } else if (formData.pledgorFromLV) {
-            d += 'Zástavce = vlastník nemovitosti uvedený v přiloženém výpisu z Katastru nemovitostí (LV). Martin přiložil LV jako další .pdf/obrázek v této konverzaci. VYTÁHNI ze sekce "Vlastníci" v LV: jméno/název, IČO/RČ, bydliště/sídlo, případně doručovací adresu (pokud LV uvádí jinou než bydliště). NEPOUŽÍVEJ údaje dlužníka — zástavce je jiná osoba (typicky příbuzný klienta zastavující své nemovitosti za úvěr klienta).\n';
+            d += 'Zástavce = vlastník nemovitosti uvedený v přiloženém výpisu z Katastru nemovitostí (LV). Uživatel přiložil LV jako další .pdf/obrázek v této konverzaci. VYTÁHNI ze sekce "Vlastníci" v LV: jméno/název, IČO/RČ, bydliště/sídlo, případně doručovací adresu (pokud LV uvádí jinou než bydliště). NEPOUŽÍVEJ údaje dlužníka — zástavce je jiná osoba (typicky příbuzný klienta zastavující své nemovitosti za úvěr klienta).\n';
         } else {
             if (formData.pledgorName) d += 'Název / Jméno: ' + formData.pledgorName + '\n';
             if (formData.pledgorIco) d += 'IČO / RČ: ' + formData.pledgorIco + '\n';
@@ -1245,7 +1515,7 @@ function buildLoanDocDataDescription(formData) {
     }
 
     if (formData.notes) {
-        d += '\n=== DOPLŇUJÍCÍ POKYNY OD MARTINA (zohledni je) ===\n' + formData.notes + '\n';
+        d += '\n=== DOPLŇUJÍCÍ POKYNY OD UŽIVATELE (zohledni je) ===\n' + formData.notes + '\n';
     }
 
     if (formData.recapDrawdown) {
@@ -1381,7 +1651,7 @@ function buildLoanDocManualUserContent(templateName, dataDescription, templateTe
         'POKUD najdeš odchylku formátování nebo logický problém, OPRAV ho PŘED vrácením. Lepší dalších 30 sekund práce než hodina ručního formátování.\n\n' +
         '=== SHRNUTÍ POD DOKUMENT (stručně, v bodech) ===\n' +
         '1. Doplněno — hlavní vyplněné údaje.\n' +
-        '2. Zůstalo „(Doplnit)“ — co a kde (článek / příloha), aby to Martin doplnil ručně.\n' +
+        '2. Zůstalo „(Doplnit)“ — co a kde (článek / příloha), aby to uživatel doplnil ručně.\n' +
         '3. Vypuštěno nebo přeformulováno — co a proč.\n' +
         '4. Ke kontrole — kde si nejsi jistá, právní nejasnosti, rozpory v DATECH.\n\n' +
         dataDescription;
@@ -1394,7 +1664,8 @@ function buildLoanDocManualUserContent(templateName, dataDescription, templateTe
 // prompt zkopírovat a paste do externí ChatGPT/Claude (manuální fallback).
 // =============================================
 app.post('/api/generate-loan-doc/preview', function (req, res) {
-    if (!verifyDatabaseToken(req)) {
+    // Martin (relace) nebo advokát (lawyerToken v těle) — bez AI, bez nákladů
+    if (!verifyDatabaseToken(req) && !verifyLawyerToken(req.body && req.body.lawyerToken)) {
         return res.status(401).json({ error: 'Neplatná relace. Obnovte stránku a zadejte PIN.' });
     }
     var formData = (req.body && req.body.formData) || {};
