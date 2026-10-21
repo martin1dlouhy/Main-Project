@@ -255,6 +255,63 @@
             font-size: 14px;
         }
 
+        /* Počet nemovitostí v jednom ocenění (krok 1) — sdílený .segmented z app-shell.css, vlevo od „Pokračovat" */
+        .property-count {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-right: auto;
+        }
+
+        .property-count-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .property-count-label {
+            font-size: 14px;
+            color: var(--text-soft);
+        }
+
+        .property-count .segmented button {
+            min-width: 38px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .property-count .segmented button:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        .property-count-hint {
+            font-size: 13px;
+            color: var(--text-mute);
+        }
+
+        /* Krok 4 — označení jednotlivých nemovitostí (jen při počtu 2+) */
+        .property-labels {
+            margin-bottom: 28px;
+            padding: 20px 24px 4px;
+            border: 1px solid var(--line-amber);
+            border-radius: 14px;
+            background: var(--amber-tint);
+        }
+
+        .property-labels-title {
+            margin-bottom: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .property-labels-note {
+            margin: 0 0 16px;
+            font-size: 13px;
+            color: var(--text-mute);
+        }
+
         /* Forms - overrides for this app */
         .form-group { margin-bottom: 20px; }
 
@@ -1201,6 +1258,12 @@
             color: var(--text-secondary);
         }
 
+        /* Blok zpracovaný, ale něco nesedí (víc nemovitostí: AI neocenila všechny / součet nesedí) */
+        .parse-status.warning {
+            background: var(--warning-tint);
+            color: var(--warning);
+        }
+
         /* E-mail k prověření — zaškrtávátko „Do e-mailu" na kartě AI (jen u AI s daty) */
         .email-include {
             display: flex;
@@ -1260,6 +1323,14 @@
         .comparison-table .highlight-row td {
             background: var(--accent-light);
             font-weight: 700;
+        }
+
+        /* Rozpis po nemovitostech — nadpis skupiny řádků */
+        .comparison-table .group-row td {
+            padding-top: 20px;
+            font-weight: 700;
+            color: var(--amber-warm);
+            border-bottom: 1px solid var(--line-amber);
         }
 
         /* Property summary header */
@@ -1861,6 +1932,7 @@
         #reExportCard .rx-compare > div { padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); }
         #reExportCard .rx-compare .rx-h { font-weight: 600; }
         #reExportCard .rx-compare .rx-k { color: var(--text-soft); }
+        #reExportCard .rx-compare .rx-sub { grid-column: 1 / -1; padding-top: 14px; font-size: 14px; font-weight: 600; color: var(--text-soft); }
         #reExportCard .rx-badge { display: inline-block; padding: 2px 10px; font-size: 14px; border-radius: 8px; background: var(--bg-input); }
         #reExportCard .rx-badge.ok { background: var(--success-tint); color: var(--success); }
         #reExportCard .rx-badge.warn { background: var(--warning-tint); color: var(--warning); }
@@ -2257,6 +2329,19 @@
             </div>
 
             <div class="buttons">
+                <div class="property-count">
+                    <div class="property-count-row">
+                        <span class="property-count-label" id="propertyCountLabel">Počet nemovitostí</span>
+                        <div class="segmented" role="group" aria-labelledby="propertyCountLabel">
+                            <button type="button" class="active" data-count="1" aria-pressed="true" onclick="selectPropertyCount(1)">1</button>
+                            <button type="button" data-count="2" aria-pressed="false" onclick="selectPropertyCount(2)">2</button>
+                            <button type="button" data-count="3" aria-pressed="false" onclick="selectPropertyCount(3)">3</button>
+                            <button type="button" data-count="4" aria-pressed="false" onclick="selectPropertyCount(4)">4</button>
+                            <button type="button" data-count="5" aria-pressed="false" onclick="selectPropertyCount(5)">5</button>
+                        </div>
+                    </div>
+                    <span class="property-count-hint">Víc nemovitostí stejného typu najednou — AI ocení každou zvlášť a sečte je.</span>
+                </div>
                 <button class="btn btn-primary" onclick="nextStep()" id="step1Next" disabled>
                     Pokračovat
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" style="margin-left: 6px; vertical-align: middle;">
@@ -2662,6 +2747,10 @@
         let loanPurpose = '';
         let selectedInputs = [];
         let formData = {};
+        // Víc nemovitostí stejného typu v jednom ocenění (krok 1) — AI ocení každou zvlášť a sečte je
+        const MAX_PROPERTY_COUNT = 5;
+        let propertyCount = 1;
+        let propertyLabels = []; // označení / adresy z kroku 4, index 0 = nemovitost 1
         let visitedSteps = [1];
         let compareSelectedIds = new Set();
         let filterSearchText = '';
@@ -2708,6 +2797,13 @@
         function formatPct(n) {
             return n ? new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 0 }).format(n) + ' %' : '—';
         }
+
+        // Podklady společné pro všechny typy (krok 3) — popisky i pro prompt a obrázek ocenění
+        const GLOBAL_INPUTS = [
+            { id: 'cenova_mapa', label: 'Cenová mapa CUZK', icon: '◆' },
+            { id: 'reas_prodeje', label: 'Výpis prodejů z REAS', icon: '◆' }
+        ];
+        const GLOBAL_INPUT_LABELS = Object.fromEntries(GLOBAL_INPUTS.map(i => [i.id, i.label]));
 
         const propertyConfigs = {
             land: {
@@ -2983,6 +3079,9 @@
                 try {
                     var data = window.DashboardBridge ? DashboardBridge.takeHandoff() : null;
                     if (data) {
+                        // Nové ocenění k případu vždy začíná čistě — okno otevřené z Dashboardu (window.open)
+                        // může zdědit rozpracovanou valuaci ze záložky, ze které se otevíralo
+                        if (data.valuationId == null) resetGenerator();
                         window.__dashCaseId = data.caseId || null;
                         // Ocenění, se kterým byla appka otevřena — vazba na případ platí jen pro něj
                         // (loadSavedValuation ji u jiného ocenění zapomene)
@@ -3009,14 +3108,19 @@
         })();
 
         function loadState() {
-            const saved = localStorage.getItem('prompt-gen-state');
+            // Rozpracovaná valuace patří jen k této záložce (sessionStorage): obnovení stránky nebo odskok
+            // na Dashboard a zpět ji zachová, nové okno začne čistě. Dřív localStorage + Google Drive
+            // (state.json) — nové okno pak natáhlo údaje z předchozí valuace (Martin 21. 10. 2026).
+            try { localStorage.removeItem('prompt-gen-state'); } catch (e) { /* starý klíč — jen úklid */ }
+            let saved = null;
+            try { saved = sessionStorage.getItem('prompt-gen-state'); } catch (e) { /* úložiště nedostupné */ }
             if (saved) {
                 let state;
                 try {
                     state = JSON.parse(saved);
                 } catch (e) {
                     console.error('Corrupted saved state, resetting:', e);
-                    localStorage.removeItem('prompt-gen-state');
+                    try { sessionStorage.removeItem('prompt-gen-state'); } catch (e2) { /* ignore */ }
                     return;
                 }
                 propertyType = state.propertyType || '';
@@ -3024,6 +3128,9 @@
                 selectedInputs = state.selectedInputs || [];
                 formData = state.formData || {};
                 currentStep = state.currentStep || 1;
+                propertyCount = clampPropertyCount(state.propertyCount);
+                propertyLabels = Array.isArray(state.propertyLabels) ? state.propertyLabels.map(l => String(l || '')) : [];
+                syncPropertyCountUI();
                 // Restore property type selection UI
                 if (propertyType) {
                     document.querySelectorAll('.property-type-card').forEach(card => {
@@ -3057,9 +3164,85 @@
                 loanPurpose,
                 selectedInputs,
                 formData,
-                currentStep
+                currentStep,
+                propertyCount,
+                propertyLabels
             };
-            localStorage.setItem('prompt-gen-state', JSON.stringify(state));
+            try { sessionStorage.setItem('prompt-gen-state', JSON.stringify(state)); } catch (e) { /* plné nebo zakázané úložiště nesmí rozbít appku */ }
+        }
+
+        // ===== Víc nemovitostí v jednom ocenění =====
+        function clampPropertyCount(n) {
+            const v = parseInt(n, 10);
+            return isNaN(v) ? 1 : Math.min(MAX_PROPERTY_COUNT, Math.max(1, v));
+        }
+
+        function selectPropertyCount(n) {
+            propertyCount = clampPropertyCount(n);
+            syncPropertyCountUI();
+            saveState();
+        }
+
+        function syncPropertyCountUI() {
+            document.querySelectorAll('.property-count .segmented button').forEach(btn => {
+                const on = parseInt(btn.dataset.count, 10) === propertyCount;
+                btn.classList.toggle('active', on);
+                btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+        }
+
+        // Pole „Nemovitost N — označení / adresa" v kroku 4 (jen při počtu 2+)
+        function propertyLabelsUpdated() {
+            for (let i = 0; i < propertyCount; i++) {
+                const el = document.getElementById('property_label_' + (i + 1));
+                if (el) propertyLabels[i] = el.value.trim();
+            }
+            saveState();
+            updatePreview();
+        }
+
+        // „2× Rodinný dům" — název typu s počtem (save dialog, obrázek, export, e-mail)
+        function valuationTypeName(config) {
+            const name = (config && config.name) || propertyType || '';
+            return propertyCount > 1 ? propertyCount + '× ' + name : name;
+        }
+
+        // Kolik nemovitostí rozepsat ve výsledcích: zvolený počet, nebo víc, když je AI vrátila
+        function multiPropertyCount(sources) {
+            let n = propertyCount;
+            sources.forEach(s => (aiParsedData[s]?.nemovitosti || []).forEach(p => { if (p.cislo > n) n = p.cislo; }));
+            return n;
+        }
+
+        // Nemovitost č. i (od 0) z výstupu jedné AI
+        function aiProperty(src, i) {
+            return (aiParsedData[src]?.nemovitosti || []).find(p => p.cislo === i + 1) || null;
+        }
+
+        // „Nemovitost 1 — RD Lipová 12": vlastní označení z kroku 4, jinak označení od AI
+        function propertyDisplayName(i, sources) {
+            let label = (propertyLabels[i] || '').trim();
+            if (!label) {
+                for (const s of sources) {
+                    const p = aiProperty(s, i);
+                    if (p && p.nazev) { label = p.nazev; break; }
+                }
+            }
+            return 'Nemovitost ' + (i + 1) + (label ? ' — ' + label : '');
+        }
+
+        // Upozornění u výstupu AI: neocenila všechny nemovitosti, nebo součet nesedí s celkem
+        function multiPropertyWarning(d) {
+            if (!d || propertyCount <= 1) return '';
+            const props = (d.nemovitosti || []).filter(p => p.trzniHodnota);
+            if (props.length < propertyCount) {
+                return 'Zpracováno, ale AI ocenila jen ' + props.length + ' z ' + propertyCount + ' nemovitostí — zkontrolujte výstup';
+            }
+            const sum = props.reduce((a, p) => a + p.trzniHodnota, 0);
+            if (d.trzniHodnota && Math.abs(sum - d.trzniHodnota) / d.trzniHodnota > 0.02) {
+                return 'Zpracováno, ale součet nemovitostí (' + formatKc(sum) + ') nesedí s celkovou tržní hodnotou';
+            }
+            return '';
         }
 
         function selectPropertyType(type) {
@@ -3152,6 +3335,8 @@
             document.getElementById('step' + step).classList.add('active');
             if (step === 1) { renderSavedValuationsPanel(); updateSyncBarVisibility(); }
             if (step === 3) populateInputsGrid();
+            // Obnovení stránky v kroku 4 — formulář se jinak vykresluje jen při přechodu z kroku 3
+            if (step === 4 && propertyType && !document.getElementById('detailForm').children.length) populateDetailForm();
             if (step === 6) populatePropertySummary();
             // Scroll to top of container on step change
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3162,10 +3347,7 @@
             const config = propertyConfigs[propertyType];
 
             // Property-specific inputs + global inputs (all types)
-            const globalInputs = [
-                { id: 'cenova_mapa', label: 'Cenová mapa CUZK', icon: '◆' }
-            ];
-            const allInputs = [...config.inputs, ...globalInputs];
+            const allInputs = [...config.inputs, ...GLOBAL_INPUTS];
 
             grid.innerHTML = allInputs.map(input => {
                 const isChecked = selectedInputs.includes(input.id);
@@ -3202,11 +3384,22 @@
             const config = propertyConfigs[propertyType];
             let html = '';
 
+            // Víc nemovitostí: označení každé z nich; ostatní pole jsou společná a nepovinná
+            if (propertyCount > 1) {
+                const escAttr = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                html += `<div class="property-labels"><div class="property-labels-title">Nemovitosti v ocenění (${propertyCount})</div>`;
+                for (let i = 1; i <= propertyCount; i++) {
+                    html += `<div class="form-group"><label for="property_label_${i}" class="required">Nemovitost ${i} — označení / adresa</label>`;
+                    html += `<input type="text" id="property_label_${i}" placeholder="např. RD Lipová 12, Černošice" value="${escAttr(propertyLabels[i - 1] || '')}" oninput="propertyLabelsUpdated()"></div>`;
+                }
+                html += `<p class="property-labels-note">Údaje níže vyplňte jen, pokud platí pro všechny nemovitosti — ostatní AI zjistí z podkladů u každé zvlášť.</p></div>`;
+            }
+
             for (const [fieldId, field] of Object.entries(config.fields)) {
                 if (fieldId === 'najemne' && !selectedInputs.includes('najemni_smlouva') && !selectedInputs.includes('najemni_smlouvy')) continue;
 
                 html += '<div class="form-group">';
-                const isRequired = fieldId.includes('adresa') || fieldId.includes('plocha') || fieldId.includes('parcelni') || fieldId === 'stav' || fieldId === 'typ_vlastnictvi';
+                const isRequired = propertyCount === 1 && (fieldId.includes('adresa') || fieldId.includes('plocha') || fieldId.includes('parcelni') || fieldId === 'stav' || fieldId === 'typ_vlastnictvi');
 
                 let label = field.label;
                 const tooltipFields = ['kzp', 'kpp', 'gdv_ocekavane', 'najemne_rocni', 'noi', 'obsazenost_komercni', 'stupen_dokonceni', 'naklady_dokonceni'];
@@ -3366,7 +3559,8 @@
                         formData[fieldId] = value;
                     }
 
-                    const isRequired = (fieldId === 'adresa' || fieldId === 'uzitna_plocha' || fieldId === 'plocha' || fieldId === 'plocha_pozemku' || fieldId === 'parcelni_cislo' || fieldId === 'stav' || fieldId === 'typ_vlastnictvi');
+                    // Víc nemovitostí: pole jsou společná a nepovinná — povinné je jen označení každé nemovitosti
+                    const isRequired = propertyCount === 1 && (fieldId === 'adresa' || fieldId === 'uzitna_plocha' || fieldId === 'plocha' || fieldId === 'plocha_pozemku' || fieldId === 'parcelni_cislo' || fieldId === 'stav' || fieldId === 'typ_vlastnictvi');
                     if (isRequired && value === '') {
                         missingFields.push(config.fields[fieldId].label);
                     }
@@ -3374,8 +3568,13 @@
             }
 
             // RD: počet podlaží potřeba pro AI odhad užitné plochy z LV zastavěné
-            if (propertyType === 'house' && !formData.podlazi) {
+            if (propertyType === 'house' && propertyCount === 1 && !formData.podlazi) {
                 missingFields.push('Počet podlaží (AI z něj dopočítá užitnou plochu z LV zastavěné)');
+            }
+            for (let i = 0; i < propertyCount && propertyCount > 1; i++) {
+                const labelEl = document.getElementById('property_label_' + (i + 1));
+                if (labelEl) propertyLabels[i] = labelEl.value.trim();
+                if (!(propertyLabels[i] || '').trim()) missingFields.push('Nemovitost ' + (i + 1) + ' — označení / adresa');
             }
 
             // S přiloženým posudkem nebo LV vytěží údaje AI z příloh — upozornění na prázdný krok 4 je zbytečné
@@ -3433,6 +3632,17 @@
             prompt += `## TYP NEMOVITOSTI\n`;
             prompt += `**${config.name}**\n\n`;
 
+            // Víc nemovitostí v jednom ocenění (krok 1) — každá zvlášť, výsledek = součet
+            if (propertyCount > 1) {
+                prompt += `## POČET NEMOVITOSTÍ: ${propertyCount}\n`;
+                prompt += `Oceňuješ **${propertyCount} ${propertyCount >= 5 ? 'samostatných nemovitostí' : 'samostatné nemovitosti'}** stejného typu najednou — podklady ke všem jsou přiložené:\n`;
+                for (let i = 0; i < propertyCount; i++) {
+                    const label = (propertyLabels[i] || '').trim();
+                    prompt += `${i + 1}. ${label || 'označení a adresu zjisti z podkladů'}\n`;
+                }
+                prompt += `\n**Každou nemovitost oceň samostatně** — vlastní údaje z podkladů, vlastní srovnatelné nemovitosti, vlastní výpočet tržní i zástavní hodnoty a vlastní red flags. Celková tržní i zástavní hodnota = součet za všechny nemovitosti. Pokud v podkladech najdeš jiný počet nemovitostí, napiš to hned na začátku odpovědi.\n\n`;
+            }
+
             // Add loan purpose section
             if (loanPurpose === 'refinancing') {
                 prompt += `## ÚČEL FINANCOVÁNÍ\n`;
@@ -3461,13 +3671,12 @@
             }
 
             // Globální inputy (nejsou v config.inputs)
-            const globalInputDefs = { cenova_mapa: 'Cenová mapa CUZK' };
             prompt += `## PŘILOŽENÉ PODKLADY\n`;
             if (selectedInputs.length > 0) {
                 prompt += `K zadání přikládám tyto podklady:\n`;
                 selectedInputs.forEach(inputId => {
                     const input = config.inputs.find(i => i.id === inputId);
-                    const label = input ? input.label : globalInputDefs[inputId];
+                    const label = input ? input.label : GLOBAL_INPUT_LABELS[inputId];
                     if (label) prompt += `- ${label}\n`;
                 });
                 prompt += `\nPokud jsou přiložené i další dokumenty, použij je také.\n\n`;
@@ -3482,6 +3691,9 @@
                 zadaneUdaje.forEach(([key, value]) => {
                     prompt += `- **${config.fields[key].label}**: ${value}\n`;
                 });
+                if (propertyCount > 1) {
+                    prompt += `\nÚdaje jsou společné pro všechny nemovitosti; co se u jednotlivých nemovitostí liší, zjisti z podkladů.`;
+                }
                 prompt += `\nTyto údaje ověř proti podkladům; při rozporu upozorni a uveď, kterému zdroji věříš.\n\n`;
             } else {
                 prompt += `Nezadány — všechny údaje o nemovitosti zjisti z přiložených podkladů.\n\n`;
@@ -3494,12 +3706,22 @@
             prompt += `4. **Neptej se, pokračuj** — neodpovídej doplňujícími otázkami. Chybějící údaj nahraď zdůvodněným předpokladem, uveď ho a pokračuj; co chybí, vypiš v sekci Chybějící dokumenty.\n`;
             prompt += `5. **Více nemovitostí** — pokud podklady obsahují víc nemovitostí (jednotky, budovy, pozemky), oceň každou zvlášť a uveď i součet. Ve strojovém shrnutí na konci uveď součet.\n\n`;
 
+            // Srovnatelné: REAS (realizované prodeje), jen 6 měsíců, ověřitelné odkazy (Martin 21. 10. 2026)
             prompt += `## PRAVIDLA PRO SROVNATELNÉ NEMOVITOSTI (platí pro každou porovnávací metodu)\n`;
-            prompt += `- **Stáří dat**: preferuj nabídky a prodeje z posledních 6 měsíců; pro dostatečný vzorek můžeš jít až 24 měsíců zpět, starší data ale přepočti na cenovou úroveň k datu ocenění (uveď o kolik a podle čeho).\n`;
+            prompt += `- **Zdroje**: přednostně realizované prodeje z REAS (reas.cz/prodane — skutečná prodejní cena a datum prodeje; byty, domy, chaty a chalupy). Přehled prodejů v obci bývá bez přihlášení skrytý, jednotlivé prodeje (stránky reas.cz/prodane/…/inzerat-…) jsou ale veřejné — hledej je vyhledáváním, např. „reas.cz prodaný dům <obec>“. Inzeráty (sreality.cz, bezrealitky.cz) ber jako doplněk.\n`;
+            prompt += `- **Stáří dat**: jen data z posledních 6 měsíců k datu ocenění — u prodeje rozhoduje datum prodeje, u inzerátu musí jít o aktuální nabídku nebo inzerát vložený v posledních 6 měsících. Starší data nepoužívej. Když jich nenajdeš dost, rozšiř okruh na sousední obce s podobnou polohou a charakterem (ne do minulosti), uveď to a sniž jistotu ocenění.\n`;
+            prompt += `- **Srážky**: u inzerátů platí srážky z metodiky níže (-10 % převod na realizační cenu a -5 % koeficient opatrnosti); u realizovaných prodejů (REAS i jiné doložené prodeje) jen -5 % koeficient opatrnosti.\n`;
             prompt += `- **Lokalita**: co nejblíže oceňované nemovitosti — stejná obec / městská část a podobná mikrolokalita.\n`;
-            prompt += `- **Povinná tabulka**: u každé srovnatelné nemovitosti uveď lokalitu, typ údaje (inzerát / realizovaný prodej), datum, plochu, cenu, cenu za m², provedené úpravy (%) a odkaz na zdroj (URL).\n`;
+            prompt += `- **Povinná tabulka**: u každé srovnatelné nemovitosti uveď lokalitu, typ údaje (inzerát / realizovaný prodej), datum, plochu, cenu, cenu za m², provedené úpravy (%) a odkaz.\n`;
+            prompt += `- **Odkazy k ověření**: u každé srovnatelné nemovitosti přímý odkaz na konkrétní prodej nebo inzerát (ne na úvodní stránku portálu ani na výsledky hledání) jako klikací odkaz v Markdownu, např. [REAS](https://www.reas.cz/prodane/…). Každý odkaz otevři a ověř, že stránka existuje a sedí cena, plocha a datum; nemovitost s neověřeným odkazem neuváděj. Pod tabulku dej číslovaný seznam celých odkazů.\n`;
             prompt += `- **Nic nevymýšlej**: uváděj jen nemovitosti, které jsi skutečně našel. Realizovaný prodej označ jen tehdy, když ho doložíš zdrojem. Pokud nenajdeš dost srovnatelných, napiš, kolik jsi jich našel, a sniž jistotu ocenění.\n`;
             prompt += `- **Statistika**: průměr, medián, směrodatná odchylka; odlehlé hodnoty vyřaď a uveď proč.\n\n`;
+
+            // Výpis prodejů z REAS z přihlášeného účtu (krok 3) — bez přihlášení AI většinu prodejů nevidí
+            if (selectedInputs.includes('reas_prodeje')) {
+                prompt += `## VÝPIS PRODEJŮ Z REAS\n`;
+                prompt += `Přikládám výpis realizovaných prodejů z REAS z přihlášeného účtu — obsahuje i prodeje, které bez přihlášení neuvidíš. Použij ho jako hlavní zdroj srovnatelných prodejů: jen prodeje z posledních 6 měsíců, které se oceňované nemovitosti podobají. U každého uveď odkaz na detail prodeje, pokud ho výpis obsahuje; jinak adresu a datum prodeje.\n\n`;
+            }
 
             // Cenová mapa CUZK — instrukce při zaškrtnutém podkladu
             if (selectedInputs.includes('cenova_mapa')) {
@@ -3613,9 +3835,9 @@
                 }
                 prompt += `## METODIKA OCENĚNÍ\n\n`;
                 prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
-                prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy) podle pravidel pro srovnatelné nemovitosti výše. Nepoužívej pouze svá tréninková data — aktivně hledej aktuální nabídky a realizované prodeje v dané lokalitě.\n\n`;
+                prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů (realizované prodeje: reas.cz; inzeráty: sreality.cz, bezrealitky.cz; cenové mapy) podle pravidel pro srovnatelné nemovitosti výše. Nepoužívej pouze svá tréninková data — aktivně hledej aktuální nabídky a realizované prodeje v dané lokalitě.\n\n`;
                 prompt += `- Najdi minimálně 5–10 srovnatelných nemovitostí v lokalitě (ideálně až 20)\n`;
-                prompt += `- Nejdůležitější jsou realizované prodeje. Pro větší vzorek zahrň i inzerované ceny.\n`;
+                prompt += `- Nejdůležitější jsou realizované prodeje (REAS). Pro větší vzorek zahrň i inzerované ceny.\n`;
                 prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
                 prompt += `- Korekce na: stav nemovitosti, poloha v rámci lokality, podlaží (u bytů), parkování, orientace a výhled\n`;
                 prompt += `- Statistická analýza: průměr, medián, směrodatná odchylka. Vážený průměr s důrazem na realizované prodeje.\n`;
@@ -3744,7 +3966,7 @@
             if (propertyType === 'mixed_use') {
                 prompt += `## METODIKA OCENĚNÍ POLYFUNKČNÍHO DOMU\n\n`;
                 prompt += `**DŮLEŽITÉ**: Polyfunkční dům vyžaduje kombinovaný přístup – odděleně ocenit bytovou a komerční část.\n`;
-                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data.\n\n`;
+                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (realizované prodeje: reas.cz; inzeráty: sreality.cz, bezrealitky.cz; cenové mapy). Nepoužívej pouze svá tréninková data.\n\n`;
                 prompt += `### 1. BYTOVÁ ČÁST - POROVNÁVACÍ METODA\n`;
                 prompt += `- Najdi minimálně 5–10 srovnatelných bytů v lokalitě (ideálně až 20)\n`;
                 prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
@@ -3774,7 +3996,7 @@
 
             if (propertyType === 'recreation') {
                 prompt += `## METODIKA OCENĚNÍ REKREAČNÍHO OBJEKTU\n\n`;
-                prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů. Nepoužívej pouze svá tréninková data.\n\n`;
+                prompt += `**DŮLEŽITÉ**: Vyhledej aktuální tržní data z veřejně dostupných zdrojů (realizované prodeje chat a chalup: reas.cz; inzeráty: sreality.cz, bezrealitky.cz). Nepoužívej pouze svá tréninková data.\n\n`;
                 prompt += `### 1. POROVNÁVACÍ METODA (Primární)\n`;
                 prompt += `- Najdi minimálně 5–10 srovnatelných rekreačních objektů v lokalitě (ideálně až 20)\n`;
                 prompt += `- **Haircut na inzerované ceny**: Srážka č. 1 (-10%) = převod z inzerované na odhadovanou realizační cenu. Srážka č. 2 (-5%) = koeficient opatrnosti pro zástavní financování. Celkový haircut = cca 15%.\n`;
@@ -3805,7 +4027,7 @@
             if (propertyType === 'apartment_building') {
                 prompt += `## METODIKA OCENĚNÍ BYTOVÉHO DOMU\n\n`;
                 prompt += `**DŮLEŽITÉ**: Pro bytový dům jsou **obě metody primární** a rovnocenné. Výslednou tržní hodnotu stanov jako vážený průměr obou metod (nebo zdůvodni, proč jedné dáváš vyšší váhu). Neplatí pravidlo „jedna primární, druhá sekundární".\n`;
-                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, cenové mapy). Nepoužívej pouze svá tréninková data.\n\n`;
+                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (realizované prodeje: reas.cz; inzeráty: sreality.cz, bezrealitky.cz; cenové mapy). Nepoužívej pouze svá tréninková data.\n\n`;
 
                 prompt += `### 1. VÝNOSOVÁ METODA (Primární — DCF / přímá kapitalizace)\n`;
                 prompt += `Bytový dům je investiční aktivum — výnosová hodnota je klíčová pro investora.\n\n`;
@@ -3921,7 +4143,7 @@
             if (propertyType === 'under_construction') {
                 prompt += `## METODIKA OCENĚNÍ ROZESTAVĚNÉHO PROJEKTU\n\n`;
                 prompt += `**KRITICKÉ**: Oceňuješ projekt v **současném, nedokončeném stavu** (as-is). **Tržní hodnota = cena, za kterou by rozestavěný projekt dnes koupil investor, který ho dokončí.** Hodnotu po dokončení počítáš jen jako mezikrok a uvádíš ji zvlášť. Věřitel půjčuje proti současnému stavu — dokončení stavby nefinancuje a nesmí s ním počítat.\n`;
-                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (sreality.cz, bezrealitky.cz, ceníky developerů, cenové mapy) podle pravidel pro srovnatelné nemovitosti výše. Nepoužívej pouze svá tréninková data.\n\n`;
+                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (realizované prodeje: reas.cz; inzeráty: sreality.cz, bezrealitky.cz; ceníky developerů; cenové mapy) podle pravidel pro srovnatelné nemovitosti výše. Nepoužívej pouze svá tréninková data.\n\n`;
 
                 prompt += `### 1. STAV VÝSTAVBY (podklad pro všechny metody)\n`;
                 prompt += `U každé stavby (každého domu) zjisti z podkladů:\n`;
@@ -4025,8 +4247,11 @@
             prompt += `Strukturuj svou odpověď následovně:\n\n`;
             prompt += `### 1. SOUHRN NEMOVITOSTI\n`;
             prompt += `- Typ, lokalita, klíčové parametry\n`;
+            if (propertyCount > 1) {
+                prompt += `- **Každou nemovitost zvlášť** (Nemovitost 1 až ${propertyCount}) — totéž členění i v dalších sekcích\n`;
+            }
             if (propertyType === 'house') {
-                prompt += `- **Plochy domu v m²**: podlahová plocha (součet podlahových ploch všech podlaží), užitná plocha (ta, se kterou počítáš cenu za m²) a plocha pozemku (výměra pozemků domu podle LV) — u každé uveď, z čeho vychází (podklad, nebo odhad ze zastavěné plochy)\n`;
+                prompt += `- **Plochy domu v m²**: podlahová plocha (součet podlahových ploch všech podlaží), užitná plocha (ta, se kterou počítáš cenu za m²) a plocha pozemku (výměra pozemků domu podle LV) — u každé uveď, z čeho vychází (podklad, nebo odhad ze zastavěné plochy)${propertyCount > 1 ? '; u každého domu zvlášť' : ''}\n`;
             }
             if (propertyType === 'under_construction') {
                 prompt += `- **Stav výstavby**: fáze a stupeň dokončení v % u každé stavby; zda stavba probíhá, nebo stojí\n`;
@@ -4057,7 +4282,7 @@
             prompt += `### 4. ROZPĚTÍ A JISTOTA OCENĚNÍ\n`;
             prompt += `- **Nízká / střední / vysoká hodnota** v Kč; střední hodnota = finální tržní hodnota\n`;
             prompt += `- **Jistota ocenění** (rozpětí = (střední − nízká) / střední):\n`;
-            prompt += `  * VYSOKÁ — alespoň 3 dobře srovnatelné nemovitosti v lokalitě (ideálně z posledních 12 měsíců) a rozpětí do 15 %\n`;
+            prompt += `  * VYSOKÁ — alespoň 3 dobře srovnatelné nemovitosti v lokalitě (nejlépe realizované prodeje) a rozpětí do 15 %\n`;
             prompt += `  * STŘEDNÍ — málo přímo srovnatelných, ale dostatek tržních dat; rozpětí 15–30 %\n`;
             prompt += `  * NÍZKÁ — žádné přímo srovnatelné nebo rozpětí nad 30 % → doporuč externí znalecký posudek\n\n`;
 
@@ -4071,7 +4296,11 @@
 
             prompt += `### 6. ZÁSTAVNÍ HODNOTA\n`;
             prompt += `- Bezpečnostní koeficient: **${safetyCoefficients[propertyType]}**\n`;
-            prompt += `- **Zástavní hodnota pro LTV** = Tržní hodnota × ${safetyCoefficients[propertyType]}\n\n`;
+            prompt += `- **Zástavní hodnota pro LTV** = Tržní hodnota × ${safetyCoefficients[propertyType]}\n`;
+            if (propertyCount > 1) {
+                prompt += `- **Souhrnná tabulka nemovitostí**: Nemovitost | Tržní hodnota | Zástavní hodnota | Hodnocení zástavy, poslední řádek Celkem (součet)\n`;
+            }
+            prompt += `\n`;
 
             prompt += `### 7. RED FLAGS & RIZIKA\n`;
             prompt += `**KRITICKÁ RIZIKA** (Deal Breakers):\n`;
@@ -4100,19 +4329,24 @@
             prompt += `**NA ÚPLNÝ KONEC své odpovědi** vlož tento strukturovaný blok. Dodržuj přesně tento formát — bude strojově zpracován:\n\n`;
             prompt += '```\n';
             prompt += `===SHRNUTÍ===\n`;
+            const multi = propertyCount > 1;
             if (propertyType === 'under_construction') {
-                prompt += `TRŽNÍ_HODNOTA: [číslo v Kč — hodnota v SOUČASNÉM rozestavěném stavu, ne po dokončení; pouze číslo bez mezer a jednotek, např. 8200000]\n`;
+                prompt += multi
+                    ? `TRŽNÍ_HODNOTA: [číslo v Kč — SOUČET hodnot v SOUČASNÉM rozestavěném stavu za všechny nemovitosti, ne po dokončení; pouze číslo bez mezer a jednotek, např. 8200000]\n`
+                    : `TRŽNÍ_HODNOTA: [číslo v Kč — hodnota v SOUČASNÉM rozestavěném stavu, ne po dokončení; pouze číslo bez mezer a jednotek, např. 8200000]\n`;
+            } else if (multi) {
+                prompt += `TRŽNÍ_HODNOTA: [číslo v Kč — SOUČET za všechny nemovitosti; pouze číslo bez mezer a jednotek, např. 8200000]\n`;
             } else {
                 prompt += `TRŽNÍ_HODNOTA: [číslo v Kč, pouze číslo bez mezer a jednotek, např. 8200000]\n`;
             }
-            prompt += `ZÁSTAVNÍ_HODNOTA: [číslo v Kč, pouze číslo]\n`;
+            prompt += multi ? `ZÁSTAVNÍ_HODNOTA: [číslo v Kč, pouze číslo — součet za všechny nemovitosti]\n` : `ZÁSTAVNÍ_HODNOTA: [číslo v Kč, pouze číslo]\n`;
             prompt += `BEZPEČNOSTNÍ_KOEFICIENT: [desetinné číslo, např. 0.80]\n`;
             prompt += `LTV_DOPORUČENÍ: [procento, např. 80]\n`;
             prompt += `PRIMÁRNÍ_METODA: [název použité primární metody]\n`;
             prompt += `HLAVNÍ_RIZIKO: [jedna věta - nejvážnější riziko]\n`;
             prompt += `SEKUNDÁRNÍ_RIZIKO: [jedna věta - druhé nejvážnější riziko]\n`;
-            prompt += `HODNOCENÍ_ZÁSTAVY: [Vhodná / Podmíněně vhodná / Nevhodná]\n`;
-            if (propertyType === 'house') {
+            prompt += multi ? `HODNOCENÍ_ZÁSTAVY: [Vhodná / Podmíněně vhodná / Nevhodná — za všechny nemovitosti dohromady]\n` : `HODNOCENÍ_ZÁSTAVY: [Vhodná / Podmíněně vhodná / Nevhodná]\n`;
+            if (propertyType === 'house' && !multi) {
                 // Plochy RD — aplikace je ukazuje ve srovnání AI, v exportu a v obrázku ocenění
                 prompt += `PODLAHOVÁ_PLOCHA: [m², pouze číslo — součet podlahových ploch všech podlaží]\n`;
                 prompt += `UŽITNÁ_PLOCHA: [m², pouze číslo — plocha, se kterou počítáš cenu za m²]\n`;
@@ -4120,11 +4354,37 @@
             }
             if (propertyType === 'under_construction') {
                 // Aplikace ukazuje i hodnotu po dokončení, stupeň dokončení a plochy (AI_EXTRA_FIELDS)
-                prompt += `HODNOTA_PO_DOKONČENÍ: [číslo v Kč, pouze číslo — tržní hodnota po dokončení (GDV), jen informativně]\n`;
-                prompt += `STUPEŇ_DOKONČENÍ: [procento, pouze číslo, např. 60 — za celý projekt]\n`;
-                prompt += `PODLAHOVÁ_PLOCHA: [m², pouze číslo — po dokončení podle projektu, součet za všechny stavby]\n`;
-                prompt += `UŽITNÁ_PLOCHA: [m², pouze číslo — po dokončení, součet; plocha, se kterou počítáš hodnotu po dokončení]\n`;
-                prompt += `PLOCHA_POZEMKU: [m², pouze číslo — výměra pozemků projektu podle LV]\n`;
+                if (multi) {
+                    prompt += `HODNOTA_PO_DOKONČENÍ: [číslo v Kč, pouze číslo — tržní hodnota po dokončení (GDV), jen informativně; součet za všechny nemovitosti]\n`;
+                    prompt += `STUPEŇ_DOKONČENÍ: [procento, pouze číslo, např. 60 — za všechny nemovitosti dohromady]\n`;
+                } else {
+                    prompt += `HODNOTA_PO_DOKONČENÍ: [číslo v Kč, pouze číslo — tržní hodnota po dokončení (GDV), jen informativně]\n`;
+                    prompt += `STUPEŇ_DOKONČENÍ: [procento, pouze číslo, např. 60 — za celý projekt]\n`;
+                    prompt += `PODLAHOVÁ_PLOCHA: [m², pouze číslo — po dokončení podle projektu, součet za všechny stavby]\n`;
+                    prompt += `UŽITNÁ_PLOCHA: [m², pouze číslo — po dokončení, součet; plocha, se kterou počítáš hodnotu po dokončení]\n`;
+                    prompt += `PLOCHA_POZEMKU: [m², pouze číslo — výměra pozemků projektu podle LV]\n`;
+                }
+            }
+            if (multi) {
+                // Rozpis po nemovitostech — aplikace z něj skládá rozpis ve srovnání, obrázku, exportu a e-mailu
+                for (let i = 1; i <= propertyCount; i++) {
+                    prompt += `NEMOVITOST_${i}: [krátké označení — adresa nebo LV / parcela]\n`;
+                    prompt += `TRŽNÍ_HODNOTA_${i}: [číslo v Kč, pouze číslo]\n`;
+                    prompt += `ZÁSTAVNÍ_HODNOTA_${i}: [číslo v Kč, pouze číslo]\n`;
+                    prompt += `HODNOCENÍ_ZÁSTAVY_${i}: [Vhodná / Podmíněně vhodná / Nevhodná]\n`;
+                    if (propertyType === 'house') {
+                        prompt += `PODLAHOVÁ_PLOCHA_${i}: [m², pouze číslo — součet podlahových ploch všech podlaží]\n`;
+                        prompt += `UŽITNÁ_PLOCHA_${i}: [m², pouze číslo — plocha, se kterou počítáš cenu za m²]\n`;
+                        prompt += `PLOCHA_POZEMKU_${i}: [m², pouze číslo — výměra pozemků podle LV]\n`;
+                    }
+                    if (propertyType === 'under_construction') {
+                        prompt += `HODNOTA_PO_DOKONČENÍ_${i}: [číslo v Kč, pouze číslo]\n`;
+                        prompt += `STUPEŇ_DOKONČENÍ_${i}: [procento, pouze číslo]\n`;
+                        prompt += `PODLAHOVÁ_PLOCHA_${i}: [m², pouze číslo — po dokončení podle projektu]\n`;
+                        prompt += `UŽITNÁ_PLOCHA_${i}: [m², pouze číslo — po dokončení]\n`;
+                        prompt += `PLOCHA_POZEMKU_${i}: [m², pouze číslo — výměra pozemků podle LV]\n`;
+                    }
+                }
             }
             prompt += `===KONEC===\n`;
             prompt += '```\n\n';
@@ -4259,6 +4519,13 @@
                 } catch (e) { /* ignore — fallback to no banner */ }
             }
             html += `<div class="property-summary-item"><span class="summary-label">Typ</span><span class="summary-value">${esc(config.name)}</span></div>`;
+            if (propertyCount > 1) {
+                html += `<div class="property-summary-item"><span class="summary-label">Počet nemovitostí</span><span class="summary-value">${propertyCount}</span></div>`;
+                for (let i = 0; i < propertyCount; i++) {
+                    const label = (propertyLabels[i] || '').trim();
+                    if (label) html += `<div class="property-summary-item"><span class="summary-label">Nemovitost ${i + 1}</span><span class="summary-value">${esc(label)}</span></div>`;
+                }
+            }
             if (formData.adresa) html += `<div class="property-summary-item"><span class="summary-label">Adresa</span><span class="summary-value">${esc(formData.adresa)}</span></div>`;
             if (formData.uzitna_plocha) html += `<div class="property-summary-item"><span class="summary-label">Plocha</span><span class="summary-value">${esc(formData.uzitna_plocha)} m²</span></div>`;
             if (formData.plocha) html += `<div class="property-summary-item"><span class="summary-label">Výměra</span><span class="summary-value">${esc(formData.plocha)} m²</span></div>`;
@@ -4330,6 +4597,32 @@
                 // radši spadnout do manuálního režimu než tiše protáhnout špatné číslo do LTV.
                 const sane = (n) => !isNaN(n) && n >= 100000;
 
+                // Víc nemovitostí v jednom ocenění — řádky s číslem (NEMOVITOST_1, TRŽNÍ_HODNOTA_1 …), i bez diakritiky
+                const pick = (...keys) => { const k = keys.find(key => data[key] != null && data[key] !== ''); return k ? data[k] : null; };
+                const nemovitosti = [];
+                for (let i = 1; i <= 10; i++) {
+                    const rawTrzni = pick('TRŽNÍ_HODNOTA_' + i, 'TRZNI_HODNOTA_' + i);
+                    const rawZastavni = pick('ZÁSTAVNÍ_HODNOTA_' + i, 'ZASTAVNI_HODNOTA_' + i);
+                    const nazev = pick('NEMOVITOST_' + i);
+                    if (rawTrzni == null && rawZastavni == null && nazev == null) continue;
+                    const t = parseAiCzk(rawTrzni);
+                    const z = parseAiCzk(rawZastavni);
+                    const pd = parseAiCzk(pick('HODNOTA_PO_DOKONČENÍ_' + i, 'HODNOTA_PO_DOKONCENI_' + i));
+                    const st = parseAiNumber('STUPEŇ_DOKONČENÍ_' + i, 'STUPEN_DOKONCENI_' + i);
+                    nemovitosti.push({
+                        cislo: i,
+                        nazev: nazev ? String(nazev).trim() : '',
+                        trzniHodnota: sane(t) ? t : null,
+                        zastavniHodnota: sane(z) ? z : null,
+                        hodnoceni: pick('HODNOCENÍ_ZÁSTAVY_' + i, 'HODNOCENI_ZASTAVY_' + i) || '',
+                        hodnotaPoDokonceni: sane(pd) ? pd : null,
+                        stupenDokonceni: st != null && st <= 100 ? st : null,
+                        podlahovaPlocha: parseAiNumber('PODLAHOVÁ_PLOCHA_' + i, 'PODLAHOVA_PLOCHA_' + i),
+                        uzitnaPlocha: parseAiNumber('UŽITNÁ_PLOCHA_' + i, 'UZITNA_PLOCHA_' + i),
+                        plochaPozemku: parseAiNumber('PLOCHA_POZEMKU_' + i)
+                    });
+                }
+
                 if (sane(trzni) && sane(zastavni)) {
                     aiParsedData[source] = {
                         trzniHodnota: trzni,
@@ -4344,11 +4637,17 @@
                         stupenDokonceni: stupen != null && stupen <= 100 ? stupen : null,
                         podlahovaPlocha: parseAiNumber('PODLAHOVÁ_PLOCHA', 'PODLAHOVA_PLOCHA'),
                         uzitnaPlocha: parseAiNumber('UŽITNÁ_PLOCHA', 'UZITNA_PLOCHA'),
-                        plochaPozemku: parseAiNumber('PLOCHA_POZEMKU')
+                        plochaPozemku: parseAiNumber('PLOCHA_POZEMKU'),
+                        nemovitosti: nemovitosti
                     };
 
                     statusEl.className = 'parse-status success';
                     statusEl.textContent = '✓ Strukturovaný blok úspěšně zpracován';
+                    const multiWarning = multiPropertyWarning(aiParsedData[source]);
+                    if (multiWarning) {
+                        statusEl.className = 'parse-status warning';
+                        statusEl.textContent = '⚠ ' + multiWarning;
+                    }
                     manualEl.style.display = 'none';
                     updateComparisonTable();
                     return;
@@ -4419,6 +4718,9 @@
 
             const row = (label, cell, rowClass) =>
                 `<tr${rowClass ? ` class="${rowClass}"` : ''}><td class="label-col">${label}</td>${sources.map(s => `<td>${cell(s)}</td>`).join('')}</tr>`;
+            // Víc nemovitostí: nahoře součty, dole rozpis po nemovitostech
+            const multiCount = multiPropertyCount(sources);
+            const multi = multiCount > 1;
             let html = `
                 <thead>
                     <tr>
@@ -4427,8 +4729,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    ${row('Tržní hodnota', s => fmt(gn(s, 'trzniHodnota')), 'highlight-row')}
-                    ${row('Zástavní hodnota', s => fmt(gn(s, 'zastavniHodnota')), 'highlight-row')}
+                    ${row(multi ? 'Tržní hodnota (součet)' : 'Tržní hodnota', s => fmt(gn(s, 'trzniHodnota')), 'highlight-row')}
+                    ${row(multi ? 'Zástavní hodnota (součet)' : 'Zástavní hodnota', s => fmt(gn(s, 'zastavniHodnota')), 'highlight-row')}
                     ${AI_EXTRA_FIELDS.filter(f => sources.some(s => gn(s, f.key))).map(f => row(f.label, s => f.fmt(gn(s, f.key)))).join('')}
                     ${row('Bezp. koeficient', s => g(s, 'koeficient'))}
                     ${row('LTV doporučení', s => g(s, 'ltv') + (g(s, 'ltv') !== '—' ? '%' : ''))}
@@ -4454,6 +4756,19 @@
                         <td colspan="${sources.length}">${fmt(minTrzni)} — ${fmt(maxTrzni)}</td>
                     </tr>
                 `;
+            }
+
+            if (multi) {
+                for (let i = 0; i < multiCount; i++) {
+                    const p = (s) => aiProperty(s, i);
+                    html += `<tr class="group-row"><td colspan="${sources.length + 1}">${esc(propertyDisplayName(i, sources))}</td></tr>`;
+                    html += row('Tržní hodnota', s => fmt(p(s)?.trzniHodnota));
+                    html += row('Zástavní hodnota', s => fmt(p(s)?.zastavniHodnota));
+                    if (sources.some(s => p(s)?.hodnoceni)) html += row('Hodnocení zástavy', s => p(s)?.hodnoceni ? esc(p(s).hodnoceni) : '—');
+                    AI_EXTRA_FIELDS.filter(f => sources.some(s => p(s)?.[f.key])).forEach(f => {
+                        html += row(f.label, s => f.fmt(p(s)?.[f.key]));
+                    });
+                }
             }
 
             html += '</tbody>';
@@ -4505,16 +4820,20 @@
                 }
 
                 const badgeClass = getBadgeClass(data.hodnoceni);
+                // Víc nemovitostí: součty + tržní hodnota každé nemovitosti
+                const multiCount = multiPropertyCount(sources);
+                const multi = multiCount > 1;
+                const escText = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
                 cardsHtml += `
                     <div class="ai-summary-card">
                         <h4>${labels[src]}</h4>
                         <div class="ai-summary-row">
-                            <span class="ai-summary-label">Tržní hodnota</span>
+                            <span class="ai-summary-label">${multi ? 'Tržní hodnota (součet)' : 'Tržní hodnota'}</span>
                             <span class="ai-summary-value highlight">${fmt(data.trzniHodnota)}</span>
                         </div>
                         <div class="ai-summary-row">
-                            <span class="ai-summary-label">Zástavní hodnota</span>
+                            <span class="ai-summary-label">${multi ? 'Zástavní hodnota (součet)' : 'Zástavní hodnota'}</span>
                             <span class="ai-summary-value highlight">${fmt(data.zastavniHodnota)}</span>
                         </div>
                         ${AI_EXTRA_FIELDS.filter(f => data[f.key]).map(f => `
@@ -4522,6 +4841,14 @@
                             <span class="ai-summary-label">${f.label}</span>
                             <span class="ai-summary-value">${f.fmt(data[f.key])}</span>
                         </div>`).join('')}
+                        ${multi ? Array.from({ length: multiCount }, (_, i) => {
+                            const p = aiProperty(src, i);
+                            return `
+                        <div class="ai-summary-row">
+                            <span class="ai-summary-label">${escText(propertyDisplayName(i, sources))}</span>
+                            <span class="ai-summary-value">${p && p.trzniHodnota ? fmt(p.trzniHodnota) : '—'}</span>
+                        </div>`;
+                        }).join('') : ''}
                         ${data.koeficient ? `
                         <div class="ai-summary-row">
                             <span class="ai-summary-label">Bezp. koeficient</span>
@@ -4657,7 +4984,12 @@
             const config = propertyConfigs[propertyType];
             let md = '# Srovnání AI valuací\n\n';
             md += `## Nemovitost\n`;
-            md += `- **Typ**: ${config?.name || propertyType}\n`;
+            md += `- **Typ**: ${valuationTypeName(config)}\n`;
+            if (propertyCount > 1) {
+                propertyLabels.slice(0, propertyCount).forEach((label, i) => {
+                    if (label && label.trim()) md += `- **Nemovitost ${i + 1}**: ${label.trim()}\n`;
+                });
+            }
             if (formData.adresa) md += `- **Adresa**: ${formData.adresa}\n`;
             if (formData.uzitna_plocha) md += `- **Plocha**: ${formData.uzitna_plocha} m²\n`;
             if (formData.plocha) md += `- **Výměra**: ${formData.plocha} m²\n`;
@@ -4668,17 +5000,35 @@
             const sources = AI_SOURCES;
             const labels = AI_LABELS;
             const mdRow = (label, cell) => `| ${label} | ${sources.map(cell).join(' | ')} |\n`;
+            const multiCount = multiPropertyCount(sources);
+            const multi = multiCount > 1;
 
             md += '## Výsledky\n\n';
             md += `| | ${sources.map(s => labels[s]).join(' | ')} |\n`;
             md += `|---|${sources.map(() => '---').join('|')}|\n`;
-            md += mdRow('**Tržní hodnota**', s => fmt(aiParsedData[s]?.trzniHodnota));
-            md += mdRow('**Zástavní hodnota**', s => fmt(aiParsedData[s]?.zastavniHodnota));
+            md += mdRow(multi ? '**Tržní hodnota (součet)**' : '**Tržní hodnota**', s => fmt(aiParsedData[s]?.trzniHodnota));
+            md += mdRow(multi ? '**Zástavní hodnota (součet)**' : '**Zástavní hodnota**', s => fmt(aiParsedData[s]?.zastavniHodnota));
             AI_EXTRA_FIELDS.filter(f => sources.some(s => aiParsedData[s]?.[f.key])).forEach(f => {
                 md += mdRow(f.label, s => f.fmt(aiParsedData[s]?.[f.key]));
             });
             md += mdRow('Hlavní riziko', s => aiParsedData[s]?.riziko1 || '—');
             md += mdRow('Hodnocení', s => aiParsedData[s]?.hodnoceni || '—');
+
+            if (multi) {
+                md += '\n## Rozpis po nemovitostech\n\n';
+                md += `| | ${sources.map(s => labels[s]).join(' | ')} |\n`;
+                md += `|---|${sources.map(() => '---').join('|')}|\n`;
+                for (let i = 0; i < multiCount; i++) {
+                    md += mdRow('**' + propertyDisplayName(i, sources) + '**', s => {
+                        const p = aiProperty(s, i);
+                        if (!p) return '—';
+                        return fmt(p.trzniHodnota) + ' (zástavní ' + fmt(p.zastavniHodnota) + ')' + (p.hodnoceni ? ', ' + p.hodnoceni : '');
+                    });
+                    AI_EXTRA_FIELDS.filter(f => sources.some(s => aiProperty(s, i)?.[f.key])).forEach(f => {
+                        md += mdRow(f.label, s => f.fmt(aiProperty(s, i)?.[f.key]));
+                    });
+                }
+            }
 
             const trzniValues = sources.map(s => aiParsedData[s]?.trzniHodnota).filter(v => v);
             if (trzniValues.length >= 2) {
@@ -4811,21 +5161,36 @@
             const topRisks = risks.slice(0, 4);
 
             const intro = 'Prosím o prověření případu, podklady posílám v příloze.';
-            const propertyLines = [config.name].concat(reviewPropertyFacts(config).map(f => f.label + ': ' + f.value));
+            // Víc nemovitostí: typ s počtem, označení nemovitostí a rozpis tržních hodnot po nemovitostech
+            const multiCount = multiPropertyCount(withData);
+            const multi = multiCount > 1;
+            const propertyLines = [valuationTypeName(config)];
+            if (propertyCount > 1) {
+                propertyLabels.slice(0, propertyCount).forEach((label, i) => {
+                    if (label && label.trim()) propertyLines.push('Nemovitost ' + (i + 1) + ': ' + label.trim());
+                });
+            }
+            propertyLines.push(...reviewPropertyFacts(config).map(f => f.label + ': ' + f.value));
             if (purposeLabels[loanPurpose]) propertyLines.push('Účel financování: ' + purposeLabels[loanPurpose]);
             const aiCells = r => [
                 reviewMilNum(r.d.trzniHodnota) + ' mil. Kč',
                 reviewSoften(r.d.hodnoceni) || '—'
             ];
             const afterTable = [summary, excluded.length ? 'Nezahrnuto: ' + excluded.join(', ') : ''].filter(Boolean);
+            const breakdown = multi ? Array.from({ length: multiCount }, (_, i) =>
+                propertyDisplayName(i, withData) + ': ' + rows.map(r => {
+                    const p = (r.d.nemovitosti || []).find(x => x.cislo === i + 1);
+                    return r.label + ' ' + (p && p.trzniHodnota ? reviewMilNum(p.trzniHodnota) + ' mil. Kč' : '—');
+                }).join(', ')) : [];
 
             // --- Čistý text (záloha pro poštovní programy bez HTML) ---
             const textParts = [intro, '', 'Případ', caseName, '', 'Nemovitost'].concat(propertyLines, ['', 'Ocenění AI']);
             rows.forEach(r => {
                 const c = aiCells(r);
-                textParts.push(r.label + ': tržní hodnota ' + c[0] + ', hodnocení zástavy: ' + c[1]);
+                textParts.push(r.label + ': tržní hodnota' + (multi ? ' celkem ' : ' ') + c[0] + ', hodnocení zástavy: ' + c[1]);
             });
             textParts.push(...afterTable);
+            if (breakdown.length) textParts.push('', 'Rozpis po nemovitostech (tržní hodnota)', ...breakdown);
             if (topRisks.length) textParts.push('', 'Rizika podle AI', ...topRisks.map(t => '– ' + t));
             // Víceřádkové poznámky z formuláře mají LF — sjednotit na CRLF
             const text = textParts.join('\r\n').replace(/\r?\n/g, '\r\n') + '\r\n';
@@ -4841,7 +5206,7 @@
             const aligns = ['left', 'right', 'left'];
             const cellStyle = (i, bold) => 'padding:2pt 12pt 2pt 0;border-bottom:1px solid #d9d9d9;vertical-align:top;text-align:' + aligns[i] + ';font-weight:' + (bold ? 'bold' : 'normal') + ';' + font;
             let table = '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr>' +
-                ['AI', 'Tržní hodnota', 'Hodnocení zástavy'].map((h, i) => '<th style="' + cellStyle(i, true) + '">' + h + '</th>').join('') +
+                ['AI', multi ? 'Tržní hodnota celkem' : 'Tržní hodnota', 'Hodnocení zástavy'].map((h, i) => '<th style="' + cellStyle(i, true) + '">' + h + '</th>').join('') +
                 '</tr>';
             rows.forEach(r => {
                 table += '<tr>' + [r.label].concat(aiCells(r)).map((v, i) => '<td style="' + cellStyle(i, false) + '">' + esc(v) + '</td>').join('') + '</tr>';
@@ -4853,6 +5218,7 @@
                 section('Případ', lines([caseName])) +
                 section('Nemovitost', lines(propertyLines)) +
                 section('Ocenění AI', table + tableNote) +
+                (breakdown.length ? section('Rozpis po nemovitostech (tržní hodnota)', lines(breakdown)) : '') +
                 (topRisks.length ? section('Rizika podle AI', lines(topRisks.map(t => '– ' + t))) : '') +
                 '</body></html>';
 
@@ -5062,7 +5428,10 @@
 
             // Hlavička — název uloženého ocenění, jinak typ + adresa; datum = poslední uložení, jinak dnes
             const purposeLabels = { general: 'bezúčelový úvěr', refinancing: 'refinancování', acquisition: 'akvizice' };
-            const title = savedName || [config.name, formData.adresa].filter(Boolean).join(' — ') || 'Ocenění nemovitosti';
+            const multiCount = multiPropertyCount(sources);
+            const multi = multiCount > 1;
+            const addressText = formData.adresa || (propertyCount > 1 ? propertyLabels.slice(0, propertyCount).filter(l => l && l.trim()).join(', ') : '');
+            const title = savedName || [valuationTypeName(config), addressText].filter(Boolean).join(' — ') || 'Ocenění nemovitosti';
             let datum = new Date().toLocaleDateString('cs-CZ');
             if (editingId) {
                 try {
@@ -5071,13 +5440,12 @@
                     if (d && !isNaN(d)) datum = d.toLocaleDateString('cs-CZ');
                 } catch (e) { /* zůstane dnešní datum */ }
             }
-            const meta = [config.name, purposeLabels[loanPurpose], 'ocenění ' + datum].filter(Boolean).join(' · ');
+            const meta = [valuationTypeName(config), purposeLabels[loanPurpose], 'ocenění ' + datum].filter(Boolean).join(' · ');
 
             // Podklady k ocenění = co je zaškrtnuté v kroku 3
-            const globalInputDefs = { cenova_mapa: 'Cenová mapa CUZK' };
             const docs = selectedInputs.map(id => {
                 const input = (config.inputs || []).find(i => i.id === id);
-                return input ? input.label : globalInputDefs[id];
+                return input ? input.label : GLOBAL_INPUT_LABELS[id];
             }).filter(Boolean);
 
             // Klíčová čísla
@@ -5090,9 +5458,10 @@
             const metric = (label, value, note) =>
                 `<div class="rx-metric"><div class="rx-metric-label">${label}</div>` +
                 `<div class="rx-metric-value">${value}</div><div class="rx-metric-note">${esc(note || '')}</div></div>`;
+            const sumNote = multi ? 'součet ' + multiCount + ' nemovitostí · ' : '';
             const metrics = [
-                metric('Tržní hodnota', trzni.length ? kc(avg(trzni)) : '—', single ? data[0].label : 'průměr AI'),
-                metric('Zástavní hodnota', zastavni.length ? kc(avg(zastavni)) : '—', koefNote),
+                metric('Tržní hodnota', trzni.length ? kc(avg(trzni)) : '—', sumNote + (single ? data[0].label : 'průměr AI')),
+                metric('Zástavní hodnota', zastavni.length ? kc(avg(zastavni)) : '—', (multi ? 'součet · ' : '') + koefNote),
                 trzni.length >= 2
                     ? metric('Rozdíl mezi AI', Math.round((Math.max(...trzni) - Math.min(...trzni)) / avg(trzni) * 100) + ' %',
                         mil(Math.min(...trzni)) + '–' + mil(Math.max(...trzni)) + ' mil. Kč')
@@ -5115,14 +5484,21 @@
             const metoda = (m) => capital(String(m || '').replace(/\s*metoda\b/i, '').trim()) || '—';
             const cmpRow = (label, cell) => `<div class="rx-k">${label}</div>` + data.map(x => `<div>${cell(x)}</div>`).join('');
             const compare =
-                `<div class="rx-compare" style="grid-template-columns: 120px repeat(${data.length}, minmax(0, 1fr));">` +
+                `<div class="rx-compare" style="grid-template-columns: ${multi ? 150 : 120}px repeat(${data.length}, minmax(0, 1fr));">` +
                 `<div></div>` + data.map(x => `<div class="rx-h">${x.label}</div>`).join('') +
-                cmpRow('Tržní', x => x.d.trzniHodnota ? kc(x.d.trzniHodnota) : '—') +
-                cmpRow('Zástavní', x => x.d.zastavniHodnota ? kc(x.d.zastavniHodnota) : '—') +
+                cmpRow(multi ? 'Tržní celkem' : 'Tržní', x => x.d.trzniHodnota ? kc(x.d.trzniHodnota) : '—') +
+                cmpRow(multi ? 'Zástavní celkem' : 'Zástavní', x => x.d.zastavniHodnota ? kc(x.d.zastavniHodnota) : '—') +
                 AI_EXTRA_FIELDS.filter(f => data.some(x => x.d[f.key])).map(f => cmpRow(f.short, x => f.fmt(x.d[f.key]))).join('') +
                 cmpRow('Metoda', x => esc(metoda(x.d.metoda))) +
                 cmpRow('Hodnocení', x => x.d.hodnoceni
                     ? `<span class="rx-badge ${badgeClass(x.d.hodnoceni)}">${esc(hodnoceni(x.d.hodnoceni))}</span>` : '—') +
+                // Víc nemovitostí: tržní hodnota každé z nich
+                (multi ? `<div class="rx-sub">Tržní hodnota po nemovitostech</div>` +
+                    Array.from({ length: multiCount }, (_, i) => {
+                        const prop = (x) => (x.d.nemovitosti || []).find(q => q.cislo === i + 1);
+                        const label = (propertyLabels[i] || '').trim() || (data.map(x => prop(x)?.nazev).find(Boolean) || '');
+                        return cmpRow(esc((i + 1) + '. ' + (label || 'nemovitost')), x => prop(x)?.trzniHodnota ? kc(prop(x).trzniHodnota) : '—');
+                    }).join('') : '') +
                 `</div>`;
 
             // Rizika: nejdřív hlavní, pak sekundární; shodná znění sloučit a uvést, která AI je zmínila
@@ -5201,8 +5577,8 @@
                 title.textContent = 'Uložit ocenění';
                 hint.style.display = 'none';
                 const config = propertyConfigs[propertyType];
-                const typeName = config?.name || propertyType;
-                const address = formData.adresa || '';
+                const typeName = valuationTypeName(config); // „2× Rodinný dům" u víc nemovitostí
+                const address = formData.adresa || (propertyCount > 1 ? propertyLabels.slice(0, propertyCount).filter(l => l && l.trim()).join(', ') : '');
                 const dateStr = new Date().toLocaleDateString('cs-CZ', { month: '2-digit', year: 'numeric' });
                 nameInput.value = address ? `${typeName} — ${address}, ${dateStr}` : `${typeName}, ${dateStr}`;
                 notesInput.value = '';
@@ -5255,6 +5631,8 @@
                 loanPurpose: loanPurpose,
                 formData: { ...formData },
                 selectedInputs: [...selectedInputs],
+                propertyCount: propertyCount,
+                propertyLabels: propertyLabels.slice(0, propertyCount),
                 aiParsedData: JSON.parse(JSON.stringify(aiParsedData)),
                 aiRawOutputs: {
                     chatgpt: document.getElementById('aiOutputChatGPT').value,
@@ -5312,7 +5690,7 @@
                             ku: formData.katastralni_uzemi || null,
                             parcela: formData.parcelni_cislo || null,
                             lv: formData.lv || null,
-                            adresa: formData.adresa || null,
+                            adresa: formData.adresa || (propertyCount > 1 ? propertyLabels.slice(0, propertyCount).filter(l => l && l.trim()).join(', ') : '') || null,
                             hodnota: (avgTrzni != null ? avgTrzni : (avgZastavni != null ? avgZastavni : null))
                         });
                     }
@@ -5728,6 +6106,10 @@
             // Restore form data with type validation
             formData = (item.formData && typeof item.formData === 'object' && !Array.isArray(item.formData)) ? item.formData : {};
             selectedInputs = Array.isArray(item.selectedInputs) ? item.selectedInputs : [];
+            // Víc nemovitostí — starší ocenění počet nemají (= 1)
+            propertyCount = clampPropertyCount(item.propertyCount);
+            propertyLabels = Array.isArray(item.propertyLabels) ? item.propertyLabels.map(l => String(l || '')) : [];
+            syncPropertyCountUI();
 
             // Restore prompt
             if (item.prompt) {
@@ -6109,6 +6491,9 @@
             loanPurpose = '';
             selectedInputs = [];
             formData = {};
+            propertyCount = 1;
+            propertyLabels = [];
+            syncPropertyCountUI();
             visitedSteps = [1];
             aiParsedData = { chatgpt: null, claude: null, gemini: null };
             editingId = null; // fresh case → save dialog vyrobí nový záznam, ne update
@@ -6177,7 +6562,7 @@
             document.querySelectorAll('.preview-toggle').forEach(t => t.classList.add('collapsed'));
             updateStepIndicator();
             showSection(1);
-            localStorage.removeItem('prompt-gen-state');
+            try { sessionStorage.removeItem('prompt-gen-state'); } catch (e) { /* ignore */ }
             renderSavedValuationsPanel(); updateSyncBarVisibility();
         }
 
@@ -6202,11 +6587,8 @@
                 appName: 'R-E Prompt Generator',
                 onReady: async function() {
                     try {
-                        var stateJson = await GDriveSync.loadFile('state.json');
-                        if (stateJson) {
-                            localStorage.setItem('prompt-gen-state', stateJson);
-                            GDriveSync.showToast('Stav načten z Google Drive', 'success');
-                        }
+                        // Rozpracovaná valuace se na Drive nesynchronizuje (patří jen k záložce, 21. 10. 2026) —
+                        // starý state.json zůstává na Drive nepoužitý; synchronizují se jen uložená ocenění.
 
                         // valuations: sloučení lokálních a cloudových dat (first-time migrace)
                         var valJson = await GDriveSync.loadFile('valuations.json');
@@ -6286,23 +6668,6 @@
                     } catch (e) { console.warn('GDrive load failed:', e); }
                 }
             });
-        }
-
-        // Wrap saveState to also push to Google Drive
-        if (typeof saveState === 'function') {
-            var _origSaveState = saveState;
-            var _gdriveSaveTimer = null;
-            window.saveState = function() {
-                _origSaveState.apply(this, arguments);
-                if (window.GDriveSync && GDriveSync.isConnected()) {
-                    // Debounce — save to Drive at most every 2s
-                    clearTimeout(_gdriveSaveTimer);
-                    _gdriveSaveTimer = setTimeout(function() {
-                        var s = localStorage.getItem('prompt-gen-state');
-                        if (s) GDriveSync.saveFile('state.json', s, 'application/json').catch(function(e){ console.warn(e); });
-                    }, 2000);
-                }
-            };
         }
 
         // Wrap saveToIndexedDB to sync to Drive
