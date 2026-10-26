@@ -16,7 +16,8 @@ import { createHmac } from 'node:crypto';
 declare const process: { env: { [key: string]: string | undefined } };
 
 const COOKIE = 'it_auth';
-const PUBLIC_PATHS = ['/login.html', '/api/login', '/api/logout'];
+// privacy.html = veřejné zásady ochrany osobních údajů (Google je vyžaduje pro OAuth aplikaci v produkci; bez dat)
+const PUBLIC_PATHS = ['/login.html', '/api/login', '/api/logout', '/privacy.html'];
 const LAWYER_HOME = '/loan-documentation.html';
 const LAWYER_PATHS = [LAWYER_HOME, '/api/ares'];
 
