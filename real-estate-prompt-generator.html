@@ -165,10 +165,10 @@
         }
 
         /* Property Type Cards */
-        /* 9 typů = mřížka 3 × 3 (dřív auto-fit — při 4 sloupcích zbyla v posledním řádku 1 karta) */
+        /* 10 typů = mřížka 5 × 2; na užších oknech 2 sloupce (pod 1180 px by 5 karet bylo moc úzkých) */
         .property-type-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 25px;
             margin-bottom: 30px;
         }
@@ -1107,6 +1107,13 @@
         }
 
         /* Responsive */
+        /* Typy nemovitostí — 2 sloupce už od 1180 px (pravidla níže pro 1024 a 768 px platí dál) */
+        @media (max-width: 1180px) {
+            .property-type-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
         @media (max-width: 1024px) {
             .container {
                 padding: 30px;
@@ -2326,6 +2333,14 @@
                     <h3>Rozestavěný projekt</h3>
                     <p>Nedokončené domy a stavby</p>
                 </div>
+                <div class="property-type-card" onclick="selectPropertyType('hotel')" role="button" tabindex="0" aria-label="Vybrat typ: Hotel" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); selectPropertyType('hotel');}">
+                    <div class="property-icon">
+                        <!-- Hotel se znakem H a markýzou nad vchodem -->
+                        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3.5 27h25"/><path d="M7 27V7a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v20"/><path d="M13.5 9.5v5M18.5 9.5v5M13.5 12h5"/><path d="M10 18.5h2.5M14.75 18.5h2.5M19.5 18.5h2.5"/><path d="M10.5 22.5h11M12.5 27v-4.5M19.5 27v-4.5"/></svg>
+                    </div>
+                    <h3>Hotel</h3>
+                    <p>Hotely, penziony, aparthotely</p>
+                </div>
             </div>
 
             <div class="buttons">
@@ -2765,7 +2780,8 @@
             recreation: 0.55,
             apartment_building: 0.75,
             industrial: 0.65,
-            under_construction: 0.50 // rozestavěný projekt: nižší likvidita a riziko dokončení
+            under_construction: 0.50, // rozestavěný projekt: nižší likvidita a riziko dokončení
+            hotel: 0.60 // hotel: hodnota stojí na provozu, málo kupců
         };
         let aiParsedData = {
             chatgpt: null,
@@ -2780,10 +2796,12 @@
         const AI_SOURCES = ['chatgpt', 'claude'];
         const AI_LABELS = { chatgpt: 'ChatGPT', claude: 'Claude' };
         // Doplňkové údaje ze shrnutí AI — řádek se ukáže, jen když ho má aspoň jedna AI.
-        // Plochy: rodinný dům a rozestavěný projekt; hodnota po dokončení a stupeň dokončení: rozestavěný projekt.
+        // Plochy: rodinný dům a rozestavěný projekt; hodnota po dokončení a stupeň dokončení: rozestavěný projekt;
+        // hodnota bez provozu: hotel.
         const AI_EXTRA_FIELDS = [
             { key: 'hodnotaPoDokonceni', label: 'Hodnota po dokončení', short: 'Po dokončení', fmt: formatKc },
             { key: 'stupenDokonceni', label: 'Stupeň dokončení', short: 'Dokončeno', fmt: formatPct },
+            { key: 'hodnotaBezProvozu', label: 'Hodnota bez provozu', short: 'Bez provozu', fmt: formatKc },
             { key: 'podlahovaPlocha', label: 'Podlahová plocha', short: 'Podlahová', fmt: formatM2 },
             { key: 'uzitnaPlocha', label: 'Užitná plocha', short: 'Užitná', fmt: formatM2 },
             { key: 'plochaPozemku', label: 'Plocha pozemku', short: 'Pozemek', fmt: formatM2 }
@@ -3062,6 +3080,41 @@
                     naklady_dokonceni: { type: 'number', label: 'Náklady na dokončení podle klienta (Kč)', placeholder: 'např. 12000000', min: 0 },
                     termin_dokonceni: { type: 'text', label: 'Plánovaný termín dokončení', placeholder: 'např. 06/2027' },
                     dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Zhotovitel, neuhrazené faktury, přípojky a komunikace, rezervace kupujících, důvod přerušení stavby, věcná břemena...' }
+                }
+            },
+            // Hotel / penzion — provozní nemovitost: hodnota z udržitelného výnosu provozu (nebo nájmu od provozovatele);
+            // pro věřitele navíc hodnota bez provozu (kdyby hotel skončil)
+            hotel: {
+                name: 'Hotel',
+                inputs: [
+                    { id: 'znalecky_posudek', label: 'Znalecký posudek', icon: '◆' },
+                    { id: 'lv', label: 'List vlastnictví (LV)', icon: '◆' },
+                    { id: 'adresa', label: 'Adresa', icon: '◆' },
+                    { id: 'provozni_vysledky', label: 'Hospodářské výsledky hotelu (2–3 roky)', icon: '◆' },
+                    { id: 'provozni_statistiky', label: 'Obsazenost a ceny pokojů (statistiky)', icon: '◆' },
+                    { id: 'najemni_smlouvy', label: 'Nájemní / provozní smlouva s provozovatelem', icon: '◆' },
+                    { id: 'fotografie', label: 'Fotografie hotelu', icon: '◆' },
+                    { id: 'pudorys', label: 'Půdorysy / pasport', icon: '◆' },
+                    { id: 'energeticky_stitek', label: 'Energetický štítek (PENB)', icon: '◆' },
+                    { id: 'stavebni_povoleni', label: 'Kolaudační rozhodnutí', icon: '◆' }
+                ],
+                fields: {
+                    adresa: { type: 'text', label: 'Adresa hotelu', placeholder: 'např. Náměstí 12, Český Krumlov' },
+                    typ_hotelu: { type: 'select', label: 'Typ hotelu', options: ['Městský hotel', 'Lázeňský / wellness hotel', 'Horský / rekreační hotel', 'Kongresový / business hotel', 'Penzion', 'Aparthotel'] },
+                    kategorie: { type: 'select', label: 'Kategorie', options: ['1–2*', '3*', '4*', '5*', 'Bez klasifikace'] },
+                    pocet_pokoju: { type: 'number', label: 'Počet pokojů', placeholder: 'např. 40', min: 1 },
+                    pocet_luzek: { type: 'number', label: 'Počet lůžek', placeholder: 'např. 85', min: 1 },
+                    celkova_plocha: { type: 'number', label: 'Celková podlahová plocha (m²)', placeholder: 'např. 2400', min: 1 },
+                    plocha_pozemku: { type: 'number', label: 'Plocha pozemku (m²)', placeholder: 'např. 1800', min: 1 },
+                    provoz: { type: 'select', label: 'Provoz hotelu', options: ['Provozuje vlastník', 'Pronajatý provozovateli', 'Provozovatel na manažerskou smlouvu / franšízu', 'Mimo provoz'] },
+                    obsazenost: { type: 'number', label: 'Průměrná roční obsazenost pokojů (%)', placeholder: 'např. 62', min: 0, max: 100 },
+                    adr: { type: 'number', label: 'Průměrná cena pokoje za noc – ADR (Kč)', placeholder: 'např. 2400', min: 0 },
+                    trzby_rocni: { type: 'number', label: 'Roční tržby hotelu (Kč)', placeholder: 'např. 28000000', min: 0 },
+                    ebitda: { type: 'number', label: 'Roční provozní zisk – EBITDA (Kč)', placeholder: 'např. 6500000', min: 0 },
+                    najemne_provozovatel: { type: 'number', label: 'Roční nájemné od provozovatele (Kč)', placeholder: 'např. 4200000', min: 0 },
+                    stav: { type: 'select', label: 'Stav objektu', options: ['Výborný - po rekonstrukci', 'Velmi dobrý', 'Dobrý', 'Průměrný', 'Nutná renovace'] },
+                    rok_stavby: { type: 'number', label: 'Rok stavby / poslední rekonstrukce', placeholder: 'např. 2012', min: 1800, max: 2026 },
+                    dodatecne_info: { type: 'textarea', label: 'Dodatečné informace', placeholder: 'Provozovatel a délka smlouvy, sezónnost, restaurace / wellness / konference, parkování, stav vybavení, plánované investice, hodnocení hostů...' }
                 }
             }
         };
@@ -3402,7 +3455,7 @@
                 const isRequired = propertyCount === 1 && (fieldId.includes('adresa') || fieldId.includes('plocha') || fieldId.includes('parcelni') || fieldId === 'stav' || fieldId === 'typ_vlastnictvi');
 
                 let label = field.label;
-                const tooltipFields = ['kzp', 'kpp', 'gdv_ocekavane', 'najemne_rocni', 'noi', 'obsazenost_komercni', 'stupen_dokonceni', 'naklady_dokonceni'];
+                const tooltipFields = ['kzp', 'kpp', 'gdv_ocekavane', 'najemne_rocni', 'noi', 'obsazenost_komercni', 'stupen_dokonceni', 'naklady_dokonceni', 'adr', 'ebitda'];
                 if (tooltipFields.includes(fieldId)) {
                     const tooltips = {
                         'kzp': 'Koeficient zastavěné plochy definuje max. procento plochy pozemku, které lze zastavět',
@@ -3412,7 +3465,9 @@
                         'noi': 'Net Operating Income - příjem po odečtení provozních nákladů',
                         'obsazenost_komercni': 'Procento obsazených komerčních prostor (0-100%)',
                         'stupen_dokonceni': 'Kolik procent stavby je hotovo — z posudku, rozpočtu nebo podle fáze výstavby',
-                        'naklady_dokonceni': 'Kolik bude stát dokončení podle klienta — AI je ověří proti aktuálním cenám stavebních prací'
+                        'naklady_dokonceni': 'Kolik bude stát dokončení podle klienta — AI je ověří proti aktuálním cenám stavebních prací',
+                        'adr': 'ADR (Average Daily Rate) — průměrná cena prodaného pokoje za noc, bez DPH a snídaně',
+                        'ebitda': 'Provozní zisk hotelu před odpisy, úroky a daněmi — z výsledovky provozu'
                     };
                     label = `<div class="label-with-tooltip"><span>${field.label}</span><div class="tooltip-icon" data-tooltip="${tooltips[fieldId] || ''}">i</div></div>`;
                 }
@@ -4242,6 +4297,70 @@
                 prompt += `   - Rezervační a budoucí kupní smlouvy se zálohami kupujících — jejich nároky při zastavení stavby\n\n`;
             }
 
+            // Hotel — provozní nemovitost: hodnota z udržitelného výnosu provozu; pro věřitele i hodnota bez provozu
+            if (propertyType === 'hotel') {
+                const pronajaty = (formData.provoz && formData.provoz.includes('Pronajatý')) || selectedInputs.includes('najemni_smlouvy');
+                const mimoProvoz = !!(formData.provoz && formData.provoz.includes('Mimo provoz'));
+                prompt += `## METODIKA OCENĚNÍ HOTELU\n\n`;
+                prompt += `**KRITICKÉ**: Hotel je provozní nemovitost — jeho hodnota stojí na udržitelném výnosu z provozu. Oceňuješ ho jako vybavený hotel v provozu podle toho, co by z něj vydělal **průměrně schopný provozovatel**, bez osobního goodwillu současného provozovatele (jeho schopností, nepřevoditelných smluv a značky, kterou by nový vlastník nezískal).\n`;
+                prompt += `Vyhledej aktuální tržní data z veřejně dostupných zdrojů (ceny pokojů na Booking.com a Google, statistiky ČSÚ o hostech a obsazenosti v kraji, hotelové reporty CBRE, Colliers, JLL, Cushman & Wakefield, nabídky a prodeje hotelů a penzionů) podle pravidel pro srovnatelné nemovitosti výše. Nepoužívej pouze svá tréninková data.\n\n`;
+
+                prompt += `### 1. PROVOZNÍ ANALÝZA (podklad pro všechny metody)\n`;
+                prompt += `- Kategorie, počet pokojů a lůžek, doplňkové provozy (restaurace, wellness, konferenční sály, parkování)\n`;
+                prompt += `- Obsazenost pokojů, průměrná cena pokoje (ADR) a RevPAR (obsazenost × ADR) za poslední 2–3 roky; ověř je proti trhu — ceny srovnatelných pokojů na Booking.com / Google a statistiky ČSÚ pro kraj\n`;
+                prompt += `- Sezónnost, závislost na jednom segmentu hostů (turisté, firmy, lázně, skupiny), konkurence v okolí a hodnocení hostů\n`;
+                prompt += `- Kdo hotel provozuje (vlastník, nájemce, provozovatel na manažerskou smlouvu nebo franšízu), délka smlouvy a bonita provozovatele\n`;
+                if (selectedInputs.includes('provozni_vysledky')) {
+                    prompt += `- Z přiložených hospodářských výsledků vypočti za každý rok tržby, náklady a EBITDA; jednorázové a mimořádné položky vyřaď\n`;
+                }
+                if (mimoProvoz) {
+                    prompt += `- **Hotel je mimo provoz** — výnosovou metodu počítej z tržního potenciálu po znovuotevření, odečti náklady a ztrátu na rozjezd; hodnota bez provozu je hlavní kontrola\n`;
+                }
+                prompt += `\n`;
+
+                prompt += `### 2. VÝNOSOVÁ METODA (Primární)\n`;
+                if (pronajaty) {
+                    prompt += `**Hotel pronajatý provozovateli — základem je nájemné**:\n`;
+                    if (formData.najemne_provozovatel) {
+                        prompt += `- Smluvní nájemné: ${formData.najemne_provozovatel} Kč/rok\n`;
+                    } else {
+                        prompt += `- Smluvní nájemné zjisti z přiložené nájemní / provozní smlouvy\n`;
+                    }
+                    prompt += `- **OVĚŘ udržitelnost nájemného**: provozní zisk hotelu před nájemným by měl nájemné pokrýt alespoň 1,3–1,5×; jinak počítej s tržním nájemným, které hotel unese\n`;
+                    prompt += `- Délka smlouvy, indexace, bonita provozovatele; je-li provozovatel propojený s vlastníkem, smluvní nájemné ignoruj a použij tržní\n`;
+                    prompt += `- NOI = nájemné - náklady vlastníka (pojištění, daň z nemovitosti, údržba konstrukcí a technologií, správa)\n`;
+                    prompt += `- Hodnota = NOI / kapitalizační míra\n`;
+                } else {
+                    prompt += `**Metoda z provozního zisku**:\n`;
+                    prompt += `- **Krok 1 - Udržitelné tržby**: počet pokojů × 365 × obsazenost × ADR + doplňkové tržby (restaurace, wellness); vycházej z průměru 2–3 let, ne z nejlepšího roku\n`;
+                    prompt += `- **Krok 2 - Udržitelná EBITDA**: tržby - provozní náklady; odečti tržní odměnu za řízení (3–4 % tržeb, i když hotel řídí vlastník sám) a rezervu na obnovu vybavení FF&E (3–5 % tržeb)\n`;
+                    if (formData.ebitda) {
+                        prompt += `- Klient uvádí EBITDA ${formData.ebitda} Kč — OVĚŘ ji proti výsledovce a trhu; čísla od klienta bývají optimistická\n`;
+                    }
+                    prompt += `- **Krok 3 - Kapitalizace**: hodnota = udržitelná EBITDA / kapitalizační míra pro hotely\n`;
+                    prompt += `- Hodnota zahrnuje i vybavení hotelu (FF&E) — jeho odhadovanou hodnotu uveď zvlášť\n`;
+                }
+                prompt += `- Kapitalizační míru pro hotely dohledej (CBRE, Colliers, JLL, Cushman & Wakefield) a uveď zdroj. Orientačně: Praha 5,5–7 %, krajská města 7–9 %, menší města a rekreační oblasti 8–11 % (ověř aktuální hodnoty)\n`;
+                prompt += `- **STRESS TEST**: jak se změní hodnota, když obsazenost klesne o 10 procentních bodů, ADR o 10 % a když provozovatel odejde?\n\n`;
+
+                prompt += `### 3. POROVNÁVACÍ METODA (Kontrolní — cena za pokoj)\n`;
+                prompt += `- Hledej prodeje a nabídky hotelů a penzionů podobné kategorie a velikosti v regionu; porovnávej cenu za pokoj, případně za m²\n`;
+                prompt += `- Hotelů se prodává málo — pokud najdeš méně než 3 srovnatelné, napiš to a výsledek ber jen orientačně\n`;
+                prompt += `- Při odchylce od výnosové metody nad 20 % vysvětli proč\n\n`;
+
+                prompt += `### 4. HODNOTA BEZ PROVOZU (scénář pro věřitele)\n`;
+                prompt += `- Odhadni, za kolik by šla nemovitost prodat, kdyby hotel skončil — prázdná budova bez provozovatele, bez tržeb a bez vybavení: podle ceny za m² nebo podle nejlepšího jiného využití (byty, ubytovna, kanceláře), po odečtení nákladů na přestavbu a rizika povolení\n`;
+                prompt += `- Uveď ji zvlášť; do tržní hodnoty se nepromítá, ale je to dolní hranice pro rozhodnutí o LTV\n\n`;
+
+                prompt += `## RED FLAGS - HOTEL\n`;
+                prompt += `1. **Závislost na provozovateli**: výsledky stojí na jedné osobě nebo firmě; nájemce propojený s vlastníkem = nájemné neodráží trh\n`;
+                prompt += `2. **Výkyvy poptávky**: sezónnost, jeden segment hostů, citlivost na krize (pandemie, ceny energií, cestovní ruch), konkurence včetně krátkodobých pronájmů (Airbnb)\n`;
+                prompt += `3. **Technický stav a investice**: interiéry hotelu je potřeba obnovovat zhruba každých 7–10 let; odložené investice (pokoje, technologie, kuchyně, wellness) odečti od hodnoty\n`;
+                prompt += `4. **Povolení**: kolaudace na ubytovací zařízení, hygiena, požární bezpečnost, živnostenská oprávnění; nepovolené části (přístavby, wellness) jsou riziko\n`;
+                prompt += `5. **Likvidita**: kupců hotelů je málo a prodej trvá dlouho; v nuceném prodeji jsou srážky vysoké — rozhoduje hodnota bez provozu\n`;
+                prompt += `6. **Právní vady**: zástavy, exekuce, věcná břemena; dlouhodobé nájemní smlouvy, které omezí nového vlastníka\n\n`;
+            }
+
             // Závěrečné instrukce
             prompt += `## ZÁVĚREČNÝ VÝSTUP\n\n`;
             prompt += `Strukturuj svou odpověď následovně:\n\n`;
@@ -4256,6 +4375,9 @@
             if (propertyType === 'under_construction') {
                 prompt += `- **Stav výstavby**: fáze a stupeň dokončení v % u každé stavby; zda stavba probíhá, nebo stojí\n`;
                 prompt += `- **Plochy v m²** (po dokončení podle projektu, součet za všechny stavby): podlahová plocha, užitná plocha a plocha pozemků podle LV — u každé uveď, z čeho vychází\n`;
+            }
+            if (propertyType === 'hotel') {
+                prompt += `- **Provoz**: kategorie, počet pokojů a lůžek, kdo hotel provozuje; obsazenost, ADR a RevPAR za poslední roky\n`;
             }
             prompt += `- Tabulka údajů z podkladů se zdrojem (viz Postup práce, bod 1) a označené rozpory\n\n`;
 
@@ -4364,6 +4486,12 @@
                     prompt += `UŽITNÁ_PLOCHA: [m², pouze číslo — po dokončení, součet; plocha, se kterou počítáš hodnotu po dokončení]\n`;
                     prompt += `PLOCHA_POZEMKU: [m², pouze číslo — výměra pozemků projektu podle LV]\n`;
                 }
+            }
+            if (propertyType === 'hotel') {
+                // Aplikace ukazuje hodnotu bez provozu (AI_EXTRA_FIELDS) — dolní hranice pro věřitele
+                prompt += multi
+                    ? `HODNOTA_BEZ_PROVOZU: [číslo v Kč, pouze číslo — hodnota, kdyby hotel skončil (prázdná budova bez vybavení); součet za všechny nemovitosti]\n`
+                    : `HODNOTA_BEZ_PROVOZU: [číslo v Kč, pouze číslo — hodnota, kdyby hotel skončil (prázdná budova bez vybavení)]\n`;
             }
             if (multi) {
                 // Rozpis po nemovitostech — aplikace z něj skládá rozpis ve srovnání, obrázku, exportu a e-mailu
@@ -4589,8 +4717,9 @@
                     const n = m ? parseAiCzk(m[0]) : NaN;
                     return !isNaN(n) && n > 0 ? n : null;
                 }
-                // Rozestavěný projekt — hodnota po dokončení (Kč), jen informativně
+                // Rozestavěný projekt — hodnota po dokončení (Kč), jen informativně; hotel — hodnota bez provozu (Kč)
                 const poDokonceni = parseAiCzk(data['HODNOTA_PO_DOKONČENÍ'] || data['HODNOTA_PO_DOKONCENI']);
+                const bezProvozu = parseAiCzk(data['HODNOTA_BEZ_PROVOZU']);
                 const stupen = parseAiNumber('STUPEŇ_DOKONČENÍ', 'STUPEN_DOKONCENI');
 
                 // Nemovitost pod 100 000 Kč = téměř jistě chyba parsování (useknutá hodnota) —
@@ -4635,6 +4764,7 @@
                         hodnoceni: data['HODNOCENÍ_ZÁSTAVY'] || '',
                         hodnotaPoDokonceni: sane(poDokonceni) ? poDokonceni : null,
                         stupenDokonceni: stupen != null && stupen <= 100 ? stupen : null,
+                        hodnotaBezProvozu: sane(bezProvozu) ? bezProvozu : null,
                         podlahovaPlocha: parseAiNumber('PODLAHOVÁ_PLOCHA', 'PODLAHOVA_PLOCHA'),
                         uzitnaPlocha: parseAiNumber('UŽITNÁ_PLOCHA', 'UZITNA_PLOCHA'),
                         plochaPozemku: parseAiNumber('PLOCHA_POZEMKU'),
