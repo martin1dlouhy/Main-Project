@@ -913,6 +913,54 @@
             flex-shrink: 0;
         }
 
+        /* Archiv — starší ocenění přesunutá z plného seznamu (max 50) */
+        .archive-section {
+            margin-top: 18px;
+            padding-top: 6px;
+            border-top: 1px solid var(--line);
+        }
+
+        .archive-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 4px;
+            cursor: pointer;
+            user-select: none;
+            font-weight: 600;
+            color: var(--text-soft);
+        }
+
+        .archive-header:hover {
+            color: var(--text);
+        }
+
+        .archive-hint {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-mute);
+        }
+
+        .archive-header .panel-chevron {
+            flex-shrink: 0;
+            transition: transform 0.3s;
+        }
+
+        .archive-header.collapsed .panel-chevron {
+            transform: rotate(-90deg);
+        }
+
+        .archive-body.collapsed {
+            display: none;
+        }
+
+        .archive-empty {
+            padding: 4px 4px 10px;
+            font-size: 13px;
+            color: var(--text-mute);
+        }
+
         /* Save Valuation Dialog */
         .save-dialog-overlay {
             position: fixed;
@@ -2766,6 +2814,15 @@
         const MAX_PROPERTY_COUNT = 5;
         let propertyCount = 1;
         let propertyLabels = []; // označení / adresy z kroku 4, index 0 = nemovitost 1
+        // Archiv uložených ocenění: seznam v localStorage má max 50 položek (místo v prohlížeči je pro celý web
+        // jen pár MB); nejstarší se nemažou, ale přesouvají do archivu v IndexedDB a na Google Drive (26. 10. 2026)
+        const MAX_ACTIVE_VALUATIONS = 50;
+        let archivedValuations = [];   // archiv v paměti, načte se z IndexedDB při startu
+        let archiveAvailable = false;  // false = archiv nejde číst/zapsat → nic se nepřesouvá ani nemaže
+        let archiveLoaded = null;      // Promise načtení archivu
+        let archiveOpen = false;       // rozbalená sekce Archiv
+        let savedPanelOpen = false;    // rozbalený panel Uložená ocenění (dřív se při hledání sbaloval)
+        let savingValuation = false;   // pojistka proti dvojímu uložení během přesunu do archivu
         let visitedSteps = [1];
         let compareSelectedIds = new Set();
         let filterSearchText = '';
@@ -3123,6 +3180,9 @@
         loadState();
         updateStepIndicator();
         renderSavedValuationsPanel(); updateSyncBarVisibility();
+        // Archiv uložených ocenění — načíst z IndexedDB, pak vyčistit duplicity a hlídat limit seznamu
+        archiveLoaded = loadArchive();
+        archiveLoaded.then(finishArchiveInit);
 
         // Dashboard bridge — one-shot handoff (appka otevřená z karty případu na Dashboardu).
         // Bridge se načítá na konci body, proto čekáme na DOMContentLoaded. Vše defenzivně —
@@ -3148,7 +3208,13 @@
                                 found = saved.some(v => v.id === data.valuationId);
                             } catch (e) { /* ignore */ }
                             if (found) loadSavedValuation(data.valuationId);
-                            else showToast('Ocenění v tomto prohlížeči není — otevřete ho ze seznamu uložených');
+                            else {
+                                // Ocenění mohlo odejít do archivu (plný seznam) — vrátit ho do seznamu a otevřít
+                                restoreArchivedValuation(data.valuationId, { silent: true }).then(function (ok) {
+                                    if (ok) loadSavedValuation(data.valuationId);
+                                    else showToast('Ocenění v tomto prohlížeči není — otevřete ho ze seznamu uložených');
+                                });
+                            }
                         }
                     }
                 } catch (e) { /* no-op — bridge nesmí rozbít appku */ }
@@ -5735,12 +5801,14 @@
             confirmSaveValuation();
         }
 
-        function confirmSaveValuation() {
+        async function confirmSaveValuation() {
             const name = document.getElementById('valuationNameInput').value.trim();
             if (!name) {
                 showToast('Zadejte název ocenění');
                 return;
             }
+            // Přesun nejstaršího do archivu je asynchronní — druhé kliknutí / Enter mezitím nesmí uložit podruhé
+            if (savingValuation) return;
 
             const notes = document.getElementById('valuationNotesInput').value.trim();
             const config = propertyConfigs[propertyType];
@@ -5773,9 +5841,11 @@
                 avgZastavni: avgZastavni
             };
 
+            savingValuation = true;
             try {
                 let saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
                 let isUpdate = false;
+                let archivedNote = '';
 
                 if (editingId) {
                     const idx = saved.findIndex(v => v.id === editingId);
@@ -5795,13 +5865,16 @@
                 }
 
                 if (!isUpdate) {
+                    // Plný seznam: nejstarší ocenění nejdřív bezpečně do archivu (dřív se tiše mazalo)
+                    const room = await makeRoomForValuations(saved, 1);
+                    saved = room.list;
+                    archivedNote = room.note;
                     // Create new
                     const newValuation = Object.assign({}, payload, {
                         id: Date.now(),
                         date: new Date().toLocaleString('cs-CZ')
                     });
                     saved.unshift(newValuation);
-                    if (saved.length > 50) saved.pop();
                     // Pamatovat nový id — další 'Uložit' (nezavře-li uživatel session) nabídne update
                     editingId = newValuation.id;
                 }
@@ -5829,7 +5902,7 @@
                 if (window.__dashCaseId && window.__dashValuationId == null) window.__dashValuationId = editingId;
 
                 closeSaveValuationDialog();
-                showToast(isUpdate ? 'Ocenění aktualizováno' : 'Ocenění uloženo');
+                showToast((isUpdate ? 'Ocenění aktualizováno' : 'Ocenění uloženo') + archivedNote);
             } catch (e) {
                 if (e.name === 'QuotaExceededError') {
                     showToast('Úložiště je plné — smažte staré ocenění');
@@ -5838,6 +5911,8 @@
                 }
                 console.error('Save valuation error:', e);
                 return;
+            } finally {
+                savingValuation = false;
             }
         }
 
@@ -5853,7 +5928,7 @@
                 return;
             }
 
-            if (saved.length === 0) {
+            if (saved.length === 0 && archivedValuations.length === 0) {
                 container.innerHTML = '';
                 return;
             }
@@ -5864,34 +5939,37 @@
                 return new Intl.NumberFormat('cs-CZ').format(Math.round(n)) + ' Kč';
             };
 
-            // C6: Filter items based on search and property type
-            let filtered = saved.filter(item => {
+            // C6: Filter items based on search and property type (platí i pro archiv)
+            const matchesFilter = (item) => {
                 const matchSearch = !filterSearchText ||
-                    item.name.toLowerCase().includes(filterSearchText.toLowerCase()) ||
+                    String(item.name || '').toLowerCase().includes(filterSearchText.toLowerCase()) ||
                     (item.notes && item.notes.toLowerCase().includes(filterSearchText.toLowerCase()));
                 const matchType = !filterPropertyType || item.propertyType === filterPropertyType;
                 return matchSearch && matchType;
-            });
+            };
+            let filtered = saved.filter(matchesFilter);
+            // Rozbalení si panel pamatuje — dřív se při každém písmenu v hledání sbalil
+            const panelCls = savedPanelOpen ? '' : ' collapsed';
 
             let html = `
                 <div class="saved-valuations-panel">
-                    <div class="step1-panel-header collapsed" onclick="this.classList.toggle('collapsed'); this.nextElementSibling.classList.toggle('collapsed');">
+                    <div class="step1-panel-header${panelCls}" onclick="toggleSavedPanel(this)">
                         <h3>
                             <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5">
                                 <path d="M3 3v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6l-4-4H4a1 1 0 0 0-1 1z"/>
                                 <path d="M9 2v4h4"/>
                             </svg>
-                            Uložená ocenění (${saved.length})
+                            Uložená ocenění (${saved.length}${archivedValuations.length ? ' · archiv ' + archivedValuations.length : ''})
                         </h3>
                         <svg class="panel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
-                    <div class="step1-panel-body collapsed">
+                    <div class="step1-panel-body${panelCls}">
                         <!-- C6: Search and Filter Bar -->
                         <div class="search-filter-bar">
                             <input type="text" placeholder="Hledat v názvu nebo poznámkách..." id="filterSearchInput" oninput="onFilterSearchChange(this.value)">
                             <select id="filterPropertyTypeSelect" class="re-select" onchange="onFilterPropertyTypeChange(this.value)">
                                 <option value="">Všechny typy</option>
-                                ${[...new Set(saved.map(s => s.propertyType))].map(type => {
+                                ${[...new Set(saved.concat(archivedValuations).map(s => s.propertyType))].map(type => {
                                     const config = propertyConfigs[type];
                                     return `<option value="${type}">${esc(config?.name || type)}</option>`;
                                 }).join('')}
@@ -5934,6 +6012,45 @@
                 `;
             });
 
+            // Archiv — starší ocenění přesunutá z plného seznamu; hledání a filtr typu platí i tady
+            if (archivedValuations.length) {
+                const archFiltered = archivedValuations.filter(matchesFilter);
+                const archCls = archiveOpen ? '' : ' collapsed';
+                html += `
+                    <div class="archive-section">
+                        <div class="archive-header${archCls}" onclick="toggleArchiveSection()">
+                            <span>Archiv (${archivedValuations.length}) <span class="archive-hint">— starší ocenění, která se nevešla do seznamu (max ${MAX_ACTIVE_VALUATIONS})</span></span>
+                            <svg class="panel-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M6 2l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div class="archive-body${archCls}">
+                            ${archFiltered.length ? '' : '<div class="archive-empty">V archivu nic neodpovídá hledání</div>'}
+                `;
+                archFiltered.forEach(item => {
+                    html += `
+                            <div class="valuation-item">
+                                <div class="valuation-item-info">
+                                    <div class="valuation-item-name">${esc(item.name)}</div>
+                                    <div class="valuation-item-meta">
+                                        <span>${esc(item.propertyTypeName || item.propertyType)}</span>
+                                        <span>${esc(item.date)}</span>
+                                        ${item.archivedAt ? `<span>v archivu od ${esc(item.archivedAt)}</span>` : ''}
+                                    </div>
+                                    <div class="valuation-item-values">
+                                        ${item.avgTrzni ? `<span class="valuation-value-badge">Tržní: ${fmt(item.avgTrzni)}</span>` : ''}
+                                        ${item.avgZastavni ? `<span class="valuation-value-badge">Zástavní: ${fmt(item.avgZastavni)}</span>` : ''}
+                                    </div>
+                                    ${item.notes ? `<div class="valuation-notes">${esc(item.notes)}</div>` : ''}
+                                </div>
+                                <div class="valuation-item-buttons">
+                                    <button class="history-item-btn" onclick="restoreArchivedValuation(${item.id})">Vrátit</button>
+                                    <button class="history-item-btn delete" onclick="deleteArchivedValuation(${item.id})">Smazat</button>
+                                </div>
+                            </div>
+                    `;
+                });
+                html += '</div></div>';
+            }
+
             html += '</div></div>';
             container.innerHTML = html;
 
@@ -5958,6 +6075,18 @@
             updateCompareFloatingBar();
         }
 
+        // Rozbalení panelu Uložená ocenění a sekce Archiv (stav přežije překreslení při hledání)
+        function toggleSavedPanel(header) {
+            savedPanelOpen = !savedPanelOpen;
+            header.classList.toggle('collapsed', !savedPanelOpen);
+            header.nextElementSibling.classList.toggle('collapsed', !savedPanelOpen);
+        }
+
+        function toggleArchiveSection() {
+            archiveOpen = !archiveOpen;
+            renderSavedValuationsPanel();
+        }
+
         // C6: Filter callbacks
         function onFilterSearchChange(text) {
             filterSearchText = text;
@@ -5970,7 +6099,7 @@
         }
 
         // C1: Duplicate valuation
-        function duplicateSavedValuation(id) {
+        async function duplicateSavedValuation(id) {
             try {
                 var saved = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
             } catch (e) {
@@ -5989,12 +6118,14 @@
             };
 
             try {
+                // Plný seznam: nejstarší ocenění nejdřív bezpečně do archivu (dřív se tiše mazalo)
+                const room = await makeRoomForValuations(saved, 1);
+                saved = room.list;
                 saved.unshift(duplicate);
-                if (saved.length > 50) saved.pop();
                 localStorage.setItem('saved-valuations', JSON.stringify(saved));
                 autoBackup();
                 renderSavedValuationsPanel();
-                showToast('Ocenění duplikováno');
+                showToast('Ocenění duplikováno' + room.note);
             } catch (e) {
                 showToast('Chyba při ukládání');
             }
@@ -6316,7 +6447,7 @@
             if (!bar) return;
             try {
                 const valuations = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
-                bar.style.display = valuations.length > 0 ? 'flex' : 'none';
+                bar.style.display = (valuations.length > 0 || archivedValuations.length > 0) ? 'flex' : 'none';
             } catch (e) {
                 bar.style.display = 'none';
             }
@@ -6365,6 +6496,250 @@
                 console.warn('IndexedDB read failed:', e);
                 return null;
             }
+        }
+
+        // ===== ARCHIV uložených ocenění =====
+        // Seznam v localStorage drží max MAX_ACTIVE_VALUATIONS ocenění. Nejstarší se nemažou, ale přesouvají
+        // do archivu: IndexedDB (re-prompt-backup, klíč 'archived-valuations') + Google Drive valuations-archiv.json.
+        // Pořadí zápisů je vždy bezpečné: nejdřív archiv (IndexedDB), pak teprve seznam — při výpadku mezi kroky
+        // zůstane ocenění v obou a při dalším startu se srovná (finishArchiveInit). Nic se neztratí.
+
+        function readActiveValuations() {
+            try {
+                const arr = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // null = archiv nejde přečíst (pak se nic nepřesouvá, aby se nepřepsal), [] = prázdný
+        async function loadArchiveFromIDB() {
+            try {
+                const db = await openBackupDB();
+                const tx = db.transaction('valuations', 'readonly');
+                const request = tx.objectStore('valuations').get('archived-valuations');
+                const value = await new Promise((resolve, reject) => {
+                    request.onsuccess = () => resolve(request.result ? request.result.value : null);
+                    request.onerror = () => reject(request.error);
+                });
+                db.close();
+                const arr = value ? JSON.parse(value) : [];
+                return Array.isArray(arr) ? arr : null;
+            } catch (e) {
+                console.warn('Archive load failed:', e);
+                return null;
+            }
+        }
+
+        async function saveArchiveToIDB(list) {
+            const db = await openBackupDB();
+            try {
+                const tx = db.transaction('valuations', 'readwrite');
+                tx.objectStore('valuations').put({ key: 'archived-valuations', value: JSON.stringify(list), updatedAt: new Date().toISOString() });
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = resolve;
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error || new Error('Archive transaction aborted'));
+                });
+            } finally {
+                db.close();
+            }
+        }
+
+        async function loadArchive() {
+            const list = await loadArchiveFromIDB();
+            if (list === null) {
+                archiveAvailable = false;
+                return;
+            }
+            archivedValuations = list;
+            archiveAvailable = true;
+        }
+
+        // Po načtení: ocenění v seznamu i v archivu patří do seznamu; seznam nad limit → přebytek do archivu
+        async function finishArchiveInit() {
+            if (archiveAvailable) {
+                const activeIds = new Set(readActiveValuations().map(v => v.id));
+                if (archivedValuations.some(v => activeIds.has(v.id))) {
+                    const cleaned = archivedValuations.filter(v => !activeIds.has(v.id));
+                    try {
+                        await saveArchiveToIDB(cleaned);
+                        archivedValuations = cleaned;
+                    } catch (e) { console.warn('Archive cleanup failed:', e); }
+                }
+                await enforceActiveLimit();
+            }
+            renderSavedValuationsPanel(); updateSyncBarVisibility();
+        }
+
+        // Kopie archivu na Google Drive a do zálohovací složky (na pozadí, chyba nevadí — hlavní je IndexedDB)
+        function syncArchiveCopies() {
+            if (window.GDriveSync && typeof GDriveSync.isConnected === 'function' && GDriveSync.isConnected()) {
+                GDriveSync.saveFile('valuations-archiv.json', JSON.stringify(archivedValuations, null, 2), 'application/json')
+                    .catch(e => console.warn('GDrive archive save failed:', e));
+            }
+            if (backupDirHandle) writeBackupToFolder();
+        }
+
+        // Přidá ocenění do archivu (nejnovější nahoru). true = bezpečně zapsáno do IndexedDB.
+        async function moveToArchive(items) {
+            if (!items.length) return true;
+            await (archiveLoaded || Promise.resolve());
+            if (!archiveAvailable) return false;
+            const now = new Date();
+            const existing = new Set(archivedValuations.map(v => v.id));
+            const added = items.filter(v => !existing.has(v.id)).map(v => Object.assign({}, v, {
+                archivedAt: now.toLocaleString('cs-CZ'),
+                archivedAtIso: now.toISOString()
+            }));
+            const updated = added.concat(archivedValuations);
+            try {
+                await saveArchiveToIDB(updated);
+            } catch (e) {
+                console.warn('Archive save failed:', e);
+                return false;
+            }
+            archivedValuations = updated;
+            syncArchiveCopies();
+            return true;
+        }
+
+        // Uvolní místo pro `incoming` nových ocenění: nejstarší (konec seznamu) přesune do archivu.
+        // Když archiv selže, nic nemaže — seznam bude dočasně nad limitem. note = doplněk do hlášky.
+        async function makeRoomForValuations(saved, incoming) {
+            const overflow = saved.length + incoming - MAX_ACTIVE_VALUATIONS;
+            if (overflow <= 0) return { list: saved, archived: [], note: '' };
+            const oldest = saved.slice(saved.length - overflow);
+            const ok = await moveToArchive(oldest);
+            if (!ok) return { list: saved, archived: [], note: ' · archiv se nepodařilo uložit, nejstarší ocenění zůstává v seznamu' };
+            const note = oldest.length === 1
+                ? ' · nejstarší „' + oldest[0].name + '" přesunuto do archivu'
+                : ' · ' + oldest.length + ' nejstarších ocenění přesunuto do archivu';
+            return { list: saved.slice(0, saved.length - overflow), archived: oldest, note: note };
+        }
+
+        // Hlídá limit seznamu po startu, sloučení s Google Drive a importu: přebytek přesune do archivu.
+        // Vrací počet přesunutých; opts.quiet = bez vlastní hlášky (import ji skládá sám).
+        async function enforceActiveLimit(opts) {
+            const saved = readActiveValuations();
+            if (saved.length <= MAX_ACTIVE_VALUATIONS) return 0;
+            const overflowItems = saved.slice(MAX_ACTIVE_VALUATIONS);
+            const ok = await moveToArchive(overflowItems);
+            if (!ok) return 0;
+            const movedIds = new Set(overflowItems.map(v => v.id));
+            const current = readActiveValuations().filter(v => !movedIds.has(v.id));
+            try {
+                localStorage.setItem('saved-valuations', JSON.stringify(current));
+                autoBackup();
+            } catch (e) {
+                console.warn('Active list save failed:', e);
+            }
+            renderSavedValuationsPanel(); updateSyncBarVisibility();
+            if (!(opts && opts.quiet)) showToast(overflowItems.length === 1 ? 'Nejstarší ocenění přesunuto do archivu' : overflowItems.length + ' nejstarších ocenění přesunuto do archivu');
+            return overflowItems.length;
+        }
+
+        // Vrátí ocenění z archivu do seznamu (nahoru); když je seznam plný, nejstarší jde do archivu
+        async function restoreArchivedValuation(id, opts) {
+            await (archiveLoaded || Promise.resolve());
+            if (!archiveAvailable) return false;
+            const item = archivedValuations.find(v => v.id === id);
+            if (!item) return false;
+            const room = await makeRoomForValuations(readActiveValuations().filter(v => v.id !== id), 1);
+            const restored = Object.assign({}, item);
+            delete restored.archivedAt;
+            delete restored.archivedAtIso;
+            const list = [restored].concat(room.list);
+            try {
+                localStorage.setItem('saved-valuations', JSON.stringify(list));
+            } catch (e) {
+                showToast(e.name === 'QuotaExceededError' ? 'Úložiště je plné — ocenění nejde vrátit' : 'Chyba při vracení ocenění');
+                return false;
+            }
+            autoBackup();
+            // Z archivu až po zápisu do seznamu (kdyby zápis archivu selhal, srovná se při dalším startu)
+            const remaining = archivedValuations.filter(v => v.id !== id);
+            archivedValuations = remaining;
+            try {
+                await saveArchiveToIDB(remaining);
+                syncArchiveCopies();
+            } catch (e) { console.warn('Archive save after restore failed:', e); }
+            renderSavedValuationsPanel(); updateSyncBarVisibility();
+            if (!(opts && opts.silent)) showToast('Ocenění „' + restored.name + '" vráceno do seznamu' + room.note);
+            return true;
+        }
+
+        // Smazání z archivu je natrvalo — jen s potvrzením
+        async function deleteArchivedValuation(id) {
+            await (archiveLoaded || Promise.resolve());
+            if (!archiveAvailable) return;
+            const item = archivedValuations.find(v => v.id === id);
+            if (!item) return;
+            if (!confirm('Smazat ocenění „' + item.name + '" z archivu natrvalo?')) return;
+            const remaining = archivedValuations.filter(v => v.id !== id);
+            try {
+                await saveArchiveToIDB(remaining);
+            } catch (e) {
+                showToast('Chyba při mazání z archivu');
+                return;
+            }
+            archivedValuations = remaining;
+            syncArchiveCopies();
+            renderSavedValuationsPanel(); updateSyncBarVisibility();
+            showToast('Ocenění smazáno z archivu');
+        }
+
+        // Ocenění do archivu ze souboru (import) — přeskočí ta, která už jsou v seznamu nebo v archivu
+        async function importArchivedValuations(items) {
+            await (archiveLoaded || Promise.resolve());
+            if (!archiveAvailable || !Array.isArray(items) || !items.length) return 0;
+            const known = new Set(readActiveValuations().map(v => v.id).concat(archivedValuations.map(v => v.id)));
+            const fresh = items.filter(v => v && v.id != null && !known.has(v.id));
+            if (!fresh.length) return 0;
+            const updated = archivedValuations.concat(fresh);
+            try {
+                await saveArchiveToIDB(updated);
+            } catch (e) {
+                console.warn('Archive import failed:', e);
+                return 0;
+            }
+            archivedValuations = updated;
+            syncArchiveCopies();
+            return fresh.length;
+        }
+
+        // Google Drive: doplnit archiv z valuations-archiv.json (jiné zařízení) a Drive dorovnat podle místního
+        async function syncArchiveWithDrive() {
+            await (archiveLoaded || Promise.resolve());
+            if (!archiveAvailable) return;
+            let cloud = [];
+            try {
+                const json = await GDriveSync.loadFile('valuations-archiv.json');
+                if (json) {
+                    const parsed = JSON.parse(json);
+                    if (Array.isArray(parsed)) cloud = parsed;
+                }
+            } catch (e) {
+                console.warn('GDrive archive load failed:', e);
+                return;
+            }
+            const activeIds = new Set(readActiveValuations().map(v => v.id));
+            const localIds = new Set(archivedValuations.map(v => v.id));
+            const fromCloud = cloud.filter(v => v && v.id != null && !localIds.has(v.id) && !activeIds.has(v.id));
+            if (fromCloud.length) {
+                const updated = archivedValuations.concat(fromCloud);
+                try {
+                    await saveArchiveToIDB(updated);
+                    archivedValuations = updated;
+                } catch (e) {
+                    console.warn('Archive merge from Drive failed:', e);
+                    return;
+                }
+                renderSavedValuationsPanel(); updateSyncBarVisibility();
+            }
+            const cloudIds = new Set(cloud.map(v => v && v.id));
+            if (archivedValuations.some(v => !cloudIds.has(v.id))) syncArchiveCopies();
         }
 
         // === Vrstva 3: File System Access API — zápis přímo do OneDrive složky ===
@@ -6428,13 +6803,13 @@
 
                 const data = localStorage.getItem('saved-valuations') || '[]';
                 const parsed = JSON.parse(data);
-                if (parsed.length === 0) return false;
+                if (parsed.length === 0 && archivedValuations.length === 0) return false;
 
                 const exportData = {
                     version: 1,
                     app: 're-prompt-generator',
                     exportDate: new Date().toISOString(),
-                    data: { savedValuations: parsed }
+                    data: { savedValuations: parsed, archivedValuations: archivedValuations }
                 };
 
                 const json = JSON.stringify(exportData, null, 2);
@@ -6540,7 +6915,8 @@
                     app: 're-prompt-generator',
                     exportDate: new Date().toISOString(),
                     data: {
-                        savedValuations: JSON.parse(localStorage.getItem('saved-valuations') || '[]')
+                        savedValuations: JSON.parse(localStorage.getItem('saved-valuations') || '[]'),
+                        archivedValuations: archivedValuations
                     }
                 };
 
@@ -6564,25 +6940,35 @@
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
 
-                    // Validate structure
-                    if (!imported.data || imported.app !== 're-prompt-generator') {
+                    // Validate structure — soubor z Exportu / zálohy, nebo holý seznam z Google Drive
+                    // (valuations.json, valuations-archiv.json — i jejich starší verze z historie verzí na Drive)
+                    const isPlainList = Array.isArray(imported);
+                    if (!isPlainList && (!imported.data || imported.app !== 're-prompt-generator')) {
+                        showToast('Neplatný soubor — nejedná se o data z R-E Generatoru');
+                        return;
+                    }
+                    const looksLikeValuation = v => v && v.id != null && v.name && v.propertyType;
+                    const importedValuations = (isPlainList ? imported : (imported.data.savedValuations || [])).filter(looksLikeValuation);
+                    const importedArchive = isPlainList ? [] : (Array.isArray(imported.data.archivedValuations) ? imported.data.archivedValuations.filter(looksLikeValuation) : []);
+                    if (isPlainList && !importedValuations.length) {
                         showToast('Neplatný soubor — nejedná se o data z R-E Generatoru');
                         return;
                     }
 
-                    // Merge saved valuations (avoid duplicates by ID)
+                    // Merge saved valuations (avoid duplicates by ID) — co už je v archivu, se do seznamu nevrací
+                    await (archiveLoaded || Promise.resolve());
                     const existingValuations = JSON.parse(localStorage.getItem('saved-valuations') || '[]');
-                    const importedValuations = imported.data.savedValuations || [];
-                    const existingIds = new Set(existingValuations.map(v => v.id));
+                    const existingIds = new Set(existingValuations.map(v => v.id).concat(archivedValuations.map(v => v.id)));
                     let newCount = 0;
 
                     importedValuations.forEach(v => {
                         if (!existingIds.has(v.id)) {
                             existingValuations.push(v);
+                            existingIds.add(v.id);
                             newCount++;
                         }
                     });
@@ -6592,10 +6978,16 @@
                     localStorage.setItem('saved-valuations', JSON.stringify(existingValuations));
                     autoBackup();
 
+                    // Archiv ze souboru + co se nevejde do seznamu (max 50), jde do archivu
+                    const archivedCount = await importArchivedValuations(importedArchive);
+                    const movedCount = await enforceActiveLimit({ quiet: true });
+
                     renderSavedValuationsPanel(); updateSyncBarVisibility();
 
-                    if (newCount > 0) {
-                        showToast(`Importováno: ${newCount} ocenění`);
+                    if (newCount > 0 || archivedCount > 0) {
+                        let msg = `Importováno: ${newCount + archivedCount} ocenění`;
+                        if (archivedCount + movedCount > 0) msg += ` · do archivu ${archivedCount + movedCount} (seznam má max ${MAX_ACTIVE_VALUATIONS})`;
+                        showToast(msg);
                     } else {
                         showToast('Všechna data již existují — nic nového k importu');
                     }
@@ -6765,6 +7157,10 @@
                             order.push(k);
                         });
                         var merged = order.map(function(k){ return byKey[k]; }).concat(noKey);
+                        // Ocenění přesunutá do archivu nevracet do seznamu (Drive mohl mít starší verzi seznamu)
+                        await (archiveLoaded || Promise.resolve());
+                        var archivedIds = new Set(archivedValuations.map(function(v) { return v.id; }));
+                        merged = merged.filter(function(v) { return !(v && archivedIds.has(v.id)); });
 
                         var localCount = localArr.length;
                         var cloudCount = cloudArr.length;
@@ -6795,6 +7191,10 @@
                         } else if (mergedCount > localCount) {
                             GDriveSync.showToast('Načteno ' + (mergedCount - localCount) + ' ocenění z Drive', 'success');
                         }
+
+                        // Archiv: sloučit s valuations-archiv.json na Drive, pak hlídat limit seznamu (max 50)
+                        await syncArchiveWithDrive();
+                        await enforceActiveLimit();
                     } catch (e) { console.warn('GDrive load failed:', e); }
                 }
             });
