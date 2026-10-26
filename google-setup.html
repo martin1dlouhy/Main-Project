@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Propojení s Google | Investment Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="design-system/tokens.css">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%;background:var(--bg-deep);color:var(--text);font-family:var(--font-body)}
+  body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px 16px}
+  .box{width:100%;max-width:460px;background:var(--bg-raised);border:1px solid var(--line-faint);
+    border-radius:var(--r-lg);padding:40px 28px 32px;text-align:center;box-shadow:var(--shadow-lg)}
+  .logo{width:56px;height:56px;margin:0 auto 20px;border-radius:14px;display:flex;align-items:center;
+    justify-content:center;background:linear-gradient(145deg,var(--amber-warm),var(--amber));
+    box-shadow:0 0 32px var(--amber-glow),0 4px 16px rgba(0,0,0,0.4)}
+  .logo svg{width:26px;height:26px;stroke:#1a1207;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  h1{font-family:var(--font-display);font-weight:300;font-size:26px;letter-spacing:-0.01em;margin-bottom:10px}
+  .sub{color:var(--text-mute);font-size:14px;line-height:1.55;margin-bottom:22px}
+  ol{text-align:left;color:var(--text-mute);font-size:13px;line-height:1.7;margin:0 0 22px 18px}
+  .msg{min-height:20px;color:var(--danger);font-size:13px;margin-bottom:12px;line-height:1.4}
+  .btn{width:100%;padding:12px 24px;background:var(--amber);color:#1a1207;border:none;border-radius:var(--r-sm);
+    font-family:var(--font-body);font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px var(--amber-glow);
+    transition:background var(--dur) var(--ease)}
+  .btn:hover{background:var(--amber-warm)}
+  .btn:disabled{opacity:.6;cursor:default}
+</style>
+</head>
+<body>
+<main class="box">
+  <div class="logo" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  </div>
+  <h1>Propojení s Google</h1>
+  <p class="sub">Obnoví trvalé propojení serveru s vaším Google Drive. Díky němu se aplikace připojují k Drive samy a přístup advokáta načítá šablony.</p>
+  <ol>
+    <li>Klikněte na tlačítko a u Googlu povolte přístup (případné varování „aplikace není ověřená“ → Rozšířené → Pokračovat).</li>
+    <li>Zobrazený dlouhý kód zkopírujte do Railway → Variables → <strong>GOOGLE_REFRESH_TOKEN</strong> a potvrďte Deploy.</li>
+  </ol>
+  <div class="msg" id="msg" role="alert"></div>
+  <button type="button" class="btn" id="btn">Pokračovat na Google</button>
+  <noscript><p class="msg">Zapněte JavaScript.</p></noscript>
+</main>
+<script src="profilend-auth.js"></script>
+<script>
+// Jednorázové (opakovatelné) obnovení serverového Google přístupu: Railway /api/google/setup vyžaduje
+// deviceToken tohoto zařízení (Martin). Advokát sem neprojde už přes proxy.ts; tady je jen pojistka.
+(function () {
+    'use strict';
+    var msg = document.getElementById('msg');
+    var btn = document.getElementById('btn');
+    btn.addEventListener('click', function () {
+        msg.textContent = '';
+        if (!window.ProfilendAuth) { msg.textContent = 'Nenačetl se přihlašovací modul — obnovte stránku.'; return; }
+        if (ProfilendAuth.isLawyer && ProfilendAuth.isLawyer()) { msg.textContent = 'Propojení s Google může obnovit jen Martin.'; return; }
+        btn.disabled = true;
+        ProfilendAuth.ensureDevice().then(function (device) {
+            if (!device) {
+                msg.textContent = 'Bez přihlášení PINem to nejde — zkuste to znovu.';
+                btn.disabled = false;
+                return;
+            }
+            btn.textContent = 'Přesměrovávám na Google…';
+            location.href = ProfilendAuth.RAILWAY + '/api/google/setup?device=' + encodeURIComponent(device);
+        });
+    });
+})();
+</script>
+</body>
+</html>
