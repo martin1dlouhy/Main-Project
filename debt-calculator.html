@@ -156,6 +156,41 @@
   }
   .result-value.highlight{color:var(--amber-warm)}
 
+  /* ===== Externí financování (vlastní úvěr, např. americká hypotéka) ===== */
+  .lever-panel{
+    grid-column:1 / -1;background:var(--bg-raised);
+    border:1px solid var(--line-faint);border-radius:var(--r-lg);
+    padding:20px 24px;
+  }
+  .lever-toggle{display:flex;align-items:center;gap:14px;cursor:pointer;position:relative}
+  .lever-toggle input{position:absolute;opacity:0;pointer-events:none}
+  .lever-switch{
+    position:relative;flex-shrink:0;width:40px;height:22px;border-radius:11px;
+    background:var(--bg-input);border:1px solid var(--line-strong);
+    transition:all var(--dur) var(--ease);
+  }
+  .lever-switch::after{
+    content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+    background:var(--text-mute);transition:all var(--dur) var(--ease);
+  }
+  .lever-toggle input:checked + .lever-switch{background:var(--amber-tint);border-color:var(--amber)}
+  .lever-toggle input:checked + .lever-switch::after{transform:translateX(18px);background:var(--amber)}
+  .lever-toggle input:focus-visible + .lever-switch{box-shadow:0 0 0 3px var(--amber-glow)}
+  .lever-toggle-text{display:flex;flex-direction:column;gap:2px}
+  .lever-toggle-title{font-family:var(--font-display);font-size:18px;color:var(--text)}
+  .lever-toggle-sub{font-size:12px;color:var(--text-mute);line-height:1.5}
+  .lever-fields{
+    display:grid;grid-template-columns:1fr 1fr;gap:20px 24px;
+    margin-top:20px;padding-top:20px;border-top:1px solid var(--line-faint);
+  }
+  .lever-fields[hidden]{display:none}
+  .lever-assumption{grid-column:1 / -1;font-size:12px;color:var(--text-mute);line-height:1.5;margin:0}
+  .lever-results[hidden]{display:none}
+  @media (max-width:760px){
+    .lever-fields{grid-template-columns:1fr;gap:16px}
+    .lever-panel{padding:18px}
+  }
+
   /* Risk info-notes are shared via design-system/app-shell.css */
 
   /* ===== Chart panel ===== */
@@ -769,6 +804,127 @@
       </select>
     </div>
 
+    <!-- ===== Externí financování — úvěr klientovi financovaný vlastním úvěrem ===== -->
+    <div class="lever-panel" id="leverPanel">
+      <label class="lever-toggle" for="extEnabled">
+        <input type="checkbox" id="extEnabled" onchange="toggleExternalFinancing()">
+        <span class="lever-switch" aria-hidden="true"></span>
+        <span class="lever-toggle-text">
+          <span class="lever-toggle-title">Externí financování</span>
+          <span class="lever-toggle-sub">Úvěr klientovi financuji zčásti nebo celý vlastním úvěrem (např. americká hypotéka)</span>
+        </span>
+      </label>
+
+      <div class="lever-fields" id="leverFields" hidden>
+        <div class="form-group">
+          <label for="extAmount">Výše úvěru od banky (<span id="extAmountCurrency">CZK</span>)</label>
+          <input type="text" id="extAmount" placeholder="6 000 000" value="">
+          <small id="extSplitInfo">Zbytek úvěru klientovi doplníte z vlastních peněz</small>
+        </div>
+
+        <div class="form-group">
+          <label for="extRate">Úroková sazba banky (% p.a.)</label>
+          <input type="text" id="extRate" placeholder="5.5" value="5.5">
+        </div>
+
+        <div class="form-group">
+          <label for="extDrawdownDate">Datum čerpání u banky</label>
+          <input type="date" id="extDrawdownDate" value="">
+          <small>Prázdné = stejný den jako čerpání klientovi. Může být i dřív.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="extTerm">Splatnost u banky (měsíce)</label>
+          <input type="text" id="extTerm" placeholder="240" value="240">
+          <small>Např. 240 = 20 let. Určuje výši měsíční splátky bance.</small>
+        </div>
+
+        <div class="form-group">
+          <label>Splácení bance</label>
+          <div class="dropdown-field" data-target-select="extPaymentType">
+            <button class="dropdown-trigger" type="button" aria-expanded="false" aria-haspopup="listbox">
+              <span class="dropdown-label">Anuitní (měsíčně úrok + jistina)</span>
+              <svg class="dropdown-chevron" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </button>
+            <ul class="dropdown-menu" role="listbox">
+              <li class="dropdown-option selected" data-value="annuity" role="option">Anuitní (měsíčně úrok + jistina)</li>
+              <li class="dropdown-option" data-value="interestOnly" role="option">Jen úroky měsíčně, jistina na konci</li>
+            </ul>
+          </div>
+          <select id="extPaymentType" hidden onchange="onExtOptionChange()">
+            <option value="annuity">Anuitní (měsíčně úrok + jistina)</option>
+            <option value="interestOnly">Jen úroky měsíčně, jistina na konci</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="extParkingRate">Úrok z načerpaných peněz (% p.a.)</label>
+          <input type="text" id="extParkingRate" placeholder="0" value="0">
+          <small>Když načerpáte dřív — např. spořicí účet do výplaty klientovi</small>
+        </div>
+
+        <div class="form-group">
+          <label for="extFee">Poplatky bance při sjednání</label>
+          <div class="fee-type-selector">
+            <label>
+              <input type="radio" name="extFeeType" value="percent" checked>
+              <span>%</span>
+            </label>
+            <label>
+              <input type="radio" name="extFeeType" value="absolute">
+              <span id="extFeeCurrency">CZK</span>
+            </label>
+          </div>
+          <input type="text" id="extFee" placeholder="0" value="0">
+          <small>Zpracování, odhad apod. — platíte v den čerpání u banky</small>
+        </div>
+
+        <div class="form-group">
+          <label for="extEarlyFee">Poplatek bance za předčasné splacení</label>
+          <div class="fee-type-selector">
+            <label>
+              <input type="radio" name="extEarlyFeeType" value="percent" checked>
+              <span>%</span>
+            </label>
+            <label>
+              <input type="radio" name="extEarlyFeeType" value="absolute">
+              <span id="extEarlyFeeCurrency">CZK</span>
+            </label>
+          </div>
+          <input type="text" id="extEarlyFee" placeholder="0" value="0">
+          <small>Z dluhu, který bance doplatíte v den splacení klientem</small>
+        </div>
+
+        <div class="form-group">
+          <label>Zdanění výnosu</label>
+          <div class="dropdown-field" data-target-select="extTaxMode">
+            <button class="dropdown-trigger" type="button" aria-expanded="false" aria-haspopup="listbox">
+              <span class="dropdown-label">Nezohledňovat</span>
+              <svg class="dropdown-chevron" viewBox="0 0 11 7" fill="none"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </button>
+            <ul class="dropdown-menu" role="listbox">
+              <li class="dropdown-option selected" data-value="none" role="option">Nezohledňovat</li>
+              <li class="dropdown-option" data-value="gross" role="option">Fyzická osoba — z přijatých úroků a poplatků</li>
+              <li class="dropdown-option" data-value="profit" role="option">Firma — ze zisku (po úrocích bance)</li>
+            </ul>
+          </div>
+          <select id="extTaxMode" hidden onchange="onExtOptionChange(true)">
+            <option value="none">Nezohledňovat</option>
+            <option value="gross">Fyzická osoba — z přijatých úroků a poplatků</option>
+            <option value="profit">Firma — ze zisku (po úrocích bance)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="extTaxRateGroup" style="display:none;">
+          <label for="extTaxRate">Sazba daně (%)</label>
+          <input type="text" id="extTaxRate" placeholder="15" value="15">
+          <small>Orientačně — ověřte s daňovým poradcem</small>
+        </div>
+
+        <p class="lever-assumption">Předpoklad: zbytek dluhu bance doplatíte v den, kdy klient splatí (i při předčasném splacení). Splátky bance jsou měsíční ode dne čerpání u banky.</p>
+      </div>
+    </div>
+
     <button class="calculate-btn" onclick="calculate()">Vypočítat</button>
   </div>
 
@@ -810,6 +966,37 @@
     </div>
     <div id="riskAssessment"></div>
 
+    <div class="lever-results" id="leverResults" hidden>
+      <h3>Výnos s <em style="font-style:italic;color:var(--amber-warm);">externím financováním</em></h3>
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="result-label">IRR na vlastní kapitál</div>
+          <div class="result-value highlight" id="extIrr">-</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Vloženo ze svého (max.)</div>
+          <div class="result-value" id="extOwn">-</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label" id="extProfitLabel">Čistý zisk</div>
+          <div class="result-value" id="extProfit">-</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label" id="extMonthlyLabel">Čistý cash flow / měsíc</div>
+          <div class="result-value" id="extMonthly">-</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Úrokové rozpětí</div>
+          <div class="result-value" id="extSpread">-</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Dluh u banky při splacení</div>
+          <div class="result-value" id="extBalance">-</div>
+        </div>
+      </div>
+      <div id="leverNotes"></div>
+    </div>
+
     <div class="chart-section" id="chartSection">
       <h3>Vizualizace splácení</h3>
       <div id="chartContainer">
@@ -840,6 +1027,16 @@
             </tr>
           </thead>
           <tbody id="scheduleBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="schedule-section" id="leverSection">
+      <h3>Cash flow s externím financováním</h3>
+      <div style="overflow-x:auto">
+        <table class="schedule-table" id="leverTable">
+          <thead id="leverHead"></thead>
+          <tbody id="leverBody"></tbody>
         </table>
       </div>
     </div>
@@ -961,6 +1158,10 @@
         document.getElementById('earlyRepaymentFeeCurrency').textContent = currency;
         document.getElementById('contractualPenaltyCurrency').textContent = currency;
         document.getElementById('otherFeesCurrency').textContent = currency;
+        document.getElementById('extAmountCurrency').textContent = currency;
+        document.getElementById('extFeeCurrency').textContent = currency;
+        document.getElementById('extEarlyFeeCurrency').textContent = currency;
+        updateExtSplitInfo();
 
         // Recalculate if results are visible
         if (document.getElementById('results').classList.contains('show')) {
@@ -1039,36 +1240,23 @@
                 this.select();
             });
 
-            if (input.id === 'interestRate' || input.id === 'setupFee' || input.id === 'earlyRepaymentFee' || input.id === 'contractualPenalty' || input.id === 'otherFees') {
+            // Sazby (vždy desetinné číslo) a poplatky, které mohou být v % (pak desetinné číslo)
+            const decimalIds = ['interestRate', 'extRate', 'extParkingRate', 'extTaxRate'];
+            const feeTypeRadio = {
+                setupFee: 'setupFeeType', earlyRepaymentFee: 'earlyRepaymentFeeType',
+                contractualPenalty: 'contractualPenaltyType', otherFees: 'otherFeesType',
+                extFee: 'extFeeType', extEarlyFee: 'extEarlyFeeType'
+            };
+            if (decimalIds.indexOf(input.id) !== -1 || feeTypeRadio[input.id]) {
                 // Special handling for inputs that can be percentages
                 input.addEventListener('input', function(e) {
-                    const isSetupFee = this.id === 'setupFee';
-                    const isEarlyFee = this.id === 'earlyRepaymentFee';
-                    const isPenalty = this.id === 'contractualPenalty';
-                    const isOtherFees = this.id === 'otherFees';
+                    const radioName = feeTypeRadio[this.id];
+                    const isDecimal = decimalIds.indexOf(this.id) !== -1 ||
+                        (radioName && (document.querySelector('input[name="' + radioName + '"]:checked') || {}).value === 'percent');
 
-                    if (isSetupFee || isEarlyFee || isPenalty || isOtherFees) {
-                        let feeType;
-                        if (isSetupFee) feeType = document.querySelector('input[name="setupFeeType"]:checked').value;
-                        else if (isEarlyFee) feeType = document.querySelector('input[name="earlyRepaymentFeeType"]:checked').value;
-                        else if (isPenalty) feeType = document.querySelector('input[name="contractualPenaltyType"]:checked').value;
-                        else feeType = document.querySelector('input[name="otherFeesType"]:checked').value;
-
-                        if (feeType === 'percent') {
-                            // Allow decimal for percentages
-                            let cleaned = this.value.replace(/[^\d.]/g, '');
-                            const parts = cleaned.split('.');
-                            if (parts.length > 2) {
-                                cleaned = parts[0] + '.' + parts.slice(1).join('');
-                            }
-                            this.value = cleaned;
-                            return;
-                        }
-                    }
-
-                    if (this.id === 'interestRate') {
-                        // Allow decimal for interest rate
-                        let cleaned = this.value.replace(/[^\d.]/g, '');
+                    if (isDecimal) {
+                        // Allow decimal; česká desetinná čárka se převede na tečku (jinak by z 5,5 bylo 55)
+                        let cleaned = this.value.replace(/,/g, '.').replace(/[^\d.]/g, '');
                         const parts = cleaned.split('.');
                         if (parts.length > 2) {
                             cleaned = parts[0] + '.' + parts.slice(1).join('');
@@ -1730,6 +1918,14 @@
         }
 
         document.getElementById('scheduleSection').classList.add('show');
+
+        // Externí financování (vypnuté = sekce skrytá, výpočet výše beze změny)
+        renderExternalFinancing({
+            loanAmount, interestRate, paymentType, interestFrequency, basis,
+            drawdownDate, maturityDate: actualRepaymentDate, loanTermMonths: actualLoanTermMonths,
+            setupFeeAmount, netDisbursement, monthlyPayment, totalReturnAmount, irr,
+            cashFlows, cashFlowDates
+        });
     }
 
     function generatePaymentSchedule(paymentType, loanAmount, interestRate, loanTermMonths,
@@ -1898,6 +2094,554 @@
         scheduleBody.innerHTML += feesRow + totalRow;
 
         return scheduleData;
+    }
+
+    // ===== EXTERNÍ FINANCOVÁNÍ =====
+    // Úvěr klientovi je zčásti nebo celý financovaný vlastním úvěrem (např. americká hypotéka).
+    // Pohled investora: peníze od klienta − splátky bance − poplatky (− daň) = cash flow na vlastní kapitál.
+    // Předpoklad: zbytek dluhu bance se doplatí v den splacení klientem (i předčasného).
+    let lastLever = null;
+
+    function dayIndex(d) {
+        return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+    }
+    function dateKey(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function getExtFormState() {
+        return {
+            enabled: document.getElementById('extEnabled').checked,
+            amount: document.getElementById('extAmount').value,
+            rate: document.getElementById('extRate').value,
+            drawdownDate: document.getElementById('extDrawdownDate').value,
+            term: document.getElementById('extTerm').value,
+            paymentType: document.getElementById('extPaymentType').value,
+            fee: document.getElementById('extFee').value,
+            feeType: (document.querySelector('input[name="extFeeType"]:checked') || { value: 'percent' }).value,
+            earlyFee: document.getElementById('extEarlyFee').value,
+            earlyFeeType: (document.querySelector('input[name="extEarlyFeeType"]:checked') || { value: 'percent' }).value,
+            parkingRate: document.getElementById('extParkingRate').value,
+            taxMode: document.getElementById('extTaxMode').value,
+            taxRate: document.getElementById('extTaxRate').value
+        };
+    }
+
+    // Starší uložené výpočty / odkazy externí financování nemají → s = undefined → vypnuto.
+    function applyExtFormState(s) {
+        const enabled = !!(s && s.enabled);
+        document.getElementById('extEnabled').checked = enabled;
+        if (s) {
+            const setVal = function (id, v) { if (v !== undefined && v !== null) document.getElementById(id).value = v; };
+            setVal('extAmount', s.amount);
+            setVal('extRate', s.rate);
+            setVal('extDrawdownDate', s.drawdownDate);
+            setVal('extTerm', s.term);
+            if (s.paymentType === 'annuity' || s.paymentType === 'interestOnly') setVal('extPaymentType', s.paymentType);
+            setVal('extFee', s.fee);
+            setVal('extEarlyFee', s.earlyFee);
+            setVal('extParkingRate', s.parkingRate);
+            if (['none', 'gross', 'profit'].indexOf(s.taxMode) !== -1) setVal('extTaxMode', s.taxMode);
+            setVal('extTaxRate', s.taxRate);
+            [['extFeeType', s.feeType], ['extEarlyFeeType', s.earlyFeeType]].forEach(function (p) {
+                const el = document.querySelector('input[name="' + p[0] + '"][value="' + p[1] + '"]');
+                if (el) el.checked = true;
+            });
+        }
+        if (typeof window.syncCustomDropdown === 'function') {
+            window.syncCustomDropdown('extPaymentType');
+            window.syncCustomDropdown('extTaxMode');
+        }
+        document.getElementById('leverFields').hidden = !enabled;
+        document.getElementById('extTaxRateGroup').style.display =
+            document.getElementById('extTaxMode').value === 'none' ? 'none' : '';
+        updateExtSplitInfo();
+    }
+
+    function toggleExternalFinancing() {
+        const on = document.getElementById('extEnabled').checked;
+        document.getElementById('leverFields').hidden = !on;
+        if (on) {
+            const amt = document.getElementById('extAmount');
+            if (!amt.value.trim()) {
+                const loan = parseFloat(parseFormattedNumber(document.getElementById('loanAmount').value)) || 0;
+                if (loan > 0) amt.value = formatNumberInput(String(Math.round(loan * 0.75 / 100000) * 100000));
+            }
+            updateExtSplitInfo();
+        }
+        if (document.getElementById('results').classList.contains('show')) calculate();
+    }
+
+    function onExtOptionChange(taxModeChanged) {
+        const mode = document.getElementById('extTaxMode').value;
+        document.getElementById('extTaxRateGroup').style.display = mode === 'none' ? 'none' : '';
+        if (taxModeChanged && mode !== 'none') {
+            document.getElementById('extTaxRate').value = mode === 'profit' ? '21' : '15';
+        }
+        if (document.getElementById('results').classList.contains('show')) calculate();
+    }
+
+    // Rozdělení úvěru klientovi: banka vs. vlastní peníze (živě pod polem „Výše úvěru od banky“)
+    function updateExtSplitInfo() {
+        const info = document.getElementById('extSplitInfo');
+        if (!info) return;
+        const loan = parseFloat(parseFormattedNumber(document.getElementById('loanAmount').value)) || 0;
+        const ext = parseFloat(parseFormattedNumber(document.getElementById('extAmount').value)) || 0;
+        if (!(loan > 0) || !(ext > 0)) {
+            info.textContent = 'Zbytek úvěru klientovi doplníte z vlastních peněz';
+            return;
+        }
+        if (ext >= loan) {
+            info.textContent = ext === loan
+                ? 'Banka financuje celý úvěr klientovi — bez vlastních peněz'
+                : 'Banka financuje celý úvěr klientovi a o ' + formatCurrency(ext - loan) + ' víc';
+            return;
+        }
+        const own = loan - ext;
+        info.textContent = 'Banka ' + Math.round(ext / loan * 100) + ' % · vlastní peníze ' +
+            formatCurrency(own) + ' (' + Math.round(own / loan * 100) + ' %)';
+    }
+
+    function readExtParams() {
+        function num(id) {
+            const v = parseFloat(parseFormattedNumber(String(document.getElementById(id).value || '')));
+            return isNaN(v) ? 0 : v;
+        }
+        function dec(id) {
+            const v = parseFloat(String(document.getElementById(id).value || '').replace(',', '.'));
+            return isNaN(v) ? 0 : v;
+        }
+        const feeType = (document.querySelector('input[name="extFeeType"]:checked') || { value: 'percent' }).value;
+        const earlyFeeType = (document.querySelector('input[name="extEarlyFeeType"]:checked') || { value: 'percent' }).value;
+        const ddVal = document.getElementById('extDrawdownDate').value;
+        const dd = ddVal ? new Date(ddVal) : null;
+        const taxMode = document.getElementById('extTaxMode').value;
+        return {
+            amount: num('extAmount'),
+            rate: dec('extRate'),
+            term: Math.round(num('extTerm')),
+            drawdown: dd && !isNaN(dd.getTime()) ? dd : null,
+            payType: document.getElementById('extPaymentType').value === 'interestOnly' ? 'interestOnly' : 'annuity',
+            fee: feeType === 'percent' ? dec('extFee') : num('extFee'),
+            feeType: feeType,
+            earlyFee: earlyFeeType === 'percent' ? dec('extEarlyFee') : num('extEarlyFee'),
+            earlyFeeType: earlyFeeType,
+            parkRate: dec('extParkingRate'),
+            taxMode: (taxMode === 'gross' || taxMode === 'profit') ? taxMode : 'none',
+            taxRate: dec('extTaxRate')
+        };
+    }
+
+    // IRR půlením intervalu (−99 % až 1 000 % p.a.) — spolehlivé i při vysoké páce, kde Newton může ujet.
+    // Znaménko NPV při 0 % určí, na které straně nuly kořen hledat (u toků − … + … − mohou být kořeny dva;
+    // bere se ten, kde NPV s rostoucí sazbou klesá přes nulu — stejně jako u běžné investice).
+    // Vrací % p.a., Infinity (> 1 000 %), -Infinity (< −99 %) nebo null.
+    function solveIRRBisection(flows) {
+        if (!flows.length) return null;
+        const t0 = flows[0].date;
+        const yrs = flows.map(function (f) { return (f.date - t0) / 86400000 / 365.25; });
+        const npv = function (rate) {
+            let s = 0;
+            for (let i = 0; i < flows.length; i++) s += flows[i].amount / Math.pow(1 + rate, yrs[i]);
+            return s;
+        };
+        const f0 = npv(0);
+        if (!isFinite(f0)) return null;
+        if (f0 === 0) return 0;
+        let lo, hi;
+        if (f0 > 0) {
+            lo = 0; hi = 10;
+            const fHi = npv(hi);
+            if (!isFinite(fHi)) return null;
+            if (fHi > 0) return Infinity;
+        } else {
+            lo = -0.99; hi = 0;
+            const fLo0 = npv(lo);
+            if (!isFinite(fLo0)) return null;
+            if (fLo0 < 0) return -Infinity;
+        }
+        let fLo = npv(lo);
+        for (let k = 0; k < 200; k++) {
+            const mid = (lo + hi) / 2;
+            const fm = npv(mid);
+            if ((fm > 0) === (fLo > 0)) { lo = mid; fLo = fm; } else { hi = mid; }
+        }
+        return (lo + hi) / 2 * 100;
+    }
+
+    // c = výsledky úvěru klientovi z calculate(), e = parametry z readExtParams()
+    function computeExternalFinancing(c, e) {
+        const tc = new Date(c.drawdownDate);
+        const T = new Date(c.maturityDate);
+        if (!(e.amount > 0)) return { error: 'Zadejte výši úvěru od banky.' };
+        if (!(e.term > 0)) return { error: 'Zadejte splatnost úvěru od banky v měsících.' };
+        const tb = e.drawdown ? new Date(e.drawdown) : new Date(tc);
+        if (!(dayIndex(tb) < dayIndex(T))) {
+            return { error: 'Datum čerpání u banky musí být před splacením úvěru klientem.' };
+        }
+
+        const B0 = e.amount, n = e.term, r = e.rate / 100 / 12;
+        const pmt = e.payType === 'interestOnly' ? B0 * r
+            : (r === 0 ? B0 / n : B0 * r / (1 - Math.pow(1 + r, -n)));
+        const bankFee = e.feeType === 'percent' ? B0 * e.fee / 100 : e.fee;
+
+        const ev = [];
+        function add(date, o) { o.date = new Date(date); o.day = dayIndex(o.date); ev.push(o); }
+
+        // --- Klient: platby a jejich výnosová část (úrok + poplatky, bez jistiny) ---
+        const cf = c.cashFlows, cd = c.cashFlowDates;
+        const princ = new Array(cf.length).fill(0);
+        princ[0] = -c.loanAmount; // výplata klientovi: −(úvěr − poplatek za sjednání) → výnos = poplatek
+        let firstClientInterest = null;
+        if (c.paymentType === 'annuity') {
+            const dates = buildPeriodDates(tc, T, cf.length - 1, 1);
+            const ann = solveAnnuityDayCount(c.loanAmount, c.interestRate, c.basis, dates);
+            for (let i = 1; i < cf.length; i++) princ[i] = ann.rows[i - 1] ? ann.rows[i - 1].principal : 0;
+            firstClientInterest = ann.rows[0] ? ann.rows[0].interest : null;
+        } else {
+            princ[cf.length - 1] = c.loanAmount;
+        }
+        for (let i = 0; i < cf.length; i++) {
+            add(cd[i], {
+                client: cf[i],
+                clientPrincipal: i > 0 ? princ[i] : 0,
+                clientIncome: cf[i] - princ[i],
+                label: i === 0 ? 'Výplata klientovi' : (i === cf.length - 1 ? 'Splacení klientem' : 'Platba od klienta')
+            });
+        }
+
+        // --- Banka: čerpání, měsíční splátky do splacení klientem, doplacení zbytku ---
+        add(tb, { bank: B0 - bankFee, bankCost: bankFee, balance: B0, label: 'Čerpání úvěru od banky' });
+        const dayT = dayIndex(T);
+        let bal = B0, last = new Date(tb), bankInterestTotal = 0, bankPaymentsTotal = 0, bankEnd = null;
+        for (let k = 1; k <= n; k++) {
+            const d = new Date(tb);
+            d.setMonth(d.getMonth() + k);
+            if (dayIndex(d) > dayT) break;
+            const interest = bal * r;
+            let principal = e.payType === 'interestOnly' ? 0 : Math.min(bal, Math.max(0, pmt - interest));
+            if (k === n) principal = bal; // poslední splátka doplatí zbytek
+            const pay = interest + principal;
+            bal = Math.max(0, bal - principal);
+            bankInterestTotal += interest;
+            bankPaymentsTotal += pay;
+            add(d, { bank: -pay, bankCost: interest, balance: bal, label: 'Splátka bance' });
+            last = d;
+            if (bal <= 0.005) { bal = 0; bankEnd = d; break; }
+        }
+        const balanceAtPayoff = bal;
+        let accrued = 0, earlyFee = 0;
+        if (balanceAtPayoff > 0) {
+            accrued = bal * (e.rate / 100) * Math.max(0, daysBetween(last, T)) / 365;
+            earlyFee = e.earlyFeeType === 'percent' ? bal * e.earlyFee / 100 : e.earlyFee;
+            bankInterestTotal += accrued;
+            add(T, { bank: -(bal + accrued + earlyFee), bankCost: accrued + earlyFee, balance: 0, label: 'Doplacení dluhu bance' });
+        }
+
+        // --- Načerpáno dřív: peníze čekají (úrok z nich) a bance už běží úrok ---
+        const daysEarly = dayIndex(tc) - dayIndex(tb);
+        let parkInterest = 0;
+        if (daysEarly > 0 && e.parkRate > 0) {
+            parkInterest = (B0 - bankFee) * (e.parkRate / 100) * daysEarly / 365;
+            add(tc, { park: parkInterest, label: 'Úrok z načerpaných peněz' });
+        }
+        const carryInterest = daysEarly > 0 ? B0 * (e.rate / 100) * daysEarly / 365 : 0;
+
+        // --- Daň (orientačně): odečítá se v den příjmu ---
+        const taxRate = e.taxMode === 'none' ? 0 : e.taxRate / 100;
+        let taxBaseTotal = 0;
+        ev.forEach(function (x) {
+            let base = (x.clientIncome || 0) + (x.park || 0);
+            if (e.taxMode === 'profit') base -= (x.bankCost || 0);
+            x.taxBase = base;
+            taxBaseTotal += base;
+        });
+        ev.forEach(function (x) {
+            // Firma se ztrátou z obchodu daň neplatí (a ztrátu tu neuplatňujeme)
+            x.tax = (taxRate && taxBaseTotal > 0) ? -taxRate * x.taxBase : 0;
+        });
+
+        // --- Řádky po dnech ---
+        ev.sort(function (a, b) { return a.day - b.day; });
+        const rows = [], byDay = {};
+        let curBal = 0;
+        ev.forEach(function (x) {
+            let row = byDay[x.day];
+            if (!row) {
+                row = { date: x.date, day: x.day, labels: [], client: 0, bank: 0, tax: 0, balance: 0 };
+                byDay[x.day] = row;
+                rows.push(row);
+            }
+            row.client += x.client || 0;
+            row.bank += (x.bank || 0) + (x.park || 0);
+            row.tax += x.tax || 0;
+            if (x.label && row.labels.indexOf(x.label) === -1) row.labels.push(x.label);
+            if (typeof x.balance === 'number') curBal = x.balance;
+            row.balance = curBal;
+        });
+        let cum = 0, taxTotal = 0;
+        rows.forEach(function (row) {
+            row.net = row.client + row.bank + row.tax;
+            cum += row.net;
+            row.cum = cum;
+            taxTotal += row.tax;
+        });
+
+        // --- Jistina, kterou klient vrací průběžně (anuita), jde stranou na doplacení banky (bez úroku) ---
+        const payoffAmount = balanceAtPayoff > 0 ? balanceAtPayoff + accrued + earlyFee : 0;
+        const sweepByDay = {};
+        let reserve = 0;
+        if (payoffAmount > 0) {
+            ev.forEach(function (x) { // ev je seřazené podle dne
+                if (!(x.clientPrincipal > 0) || x.day >= dayT || reserve >= payoffAmount) return;
+                const s = Math.min(x.clientPrincipal, payoffAmount - reserve);
+                reserve += s;
+                sweepByDay[x.day] = (sweepByDay[x.day] || 0) + s;
+            });
+        }
+
+        // --- Cash flow na vlastní kapitál: načerpané peníze „čekají“ do výplaty klientovi,
+        //     odložená jistina se vrací v den splacení na doplacení banky ---
+        const eq = rows.map(function (row) {
+            return { date: row.date, day: row.day, amount: row.net - (sweepByDay[row.day] || 0) + (row.day === dayT ? reserve : 0) };
+        });
+        if (daysEarly > 0) {
+            eq.forEach(function (f) {
+                if (f.day === dayIndex(tb)) f.amount -= B0;
+                if (f.day === dayIndex(tc)) f.amount += B0;
+            });
+        }
+        let eqCum = 0, minCum = 0;
+        eq.forEach(function (f) { eqCum += f.amount; if (eqCum < minCum) minCum = eqCum; });
+        const peakOwn = minCum < 0 ? -minCum : 0;
+        const noOwnMoney = peakOwn < Math.max(1000, c.loanAmount * 0.01);
+        // Na doplacení banky nestačí ani poslední platba klienta s odloženou jistinou (např. úvěr od banky
+        // vyšší než úvěr klientovi) → IRR by počítalo s utracením peněz potřebných na doplacení → nepočítat.
+        const lastNet = eq.length ? eq[eq.length - 1].amount : 0;
+        const irregular = lastNet < 0;
+        const irr = (noOwnMoney || irregular) ? null : solveIRRBisection(eq);
+
+        const clientMonthlyEq = c.paymentType === 'annuity' ? c.monthlyPayment
+            : (c.paymentType === 'interestOnly' ? c.monthlyPayment / (c.interestFrequency || 1) : 0);
+
+        return {
+            tb: tb, tc: tc, T: T, B0: B0, bankFee: bankFee, pmt: pmt, rows: rows,
+            irr: irr, noOwnMoney: noOwnMoney, irregular: irregular, lastNet: lastNet, peakOwn: peakOwn, netProfit: cum,
+            clientMonthlyEq: clientMonthlyEq, reserve: reserve,
+            // s odkládanou jistinou zbývá z anuity klienta jen úrok (první měsíc)
+            netMonthly: (reserve > 0 && firstClientInterest !== null ? firstClientInterest : clientMonthlyEq) - pmt,
+            coverage: pmt > 0 ? clientMonthlyEq / pmt : null,
+            spread: c.interestRate - e.rate,
+            balanceAtPayoff: balanceAtPayoff, accrued: accrued, earlyFee: earlyFee, bankEnd: bankEnd,
+            bankInterestTotal: bankInterestTotal, bankPaymentsTotal: bankPaymentsTotal,
+            daysEarly: daysEarly, parkInterest: parkInterest, carryInterest: carryInterest,
+            taxTotal: taxTotal, ext: e
+        };
+    }
+
+    function formatExtIrr(res) {
+        if (res.noOwnMoney || res.irr === null) return '—';
+        if (res.irr === Infinity) return '> 1 000 %';
+        if (res.irr === -Infinity) return '< −99 %';
+        return res.irr.toFixed(2) + '%';
+    }
+
+    function renderExternalFinancing(c) {
+        const box = document.getElementById('leverResults');
+        const section = document.getElementById('leverSection');
+        const notesEl = document.getElementById('leverNotes');
+        lastLever = null;
+        if (!document.getElementById('extEnabled').checked) {
+            box.hidden = true;
+            section.classList.remove('show');
+            return;
+        }
+        box.hidden = false;
+        const e = readExtParams();
+        const res = computeExternalFinancing(c, e);
+        if (res.error) {
+            ['extIrr', 'extOwn', 'extProfit', 'extMonthly', 'extSpread', 'extBalance'].forEach(function (id) {
+                document.getElementById(id).textContent = '-';
+            });
+            notesEl.innerHTML = '<div class="info-note warning"><strong>Externí financování:</strong> ' + res.error + '</div>';
+            section.classList.remove('show');
+            return;
+        }
+        res.baseIrr = c.irr;
+        res.clientRate = c.interestRate;
+        res.paymentType = c.paymentType;
+        lastLever = res;
+
+        const taxOn = e.taxMode !== 'none';
+        document.getElementById('extIrr').textContent = formatExtIrr(res);
+        document.getElementById('extOwn').textContent = formatCurrency(res.peakOwn);
+        document.getElementById('extProfitLabel').textContent = taxOn ? 'Čistý zisk po dani' : 'Čistý zisk';
+        document.getElementById('extProfit').textContent = formatCurrency(res.netProfit);
+        document.getElementById('extMonthlyLabel').textContent = taxOn ? 'Cash flow / měsíc (před daní)' : 'Čistý cash flow / měsíc';
+        document.getElementById('extMonthly').textContent = formatCurrency(res.netMonthly) + ' / měsíc';
+        document.getElementById('extSpread').textContent = (res.spread > 0 ? '+' : '') + res.spread.toFixed(2) + ' p.b.';
+        document.getElementById('extBalance').textContent = formatCurrency(res.balanceAtPayoff);
+
+        // --- Upozornění ---
+        let html = '';
+        if (res.spread <= 0) {
+            html += '<div class="info-note danger"><strong>Záporné úrokové rozpětí:</strong> banka (' + e.rate + ' %) je stejně drahá nebo dražší než úvěr klientovi (' + res.clientRate + ' %) — na úrocích nevyděláváte, výnos drží jen poplatky.</div>';
+        }
+        if (res.noOwnMoney) {
+            html += '<div class="info-note">' + '<strong>Bez vlastních peněz:</strong> úvěr klientovi je celý financovaný bankou — výnos v % nelze spočítat. Rozhoduje čistý zisk ' + formatCurrency(res.netProfit) + ' a měsíční cash flow.</div>';
+        } else if (res.irregular) {
+            // vysvětlí upozornění „Peníze na doplacení banky držte stranou“ níže
+        } else if (res.irr === Infinity) {
+            html += '<div class="info-note success"><strong>Páka:</strong> ze svého vkládáte nejvýš ' + formatCurrency(res.peakOwn) + ' — výnos v % vychází přes 1 000 %, rozhoduje čistý zisk ' + formatCurrency(res.netProfit) + '.</div>';
+        } else if (typeof res.irr === 'number' && isFinite(res.irr) && res.irr > res.baseIrr) {
+            html += '<div class="info-note success"><strong>Páka zvyšuje výnos:</strong> IRR na vlastní kapitál ' + res.irr.toFixed(2) + '% proti ' + res.baseIrr.toFixed(2) + '% bez externího financování.</div>';
+        } else {
+            html += '<div class="info-note warning"><strong>Páka výnos nezvyšuje:</strong> IRR na vlastní kapitál ' + formatExtIrr(res) + ' proti ' + res.baseIrr.toFixed(2) + '% bez externího financování.</div>';
+        }
+
+        if (res.clientMonthlyEq > 0) {
+            if (res.coverage !== null && res.coverage < 1) {
+                html += '<div class="info-note danger"><strong>Platby od klienta nepokryjí splátku bance:</strong> splátka bance ' + formatCurrency(res.pmt) + ' měsíčně, od klienta ≈ ' + formatCurrency(res.clientMonthlyEq) + ' (krytí ' + res.coverage.toFixed(2) + '×). Rozdíl doplácíte ze svého.</div>';
+            } else {
+                html += '<div class="info-note warning"><strong>Riziko výpadku klienta:</strong> splátku bance ' + formatCurrency(res.pmt) + ' měsíčně platíte, i když klient přestane platit. Pravidelné platby od klienta ji pokrývají ' + (res.coverage !== null ? res.coverage.toFixed(2) : '—') + '×.</div>';
+            }
+        } else {
+            html += '<div class="info-note warning"><strong>Klient platí až při splatnosti:</strong> do té doby platíte bance ze svého ' + formatCurrency(res.pmt) + ' měsíčně, celkem ' + formatCurrency(res.bankPaymentsTotal) + '.</div>';
+        }
+
+        if (res.daysEarly > 0) {
+            html += '<div class="info-note"><strong>Načerpáno o ' + res.daysEarly + ' dní dřív:</strong> úroky bance za tuto dobu ≈ ' + formatCurrency(res.carryInterest) +
+                (res.parkInterest > 0 ? ', načerpané peníze vydělají ' + formatCurrency(res.parkInterest) : ', načerpané peníze do výplaty nevydělávají') + '.</div>';
+        } else if (res.daysEarly < 0) {
+            html += '<div class="info-note"><strong>Úvěr od banky čerpáte o ' + (-res.daysEarly) + ' dní později:</strong> výplatu klientovi do té doby financujete celou ze svého.</div>';
+        }
+
+        if (res.balanceAtPayoff > 0) {
+            html += '<div class="info-note"><strong>Doplacení banky:</strong> ' + res.T.toLocaleDateString('cs-CZ') + ' doplatíte bance zbytek dluhu ' + formatCurrency(res.balanceAtPayoff) +
+                (res.earlyFee > 0 ? ' + poplatek za předčasné splacení ' + formatCurrency(res.earlyFee) : '') + ' z peněz od klienta.</div>';
+        } else if (res.bankEnd) {
+            html += '<div class="info-note"><strong>Úvěr od banky skončí dřív:</strong> poslední splátka bance ' + res.bankEnd.toLocaleDateString('cs-CZ') + ', ještě před splacením klientem.</div>';
+        }
+
+        // Klient vrací jistinu průběžně (anuita), bance ji doplácíte až na konci → jistina jde stranou
+        if (res.reserve > 0) {
+            html += '<div class="info-note"><strong>Jistina od klienta jde stranou:</strong> klient vrací jistinu průběžně, bance ji doplácíte až na konci — kalkulace z ní odkládá ' +
+                formatCurrency(res.reserve) + ' na doplacení banky (bez úroku). Měsíční cash flow a výnos v % jsou bez ní.</div>';
+        }
+        if (res.irregular) {
+            html += '<div class="info-note warning"><strong>Na doplacení banky nestačí peníze od klienta:</strong> v den splacení zaplatíte bance o ' + formatCurrency(-res.lastNet) +
+                ' víc, než máte k dispozici z platby klienta' + (res.reserve > 0 ? ' a odložené jistiny' : '') + '. Výnos v % proto nepočítám, rozhoduje čistý zisk ' +
+                formatCurrency(res.netProfit) + '.</div>';
+        }
+
+        if (taxOn) {
+            html += '<div class="info-note"><strong>Daň (orientačně):</strong> ' + e.taxRate + ' % ' +
+                (e.taxMode === 'gross' ? 'z přijatých úroků a poplatků' : 'ze zisku po úrocích a poplatcích bance') +
+                ' = ' + formatCurrency(-res.taxTotal) + ' za celou dobu, odečteno v den příjmu.' +
+                (e.taxMode === 'gross' ? ' U fyzické osoby se příjmy z úroků obvykle nesnižují o výdaje — úroky bance tedy nejspíš neodečtete.' : '') +
+                ' Ověřte s daňovým poradcem.</div>';
+        }
+        notesEl.innerHTML = html;
+
+        // --- Tabulka cash flow ---
+        document.getElementById('leverHead').innerHTML = '<tr>' +
+            '<th>Datum</th><th>Popis</th>' +
+            '<th class="text-right">Klient</th><th class="text-right">Banka</th>' +
+            (taxOn ? '<th class="text-right">Daň</th>' : '') +
+            '<th class="text-right">Čistě</th><th class="text-right">Kumulativně</th><th class="text-right">Dluh u banky</th></tr>';
+        let body = '', sumClient = 0, sumBank = 0, sumTax = 0;
+        res.rows.forEach(function (row) {
+            sumClient += row.client; sumBank += row.bank; sumTax += row.tax;
+            body += '<tr><td>' + row.date.toLocaleDateString('cs-CZ') + '</td><td>' + row.labels.join(', ') + '</td>' +
+                '<td class="text-right">' + (row.client ? formatCurrency(row.client) : '') + '</td>' +
+                '<td class="text-right">' + (row.bank ? formatCurrency(row.bank) : '') + '</td>' +
+                (taxOn ? '<td class="text-right">' + (row.tax ? formatCurrency(row.tax) : '') + '</td>' : '') +
+                '<td class="text-right">' + formatCurrency(row.net) + '</td>' +
+                '<td class="text-right">' + formatCurrency(row.cum) + '</td>' +
+                '<td class="text-right">' + formatCurrency(row.balance) + '</td></tr>';
+        });
+        body += '<tr class="schedule-total"><td colspan="2" class="text-right"><strong>CELKEM:</strong></td>' +
+            '<td class="text-right"><strong>' + formatCurrency(sumClient) + '</strong></td>' +
+            '<td class="text-right"><strong>' + formatCurrency(sumBank) + '</strong></td>' +
+            (taxOn ? '<td class="text-right"><strong>' + formatCurrency(sumTax) + '</strong></td>' : '') +
+            '<td class="text-right"><strong>' + formatCurrency(res.netProfit) + '</strong></td><td></td><td></td></tr>';
+        document.getElementById('leverBody').innerHTML = body;
+        section.classList.add('show');
+    }
+
+    // Stránka PDF s externím financováním (jen když je zapnuté a spočítané)
+    function buildLeverPdfPage() {
+        const res = lastLever;
+        if (!res) return null;
+        const e = res.ext;
+        const cur = currentCurrency;
+        const feeTxt = function (v, type) { return type === 'percent' ? v + ' %' : formatCurrency(v); };
+        const taxTxt = e.taxMode === 'none' ? 'Nezohledněno'
+            : (e.taxRate + ' % ' + (e.taxMode === 'gross' ? 'z přijatých úroků a poplatků (fyzická osoba)' : 'ze zisku (firma)'));
+        let notes = '';
+        document.querySelectorAll('#leverNotes .info-note').forEach(function (note) {
+            let cls = 'pdf-risk-info';
+            if (note.classList.contains('success')) cls = 'pdf-risk-success';
+            else if (note.classList.contains('danger')) cls = 'pdf-risk-danger';
+            else if (note.classList.contains('warning')) cls = 'pdf-risk-warning';
+            const div = document.createElement('div');
+            div.className = 'pdf-risk-note ' + cls;
+            div.textContent = note.textContent.trim();
+            notes += div.outerHTML;
+        });
+        const param = function (label, value) {
+            return '<div class="pdf-param"><span class="pdf-param-label">' + label + ': </span><span class="pdf-param-value">' + value + '</span></div>';
+        };
+        const card = function (label, id, highlight) {
+            return '<div class="pdf-result-card' + (highlight ? ' highlight' : '') + '"><div class="pdf-result-label">' + label +
+                '</div><div class="pdf-result-value">' + document.getElementById(id).textContent + '</div></div>';
+        };
+        const page = document.createElement('div');
+        page.className = 'pdf-layout';
+        page.innerHTML =
+            '<div class="pdf-header"><h1>Externí financování</h1><p>Úvěr klientovi financovaný vlastním úvěrem</p></div>' +
+            '<div class="pdf-section"><div class="pdf-section-title">Úvěr od banky</div><div class="pdf-params-grid">' +
+            param('Výše úvěru od banky', formatCurrency(res.B0)) +
+            param('Úroková sazba banky', e.rate + '% p.a.') +
+            param('Datum čerpání u banky', res.tb.toLocaleDateString('cs-CZ')) +
+            param('Splatnost u banky', e.term + ' měsíců') +
+            param('Splácení bance', e.payType === 'interestOnly' ? 'Jen úroky měsíčně' : 'Anuitní') +
+            param('Splátka bance', formatCurrency(res.pmt) + ' / měsíc') +
+            param('Poplatky při sjednání', feeTxt(e.fee, e.feeType)) +
+            param('Poplatek za předčasné splacení', feeTxt(e.earlyFee, e.earlyFeeType)) +
+            (res.daysEarly > 0 ? param('Úrok z načerpaných peněz', e.parkRate + '% p.a.') : '') +
+            param('Zdanění', taxTxt) +
+            param('Měna', cur) +
+            '</div></div>' +
+            '<div class="pdf-section"><div class="pdf-section-title">Výnos s externím financováním</div><div class="pdf-results-grid">' +
+            card('IRR na vlastní kapitál', 'extIrr', true) +
+            card('Vloženo ze svého (max.)', 'extOwn') +
+            card(document.getElementById('extProfitLabel').textContent, 'extProfit', true) +
+            card(document.getElementById('extMonthlyLabel').textContent, 'extMonthly') +
+            card('Úrokové rozpětí', 'extSpread') +
+            card('Dluh u banky při splacení', 'extBalance') +
+            '</div></div>' +
+            (notes ? '<div class="pdf-section"><div class="pdf-section-title">Upozornění</div>' + notes + '</div>' : '') +
+            '<div class="pdf-footer">Investment Tools | Vygenerováno: ' + new Date().toLocaleDateString('cs-CZ') + ' v ' + new Date().toLocaleTimeString('cs-CZ') + '</div>';
+        return page;
+    }
+
+    // CSV blok s cash flow (oddělovač ';' a celá čísla jako zbytek exportu)
+    function leverCsv() {
+        const res = lastLever;
+        if (!res) return '';
+        const taxOn = res.ext.taxMode !== 'none';
+        const n = function (v) { return String(Math.round(v)); };
+        let csv = '\n\nCash flow s externím financováním\n\n';
+        csv += 'Datum;Popis;Klient;Banka;' + (taxOn ? 'Daň;' : '') + 'Čistě;Kumulativně;Dluh u banky\n';
+        res.rows.forEach(function (row) {
+            csv += row.date.toLocaleDateString('cs-CZ') + ';' + row.labels.join(', ') + ';' + n(row.client) + ';' + n(row.bank) + ';' +
+                (taxOn ? n(row.tax) + ';' : '') + n(row.net) + ';' + n(row.cum) + ';' + n(row.balance) + '\n';
+        });
+        csv += '\nIRR na vlastní kapitál;' + formatExtIrr(res) + '\n';
+        csv += 'Vloženo ze svého (max.);' + n(res.peakOwn) + '\n';
+        csv += (taxOn ? 'Čistý zisk po dani;' : 'Čistý zisk;') + n(res.netProfit) + '\n';
+        return csv;
     }
 
     // ===== SCENARIO COMPARISON =====
@@ -2178,7 +2922,8 @@
                 otherFeesType: document.querySelector('input[name="otherFeesType"]:checked').value,
                 paymentType: document.getElementById('paymentType').value,
                 interestFrequency: document.getElementById('interestFrequency').value,
-                dayCountBasis: document.getElementById('dayCountBasis').value
+                dayCountBasis: document.getElementById('dayCountBasis').value,
+                ext: getExtFormState()
             },
             scenarios
         };
@@ -2289,6 +3034,9 @@
         const oftEl = document.querySelector(`input[name="otherFeesType"][value="${data.form.otherFeesType}"]`);
         if (oftEl) oftEl.checked = true;
 
+        // Externí financování — starší uložené výpočty ho nemají → vypnuto
+        applyExtFormState(data.form.ext);
+
         scenarios = data.scenarios || [];
         scenarioCounter = scenarios.length;
 
@@ -2341,6 +3089,8 @@
             dcb: document.getElementById('dayCountBasis').value,
             curr: currentCurrency
         };
+        // Externí financování jen když je zapnuté (odkaz zůstane krátký)
+        if (document.getElementById('extEnabled').checked) data.ext = getExtFormState();
 
         const url = window.location.href.split('#')[0] + '#' + btoa(JSON.stringify(data));
 
@@ -2385,6 +3135,8 @@
                 var el = document.querySelector('input[name="' + p[0] + '"][value="' + p[1] + '"]');
                 if (el) el.checked = true;
             });
+
+            applyExtFormState(data.ext);
 
             setCurrency(data.curr || 'CZK');
             if (typeof window.syncCustomDropdown === 'function') {
@@ -2565,6 +3317,18 @@
                 const doc = new jsPDF();
                 doc.addImage(imgData1, 'PNG', 0, 0, imgWidth, imgHeight1);
 
+                // Externí financování — vlastní stránka hned za souhrnem (jen když je zapnuté)
+                const leverPage = buildLeverPdfPage();
+                let leverStep = Promise.resolve();
+                if (leverPage) {
+                    document.body.appendChild(leverPage);
+                    leverStep = html2canvas(leverPage, { scale: 2, useCORS: true }).then(canvasL => {
+                        doc.addPage();
+                        doc.addImage(canvasL.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, (canvasL.height * imgWidth) / canvasL.width);
+                    }).catch(err => console.error('html2canvas lever page error:', err));
+                }
+
+                leverStep.then(() => {
                 const chartCanvas = document.getElementById('paymentChart');
                 if (chartCanvas && paymentChart) {
                     const page2 = document.createElement('div');
@@ -2607,6 +3371,7 @@
                     doc.save(filename);
                     cleanupPdfElements();
                 }
+                });
             }).catch(err => {
                 console.error('html2canvas page1 error:', err);
                 cleanupPdfElements();
@@ -2769,6 +3534,9 @@
             csv += rowData.join(';') + '\n';
         });
 
+        // Extern\u00ED financov\u00E1n\u00ED (jen kdy\u017E je zapnut\u00E9 a spo\u010D\u00EDtan\u00E9)
+        csv += leverCsv();
+
         const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
@@ -2879,6 +3647,11 @@
     }
 
     updateDebtSyncBar();
+
+    // Externí financování — živý přehled banka / vlastní peníze pod polem „Výše úvěru od banky“
+    ['loanAmount', 'extAmount'].forEach(function (id) {
+        document.getElementById(id).addEventListener('input', updateExtSplitInfo);
+    });
 
     // ===== Google Drive Sync =====
     function collectDebtCalcData() {
