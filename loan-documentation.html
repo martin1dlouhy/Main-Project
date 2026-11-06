@@ -3459,13 +3459,29 @@
                 var el = document.getElementById(id);
                 if (!el) return;
                 el.addEventListener('change', loanCalcMaturityDate);
-                if (id === 'maturity') el.addEventListener('input', loanCalcMaturityDate);
+                if (id === 'maturity') {
+                    el.addEventListener('input', loanCalcMaturityDate);
+                    el.addEventListener('input', updateMaturityUnitLabels);
+                }
             });
             // Ruční override — když Martin změní datum přímo, schovej hint a respektuj jeho hodnotu.
             var md = document.getElementById('maturityDate');
             if (md) md.addEventListener('input', function() {
                 document.getElementById('maturityDate-hint').style.display = 'none';
             });
+            updateMaturityUnitLabels();
+        }
+
+        // Popisky jednotky splatnosti podle zadaného čísla („2 roky“, „5 let“, „1 měsíc“);
+        // hodnoty voleb zůstávají „let“ / „měsíců“. Vlastní dropdown z design-system/nav.js bere text z <li>.
+        function updateMaturityUnitLabels() {
+            var sel = document.getElementById('maturityUnit');
+            if (!sel) return;
+            var val = (document.getElementById('maturity') || {}).value || '';
+            Array.prototype.forEach.call(sel.options, function(opt) { opt.textContent = czMaturityUnit(val, opt.value); });
+            var field = document.querySelector('.dropdown-field[data-target-select="maturityUnit"]');
+            if (field) field.querySelectorAll('.dropdown-option').forEach(function(li) { li.textContent = czMaturityUnit(val, li.getAttribute('data-value')); });
+            if (typeof window.syncCustomDropdown === 'function') window.syncCustomDropdown('maturityUnit');
         }
 
         /* ─── TEMPLATES ─── */
@@ -5645,6 +5661,20 @@
             var k = (r >= 10 && r < 20) ? 2 : (u === 1 ? 0 : (u >= 2 && u <= 4 ? 1 : 2));
             return czNumberWords(n, 'n') + ' ' + ['procento', 'procenta', 'procent'][k];
         }
+        // Jednotka doby splatnosti ve tvaru podle čísla: 1 rok, 2–4 roky, 5 let / 1 měsíc, 2–4 měsíce, 5 měsíců;
+        // desetinné číslo „1,5 roku“ / „1,5 měsíce“; u rozsahu („24 - 36“) rozhoduje poslední číslo.
+        // unit = uložená hodnota „let“ / „měsíců“. Stejná funkce je v termsheet-generator.html a server.js.
+        function czMaturityUnit(maturity, unit) {
+            var months = unit === 'měsíců';
+            var nums = String(maturity == null ? '' : maturity).match(/\d+(?:[.,]\d+)?/g);
+            if (!nums) return months ? 'měsíců' : 'let';
+            var last = nums[nums.length - 1];
+            if (/[.,]/.test(last)) return months ? 'měsíce' : 'roku';
+            var n = parseInt(last, 10);
+            if (n === 1) return months ? 'měsíc' : 'rok';
+            if (n >= 2 && n <= 4) return months ? 'měsíce' : 'roky';
+            return months ? 'měsíců' : 'let';
+        }
 
         // Sestaví strukturovaný blok DATA z formuláře — IDENTICKÝ s tím, co backend
         // (railway-api/server.js, /api/generate-loan-doc handler) sestavuje serverside.
@@ -5678,7 +5708,7 @@
             }
             if (formData.interest) d += 'Úroková sazba: ' + formData.interest + ' % p.a.\n';
             if (formData.interestPayment) d += 'Placení úroků: ' + formData.interestPayment + '\n';
-            if (formData.maturity) d += 'Doba splatnosti: ' + formData.maturity + ' ' + (formData.maturityUnit || 'let') + '\n';
+            if (formData.maturity) d += 'Doba splatnosti: ' + formData.maturity + ' ' + czMaturityUnit(formData.maturity, formData.maturityUnit) + '\n';
             if (formData.maturityDate) d += 'Datum splatnosti (Den konečné splatnosti): ' + formData.maturityDate + '\n';
             if (formData.earlyRepayment) d += 'Předčasné splacení: ' + formData.earlyRepayment + '\n';
 
@@ -6743,6 +6773,7 @@
                 el.value = value;
                 report.filled.push({ label: label, value: value });
                 if (isSelect && typeof window.syncCustomDropdown === 'function') window.syncCustomDropdown(id);
+                if (id === 'maturity' || id === 'maturityUnit') updateMaturityUnitLabels();
             }
 
             order.forEach(function(key) {
@@ -7849,6 +7880,7 @@
                 ['currency', 'drawdownType', 'interestPayment', 'maturityUnit', 'originationFeeType']
                     .forEach(function(selId) { window.syncCustomDropdown(selId); });
             }
+            updateMaturityUnitLabels();   // „2 roky“ / „5 let“ podle načtené doby splatnosti
             toggleFormTranches();
             renderReadiness();
         }

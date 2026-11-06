@@ -1988,6 +1988,22 @@
         return unit === 'měsíců' ? Math.round(v) : Math.round(v * 12);
     }
 
+    // Jednotka doby splatnosti ve tvaru podle čísla: 1 rok, 2–4 roky, 5 let / 1 měsíc, 2–4 měsíce, 5 měsíců;
+    // desetinné číslo „1,5 roku“ / „1,5 měsíce“; u rozsahu („24 - 36“) rozhoduje poslední číslo.
+    // unit = uložená hodnota „let“ / „měsíců“ (zůstává kvůli starým případům a výpočtům).
+    // Stejná funkce je v loan-documentation.html a railway-api/server.js.
+    function czMaturityUnit(maturity, unit) {
+        var months = unit === 'měsíců';
+        var nums = String(maturity == null ? '' : maturity).match(/\d+(?:[.,]\d+)?/g);
+        if (!nums) return months ? 'měsíců' : 'let';
+        var last = nums[nums.length - 1];
+        if (/[.,]/.test(last)) return months ? 'měsíce' : 'roku';
+        var n = parseInt(last, 10);
+        if (n === 1) return months ? 'měsíc' : 'rok';
+        if (n >= 2 && n <= 4) return months ? 'měsíce' : 'roky';
+        return months ? 'měsíců' : 'let';
+    }
+
     function calcPayment(amount, ratePct, months, mode) {
         if (!(amount > 0) || !(ratePct > 0)) return null;
         var annual = amount * (ratePct / 100);
@@ -2270,6 +2286,7 @@
         ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type','f-maturity-unit'].forEach(function(id) {
             syncTsDropdown(document.getElementById(id));
         });
+        updateMaturityUnitLabels();   // „2 roky“ / „5 let“ podle načtené doby splatnosti
     }
 
     function resetForm() {
@@ -2333,6 +2350,7 @@
         ['f-status','f-currency','f-drawdown-type','f-interest-payment','f-origination-fee-type','f-maturity-unit'].forEach(function(id) {
             syncTsDropdown(document.getElementById(id));
         });
+        updateMaturityUnitLabels();   // „2 roky“ / „5 let“ podle načtené doby splatnosti
     }
 
     function escapeHtml(str) {
@@ -2815,7 +2833,7 @@
         }
         // Splatnost v jednom řádku: „24 měsíců, do 15. 11. 2028“
         function maturityLine(d) {
-            var dur = d.maturity ? rangeDash(d.maturity) + NBSP + (d.maturityUnit || 'let') : '';
+            var dur = d.maturity ? rangeDash(d.maturity) + NBSP + czMaturityUnit(d.maturity, d.maturityUnit) : '';
             var end = d.maturityDate ? 'do ' + fmtDate(d.maturityDate) : '';
             return dur && end ? dur + ', ' + end : (dur || capFirst(end));
         }
@@ -3625,6 +3643,24 @@
         }
     }
 
+    // Popisky jednotky splatnosti podle zadaného čísla („2 roky“, „5 let“, „1 měsíc“);
+    // hodnoty voleb zůstávají „let“ / „měsíců“
+    function updateMaturityUnitLabels() {
+        var sel = document.getElementById('f-maturity-unit');
+        if (!sel) return;
+        var val = document.getElementById('f-maturity').value;
+        Array.prototype.forEach.call(sel.options, function(opt) { opt.textContent = czMaturityUnit(val, opt.value); });
+        var wrapper = sel.closest('.custom-dropdown');
+        if (wrapper) {
+            wrapper.querySelectorAll('.custom-dropdown-option').forEach(function(o) { o.textContent = czMaturityUnit(val, o.dataset.value); });
+        }
+        syncTsDropdown(sel);
+    }
+    function initMaturityUnitLabels() {
+        document.getElementById('f-maturity').addEventListener('input', updateMaturityUnitLabels);
+        updateMaturityUnitLabels();
+    }
+
     // ===== LV UPLOAD & PARSING =====
     var lvFiles = []; // Array of {file, name, status, text, results}
 
@@ -4201,9 +4237,10 @@
     // Custom dropdowns must paint regardless of DB init — initialize them as soon as the
     // script runs, so a failing openDB() can never leave the form selects empty.
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initTsDropdowns);
+        document.addEventListener('DOMContentLoaded', function() { initTsDropdowns(); initMaturityUnitLabels(); });
     } else {
         initTsDropdowns();
+        initMaturityUnitLabels();
     }
 
     async function init() {

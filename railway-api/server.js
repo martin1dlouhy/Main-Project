@@ -1197,6 +1197,20 @@ function czPercentWords(n) {
     var k = (r >= 10 && r < 20) ? 2 : (u === 1 ? 0 : (u >= 2 && u <= 4 ? 1 : 2));
     return czNumberWords(n, 'n') + ' ' + ['procento', 'procenta', 'procent'][k];
 }
+// Jednotka doby splatnosti ve tvaru podle čísla: 1 rok, 2–4 roky, 5 let / 1 měsíc, 2–4 měsíce, 5 měsíců;
+// desetinné číslo „1,5 roku“ / „1,5 měsíce“; u rozsahu („24 - 36“) rozhoduje poslední číslo.
+// unit = uložená hodnota „let“ / „měsíců“. Stejná funkce je v loan-documentation.html a termsheet-generator.html.
+function czMaturityUnit(maturity, unit) {
+    var months = unit === 'měsíců';
+    var nums = String(maturity == null ? '' : maturity).match(/\d+(?:[.,]\d+)?/g);
+    if (!nums) return months ? 'měsíců' : 'let';
+    var last = nums[nums.length - 1];
+    if (/[.,]/.test(last)) return months ? 'měsíce' : 'roku';
+    var n = parseInt(last, 10);
+    if (n === 1) return months ? 'měsíc' : 'rok';
+    if (n >= 2 && n <= 4) return months ? 'měsíce' : 'roky';
+    return months ? 'měsíců' : 'let';
+}
 
 // =============================================
 // Loan doc prompt builders — single source of truth.
@@ -1359,7 +1373,7 @@ function buildLoanDocDataDescription(formData) {
     }
     if (formData.interest) d += 'Úroková sazba: ' + formData.interest + ' % p.a.\n';
     if (formData.interestPayment) d += 'Placení úroků: ' + formData.interestPayment + '\n';
-    if (formData.maturity) d += 'Doba splatnosti: ' + formData.maturity + ' ' + (formData.maturityUnit || 'let') + '\n';
+    if (formData.maturity) d += 'Doba splatnosti: ' + formData.maturity + ' ' + czMaturityUnit(formData.maturity, formData.maturityUnit) + '\n';
     if (formData.maturityDate) d += 'Datum splatnosti (Den konečné splatnosti): ' + formData.maturityDate + '\n';
     if (formData.earlyRepayment) d += 'Předčasné splacení: ' + formData.earlyRepayment + '\n';
 
