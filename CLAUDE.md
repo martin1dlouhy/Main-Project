@@ -70,6 +70,11 @@ The loan-doc system prompt exists twice: `buildLoanDocSystemPrompt` in `server.j
 
 Real user data lives in the browser and on Google Drive / Sheets. **Never write test data from tooling.** Notable: R-E `saved-valuations` + IndexedDB `re-prompt-backup`; Term Sheet IndexedDB `ProfiLendTermSheets`; Loan Doc IndexedDB `loanDocDB` (lawyer mode: `loanDocDB-advokat`); Marketing Agent `brand-preset-<slug>` + IndexedDB `MarketingAgentDB`; Dashboard `dashboard-sheet-id`, `dashboard-sort`; shared Google token `gdrive-shared-token`.
 
+Loan Doc templates: the Drive folder `Investment Tools/Šablony/Úvěrová dokumentace` is the source of truth.
+- Both modes mirror it **by version**: each IndexedDB record keeps `driveId` + `driveModified`. The owner does this in `syncTemplatesFromDrive`, the lawyer in `syncLawyerTemplates`.
+- Legacy records without these fields are compared by size and upload time (`compareWithDrive`).
+- Deleting a template, finishing a pending deletion (`loanDoc.deletedTemplates` + `loanDoc.deletedTemplateVersions`) and „Nahrát vše na Drive“ change Drive only when Drive still has the same version. They never overwrite or trash a newer version uploaded from another device.
+
 ## Testing this code
 
 No automated suite. Kritik walkthrough after every change: load → input → calc → export for the affected app, check the browser console, check mobile width. "The diff looks right" isn't enough.

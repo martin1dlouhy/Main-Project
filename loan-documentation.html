@@ -1921,7 +1921,7 @@
                         <div class="owner-only" style="margin-top: 1rem;">
                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem;">
                                 <label class="form-label" style="margin: 0;">Nahrát šablony (Word, Excel)</label>
-                                <button type="button" class="btn btn-outline btn-small" onclick="pushAllTemplatesToDrive()" id="btn-push-all-templates" title="Nahraje všechny lokální šablony na Google Drive (přepíše stejně pojmenované)">
+                                <button type="button" class="btn btn-outline btn-small" onclick="pushAllTemplatesToDrive()" id="btn-push-all-templates" title="Nahraje na Google Drive šablony, které tam chybí nebo jsou tady novější (novější verzi na Drive nepřepíše)">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                     <span id="btn-push-all-templates-label">Nahrát vše na Drive</span>
                                 </button>
@@ -2672,6 +2672,9 @@
         document.documentElement.classList.toggle('lawyer-mode', LAWYER_MODE);
         /* PIN is verified server-side — no client-side secret */
         var db = null;
+        // Splní se po otevření databáze (openDB) — Google Drive se může připojit dřív než aplikace
+        var dbReadyResolve = null;
+        var dbReady = new Promise(function(resolve) { dbReadyResolve = resolve; });
         var generatedDocuments = {};
         var folderHandle = null;
         var selectedTemplates = {};
@@ -3063,6 +3066,7 @@
                 db = event.target.result;
                 ensureDefaultCategories(function() {
                     renderTemplateList();
+                    if (dbReadyResolve) { dbReadyResolve(); dbReadyResolve = null; }
                     if (LAWYER_MODE) syncLawyerTemplates(false);
                 });
             };
@@ -3535,11 +3539,13 @@
                                     var mime = templateMime(name);
                                     var blob = new Blob([data], { type: mime });
                                     GDriveSync.saveShared('Šablony/Úvěrová dokumentace/' + name, blob, mime)
-                                        .then(function() {
+                                        .then(function(uploaded) {
                                             GDriveSync.showToast && GDriveSync.showToast('Šablona nahrána na Drive: ' + name, 'success');
+                                            rememberDriveVersions([{ name: name, id: uploaded && uploaded.id }]);
                                         })
                                         .catch(function(err) {
                                             console.warn('GDrive template upload failed:', err);
+                                            showToast('Šablonu ' + name + ' se nepodařilo nahrát na Google Drive — zkus později „Nahrát vše na Drive“.', 'error');
                                         });
                                 } catch (err) {
                                     console.warn('GDrive template upload error:', err);
@@ -3554,6 +3560,8 @@
         }
 
         /* ─── BULK PUSH TEMPLATES TO DRIVE ─── */
+        // Nahraje na Drive šablony, které tam chybí nebo jsou tady novější. Nejdřív synchronizace:
+        // stará kopie z tohoto počítače nesmí přepsat novější verzi na Drive (a tím ani šablony advokáta).
         async function pushAllTemplatesToDrive() {
             if (lawyerReadOnly()) return;
             if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) {
@@ -3566,31 +3574,43 @@
             var origLabel = lbl ? lbl.textContent : '';
             if (lbl) lbl.textContent = 'Nahrávám…';
             try {
-                var templates = await new Promise(function(resolve) {
-                    getAllFromDB('templates', function(rows) { resolve(rows || []); });
-                });
+                await syncTemplatesFromDrive();
+                var templates = await dbAsync('all', 'templates');
                 if (templates.length === 0) {
                     showToast('Žádné lokální šablony k nahrání', 'info');
                     return;
                 }
-                var ok = 0, fail = 0;
+                var files = await GDriveSync.listShared(TEMPLATE_FOLDER);
+                var ok = 0, fail = 0, same = 0, newer = 0, pushed = [];
                 for (var i = 0; i < templates.length; i++) {
                     var t = templates[i];
                     if (!t || !t.data || !t.name) { fail++; continue; }
+                    var f = newestDriveFile(files, t.name);
+                    var rel = f ? compareWithDrive(versionOf(t), f) : 'local';
+                    // 'check' už rozhodla synchronizace výše: obsah se liší a tady je novější → nahrát
+                    if (rel === 'check' && templateDriveNotes[t.name] === 'novější než na Drive') rel = 'local';
+                    if (rel === 'same') { same++; continue; }
+                    if (rel !== 'local') { newer++; continue; } // na Drive je novější verze (nebo nejde poznat) — nepřepisovat
                     if (lbl) lbl.textContent = 'Nahrávám… ' + (i + 1) + '/' + templates.length;
                     try {
                         var mime = templateMime(t.name);
                         var blob = (t.data instanceof Blob) ? t.data : new Blob([t.data], { type: mime });
-                        await GDriveSync.saveShared('Šablony/Úvěrová dokumentace/' + t.name, blob, mime);
+                        var uploaded = await GDriveSync.saveShared(TEMPLATE_FOLDER + '/' + t.name, blob, mime);
                         ok++;
+                        pushed.push({ name: t.name, id: uploaded && uploaded.id });
                     } catch (err) {
                         console.warn('Push failed for ' + t.name, err);
                         fail++;
                     }
                 }
-                var msg = 'Nahráno ' + ok + '/' + templates.length + ' šablon na Drive';
-                if (fail > 0) msg += ' (' + fail + ' selhalo)';
-                showToast(msg, fail > 0 ? 'error' : 'success');
+                await rememberDriveVersions(pushed);
+                var parts = [];
+                if (ok) parts.push('nahráno: ' + ok);
+                if (same) parts.push('už na Drive: ' + same);
+                if (newer) parts.push('přeskočeno, na Drive je novější verze: ' + newer);
+                if (fail) parts.push('selhalo: ' + fail);
+                var msg = (ok || newer || fail) ? 'Šablony na Drive — ' + parts.join(', ') : 'Všechny šablony už na Drive jsou';
+                showToast(msg, fail > 0 ? 'error' : (newer ? 'info' : 'success'));
                 if (typeof updateDriveTemplatesStatus === 'function') {
                     try { await updateDriveTemplatesStatus(); } catch (e) {}
                 }
@@ -4818,7 +4838,7 @@
             }
             showToast('Synchronizuji šablony z Drive…', 'info');
             try {
-                await syncTemplatesFromDrive();
+                if (!(await syncTemplatesFromDrive())) showToast('Synchronizace selhala', 'error');
                 await updateDriveTemplatesStatus();
             } catch (e) {
                 console.warn('refreshTemplatesFromDrive:', e);
@@ -4860,7 +4880,8 @@
             return LAWYER_MODE ? Object.assign({}, body, { lawyerToken: ProfilendAuth.getDeviceToken() }) : body;
         }
 
-        function lawyerDb(op, store, arg) {
+        // IndexedDB jako Promise (synchronizace šablon v obou režimech)
+        function dbAsync(op, store, arg) {
             return new Promise(function(resolve) {
                 if (op === 'all') getAllFromDB(store, resolve);
                 else if (op === 'put') putToDb(store, arg, resolve);
@@ -4895,8 +4916,8 @@
             setLawyerTemplatesStatus('Šablony: načítám…');
             lawyerSyncRunning = (async function() {
                 var list = (await lawyerApi('/api/lawyer/templates', { refresh: !!force })).templates || [];
-                var cats = await lawyerDb('all', 'categories');
-                var local = await lawyerDb('all', 'templates');
+                var cats = await dbAsync('all', 'categories');
+                var local = await dbAsync('all', 'templates');
                 var byName = {};
                 local.forEach(function(t) { byName[t.name] = t; });
                 var wanted = {};
@@ -4917,12 +4938,12 @@
                         driveMd5: f.md5 || '',
                         driveModified: f.modifiedTime || ''
                     };
-                    if (cur) { rec.id = cur.id; await lawyerDb('put', 'templates', rec); }
-                    else await lawyerDb('add', 'templates', rec);
+                    if (cur) { rec.id = cur.id; await dbAsync('put', 'templates', rec); }
+                    else await dbAsync('add', 'templates', rec);
                     changed++;
                 }
                 var removed = local.filter(function(t) { return !wanted[t.name]; });
-                for (var j = 0; j < removed.length; j++) await lawyerDb('delete', 'templates', removed[j].id);
+                for (var j = 0; j < removed.length; j++) await dbAsync('delete', 'templates', removed[j].id);
                 lawyerSyncAt = Date.now();
                 if (changed || removed.length) renderTemplateList();
                 setLawyerTemplatesStatus('Šablony: ' + list.length + ' · ' + autosaveTime());
@@ -4954,57 +4975,225 @@
             if (lawyerTplBtn) lawyerTplBtn.title = 'Šablony od Martina (jen ke čtení) — kliknutím zkontrolujete nové verze';
         }
 
-        // Načtení šablon z Google Drive do IndexedDB (po přihlášení)
-        async function syncTemplatesFromDrive() {
-            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return;
+        /* ─── SYNCHRONIZACE ŠABLON S DRIVE (Martinův režim) ─── */
+        // Drive je zdroj pravdy: chybějící šablony stáhne, novější verze stáhne místo starých kopií se stejným
+        // názvem a šablony smazané na Drive odebere. Kterou verzi z Drive šablona má, si pamatuje v driveId +
+        // driveModified (stejně jako v režimu advokáta); starší záznamy bez nich porovná compareWithDrive
+        // podle velikosti a času nahrání. Šablona nahraná jen do tohoto počítače se sama nikdy nesmaže.
+        var TEMPLATE_FOLDER = 'Šablony/Úvěrová dokumentace';
+        var DRIVE_TIME_SLACK_MS = 10 * 60 * 1000; // doba nahrávání + rozdíl hodin počítače a Drive
+        var templateSyncRunning = null;           // Promise běžící synchronizace
+        var templateDriveNotes = {};              // název → poznámka v seznamu (šablona není na Drive)
+
+        function dataSize(data) {
+            if (!data) return -1;
+            if (data.byteLength !== undefined) return data.byteLength;
+            return data.size !== undefined ? data.size : -1;
+        }
+
+        // Verze šablony pro porovnání s Drive (ukládá se i k čekajícímu smazání)
+        function versionOf(t) {
+            return { driveId: t.driveId || null, driveModified: t.driveModified || null, uploadedAt: t.uploadedAt || null, size: dataSize(t.data) };
+        }
+
+        // Verze šablony vs. soubor stejného názvu na Drive: 'same' = stejná verze, 'drive' = na Drive je novější,
+        // 'local' = tady je novější (na Drive ještě není), 'check' = stejná velikost, ale jiný čas → porovnat obsah
+        function compareWithDrive(ver, f) {
+            if (ver.driveId) return (ver.driveId === f.id && ver.driveModified === f.modifiedTime) ? 'same' : 'drive';
+            var up = Date.parse(ver.uploadedAt || '') || 0;
+            var mod = Date.parse(f.modifiedTime || '') || 0;
+            if (ver.size === Number(f.size)) return Math.abs(mod - up) <= DRIVE_TIME_SLACK_MS ? 'same' : 'check';
+            return mod > up ? 'drive' : 'local';
+        }
+
+        // listShared řadí od nejnovějšího
+        function newestDriveFile(files, name) {
+            return (files || []).filter(function(f) { return f.name === name; })[0] || null;
+        }
+
+        function sameBytes(a, b) {
+            if (!a || !b || a.byteLength === undefined || a.byteLength !== b.byteLength) return false;
+            var x = new Uint8Array(a), y = new Uint8Array(b);
+            for (var i = 0; i < x.length; i++) if (x[i] !== y[i]) return false;
+            return true;
+        }
+
+        // Stáhne šablonu z Drive a ověří ji: velikost podle seznamu a formát ZIP (každý .docx i .xlsx).
+        // Soubor, který se zrovna nahrává z jiného počítače, neprojde → zkusí se při příští synchronizaci.
+        async function loadDriveTemplate(f) {
             try {
-                var driveFiles = await GDriveSync.listShared('Šablony/Úvěrová dokumentace');
-                if (!driveFiles || driveFiles.length === 0) return;
-                var deleted = getDeletedTemplateNames();
-                getAllFromDB('categories', function(cats) {
-                    getAllFromDB('templates', function(localTemplates) {
-                        var localNames = new Set((localTemplates || []).map(function(t){ return t.name; }));
-                        var added = 0;
-                        var pending = 0;
-                        driveFiles.forEach(function(f) {
-                            if (!/\.(docx|xlsx)$/i.test(f.name)) return;
-                            if (localNames.has(f.name)) return;
-                            // Šablona smazaná v aplikaci (např. když Drive nebyl připojený) — nevracet ji,
-                            // ale dokončit smazání i na Drive (do koše)
-                            if (deleted.indexOf(f.name) !== -1) {
-                                trashTemplateOnDrive(f.name);
-                                return;
-                            }
-                            pending++;
-                            GDriveSync.loadSharedBinary('Šablony/Úvěrová dokumentace/' + f.name).then(function(buf) {
-                                if (buf) {
-                                    var detected = isXlsxName(f.name) ? null : detectCategory(f.name, cats);
-                                    saveToDb('templates', {
-                                        name: f.name,
-                                        data: buf,
-                                        category: detected ? detected.name : null,
-                                        uploadedAt: f.modifiedTime || new Date().toISOString()
-                                    }, function(id) {
-                                        if (id) added++;
-                                        pending--;
-                                        if (pending === 0) {
-                                            renderTemplateList();
-                                            if (added > 0) showToast('Načteno z Drive: ' + added + ' šablon', 'success');
-                                        }
-                                    });
-                                } else {
-                                    pending--;
-                                }
-                            }).catch(function(err) {
-                                console.warn('loadSharedBinary failed for ' + f.name, err);
-                                pending--;
-                            });
-                        });
-                    });
-                });
+                var buf = await GDriveSync.loadSharedBinary(TEMPLATE_FOLDER + '/' + f.name);
+                var b = buf ? new Uint8Array(buf) : null;
+                if (b && b.length === Number(f.size) && b[0] === 0x50 && b[1] === 0x4B) return buf;
+                console.warn('Šablona z Drive neprošla kontrolou, zkusím to příště: ' + f.name);
             } catch (e) {
-                console.warn('syncTemplatesFromDrive failed:', e);
+                console.warn('loadSharedBinary failed for ' + f.name, e);
             }
+            return null;
+        }
+
+        // Změní šablonu jen tehdy, když ji mezitím nic nepřepsalo (nahrání nové verze, smazání).
+        // change(záznam) vrátí upravený záznam, nebo null = smazat. Kontrola i zápis v jedné transakci.
+        function updateTemplateIfUnchanged(snap, change) {
+            return new Promise(function(resolve) {
+                if (!db) { resolve(false); return; }
+                var store = db.transaction(['templates'], 'readwrite').objectStore('templates');
+                var get = store.get(snap.id);
+                get.onsuccess = function() {
+                    var cur = get.result;
+                    if (!cur || cur.uploadedAt !== snap.uploadedAt || cur.driveModified !== snap.driveModified) { resolve(false); return; }
+                    var next = change(cur);
+                    var write = next ? store.put(next) : store.delete(snap.id);
+                    write.onsuccess = function() { resolve(true); };
+                    write.onerror = function() { resolve(false); };
+                };
+                get.onerror = function() { resolve(false); };
+            });
+        }
+
+        // Přidá šablonu, jen když tu stejný název ještě není (souběh s nahráním nebo s druhou záložkou)
+        function addTemplateIfMissing(rec) {
+            return new Promise(function(resolve) {
+                if (!db) { resolve(false); return; }
+                var store = db.transaction(['templates'], 'readwrite').objectStore('templates');
+                var all = store.getAll();
+                all.onsuccess = function() {
+                    if ((all.result || []).some(function(t) { return t.name === rec.name; })) { resolve(false); return; }
+                    var write = store.add(rec);
+                    write.onsuccess = function() { resolve(true); };
+                    write.onerror = function() { resolve(false); };
+                };
+                all.onerror = function() { resolve(false); };
+            });
+        }
+
+        // Po nahrání na Drive si šablony zapamatují nahranou verzi (jinak by je příští synchronizace stahovala).
+        // uploads = [{ name, id }]. Když je na Drive mezitím něco jiného (jiné id nebo velikost), nechá to na synchronizaci.
+        async function rememberDriveVersions(uploads) {
+            if (!uploads.length) return;
+            try {
+                var files = await GDriveSync.listShared(TEMPLATE_FOLDER);
+                var local = await dbAsync('all', 'templates');
+                var notesChanged = false;
+                for (var i = 0; i < uploads.length; i++) {
+                    var u = uploads[i];
+                    var f = newestDriveFile(files, u.name);
+                    var t = local.filter(function(x) { return x.name === u.name; })[0];
+                    if (!f || !t || (u.id && u.id !== f.id) || Number(f.size) !== dataSize(t.data)) continue;
+                    var ok = await updateTemplateIfUnchanged(t, function(rec) { rec.driveId = f.id; rec.driveModified = f.modifiedTime; return rec; });
+                    if (ok && templateDriveNotes[u.name]) { delete templateDriveNotes[u.name]; notesChanged = true; }
+                }
+                if (notesChanged) renderTemplateList();
+            } catch (e) {
+                console.warn('rememberDriveVersions:', e);
+            }
+        }
+
+        // Vrací Promise<boolean>: false = synchronizace selhala (Drive neodpověděl)
+        function syncTemplatesFromDrive() {
+            if (LAWYER_MODE || !window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected()) return Promise.resolve(true);
+            if (templateSyncRunning) return templateSyncRunning;
+            templateSyncRunning = (async function() {
+                await dbReady;
+                var files = (await GDriveSync.listShared(TEMPLATE_FOLDER)) || [];
+                if (files.length === 0) return true; // složka chybí nebo je prázdná → nic neměnit
+                var byName = {}, dup = {};
+                files.forEach(function(f) {
+                    if (!/\.(docx|xlsx)$/i.test(f.name || '') || /^application\/vnd\.google-apps\./.test(f.mimeType || '')) return;
+                    if (byName[f.name]) dup[f.name] = true; else byName[f.name] = f;
+                });
+                var cats = await dbAsync('all', 'categories');
+                var local = await dbAsync('all', 'templates');
+                var localByName = {};
+                local.forEach(function(t) { if (!localByName[t.name]) localByName[t.name] = t; });
+                var pending = getDeletedTemplateNames();
+                var pendingVersions = getDeletedTemplateVersions();
+                var notes = {}, added = 0, updated = 0, removed = 0;
+                var names = Object.keys(byName);
+                for (var i = 0; i < names.length; i++) {
+                    var name = names[i], f = byName[name], cur = localByName[name];
+                    // Stejný název na Drive víckrát nebo soubor, který se právě nahrává → tentokrát přeskočit
+                    if (dup[name] || !(Number(f.size) > 0)) continue;
+                    if (!cur) {
+                        // Smazaná tady bez připojeného Drive → dokončit smazání, ale jen u stejné verze;
+                        // novější verze z jiného počítače se stáhne
+                        if (pending.indexOf(name) !== -1 && (await trashTemplateOnDrive(name, pendingVersions[name], f)) !== 'newer') continue;
+                        var buf = await loadDriveTemplate(f);
+                        if (!buf) continue;
+                        var detected = isXlsxName(name) ? null : detectCategory(name, cats);
+                        if (await addTemplateIfMissing({
+                            name: name,
+                            data: buf,
+                            category: detected ? detected.name : null,
+                            uploadedAt: f.modifiedTime || new Date().toISOString(),
+                            driveId: f.id,
+                            driveModified: f.modifiedTime
+                        })) added++;
+                        continue;
+                    }
+                    var rel = compareWithDrive(versionOf(cur), f);
+                    if (rel === 'local') { notes[name] = 'novější než na Drive'; continue; }
+                    if (rel === 'same') {
+                        if (!cur.driveId) await updateTemplateIfUnchanged(cur, function(rec) { rec.driveId = f.id; rec.driveModified = f.modifiedTime; return rec; });
+                        continue;
+                    }
+                    // 'drive' nebo 'check' → stáhnout a porovnat obsah
+                    var data = await loadDriveTemplate(f);
+                    if (!data) continue;
+                    var same = sameBytes(data, cur.data);
+                    if (!same && rel === 'check' && !((Date.parse(f.modifiedTime) || 0) > (Date.parse(cur.uploadedAt) || 0))) {
+                        notes[name] = 'novější než na Drive';
+                        continue;
+                    }
+                    var replaced = await updateTemplateIfUnchanged(cur, function(rec) {
+                        if (!same) { rec.data = data; rec.uploadedAt = f.modifiedTime || rec.uploadedAt; }
+                        rec.driveId = f.id;
+                        rec.driveModified = f.modifiedTime;
+                        return rec;
+                    });
+                    if (replaced && !same) updated++;
+                }
+                // Šablony, které na Drive nejsou: pocházejí-li z Drive (driveId), byly tam smazané → odebrat;
+                // jinak jsou jen v tomto počítači → nechat. Seznam bez stránkování je úplný jen do 200 souborů.
+                if (files.length < 200) {
+                    for (var j = 0; j < local.length; j++) {
+                        var t = local[j];
+                        if (byName[t.name]) continue;
+                        if (!t.driveId) { notes[t.name] = 'jen v tomto počítači'; continue; }
+                        if (await updateTemplateIfUnchanged(t, function() { return null; })) removed++;
+                    }
+                    // Čekající smazání šablon, které na Drive už nejsou → není co dokončit
+                    pending.forEach(function(n) { if (!byName[n]) unmarkTemplateDeleted(n); });
+                }
+                var notesChanged = JSON.stringify(notes) !== JSON.stringify(templateDriveNotes);
+                templateDriveNotes = notes;
+                if (added || removed || notesChanged) renderTemplateList();
+                if (added || updated || removed) {
+                    var parts = [];
+                    if (added) parts.push('nové: ' + added);
+                    if (updated) parts.push('aktualizované: ' + updated);
+                    if (removed) parts.push('odebrané: ' + removed);
+                    showToast('Šablony synchronizovány s Drive — ' + parts.join(', '), 'success');
+                }
+                var dupNames = Object.keys(dup);
+                if (dupNames.length) {
+                    showToast('Na Google Drive je šablona „' + dupNames.join('“, „') + '“ vícekrát — nech tam jen jednu. Do té doby ji synchronizace přeskakuje.', 'info');
+                }
+                return true;
+            })().catch(function(e) {
+                console.warn('syncTemplatesFromDrive failed:', e);
+                return false;
+            }).then(function(ok) {
+                templateSyncRunning = null;
+                return ok;
+            });
+            return templateSyncRunning;
+        }
+
+        // Poznámka u šablony v seznamu: advokát vidí verzi od Martina, Martin šablony, které nejsou na Drive
+        function templateNote(t) {
+            if (LAWYER_MODE) return lawyerTemplateDate(t);
+            return (templateDriveNotes && templateDriveNotes[t.name]) || '';
         }
 
         function renderTemplateList() {
@@ -5087,7 +5276,8 @@
                                 s += '<div class="template-item">';
                                 s += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
                                 s += '<span class="template-name">' + escapeHtml(template.name) + '</span>';
-                                if (LAWYER_MODE) s += '<span class="template-note">' + escapeHtml(lawyerTemplateDate(template)) + '</span>';
+                                var note = templateNote(template);
+                                if (note) s += '<span class="template-note">' + escapeHtml(note) + '</span>';
                                 s += categoryDropdownMarkup(template.id, template.category);
                                 s += '<button type="button" class="template-delete" onclick="deleteTemplate(' + template.id + ')" title="Smazat šablonu">✕</button>';
                                 s += '</div>';
@@ -5110,7 +5300,8 @@
                             html += '<div class="template-item">';
                             html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
                             html += '<span class="template-name">' + escapeHtml(template.name) + '</span>';
-                            html += '<span class="template-note">Pro tlačítko Splátkový kalendář' + (LAWYER_MODE ? ' · ' + escapeHtml(lawyerTemplateDate(template)) : '') + '</span>';
+                            var sheetNote = templateNote(template);
+                            html += '<span class="template-note">Pro tlačítko Splátkový kalendář' + (sheetNote ? ' · ' + escapeHtml(sheetNote) : '') + '</span>';
                             html += '<button type="button" class="template-delete" onclick="deleteTemplate(' + template.id + ')" title="Smazat šablonu">✕</button>';
                             html += '</div>';
                         });
@@ -5189,32 +5380,63 @@
 
         // Smazané šablony — aby je synchronizace z Drive nevrátila zpět. Šablona se smaže i na Drive
         // (přesune do koše, dá se obnovit); bez připojeného Drive se to dokončí při příští synchronizaci.
+        // K názvu se ukládá i verze smazané šablony: na Drive se smaže jen ta, ne novější z jiného počítače.
         var DELETED_TEMPLATES_KEY = 'loanDoc.deletedTemplates';
+        var DELETED_TEMPLATE_VERSIONS_KEY = 'loanDoc.deletedTemplateVersions';
         function getDeletedTemplateNames() {
             try {
                 var arr = JSON.parse(localStorage.getItem(DELETED_TEMPLATES_KEY) || '[]');
                 return Array.isArray(arr) ? arr : [];
             } catch (e) { return []; }
         }
-        function markTemplateDeleted(name) {
+        function getDeletedTemplateVersions() {
+            try {
+                var obj = JSON.parse(localStorage.getItem(DELETED_TEMPLATE_VERSIONS_KEY) || '{}');
+                return obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
+            } catch (e) { return {}; }
+        }
+        function markTemplateDeleted(name, tpl) {
             var arr = getDeletedTemplateNames();
             if (name && arr.indexOf(name) === -1) arr.push(name);
             try { localStorage.setItem(DELETED_TEMPLATES_KEY, JSON.stringify(arr)); } catch (e) { }
+            if (name && tpl) {
+                var versions = getDeletedTemplateVersions();
+                versions[name] = versionOf(tpl);
+                try { localStorage.setItem(DELETED_TEMPLATE_VERSIONS_KEY, JSON.stringify(versions)); } catch (e) { }
+            }
         }
         function unmarkTemplateDeleted(name) {
             var arr = getDeletedTemplateNames().filter(function(n) { return n !== name; });
             try { localStorage.setItem(DELETED_TEMPLATES_KEY, JSON.stringify(arr)); } catch (e) { }
+            var versions = getDeletedTemplateVersions();
+            if (versions[name]) {
+                delete versions[name];
+                try { localStorage.setItem(DELETED_TEMPLATE_VERSIONS_KEY, JSON.stringify(versions)); } catch (e) { }
+            }
         }
-        async function trashTemplateOnDrive(name) {
-            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected() || !GDriveSync.trashShared) return false;
+        // Smaže šablonu i na Drive (do koše), ale jen verzi, kterou mažeme tady (ver = versionOf).
+        // Novější verzi nahranou z jiného počítače nechá — při synchronizaci se stáhne. Bez známé verze
+        // (čekající smazání z doby před ukládáním verzí) na Drive nic nemaže. f = soubor na Drive, je-li známý.
+        // Vrací 'trashed' | 'missing' (na Drive není) | 'newer' | 'failed' (zkusí se při příští synchronizaci).
+        async function trashTemplateOnDrive(name, ver, f) {
+            if (!window.GDriveSync || !GDriveSync.isConnected || !GDriveSync.isConnected() || !GDriveSync.trashShared) return 'failed';
             try {
-                await GDriveSync.trashShared('Šablony/Úvěrová dokumentace/' + name);
+                if (f === undefined) f = newestDriveFile(await GDriveSync.listShared(TEMPLATE_FOLDER), name);
+                var result = 'missing';
+                if (f) {
+                    var rel = ver ? compareWithDrive(ver, f) : 'drive';
+                    if (rel === 'same' || rel === 'local') {
+                        result = (await GDriveSync.trashShared(TEMPLATE_FOLDER + '/' + name)) ? 'trashed' : 'missing';
+                    } else {
+                        result = 'newer';
+                    }
+                }
                 unmarkTemplateDeleted(name);
                 if (typeof updateDriveTemplatesStatus === 'function') updateDriveTemplatesStatus();
-                return true;
+                return result;
             } catch (e) {
                 console.warn('Drive trash failed for ' + name, e);
-                return false;
+                return 'failed';
             }
         }
 
@@ -5227,11 +5449,14 @@
                 if (!confirm('Smazat šablonu' + (name ? ' „' + name + '“' : '') + '?\n\nSmaže se i z Google Drive (přesune se do koše, dá se obnovit).')) return;
                 deleteFromDB('templates', id, function(success) {
                     if (!success) { showToast('Šablonu se nepodařilo smazat', 'error'); return; }
-                    if (name) markTemplateDeleted(name);
+                    if (name) markTemplateDeleted(name, tpl);
                     renderTemplateList();
                     if (name && driveOn) {
-                        trashTemplateOnDrive(name).then(function(ok) {
-                            showToast(ok ? 'Šablona smazána i z Google Drive (je v koši)' : 'Šablona smazána v aplikaci — na Drive se ji nepodařilo smazat, zkusím to znovu při příští synchronizaci', ok ? 'success' : 'info');
+                        trashTemplateOnDrive(name, versionOf(tpl)).then(function(res) {
+                            if (res === 'trashed') showToast('Šablona smazána i z Google Drive (je v koši)', 'success');
+                            else if (res === 'missing') showToast('Šablona smazána (na Google Drive nebyla)', 'success');
+                            else if (res === 'newer') showToast('Šablona smazána v aplikaci. Na Google Drive je její novější verze — ta zůstává a při synchronizaci se stáhne.', 'info');
+                            else showToast('Šablona smazána v aplikaci — na Drive se ji nepodařilo smazat, zkusím to znovu při příští synchronizaci', 'info');
                         });
                     } else {
                         showToast('Šablona smazána' + (name ? ' — z Google Drive se smaže při příštím připojení' : ''), 'success');
@@ -9257,6 +9482,8 @@
             GDriveSync.init({
                 appName: 'Úvěrová dokumentace',
                 onReady: async function() {
+                    // Drive se může připojit dřív, než je po odemčení otevřená databáze — počkat na ni
+                    await dbReady;
                     // Nejdřív kategorie, pak šablony (kategorie jsou potřeba pro auto-detekci)
                     try { await loadCategoriesFromDrive(); } catch (e) { console.warn('loadCategoriesFromDrive:', e); }
                     // Synchronizace šablon z Drive → IndexedDB

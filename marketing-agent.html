@@ -2841,7 +2841,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             setupModuleNavigation();
             updateFormatBasedOnChannel();
-            initCustomDropdowns();
+            initMarketingDropdowns();
             initBatchSelector();
             initBrandKit();
             initBrandPresets();
@@ -2852,11 +2852,12 @@
         });
 
         // ================== CUSTOM DROPDOWNS ==================
-        function initCustomDropdowns() {
+        // Own name on purpose: design-system/nav.js publishes window.initCustomDropdowns
+        // (for .dropdown-field) and overwrites any global function of the same name.
+        function initMarketingDropdowns() {
             document.querySelectorAll('.custom-dropdown').forEach(dd => {
                 const trigger = dd.querySelector('.custom-dropdown-trigger');
                 const menu = dd.querySelector('.custom-dropdown-menu');
-                const options = dd.querySelectorAll('.custom-dropdown-option');
                 const customInput = dd.querySelector('.dropdown-custom-input');
 
                 trigger.addEventListener('click', (e) => {
@@ -2867,18 +2868,15 @@
                     dd.classList.toggle('open');
                 });
 
-                // Prevent menu close when clicking inside menu
+                // Prevent menu close when clicking inside menu. Options are handled here
+                // (delegation), so options rebuilt later (brand list) stay clickable.
                 if (menu) {
                     menu.addEventListener('click', (e) => {
                         e.stopPropagation();
-                    });
-                }
-
-                options.forEach(opt => {
-                    opt.addEventListener('click', (e) => {
-                        e.stopPropagation();
+                        const opt = e.target.closest('.custom-dropdown-option');
+                        if (!opt) return;
                         const val = opt.getAttribute('data-value');
-                        options.forEach(o => o.classList.remove('selected'));
+                        dd.querySelectorAll('.custom-dropdown-option').forEach(o => o.classList.remove('selected'));
                         opt.classList.add('selected');
 
                         // Handle "Jiné" option — show custom input
@@ -2898,7 +2896,7 @@
                         }
                         dd.dispatchEvent(new Event('change'));
                     });
-                });
+                }
 
                 // Handle Enter on custom input
                 if (customInput) {
