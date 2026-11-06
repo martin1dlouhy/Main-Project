@@ -2491,7 +2491,7 @@
 
     /* ===== TERM SHEET DOCX — vzhled dokumentu pro klienta + formulář =====
        Jediný zdroj XML těla Term Sheetu (generateDOCX ho vkládá do šablony s hlavičkou a zápatím).
-       Strana 1 = stručná nabídka v bodech (jen ke čtení). Další strany = formulář „Údaje pro smluvní
+       Strana 1 = podmínky v jedné tabulce „popisek | hodnota“ (jen ke čtení). Další strany = formulář „Údaje pro smluvní
        dokumentaci“ z obsahových prvků Wordu: textová pole, rozbalovací seznamy, kalendář a opakovací
        sekce (klient přidá nemovitost, vlastníka, část čerpání nebo věřitele tlačítkem +).
        Dokument je zamčený pro „vyplňování formulářů“ — klient mění jen pole formuláře.
@@ -2507,6 +2507,7 @@
         var C = {
             green: '2F4741',      // tmavě zelená — nadpisy, pruhy
             gold: 'D7AD5B',       // zlatá — linky, text jen na zelené
+            goldTint: 'F5EBD6',   // odstín zlaté 25 % (logomanuál) — jemné plochy, např. rámeček upozornění
             paper: 'E9E9E9',      // světle šedá — pole k vyplnění
             sage: '485B56',       // šedozelená — popisky, vedlejší text
             sageLight: 'C9CFCD',  // světlá šedozelená — text na zelené, dělicí linky
@@ -2724,10 +2725,6 @@
             var c = parseInt(digits(d.collateralValue), 10) || 0;
             return (a > 0 && c > 0) ? (Math.round(a / c * 1000) / 10).toString().replace('.', ',') + NBSP + '%' : '';
         }
-        function feeShort(d) {
-            if (!d.originationFee) return '';
-            return d.originationFeeType === 'percent' ? fmtPct(d.originationFee) : fmtMoney(d.originationFee, d.currency);
-        }
         function feeLong(d) {
             if (!d.originationFee) return '';
             if (d.originationFeeType !== 'percent') return fmtMoney(d.originationFee, d.currency);
@@ -2748,19 +2745,10 @@
             };
             return map[d.interestPayment] || capFirst(d.interestPayment);
         }
-        function maturityText(d) {
-            if (d.maturityDate) return fmtDate(d.maturityDate);
-            return d.maturity ? d.maturity + ' ' + (d.maturityUnit || 'let') : '';
-        }
         function drawdownText(d) {
             if (d.drawdownType === 'Ve tranších') return 'Ve více částech' + (d.drawdownDate ? ', první předpoklad ' + fmtDate(d.drawdownDate) : '');
             return 'Jednorázově' + (d.drawdownDate ? ', předpoklad ' + fmtDate(d.drawdownDate) : '');
         }
-        // Pravidelná splátka do dlaždice (u splácení jen na konci žádná není)
-        var PAYMENT_TILE_LABELS = {
-            'Měsíční': 'Měsíční splátka', 'Anuitní': 'Měsíční splátka',
-            'Čtvrtletní': 'Čtvrtletní splátka', 'Pololetní': 'Pololetní splátka'
-        };
         var DOC_LABELS = {
             'Zástavní smlouva – nemovitosti': 'Zástavní smlouva k nemovitosti',
             'Zástavní smlouva – podíly': 'Zástavní smlouva k podílu',
@@ -2769,6 +2757,19 @@
             'Vinkulace pojistného plnění': 'Vinkulace pojištění nemovitosti'
         };
 
+        // Strana 1 = klasický term sheet: vše v jednotné tabulce „popisek | hodnota“ (Martin 6. 11.)
+        // Jeden levý okraj, dva oddíly se zlatou linkou, řádky oddělené tenkou linkou, klíčová čísla tučně.
+        var TERM_MAR = { top: 60, bottom: 60, left: 0, right: 110 };
+
+        // „24 - 36“ → „24–36“
+        function rangeDash(s) { return String(s == null ? '' : s).replace(/(\d)\s*[-–]\s*(\d)/g, '$1–$2'); }
+        // „kú Poděbrady (Poděbrady)“ → „k. ú. Poděbrady“; „kú Kunratice (Praha)“ → „k. ú. Kunratice (Praha)“
+        function tidyLv(s) {
+            return String(s || '')
+                .replace(/(^|[\s,(])kú\s+([^,()—]+?)\s*\(\s*\2\s*\)/g, '$1k.' + NBSP + 'ú. $2')
+                .replace(/(^|[\s,(])kú\s+/g, '$1k.' + NBSP + 'ú. ');
+        }
+
         function titleBlock(d) {
             var meta = [];
             if (d.issueDate) meta.push('Vystaveno ' + fmtDate(d.issueDate));
@@ -2776,102 +2777,97 @@
             // mezera pod hlavičkou s logem jako v Martinově úpravě (16. 10.)
             return para(run('Term Sheet', { b: true, sz: 26, color: C.green }), { before: 660, after: 30, line: 240 }) +
                    para(run(d.borrower || '', { sz: 13 }) + (d.ico ? run('   ·   IČO ' + d.ico, { sz: 11, color: C.sage }) : ''), { after: 40 }) +
-                   // bez zlaté linky — zlatá jen pod dlaždicemi (přehlednější strana, Martin 16. 10.)
-                   para(run(meta.join('   ·   '), { color: C.sage }), { after: 300 });
+                   para(run(meta.join('   ·   '), { color: C.sage }));
         }
+        // Klíčová čísla jsou první řádky tabulky (tučně) — samostatný pruh není
+        function keyFigures() { return ''; }
 
-        function keyFigures(d) {
-            var tiles = [['Výše úvěru', fmtMoney(d.amount, d.currency)]];
-            if (d.interest) tiles.push(['Úroková sazba', fmtPct(d.interest) + NBSP + 'p.a.']);
-            if (d.maturity) tiles.push(['Splatnost', d.maturity + NBSP + (d.maturityUnit || 'let')]);
-            if (d.paymentValue > 0 && PAYMENT_TILE_LABELS[d.interestPayment]) tiles.push([PAYMENT_TILE_LABELS[d.interestPayment], fmtMoney(String(d.paymentValue), d.currency)]);
-            else if (ltvText(d)) tiles.push(['LTV', ltvText(d)]);
-            else if (d.originationFee) tiles.push(['Poplatek za sjednání', feeShort(d)]);
-            var w = Math.floor(PAGE_W / tiles.length);
-            var widths = [], cells = [];
-            tiles.forEach(function (t, i) {
-                var cw = (i === tiles.length - 1) ? PAGE_W - w * (tiles.length - 1) : w;
-                widths.push(cw);
-                cells.push(cell(para(run(t[0], { color: C.sageLight }), { after: 40 }) +
-                                para(run(t[1], { b: true, sz: 16, color: C.white }), { line: 240 }),
-                                { w: cw, fill: C.green, borders: { bottom: { color: C.gold, sz: 18 } } }));
-            });
-            return table(widths, [row(cells)], { cellMar: { top: 140, bottom: 140, left: 170, right: 110 } }) + spacer(160);
+        // Nadpis oddílu: zelený, tučný, se zlatou linkou pod sebou
+        function termSection(title) {
+            return para(run(title, { b: true, color: C.green, sz: 12 }), { before: 320, after: 40, keepNext: true, borderBottom: { color: C.gold, sz: 8, space: 6 } });
         }
-
-        // Body nabídky: popisek | hodnota, víc hodnot = víc řádků v buňce
-        function pointRow(label, values, bold) {
+        // Řádek tabulky; values = text nebo pole textů (víc řádků v buňce); o.bold = hodnota tučně
+        function termRow(label, values, o) {
+            o = o || {};
             var vals = nonEmpty(Array.isArray(values) ? values : [values]);
             if (!vals.length) return '';
-            var content = vals.map(function (v) { return para(run(v, { b: !!bold })); }).join('');
+            var content = vals.map(function (v) { return para(run(v, { b: !!o.bold })); }).join('');
             return row([cell(para(run(label, { color: C.sage })), { w: LABEL_W }), cell(content, { w: PAGE_W - LABEL_W })]);
         }
-
-        // Nadpis oddílu nabídky (malé verzálky, zelená)
-        function offerSection(title) {
-            return para(run(title, { b: true, caps: true, spacing: 30, color: C.green, sz: 9.5 }), { before: 300, after: 80, keepNext: true });
+        function termTable(rows) {
+            return table([LABEL_W, PAGE_W - LABEL_W], rows, { borders: 'rows', cellMar: TERM_MAR });
         }
-        // Tabulka popisek | hodnota na první straně — bez čar, řádky odděluje mezera
-        function offerTable(rows) {
-            return table([LABEL_W, PAGE_W - LABEL_W], rows, { cellMar: { top: 50, bottom: 50, left: 110, right: 110 } });
+        // Nemovitost: LV tučně, podrobnosti (parcely, stavby) drobně šedě pod ním
+        function propertyLines(items) {
+            return items.map(function (item, i) {
+                var s = capFirst(item);
+                var cut = s.indexOf('—');
+                var main = tidyLv(cut > 0 ? s.slice(0, cut).trim() : s);
+                var detail = cut > 0 ? capFirst(s.slice(cut + 1).trim()) : '';
+                return para(run(main, { b: true }), { before: i ? 120 : 0 }) +
+                       (detail ? para(run(detail, { color: C.sage, sz: 9.5 }), { before: 20 }) : '');
+            }).join('');
         }
-        // Zajištění: označení LV tučně, podrobnosti (parcely, jednotka) drobně šedě
-        function collateralRow(item, first, multi) {
-            var s = capFirst(item);
-            var cut = s.indexOf('—');
-            var main = cut > 0 ? s.slice(0, cut).trim() : s;
-            var detail = cut > 0 ? capFirst(s.slice(cut + 1)) : '';
-            // další nemovitost odsadit, ať se bloky bez čar neslévají
-            var content = para(run(main, { b: true }), { before: first ? 0 : 100 }) + (detail ? para(run(detail, { color: C.sage, sz: 9.5 }), { before: 20 }) : '');
-            var label = first ? (multi ? 'Nemovitosti' : 'Nemovitost') : '';
-            return row([cell(para(run(label, { color: C.sage }), { before: first ? 0 : 100 }), { w: LABEL_W }), cell(content, { w: PAGE_W - LABEL_W })]);
-        }
-        // Dokumenty ke smlouvě ve dvou sloupcích (úvěrová smlouva první)
-        function docsGrid(docs) {
-            var list = docs.slice().sort(function (a, b) { return (a === 'Úvěrová smlouva' ? 0 : 1) - (b === 'Úvěrová smlouva' ? 0 : 1); })
+        // Dokumenty pod sebou, úvěrová smlouva první
+        function docList(docs) {
+            return docs.slice().sort(function (a, b) { return (a === 'Úvěrová smlouva' ? 0 : 1) - (b === 'Úvěrová smlouva' ? 0 : 1); })
                 .map(function (s) { return DOC_LABELS[s] || capFirst(s); });
-            var half = Math.ceil(list.length / 2), w = Math.floor(PAGE_W / 2), rows = [];
-            for (var i = 0; i < half; i++) {
-                rows.push(row([cell(para(run('–  ' + list[i])), { w: w }),
-                               cell(para(run(list[i + half] ? '–  ' + list[i + half] : '')), { w: PAGE_W - w })]));
-            }
-            return table([w, PAGE_W - w], rows, { cellMar: { top: 30, bottom: 30, left: 110, right: 110 } });
+        }
+        // Splatnost v jednom řádku: „24 měsíců, do 15. 11. 2028“
+        function maturityLine(d) {
+            var dur = d.maturity ? rangeDash(d.maturity) + NBSP + (d.maturityUnit || 'let') : '';
+            var end = d.maturityDate ? 'do ' + fmtDate(d.maturityDate) : '';
+            return dur && end ? dur + ', ' + end : (dur || capFirst(end));
+        }
+        // Splácení i s částkou pravidelné splátky v jedné větě
+        function repaymentLine(d) {
+            var amt = d.paymentValue > 0 ? fmtMoney(String(d.paymentValue), d.currency) : '';
+            var per = { 'Měsíční': 'Měsíčně', 'Čtvrtletní': 'Čtvrtletně', 'Pololetní': 'Pololetně' }[d.interestPayment];
+            if (per && amt) return per + ' úroky ' + amt + ', jistina se splatí na konci';
+            if (d.interestPayment === 'Anuitní' && amt) return 'Měsíční splátka ' + amt + ' (jistina i úroky, anuita)';
+            return repaymentText(d);
         }
 
         function offerBody(d) {
-            var x = '';
-            // Podmínky úvěru
             var terms = [
-                pointRow('Účel úvěru', capFirst(d.purpose)),
-                pointRow('Splácení', repaymentText(d)),
-                pointRow('Konec splatnosti', maturityText(d)),
-                pointRow('Čerpání', drawdownText(d)),
-                pointRow('Poplatek za sjednání', capFirst(feeLong(d))),
-                pointRow('Předčasné splacení', capFirst(d.earlyRepayment)),
-                pointRow('Ostatní náklady', capFirst(d.otherCosts)),
-                pointRow('Poznámka', d.clientNote ? capFirst(d.clientNote) : '')
+                termRow('Výše úvěru', fmtMoney(d.amount, d.currency), { bold: true }),
+                termRow('Úroková sazba', d.interest ? fmtPct(d.interest) + NBSP + 'p.a.' : '', { bold: true }),
+                termRow('Splatnost', maturityLine(d)),
+                termRow('Splácení', repaymentLine(d)),
+                termRow('Čerpání', drawdownText(d)),
+                termRow('Účel úvěru', capFirst(d.purpose)),
+                termRow('Poplatek za sjednání', capFirst(feeLong(d))),
+                termRow('Předčasné splacení', capFirst(d.earlyRepayment)),
+                termRow('Ostatní náklady', capFirst(d.otherCosts)),
+                termRow('Poznámka', d.clientNote ? capFirst(d.clientNote) : '')
             ].filter(function (r) { return r; });
-            x += offerSection('Podmínky úvěru') + offerTable(terms);
-            // Zajištění
             var col = nonEmpty(d.collateralItems);
-            var colRows = col.map(function (item, i) { return collateralRow(item, i === 0, col.length > 1); });
-            if (d.collateralValue) colRows.push(pointRow('Hodnota zajištění', fmtMoney(d.collateralValue, d.currency) + (ltvText(d) ? '   ·   LTV ' + ltvText(d) : '')));
-            if (colRows.length) x += offerSection('Zajištění') + offerTable(colRows);
-            // Smluvní dokumentace
             var docs = nonEmpty(d.documentation);
-            if (docs.length) x += offerSection('Smluvní dokumentace') + docsGrid(docs);
-            // upozornění drobným písmem bez rámečku (jako poznámka pod čarou)
-            x += spacer(360);
-            x += para(run('Upozornění: ', { b: true, color: C.green, sz: 9.5 }) +
+            var secured = [];
+            if (col.length) {
+                secured.push(row([cell(para(run(col.length > 1 ? 'Nemovitosti' : 'Nemovitost', { color: C.sage })), { w: LABEL_W }),
+                                  cell(propertyLines(col), { w: PAGE_W - LABEL_W })]));
+            }
+            if (d.collateralValue) secured.push(termRow('Hodnota zajištění', fmtMoney(d.collateralValue, d.currency) + (ltvText(d) ? '   ·   LTV ' + ltvText(d) : '')));
+            if (docs.length) secured.push(termRow('Smluvní dokumentace', docList(docs)));
+            // poslední řádek tabulky drží s upozorněním, aby upozornění nikdy nezůstalo samo na další straně
+            var lastRows = secured.length ? secured : terms;
+            if (lastRows.length) lastRows[lastRows.length - 1] = keep(lastRows[lastRows.length - 1]);
+            var x = '';
+            if (terms.length) x += termSection('Podmínky úvěru') + termTable(terms);
+            if (secured.length) x += termSection('Zajištění a dokumentace') + termTable(secured);
+            // upozornění v jemném rámečku (odstín zlaté 25 % + zlatá linka vlevo) — zvýrazněné, ale klidné (Martin 6. 11.);
+            // bez kontaktu — Term Sheet často jde přes zprostředkovatele
+            x += keep(spacer(300));
+            x += noticeBox(run('Upozornění: ', { b: true, color: C.green, sz: 10 }) +
                 run('Finální schválení financování závisí na interním ocenění nemovitosti ze strany Spolumajitelé Private Credit a.s. ' +
-                    'Uvedené podmínky jsou předběžné a mohou být upraveny na základě výsledků ocenění.', { color: C.sage, sz: 9.5 }));
-            // bez kontaktu — Term Sheet často jde přes zprostředkovatele (Martin 16. 10.)
+                    'Uvedené podmínky jsou předběžné a mohou být upraveny na základě výsledků ocenění.', { color: C.sage, sz: 10 }), C.goldTint);
             return x;
         }
 
-        // Rámeček se zlatou linkou vlevo (upozornění, pokyny)
-        function noticeBox(runsXml) {
-            return table([PAGE_W], [row([cell(para(runsXml), { w: PAGE_W, borders: { left: { color: C.gold, sz: 24 } } })])],
+        // Rámeček se zlatou linkou vlevo (upozornění, pokyny); fill = volitelné podbarvení
+        function noticeBox(runsXml, fill) {
+            return table([PAGE_W], [row([cell(para(runsXml), { w: PAGE_W, fill: fill, borders: { left: { color: C.gold, sz: 24 } } })])],
                 { cellMar: { top: 100, bottom: 100, left: 220, right: 160 } });
         }
 
@@ -3058,7 +3054,8 @@
             idCounter = 0;
             var x = titleBlock(d) + keyFigures(d) + offerBody(d);
             if (!d.clientChecklist || d.clientChecklist.enabled !== false) x += formSections(d);
-            return x + para('');
+            // závěrečný odstavec (Word ho chce za tabulkou) jen 1 bod vysoký, ať u plné strany nevznikne prázdná další
+            return x + '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/><w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>';
         }
 
         // Vloží tělo do document.xml šablony (zachová hlavičku, zápatí a okraje šablony)
