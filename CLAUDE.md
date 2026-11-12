@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Martin's personal web of tools.** GitHub repo `martin1dlouhy/Main-Project`, deployed at https://main-five-alpha.vercel.app. Vanilla HTML apps, each one large self-contained `.html` file with inline `<style>` and `<script>`:
 
 - **Osobní:** `debt-calculator.html`, `real-estate-prompt-generator.html`, `sp500-calculator.html`
-- **Private Credit** (lending tools Martin uses for Spolumajitelé Private Credit a.s. until its own internal app exists): `termsheet-generator.html`, `loan-documentation.html`, `marketing-agent.html`, `database.html`
+- **Private Credit** (lending tools Martin uses for Spolumajitelé Private Credit a.s. until its own internal app exists): `termsheet-generator.html`, `loan-documentation.html`, `marketing-agent.html`, `database.html`, `crm.html`
 - **Dashboard:** `dashboard.html` (case pipeline on Google Sheets, events from the other apps via `dashboard-bridge.js`)
 - Landing `index.html`, catalogue `apps.html`
 
@@ -25,6 +25,17 @@ Martin does not want the name of his former company anywhere visible on this web
 - `dashboard-bridge.js` — localStorage event bus between apps and the Dashboard.
 
 Other intentional legacy identifiers: IndexedDB `ProfiLendTermSheets`, CSS class `.profilend-badge`, Marketing Agent brand slug `profilend` and Drive path `brand-assets/profilend/`, Dashboard `LEGACY_SHEET_TITLE` (fallback lookup of the old Google Sheet name, same idea as `LEGACY_ROOT_FOLDER_NAME`) — stored user data depends on them.
+
+## CRM (`crm.html`, since Nov 2026)
+
+People Martin has a business relationship with (intermediaries and clients). `database.html` stays the LinkedIn prospecting tool; only people who replied move to the CRM. Spec: `claude-workspace/specs/2026-11-12-crm-etapa-1-design.md` (stage 1; deployment 1 = people, card, table import; deployment 2 = „Dnes“, contact log, bulk e-mail copy, settings, backup).
+
+- **Demo mode is automatic on `localhost` / `127.0.0.1` and cannot be switched off there.** It is decided before anything touches `ProfilendAuth` or `localStorage`: made-up people, no Google, no Railway, no ARES, no browser storage. The code is the same as on the live site; only `gfetch` is answered by an in-memory fake of Drive + Sheets (`createFakeGoogle`) that enforces the real grid limits (26 columns × 1000 rows until expanded), shifts rows on delete and can return 401 / 429 on request (`window.__crmFake.failNext`). Test here, never on Martin's data.
+- **Storage:** Google Sheet „Investment Tools CRM“ in `Investment Tools/CRM`, tabs `Lide`, `Historie`, `Nastaveni`; its id in `localStorage` `crm-sheet-id`. New columns only at the end.
+- **Write layer follows `database.html`, not the Dashboard:** one write queue, grid expansion before every write, people are patched by `id` with only the changed cells, and `aktualizovano` is compared first (a stale tab must not overwrite a newer change → conflict, reload).
+- **„Neposílat“ is tracked per e-mail address, not per card.** Unsubscribing is permanent (re-enable only with a newly recorded consent). Erasing a person can leave a stub row with fingerprints only (`otisk_email`, `otisk_telefon`, `otisk_jmeno`); rows with an empty `typ` are stubs and never shown.
+- Defaults by source (`ZDROJ_DEFAULTS`): people from ads get „Neposílat“ until they consent, everyone else „Posílat“ (Martin's decision, 12 Nov 2026).
+- Every text from the sheet or an uploaded file goes through `escapeHtml`; values are written `RAW`.
 
 ## Commands
 
@@ -68,7 +79,7 @@ The loan-doc system prompt exists twice: `buildLoanDocSystemPrompt` in `server.j
 
 ## Storage in apps (read-only from tooling)
 
-Real user data lives in the browser and on Google Drive / Sheets. **Never write test data from tooling.** Notable: R-E `saved-valuations` + IndexedDB `re-prompt-backup`; Term Sheet IndexedDB `ProfiLendTermSheets`; Loan Doc IndexedDB `loanDocDB` (lawyer mode: `loanDocDB-advokat`); Marketing Agent `brand-preset-<slug>` + IndexedDB `MarketingAgentDB`; Dashboard `dashboard-sheet-id`, `dashboard-sort`; shared Google token `gdrive-shared-token`.
+Real user data lives in the browser and on Google Drive / Sheets. **Never write test data from tooling.** Notable: R-E `saved-valuations` + IndexedDB `re-prompt-backup`; Term Sheet IndexedDB `ProfiLendTermSheets`; Loan Doc IndexedDB `loanDocDB` (lawyer mode: `loanDocDB-advokat`); Marketing Agent `brand-preset-<slug>` + IndexedDB `MarketingAgentDB`; Dashboard `dashboard-sheet-id`, `dashboard-sort`; CRM `crm-sheet-id` (data in its own Google Sheet); shared Google token `gdrive-shared-token`.
 
 Loan Doc templates: the Drive folder `Investment Tools/Šablony/Úvěrová dokumentace` is the source of truth.
 - Both modes mirror it **by version**: each IndexedDB record keeps `driveId` + `driveModified`. The owner does this in `syncTemplatesFromDrive`, the lawyer in `syncLawyerTemplates`.

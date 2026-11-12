@@ -1,0 +1,3245 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM | Investment Tools</title>
+<meta name="description" content="CRM — klienti a zprostředkovatelé Spolumajitelé Private Credit: přehled lidí, historie kontaktů a výběr příjemců e-mailů.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="design-system/tokens.css">
+<link rel="stylesheet" href="design-system/app-shell.css">
+<style>
+  body{padding-top:var(--header-h)}
+  .container{max-width:var(--container);margin:0 auto;padding:8px 40px 80px}
+
+  /* ===== Pruh ukázkového režimu (jen místní náhled) ===== */
+  .demo-bar{display:none;padding:7px 16px;text-align:center;font-size:12px;letter-spacing:0.04em;
+    color:var(--amber-warm);background:var(--amber-tint);border-bottom:1px solid var(--line-amber)}
+  .demo-bar.show{display:block}
+
+  /* ===== Google tlačítko (app-tools) ===== */
+  .gbtn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;
+    font-weight:500;font-family:inherit;color:var(--text-soft);background:transparent;
+    border:1px solid var(--line-strong);border-radius:var(--r-sm);cursor:pointer;
+    transition:all var(--dur) var(--ease);white-space:nowrap}
+  .gbtn:hover{border-color:var(--amber);color:var(--amber-warm)}
+  .gdot{width:7px;height:7px;border-radius:50%;background:var(--text-faint);flex-shrink:0}
+  .gbtn.on .gdot{background:var(--success);box-shadow:0 0 8px var(--success)}
+
+  .connect-panel{margin:32px auto;max-width:560px;text-align:center;padding:56px 36px;
+    background:var(--bg-raised);border:1px solid var(--line-faint);border-radius:var(--r-lg)}
+  .connect-panel h3{font-family:var(--font-display);font-weight:300;font-size:26px;
+    letter-spacing:-0.02em;color:var(--text);margin-bottom:10px}
+  .connect-panel p{font-size:13.5px;color:var(--text-mute);margin-bottom:24px;line-height:1.6}
+  .connect-panel .connect-note{font-size:12px;opacity:.75;margin:16px 0 0}
+
+  /* ===== Záložky a nástroje seznamu ===== */
+  .crm-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 16px}
+  .tab-num{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);margin-left:6px}
+  .list-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .list-tools > .input{max-width:340px;flex:1 1 220px}
+  .f-wrap{flex:0 0 auto;width:210px}
+  .list-count{margin-left:auto;font-size:12px;color:var(--text-mute)}
+
+  /* ===== Seznam lidí ===== */
+  .crm-table th.sortable{cursor:pointer;user-select:none}
+  .crm-table th.sortable:hover{color:var(--text-soft)}
+  .crm-table th .arrow{margin-left:4px;color:var(--amber)}
+  .crm-table tbody tr{cursor:pointer;transition:background var(--dur) var(--ease)}
+  .crm-table tbody tr:hover{background:var(--bg-input)}
+  .p-name{color:var(--text);font-weight:500}
+  .p-firm{display:block;font-size:12px;color:var(--text-mute);margin-top:2px}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;line-height:1.5;
+    border:1px solid var(--line);color:var(--text-soft);white-space:nowrap}
+  .pill.imp-a{background:var(--amber);border-color:var(--amber);color:var(--bg-deep);font-weight:600}
+  .pill.imp-b{border-color:var(--line-amber);color:var(--amber-warm)}
+  .pill.imp-c{color:var(--text-mute)}
+  .pill.mail-on{border-color:var(--line-amber);color:var(--amber-warm)}
+  .pill.mail-off{color:var(--text-mute)}
+  .pill.warn{border-color:var(--warning);color:var(--warning)}
+  .pill.bad{border-color:var(--danger);color:var(--danger)}
+  .muted{color:var(--text-mute)}
+  .empty{padding:48px 20px;text-align:center;color:var(--text-mute);font-size:14px;line-height:1.7}
+
+  /* ===== Okna ===== */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(7,9,16,0.85);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;
+    align-items:flex-start;justify-content:center;overflow-y:auto;padding:48px 16px}
+  .modal-overlay.show{display:flex}
+  .modal-box{background:var(--bg-elevated);border:1px solid var(--line-strong);
+    border-radius:var(--r-lg);padding:32px;width:100%;max-width:520px;
+    box-shadow:var(--shadow-xl);margin:auto 0}
+  .modal-box.modal-lg{max-width:900px}
+  .modal-box.modal-xl{max-width:1240px}
+  .modal-box h3{font-family:var(--font-display);font-weight:300;font-size:24px;
+    letter-spacing:-0.02em;margin-bottom:20px;color:var(--text)}
+  .modal-text{font-size:14px;color:var(--text-soft);line-height:1.65}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;flex-wrap:wrap}
+  .modal-actions .left-group{display:flex;gap:8px;flex-wrap:wrap;margin-right:auto}
+  .btn-danger-ghost{color:var(--danger)}
+  .btn-danger-ghost:hover{background:var(--danger-tint)}
+
+  /* ===== Formuláře ===== */
+  .fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .fgrid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .fg-full{grid-column:1/-1}
+  .fg-2{grid-column:span 2}
+  .form-group label{display:block;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--text-mute);font-weight:500;margin-bottom:7px}
+  .form-group label .req{color:var(--amber)}
+  textarea.input{min-height:72px;resize:vertical;font-family:inherit;line-height:1.5}
+  input[type=date].input{color-scheme:dark}
+  .ico-row{display:flex;gap:8px}
+  .ico-row .input{flex:1;min-width:0}
+  .input.invalid{border-color:var(--danger)}
+  .form-err{color:var(--danger);font-size:12.5px;margin-top:10px;min-height:18px;line-height:1.5}
+  .form-hint{font-size:12.5px;color:var(--text-mute);line-height:1.6;margin-top:10px}
+  .fsec{margin-top:22px;padding-top:18px;border-top:1px solid var(--line-faint)}
+
+  .check-label,.form-group label.check-label{display:inline-flex;align-items:center;gap:10px;cursor:pointer;
+    font-size:13.5px;color:var(--text-soft);text-transform:none;letter-spacing:0;font-weight:400;margin:0}
+  .check-input{position:absolute;opacity:0;pointer-events:none}
+  .check-visual{width:20px;height:20px;border:1.5px solid var(--line);border-radius:var(--r-xs);
+    display:flex;align-items:center;justify-content:center;transition:var(--dur) var(--ease);flex-shrink:0}
+  .check-visual svg{width:12px;height:12px;color:var(--bg-deep);opacity:0;transform:scale(0.5);transition:all 0.2s ease}
+  .check-input:checked + .check-visual{background:var(--amber);border-color:var(--amber)}
+  .check-input:checked + .check-visual svg{opacity:1;transform:scale(1)}
+  .check-input:disabled + .check-visual{opacity:.6}
+  .check-input:focus-visible + .check-visual{box-shadow:0 0 0 3px var(--amber-glow)}
+
+  /* ===== Karta člověka ===== */
+  .card-head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .card-title{font-family:var(--font-display);font-weight:300;font-size:26px;letter-spacing:-0.02em;
+    color:var(--text);line-height:1.2}
+  .card-sub{font-size:13.5px;color:var(--text-mute);margin-top:4px}
+  .card-badges{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;align-items:center}
+  .card-cols{display:grid;grid-template-columns:1fr 1.3fr;gap:28px;border-top:1px solid var(--line-faint);padding-top:20px}
+  .kv{margin-bottom:16px}
+  .kv-l{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-mute);font-weight:500;margin-bottom:6px}
+  .kv-v{font-size:14px;color:var(--text-soft);line-height:1.6;word-break:break-word}
+  .kv-v a{color:var(--amber-warm);text-decoration:none}
+  .kv-v a:hover{text-decoration:underline}
+  .kv-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .btn-sm{padding:6px 12px;font-size:12.5px}
+  .tl{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto}
+  .tl li{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--line-faint);font-size:13px;color:var(--text-soft);line-height:1.5}
+  .tl li:last-child{border-bottom:none}
+  .tl .tl-date{flex:0 0 104px;color:var(--text-faint);font-family:var(--font-mono);font-size:12px;padding-top:1px;white-space:nowrap}
+  .tl .tl-kind{color:var(--text);font-weight:500}
+
+  /* ===== Volba e-mailů ===== */
+  .opt-list{display:grid;gap:10px}
+  .opt{display:block;width:100%;text-align:left;padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-md);
+    background:var(--bg-raised);cursor:pointer;font:inherit;color:var(--text-soft);transition:all var(--dur) var(--ease)}
+  .opt:hover{border-color:var(--line-strong)}
+  .opt.on{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-glow)}
+  .opt b{display:block;color:var(--text);font-weight:500;margin-bottom:3px;font-size:14px}
+  .opt span{font-size:12.5px;color:var(--text-mute);line-height:1.5}
+
+  /* ===== Nahrání tabulky ===== */
+  .steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .step{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-faint);
+    padding:6px 10px;border:1px solid var(--line-faint);border-radius:var(--r-sm)}
+  .step.on{color:var(--amber-warm);border-color:var(--line-amber)}
+  .src-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+  .file-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .file-name{font-size:13px;color:var(--text-mute)}
+  .map-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;
+    font:inherit;font-size:12.5px;color:var(--text-soft);background:transparent;cursor:pointer;transition:all var(--dur) var(--ease)}
+  .chip:hover{border-color:var(--line-strong)}
+  .chip.on{background:var(--amber);border-color:var(--amber);color:var(--bg-deep);font-weight:600}
+  .tri-wrap{max-height:52vh;overflow:auto;border:1px solid var(--line-faint);border-radius:var(--r-md)}
+  .tri{width:100%;border-collapse:collapse;font-size:13px}
+  .tri th{position:sticky;top:0;background:var(--bg);text-align:left;padding:10px 12px;font-size:11px;
+    letter-spacing:0.1em;text-transform:uppercase;color:var(--text-mute);font-weight:500;
+    border-bottom:1px solid var(--line-faint);z-index:1;white-space:nowrap}
+  .tri td{padding:7px 12px;border-bottom:1px solid var(--line-faint);color:var(--text-soft);vertical-align:middle}
+  .tri tr.off td{opacity:.45}
+  .tri .input{padding:6px 8px;font-size:13px;min-width:96px;width:100%}
+  .tri .cell-s{font-size:12.5px;color:var(--text-mute);word-break:break-word}
+  .seg-mini{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+  .seg-mini button{background:transparent;border:0;color:var(--text-mute);font:inherit;font-size:12px;
+    padding:5px 9px;cursor:pointer;white-space:nowrap}
+  .seg-mini button + button{border-left:1px solid var(--line)}
+  .seg-mini button:hover{color:var(--text)}
+  .seg-mini button.on{background:var(--amber);color:var(--bg-deep);font-weight:600}
+  .bulk-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0}
+  .bulk-row .lbl{font-size:12.5px;color:var(--text-mute)}
+  .sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}
+  .sum-list{font-size:13.5px;color:var(--text-soft);line-height:1.8;margin:8px 0 0;padding-left:18px}
+
+  .toast.warn{border-left:3px solid var(--warning)}
+  .toast.error{border-left:3px solid var(--danger)}
+
+  .page-foot{margin-top:80px;padding:40px;border-top:1px solid var(--line);text-align:center;
+    font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--text-mute);font-weight:500;
+    display:flex;justify-content:center;gap:14px;align-items:center;
+    max-width:var(--container);margin-left:auto;margin-right:auto}
+  .page-foot .dot{opacity:0.4}
+
+  @media (max-width:800px){
+    .nav{padding:18px 20px}
+    .nav-menu{display:none}
+    .app-meta,.app-head,.page-foot{padding-left:20px;padding-right:20px}
+    .container{padding:8px 20px 60px}
+    .fgrid,.fgrid-2,.map-grid{grid-template-columns:1fr}
+    .fg-2{grid-column:auto}
+    .modal-overlay{padding:16px 10px}
+    .modal-box{padding:22px}
+    .card-cols{grid-template-columns:1fr;gap:6px}
+    .card-badges{margin-left:0}
+    .src-grid{grid-template-columns:1fr}
+    .sum-grid{grid-template-columns:1fr 1fr}
+    .f-wrap{width:100%;flex:1 1 100%}
+    .list-tools > .input{max-width:none;flex:1 1 100%}
+    .list-count{margin-left:0}
+    .crm-table thead{display:none}
+    .crm-table,.crm-table tbody,.crm-table tr,.crm-table td{display:block;width:100%}
+    .crm-table tbody tr{padding:12px 16px;border-bottom:1px solid var(--line-faint)}
+    .crm-table tbody td{padding:2px 0;border:none}
+    .crm-table td[data-l]:not(:empty)::before{content:attr(data-l) ": ";color:var(--text-faint);font-size:12px}
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-left">
+    <a href="index.html" class="logo">
+      <span class="logo-mark">IT</span>
+      <span class="logo-text">Investment Tools</span>
+    </a>
+  </div>
+
+  <div class="nav-menu nav-center">
+    <div class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-item">
+      <a class="nav-link">Osobní <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="debt-calculator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M16 5 v22"/><path d="M9 27 h14"/><path d="M6 11 h20"/><path d="M6 11 l-3 7 a3 3 0 0 0 6 0 z"/><path d="M26 11 l-3 7 a3 3 0 0 0 6 0 z"/></svg></span>
+          <div><div class="dd-title">Debt Calculator</div><div class="dd-meta">Dluhové financování</div></div>
+        </a>
+        <a class="dd-item" href="real-estate-prompt-generator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 14 L14 6 L23 14 V25 H5 Z"/><path d="M11 25 V18 H17 V25"/><path d="M25 5 v4 M23 7 h4 M25 12 v2 M24 13 h2"/></svg></span>
+          <div><div class="dd-title">R-E Prompt Generator</div><div class="dd-meta">AI valuace nemovitostí</div></div>
+        </a>
+        <a class="dd-item" href="sp500-calculator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M4 26 H28"/><path d="M4 22 L10 16 L14 19 L20 9 L26 13"/><circle cx="10" cy="16" r="1.2"/><circle cx="14" cy="19" r="1.2"/><circle cx="20" cy="9" r="1.2"/><circle cx="26" cy="13" r="1.2"/></svg></span>
+          <div><div class="dd-title">S&amp;P 500 Portfolio</div><div class="dd-meta">Rozklad indexu</div></div>
+        </a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <a class="nav-link current">Private Credit <svg viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></a>
+      <div class="dropdown">
+        <a class="dd-item" href="termsheet-generator.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M8 4 H20 L24 8 V28 H8 Z"/><path d="M20 4 V8 H24"/><path d="M11 13 H21"/><path d="M11 17 H21"/><path d="M11 23 q3 -2 5 0 t5 0"/></svg></span>
+          <div><div class="dd-title">Term Sheet Generátor</div><div class="dd-meta">Smlouvy &amp; export</div></div>
+        </a>
+        <a class="dd-item" href="loan-documentation.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M10 6 H22 L26 10 V26 H10 Z"/><path d="M22 6 V10 H26"/><path d="M6 10 V30 H22"/><path d="M14 14 H22 M14 18 H22 M14 22 H19"/></svg></span>
+          <div><div class="dd-title">Úvěrová dokumentace</div><div class="dd-meta">AI generování</div></div>
+        </a>
+        <a class="dd-item" href="marketing-agent.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><path d="M5 7 H23 a2 2 0 0 1 2 2 V19 a2 2 0 0 1 -2 2 H13 L8 26 V21 H5 a2 2 0 0 1 -2 -2 V9 a2 2 0 0 1 2 -2 Z"/><path d="M27 5 v3 M25.5 6.5 h3 M27 11 v2 M26 12 h2"/></svg></span>
+          <div><div class="dd-title">Marketing Agent</div><div class="dd-meta">Sociální obsah</div></div>
+        </a>
+        <a class="dd-item" href="database.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><ellipse cx="16" cy="8" rx="10" ry="3.5"/><path d="M6 8 V16 a10 3.5 0 0 0 20 0 V8"/><path d="M6 16 V24 a10 3.5 0 0 0 20 0 V16"/></svg></span>
+          <div><div class="dd-title">Database</div><div class="dd-meta">Kontakty &amp; segmenty</div></div>
+        </a>
+        <a class="dd-item" href="crm.html">
+          <span class="dd-icon"><svg viewBox="0 0 32 32"><circle cx="12" cy="11" r="4"/><path d="M4 26 a8 8 0 0 1 16 0"/><circle cx="23" cy="13" r="3"/><path d="M22 20 a6 6 0 0 1 7 6"/></svg></span>
+          <div><div class="dd-title">CRM</div><div class="dd-meta">Klienti &amp; zprostředkovatelé</div></div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav-right-slot"></div>
+</nav>
+
+<div class="demo-bar" id="demo-bar">Ukázková data. Nic se neukládá a stránka se nepřipojuje ke Googlu ani k ARES.</div>
+
+<div class="app-meta">
+  <div class="crumbs">
+    <a href="index.html">Domů</a>
+    <span class="sep">/</span>
+    <a href="apps.html#private-credit">Private Credit</a>
+    <span class="sep">/</span>
+    <span class="current">CRM</span>
+  </div>
+  <div class="app-tools">
+    <button type="button" class="gbtn" id="btn-google" data-act="google">
+      <span class="gdot"></span><span id="gtext">Připojit Google</span>
+    </button>
+  </div>
+</div>
+
+<div class="app-head">
+  <div class="app-head-left">
+    <div class="eyebrow">Private Credit · Vztahy</div>
+    <h1 class="app-title">CRM <em>Vztahy</em></h1>
+    <p class="app-sub">Klienti a zprostředkovatelé na jednom místě: kdo je kdo, co se s ním dělo a komu lze poslat e-mail.</p>
+  </div>
+  <div class="app-actions">
+    <button type="button" class="btn btn-secondary" id="btn-import" data-act="import-open" style="display:none">Nahrát tabulku</button>
+    <button type="button" class="btn btn-primary" id="btn-add" data-act="person-add" style="display:none">Přidat člověka</button>
+  </div>
+</div>
+
+<main class="container">
+
+  <div class="connect-panel" id="connect-panel">
+    <h3>Připojte Google účet</h3>
+    <p>Lidé a historie kontaktů se ukládají do Google tabulky na vašem Disku. Přihlášení ke Googlu je jediná brána k datům.</p>
+    <button type="button" class="btn btn-primary btn-lg" data-act="google-connect">Připojit Google</button>
+    <p class="connect-note" id="connect-note" style="display:none">Automatické přihlášení teď není dostupné, připojení je ruční.</p>
+  </div>
+
+  <div id="app-view" style="display:none">
+    <div class="crm-bar">
+      <div class="segmented" id="tabs">
+        <button type="button" data-act="tab" data-tab="zprostredkovatel" class="active">Zprostředkovatelé <span class="tab-num" id="num-z">0</span></button>
+        <button type="button" data-act="tab" data-tab="klient">Klienti <span class="tab-num" id="num-k">0</span></button>
+      </div>
+    </div>
+
+    <div class="list-tools">
+      <input type="text" class="input" id="q" placeholder="Hledat jméno, firmu, e-mail, telefon…" autocomplete="off">
+      <div class="f-wrap">
+        <select id="f-dulezitost" class="crm-select">
+          <option value="">Důležitost: vše</option>
+          <option value="A">Důležitost A</option>
+          <option value="B">Důležitost B</option>
+          <option value="C">Důležitost C</option>
+        </select>
+      </div>
+      <div class="f-wrap" data-for="zprostredkovatel">
+        <select id="f-stav-z" class="crm-select">
+          <option value="">Stav: vše</option>
+          <option value="novy">Nový</option>
+          <option value="v_kontaktu">V kontaktu</option>
+          <option value="posila_pripady">Posílá případy</option>
+          <option value="spici">Spící</option>
+          <option value="nezajem">Nezájem</option>
+        </select>
+      </div>
+      <div class="f-wrap" data-for="klient" style="display:none">
+        <select id="f-stav-k" class="crm-select">
+          <option value="">Stav: vše</option>
+          <option value="zajemce">Zájemce</option>
+          <option value="nabidka">Nabídka</option>
+          <option value="klient">Klient</option>
+          <option value="byvaly">Bývalý klient</option>
+          <option value="nezajem">Nezájem</option>
+        </select>
+      </div>
+      <div class="f-wrap" data-for="zprostredkovatel">
+        <select id="f-role" class="crm-select">
+          <option value="">Role: vše</option>
+          <option>Úvěrový nebo finanční poradce</option>
+          <option>Realitní makléř</option>
+          <option>Správce nemovitostí</option>
+          <option>Účetní nebo daňový poradce</option>
+          <option>Advokát</option>
+          <option>Skupina Spolumajitelé</option>
+          <option>Jiné</option>
+        </select>
+      </div>
+      <div class="f-wrap" data-for="klient" style="display:none">
+        <select id="f-obor" class="crm-select">
+          <option value="">Obor: vše</option>
+          <option>Nemovitosti a SPV</option>
+          <option>Výroba a sklady</option>
+          <option>Jiné</option>
+        </select>
+      </div>
+      <span class="list-count" id="list-count"></span>
+    </div>
+
+    <div class="table-wrap" id="list-wrap">
+      <table class="table crm-table">
+        <thead>
+          <tr>
+            <th class="sortable" data-act="sort" data-sort="prijmeni">Jméno a firma<span class="arrow" data-arrow="prijmeni"></span></th>
+            <th id="th-role">Role</th>
+            <th class="sortable" data-act="sort" data-sort="dulezitost">Důležitost<span class="arrow" data-arrow="dulezitost"></span></th>
+            <th class="sortable" data-act="sort" data-sort="stav">Stav<span class="arrow" data-arrow="stav"></span></th>
+            <th class="sortable" data-act="sort" data-sort="posledni_kontakt">Poslední kontakt<span class="arrow" data-arrow="posledni_kontakt"></span></th>
+            <th>Další krok</th>
+            <th>E-maily</th>
+          </tr>
+        </thead>
+        <tbody id="list-body"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="list-empty" style="display:none"></div>
+  </div>
+</main>
+
+<div class="page-foot">
+  <span>Investment Tools · MMXXVI</span>
+  <span class="dot">·</span>
+  <span>Martin Dlouhý</span>
+</div>
+
+<!-- ============== OKNO: KARTA ČLOVĚKA ============== -->
+<div class="modal-overlay" id="cardModal">
+  <div class="modal-box modal-lg">
+    <div id="card-body"></div>
+    <div class="modal-actions">
+      <div class="left-group">
+        <button type="button" class="btn btn-ghost btn-danger-ghost" data-act="person-erase">Vymazat člověka</button>
+      </div>
+      <button type="button" class="btn btn-ghost" data-act="modal-close" data-modal="cardModal">Zavřít</button>
+      <button type="button" class="btn btn-primary" data-act="person-edit">Upravit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: PŘIDAT / UPRAVIT ČLOVĚKA ============== -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal-box modal-lg">
+    <h3 id="form-title">Přidat člověka</h3>
+    <div class="fgrid">
+      <div class="form-group">
+        <label>Typ <span class="req">*</span></label>
+        <select id="p-typ" class="crm-select">
+          <option value="zprostredkovatel">Zprostředkovatel</option>
+          <option value="klient">Klient</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Jméno <span class="req">*</span></label>
+        <input type="text" class="input" id="p-jmeno" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Příjmení <span class="req">*</span></label>
+        <input type="text" class="input" id="p-prijmeni" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Titul</label>
+        <input type="text" class="input" id="p-titul" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Telefon</label>
+        <input type="tel" class="input" id="p-telefon" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" class="input" id="p-email" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Firma</label>
+        <input type="text" class="input" id="p-firma" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>IČO</label>
+        <div class="ico-row">
+          <input type="text" class="input" id="p-ico" inputmode="numeric" maxlength="8" autocomplete="off">
+          <button type="button" class="btn btn-secondary btn-sm" data-act="ares">ARES</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Funkce</label>
+        <input type="text" class="input" id="p-funkce" placeholder="například jednatel" autocomplete="off">
+      </div>
+      <div class="form-group fg-full">
+        <label>Sídlo</label>
+        <input type="text" class="input" id="p-sidlo" autocomplete="off">
+      </div>
+      <div class="form-group" data-for="zprostredkovatel">
+        <label>Role</label>
+        <select id="p-role" class="crm-select">
+          <option value="">Neurčeno</option>
+          <option>Úvěrový nebo finanční poradce</option>
+          <option>Realitní makléř</option>
+          <option>Správce nemovitostí</option>
+          <option>Účetní nebo daňový poradce</option>
+          <option>Advokát</option>
+          <option>Skupina Spolumajitelé</option>
+          <option>Jiné</option>
+        </select>
+      </div>
+      <div class="form-group" data-for="klient" style="display:none">
+        <label>Obor</label>
+        <select id="p-obor" class="crm-select">
+          <option value="">Neurčeno</option>
+          <option>Nemovitosti a SPV</option>
+          <option>Výroba a sklady</option>
+          <option>Jiné</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Důležitost</label>
+        <select id="p-dulezitost" class="crm-select">
+          <option value="A">A · osobně jednou za měsíc</option>
+          <option value="B" selected>B · osobně jednou za čtvrt roku</option>
+          <option value="C">C · stačí e-mail</option>
+        </select>
+      </div>
+      <div class="form-group" data-for="zprostredkovatel">
+        <label>Stav</label>
+        <select id="p-stav-z" class="crm-select">
+          <option value="novy">Nový</option>
+          <option value="v_kontaktu">V kontaktu</option>
+          <option value="posila_pripady">Posílá případy</option>
+          <option value="spici">Spící</option>
+          <option value="nezajem">Nezájem</option>
+        </select>
+      </div>
+      <div class="form-group" data-for="klient" style="display:none">
+        <label>Stav</label>
+        <select id="p-stav-k" class="crm-select">
+          <option value="zajemce">Zájemce</option>
+          <option value="nabidka">Nabídka</option>
+          <option value="klient">Klient</option>
+          <option value="byvaly">Bývalý klient</option>
+          <option value="nezajem">Nezájem</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Odkud ho mám</label>
+        <select id="p-zdroj" class="crm-select">
+          <option value="doporuceni">Doporučení</option>
+          <option value="telefon">Kontakt z telefonu</option>
+          <option value="ozval_se">Ozval se sám</option>
+          <option value="akce">Akce</option>
+          <option value="reklama">Reklama</option>
+          <option value="database">Database (LinkedIn)</option>
+          <option value="skupina">Skupina</option>
+          <option value="jine">Jiné</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Poznámka ke zdroji</label>
+        <input type="text" class="input" id="p-zdroj-poznamka" placeholder="například kdo ho doporučil" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>LinkedIn</label>
+        <input type="text" class="input" id="p-linkedin" placeholder="https://www.linkedin.com/in/…" autocomplete="off">
+      </div>
+      <div class="form-group fg-2">
+        <label>Další krok</label>
+        <input type="text" class="input" id="p-krok" placeholder="například zavolat kvůli podkladům" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Termín kroku</label>
+        <input type="date" class="input" id="p-termin">
+      </div>
+      <div class="form-group fg-full">
+        <label>Poznámka</label>
+        <textarea class="input" id="p-poznamka"></textarea>
+      </div>
+      <div class="form-group fg-full" id="p-hned-wrap">
+        <label class="check-label">
+          <input type="checkbox" class="check-input" id="p-hned">
+          <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span>Ozvat se hned (založí krok „První kontakt“ na dnešek)</span>
+        </label>
+      </div>
+    </div>
+    <div class="form-hint" id="form-mail-hint"></div>
+    <div class="form-err" id="form-err"></div>
+    <div class="modal-actions">
+      <div class="left-group" id="form-dup-actions"></div>
+      <button type="button" class="btn btn-ghost" data-act="modal-close" data-modal="formModal">Zrušit</button>
+      <button type="button" class="btn btn-primary" id="form-save" data-act="person-save">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: E-MAILY ============== -->
+<div class="modal-overlay" id="mailModal">
+  <div class="modal-box">
+    <h3>E-maily</h3>
+    <div class="opt-list" id="mail-opts">
+      <button type="button" class="opt" data-act="mail-opt" data-val="posilat"><b>Posílat</b><span>Člověk dostává hromadné e-maily.</span></button>
+      <button type="button" class="opt" data-act="mail-opt" data-val="moje_volba"><b>Neposílat (moje rozhodnutí)</b><span>Nechci mu e-maily posílat. Jde to kdykoli vrátit.</span></button>
+      <button type="button" class="opt" data-act="mail-opt" data-val="odhlasil_se"><b>Odhlásil se</b><span>Požádal, ať mu e-maily nechodí. Je to trvalé a platí pro jeho adresu i na jiných kartách.</span></button>
+    </div>
+    <div class="fsec" id="mail-consent-wrap" style="display:none">
+      <div class="form-group">
+        <label>Nový souhlas <span class="req">*</span></label>
+        <input type="text" class="input" id="mail-consent" placeholder="kdy a jak souhlasil, například „telefonicky 20. 11. 2026“" autocomplete="off">
+      </div>
+      <div class="form-hint">Tento člověk se odhlásil. E-maily mu jde znovu zapnout jen se zapsaným novým souhlasem.</div>
+    </div>
+    <div class="form-err" id="mail-err"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-act="modal-close" data-modal="mailModal">Zrušit</button>
+      <button type="button" class="btn btn-primary" data-act="mail-save">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: VYMAZÁNÍ ============== -->
+<div class="modal-overlay" id="eraseModal">
+  <div class="modal-box">
+    <h3>Vymazat člověka</h3>
+    <p class="modal-text" id="erase-text"></p>
+    <div class="fsec">
+      <label class="check-label">
+        <input type="checkbox" class="check-input" id="erase-keep" checked>
+        <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+        <span>Nenahrávat ho znovu</span>
+      </label>
+      <div class="form-hint" id="erase-hint"></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-act="modal-close" data-modal="eraseModal">Zrušit</button>
+      <button type="button" class="btn btn-primary" data-act="erase-confirm">Vymazat</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: POTVRZENÍ ============== -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <h3 id="cf-title">Potvrzení</h3>
+    <p class="modal-text" id="cf-text"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="cf-cancel">Zrušit</button>
+      <button type="button" class="btn btn-primary" id="cf-ok">Potvrdit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: NAHRÁNÍ TABULKY ============== -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal-box modal-xl">
+    <h3>Nahrát tabulku</h3>
+    <div class="steps" id="imp-steps">
+      <span class="step" data-step="1">1 · Soubor</span>
+      <span class="step" data-step="2">2 · Sloupce</span>
+      <span class="step" data-step="3">3 · Zařazení</span>
+      <span class="step" data-step="4">4 · Souhrn</span>
+    </div>
+    <div id="imp-body"></div>
+    <div class="form-err" id="imp-err"></div>
+    <div class="modal-actions">
+      <div class="left-group">
+        <button type="button" class="btn btn-ghost" id="imp-back" data-act="imp-back" style="display:none">Zpět</button>
+      </div>
+      <button type="button" class="btn btn-ghost" id="imp-cancel" data-act="imp-close">Zrušit</button>
+      <button type="button" class="btn btn-primary" id="imp-next" data-act="imp-next">Pokračovat</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="imp-file" accept=".csv,.txt,text/csv" style="display:none">
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+'use strict';
+
+// ============================================================
+// PROSTŘEDÍ
+// Na místním náhledu běží stránka VŽDY v ukázkovém režimu: vymyšlení lidé, žádný Google,
+// žádné přihlášení a žádný zápis do úložiště prohlížeče. Rozhoduje se tady, dřív než
+// cokoli sáhne na ProfilendAuth nebo localStorage. Na živém webu se ukázka zapnout nedá.
+// ============================================================
+const HOST = location.hostname;
+const DEMO = location.protocol === 'file:' || HOST === 'localhost' || HOST === '127.0.0.1' ||
+    HOST === '[::1]' || HOST === '::1' || /\.localhost$/.test(HOST);
+
+// ============================================================
+// KONFIGURACE
+// ============================================================
+const GOOGLE_CLIENT_ID = '765274611389-25tev1d2a60v2di4t0jfho7fbpqf8q9c.apps.googleusercontent.com';
+const GOOGLE_SCOPES = [
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/spreadsheets'
+].join(' ');
+
+const ROOT_FOLDER_NAME = 'Investment Tools';
+const APP_FOLDER_NAME = 'CRM';
+const SHEET_TITLE = 'Investment Tools CRM';
+const TAB_LIDE = 'Lide';
+const TAB_HIST = 'Historie';
+const TAB_NAST = 'Nastaveni';
+
+// Sdílené klíče Google tokenu pro celý web (plní je i profilend-auth.js) — názvy neměnit
+const TOKEN_KEY = 'gdrive-shared-token';
+const TOKEN_EXPIRY_KEY = 'gdrive-shared-token-expiry';
+const SHEET_ID_KEY = 'crm-sheet-id';
+
+// Nové sloupce VŽDY jen na konec (hlavičky se doplňují samy, pořadí starých se nemění)
+const LIDE_HEADER = [
+    'id', 'vytvoreno', 'aktualizovano', 'typ', 'titul', 'jmeno', 'prijmeni', 'firma', 'ico', 'sidlo',
+    'funkce', 'role', 'obor', 'telefon', 'email', 'linkedin', 'dulezitost', 'stav',
+    'emaily', 'emaily_duvod', 'emaily_kdy', 'souhlas', 'zdroj', 'zdroj_poznamka',
+    'dalsi_krok', 'dalsi_krok_termin', 'posledni_kontakt', 'rytmus_od', 'odlozeno_do', 'poznamka',
+    'ext_id', 'otisk_email', 'otisk_telefon', 'otisk_jmeno'
+];
+const HIST_HEADER = ['id', 'clovek_id', 'datum', 'typ', 'text', 'davka_id'];
+const NAST_HEADER = ['klic', 'hodnota'];
+// Nový list Googlu má jen 26 sloupců × 1000 řádků a zápis mimo ně skončí chybou,
+// proto se listy zakládají s rozměry a před zápisem se velikost ověřuje.
+const GRID = {};
+GRID[TAB_LIDE] = { cols: 40, rows: 2000 };
+GRID[TAB_HIST] = { cols: 10, rows: 5000 };
+GRID[TAB_NAST] = { cols: 5, rows: 200 };
+
+const LBL = {
+    typ: { zprostredkovatel: 'Zprostředkovatel', klient: 'Klient' },
+    stavZ: { novy: 'Nový', v_kontaktu: 'V kontaktu', posila_pripady: 'Posílá případy', spici: 'Spící', nezajem: 'Nezájem' },
+    stavK: { zajemce: 'Zájemce', nabidka: 'Nabídka', klient: 'Klient', byvaly: 'Bývalý klient', nezajem: 'Nezájem' },
+    zdroj: { telefon: 'Kontakt z telefonu', database: 'Database (LinkedIn)', reklama: 'Reklama', doporuceni: 'Doporučení',
+        akce: 'Akce', ozval_se: 'Ozval se sám', skupina: 'Skupina', jine: 'Jiné' },
+    duvod: { odhlasil_se: 'odhlásil se', bez_souhlasu: 'nesouhlasil', moje_volba: 'moje rozhodnutí' },
+    hist: { telefon: 'Telefon', email: 'E-mail', schuzka: 'Schůzka', poznamka: 'Poznámka',
+        hromadny_email: 'Hromadný e-mail', system: 'Systém' }
+};
+const ROLE_LIST = ['Úvěrový nebo finanční poradce', 'Realitní makléř', 'Správce nemovitostí',
+    'Účetní nebo daňový poradce', 'Advokát', 'Skupina Spolumajitelé', 'Jiné'];
+const OBOR_LIST = ['Nemovitosti a SPV', 'Výroba a sklady', 'Jiné'];
+
+// Výchozí hodnoty podle toho, odkud člověk je (zadání kap. 4.6)
+const ZDROJ_DEFAULTS = {
+    telefon:    { stavZ: 'v_kontaktu', emaily: 'posilat',   rytmusHned: true,  prvniKontakt: false },
+    database:   { stavZ: 'v_kontaktu', emaily: 'posilat',   rytmusHned: false, prvniKontakt: false },
+    reklama:    { stavZ: 'novy',       emaily: 'neposilat', rytmusHned: false, prvniKontakt: true },
+    ozval_se:   { stavZ: 'novy',       emaily: 'posilat',   rytmusHned: false, prvniKontakt: true },
+    doporuceni: { stavZ: 'novy',       emaily: 'posilat',   rytmusHned: false, prvniKontakt: false },
+    akce:       { stavZ: 'novy',       emaily: 'posilat',   rytmusHned: false, prvniKontakt: false },
+    skupina:    { stavZ: 'novy',       emaily: 'posilat',   rytmusHned: false, prvniKontakt: false },
+    jine:       { stavZ: 'novy',       emaily: 'posilat',   rytmusHned: false, prvniKontakt: false }
+};
+
+// ============================================================
+// STAV
+// ============================================================
+const state = {
+    accessToken: null,
+    tokenExpiry: 0,
+    viaDeviceAuth: false,
+    spreadsheetId: null,
+    sheetTabIds: {},
+    headers: {},
+    people: [],        // živé karty (bez řádků, po kterých zůstaly jen otisky)
+    stubs: [],         // řádky po vymazaných lidech: jen otisky a nastavení e-mailů
+    history: [],
+    settings: {},
+    loadedAt: 0,
+    loadedDay: '',
+    loading: false,
+    ui: { tab: 'zprostredkovatel', sort: 'prijmeni', dir: 1, openId: null, editId: null }
+};
+
+// Úložiště prohlížeče: v ukázce se NIKDY nepoužije (jen paměť stránky)
+const memStore = {};
+const store = {
+    get: function (k) {
+        if (DEMO) return Object.prototype.hasOwnProperty.call(memStore, k) ? memStore[k] : null;
+        try { return localStorage.getItem(k); } catch (e) { return null; }
+    },
+    set: function (k, v) {
+        if (DEMO) { memStore[k] = String(v); return; }
+        try { localStorage.setItem(k, String(v)); } catch (e) { /* no-op */ }
+    },
+    del: function (k) {
+        if (DEMO) { delete memStore[k]; return; }
+        try { localStorage.removeItem(k); } catch (e) { /* no-op */ }
+    }
+};
+
+// ============================================================
+// POMOCNÉ FUNKCE
+// ============================================================
+function $(id) { return document.getElementById(id); }
+function escapeHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function genId(prefix) {
+    return (prefix || 'x') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+function nowIso() { return new Date().toISOString(); }
+// České tvary podle počtu: plural(3, 'člověk', 'lidé', 'lidí') → „lidé“
+function plural(n, one, few, many) { return n === 1 ? one : (n >= 2 && n <= 4 ? few : many); }
+// Místní den RRRR-MM-DD (ne UTC — toISOString() by po půlnoci zapsal včerejšek)
+function dayIso(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function todayIso() { return dayIso(new Date()); }
+// RRRR-MM-DD → „12. 11. 2026“ bez posunu časovou zónou
+function fmtDay(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+    if (!m) return '';
+    return parseInt(m[3], 10) + '. ' + parseInt(m[2], 10) + '. ' + m[1];
+}
+function fmtStamp(iso) {
+    if (!iso) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return fmtDay(iso);
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? String(iso) : fmtDay(dayIso(d));
+}
+// Počet kalendářních dnů mezi dvěma dny RRRR-MM-DD (ne z milisekund místního času)
+function daysBetween(fromIso, toIso) {
+    const a = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fromIso || ''));
+    const b = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(toIso || ''));
+    if (!a || !b) return null;
+    const ua = Date.UTC(+a[1], +a[2] - 1, +a[3]);
+    const ub = Date.UTC(+b[1], +b[2] - 1, +b[3]);
+    return Math.round((ub - ua) / 86400000);
+}
+function norm(s) {
+    return String(s == null ? '' : s).toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/\s+/g, ' ').trim();
+}
+function normEmail(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
+function isValidEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(s || '').trim()); }
+// Telefon jen podle číslic; české číslo bez předvolby se doplní na 420
+function normPhone(s) {
+    let d = String(s == null ? '' : s).replace(/\D/g, '');
+    if (!d) return '';
+    if (d.indexOf('00') === 0) d = d.slice(2);
+    if (d.length === 9) d = '420' + d;
+    return d;
+}
+function fmtPhone(s) {
+    const d = normPhone(s);
+    if (!d) return String(s || '').trim();
+    if (d.length === 12 && d.indexOf('420') === 0) {
+        return '+420 ' + d.slice(3, 6) + ' ' + d.slice(6, 9) + ' ' + d.slice(9);
+    }
+    return '+' + d;
+}
+// Právní forma na konci názvu (jen když ji od názvu dělí mezera nebo čárka, aby se neukousl konec slova)
+const FIRM_FORMS = /[,\s]+(spol\.?\s*s\s*r\.?\s*o\.?|s\.?\s*r\.?\s*o\.?|a\.?\s*s\.?|k\.?\s*s\.?|v\.?\s*o\.?\s*s\.?|z\.?\s*s\.?|se|o\.?\s*p\.?\s*s\.?)\.?$/;
+function normFirm(s) { return norm(s).replace(FIRM_FORMS, '').trim(); }
+function fullName(p) {
+    return [p.titul, p.jmeno, p.prijmeni].map(function (x) { return String(x || '').trim(); })
+        .filter(Boolean).join(' ') || '(bez jména)';
+}
+function nameKey(p) {
+    const n = norm((p.jmeno || '') + ' ' + (p.prijmeni || ''));
+    if (!n) return '';
+    return n + '|' + normFirm(p.firma);
+}
+const collator = new Intl.Collator('cs', { sensitivity: 'base', numeric: true });
+function safeUrl(u) {
+    const s = String(u || '').trim();
+    return /^https?:\/\//i.test(s) ? s : '';
+}
+async function sha256Hex(text) {
+    const s = String(text || '');
+    if (window.crypto && crypto.subtle && window.TextEncoder) {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+        return Array.prototype.map.call(new Uint8Array(buf), function (b) {
+            return b.toString(16).padStart(2, '0');
+        }).join('');
+    }
+    // Nouzová náhrada (nezabezpečený kontext): slabší otisk, ale stejný na obou stranách
+    let h1 = 5381, h2 = 52711;
+    for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i);
+        h1 = ((h1 << 5) + h1 + c) | 0;
+        h2 = ((h2 << 5) + h2 + c * 31) | 0;
+    }
+    return 'x' + (h1 >>> 0).toString(16) + (h2 >>> 0).toString(16);
+}
+async function fingerprints(p) {
+    const e = normEmail(p.email), t = normPhone(p.telefon), n = nameKey(p);
+    return {
+        otisk_email: e ? await sha256Hex('e:' + e) : '',
+        otisk_telefon: t ? await sha256Hex('t:' + t) : '',
+        otisk_jmeno: n ? await sha256Hex('n:' + n) : ''
+    };
+}
+// Jméno z jednoho pole (Database): známé tituly stranou, poslední slovo je příjmení
+const TITLE_RE = /^(ing|mgr|bc|judr|mudr|mvdr|phdr|rndr|paeddr|pharmdr|thdr|thlic|doc|prof|dr|dis|mba|msc|bsc|ba|ma|llm|ll\.m|ph\.?d|csc|drsc|mph|ing\.?\s*arch)\.?,?$/i;
+function splitName(full) {
+    const parts = String(full || '').replace(/,/g, ' ').split(/\s+/).filter(Boolean);
+    const titles = [], names = [];
+    parts.forEach(function (w) { (TITLE_RE.test(w) ? titles : names).push(w); });
+    if (names.length === 0) return { titul: titles.join(' '), jmeno: '', prijmeni: '' };
+    if (names.length === 1) return { titul: titles.join(' '), jmeno: '', prijmeni: names[0] };
+    return { titul: titles.join(' '), jmeno: names.slice(0, -1).join(' '), prijmeni: names[names.length - 1] };
+}
+
+function showToast(msg, type) {
+    const toast = $('toast');
+    toast.textContent = msg;
+    toast.className = 'toast' + (type ? ' ' + type : '');
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () { toast.classList.remove('show'); }, type === 'error' ? 6000 : 3500);
+}
+// Chyba v okně. Když jde o vypršelé přihlášení, přidá tlačítko „Připojit Google“ přímo do okna,
+// aby se rozepsaný formulář nemusel zavírat.
+function showErr(elId, msg, e) {
+    const box = $(elId);
+    box.textContent = msg || '';
+    if (e && e.isAuth) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-secondary btn-sm';
+        b.style.marginLeft = '10px';
+        b.textContent = 'Připojit Google';
+        b.setAttribute('data-act', 'google-connect');
+        box.appendChild(b);
+    }
+}
+function openModal(id) { $(id).classList.add('show'); }
+function closeModal(id) { $(id).classList.remove('show'); }
+function anyModalOpen() { return !!document.querySelector('.modal-overlay.show'); }
+
+function appConfirm(text, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+        $('cf-title').textContent = opts.title || 'Potvrzení';
+        $('cf-text').textContent = text;
+        const ok = $('cf-ok'), cancel = $('cf-cancel');
+        ok.textContent = opts.okLabel || 'Potvrdit';
+        cancel.textContent = opts.cancelLabel || 'Zrušit';
+        function done(val) {
+            document.removeEventListener('keydown', onKey, true);
+            closeModal('confirmModal');
+            resolve(val);
+        }
+        function onKey(e) {
+            if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); }
+            else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); done(true); }
+        }
+        ok.onclick = function () { done(true); };
+        cancel.onclick = function () { done(false); };
+        document.addEventListener('keydown', onKey, true);
+        openModal('confirmModal');
+        ok.focus();
+    });
+}
+
+function rowToObject(row, header) {
+    const o = {};
+    header.forEach(function (key, i) { if (key) o[key] = (row && row[i] != null) ? String(row[i]) : ''; });
+    return o;
+}
+function objectToRow(obj, header) {
+    return header.map(function (key) { return obj[key] != null ? String(obj[key]) : ''; });
+}
+function setSelect(id, value) {
+    const sel = $(id);
+    if (!sel) return;
+    sel.value = value == null ? '' : value;
+    if (sel.selectedIndex === -1) sel.selectedIndex = 0;
+    if (typeof window.syncCustomDropdown === 'function') window.syncCustomDropdown(id);
+}
+
+// ============================================================
+// ČTENÍ SOUBORU CSV
+// ============================================================
+function decodeBytes(buf) {
+    const b = new Uint8Array(buf);
+    if (b.length >= 3 && b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF) return new TextDecoder('utf-8').decode(b.subarray(3));
+    if (b.length >= 2 && b[0] === 0xFF && b[1] === 0xFE) return new TextDecoder('utf-16le').decode(b.subarray(2));
+    if (b.length >= 2 && b[0] === 0xFE && b[1] === 0xFF) return new TextDecoder('utf-16be').decode(b.subarray(2));
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(b); }
+    catch (e) { return new TextDecoder('windows-1250').decode(b); }
+}
+function detectDelimiter(text) {
+    const sample = text.split(/\r?\n/).slice(0, 12).join('\n');
+    const counts = { ',': 0, ';': 0, '\t': 0 };
+    let inQ = false;
+    for (let i = 0; i < sample.length; i++) {
+        const ch = sample[i];
+        if (ch === '"') inQ = !inQ;
+        else if (!inQ && counts[ch] !== undefined) counts[ch]++;
+    }
+    let best = ',';
+    [';', '\t'].forEach(function (d) { if (counts[d] > counts[best]) best = d; });
+    return best;
+}
+function parseCsv(text, delim) {
+    const rows = [];
+    let row = [], cell = '', inQ = false;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (inQ) {
+            if (ch === '"') {
+                if (text[i + 1] === '"') { cell += '"'; i++; } else { inQ = false; }
+            } else { cell += ch; }
+        } else if (ch === '"') {
+            inQ = true;
+        } else if (ch === delim) {
+            row.push(cell); cell = '';
+        } else if (ch === '\n' || ch === '\r') {
+            if (ch === '\r' && text[i + 1] === '\n') i++;
+            row.push(cell); cell = '';
+            rows.push(row); row = [];
+        } else {
+            cell += ch;
+        }
+    }
+    if (cell !== '' || row.length > 0) { row.push(cell); rows.push(row); }
+    return rows.map(function (r) { return r.map(function (c) { return String(c).trim(); }); })
+        .filter(function (r) { return r.some(function (c) { return c !== ''; }); });
+}
+
+// ============================================================
+// TABULKA NANEČISTO (jen ukázkový režim)
+// Napodobuje Google Drive a Sheets v paměti stránky včetně jejich omezení: mřížka listu
+// (26 sloupců × 1000 řádků, dokud ji program nerozšíří), posun řádků po smazání a na
+// vyžádání odpovědi 401 a 429. Program nad ní běží stejný jako na živém webu.
+// ============================================================
+function createFakeGoogle() {
+    const files = [];
+    const books = {};
+    const failQueue = [];
+    const calls = [];
+    let seq = 100;
+
+    function resp(status, body) {
+        const text = JSON.stringify(body == null ? {} : body);
+        return {
+            ok: status >= 200 && status < 300,
+            status: status,
+            json: function () { return Promise.resolve(JSON.parse(text)); },
+            text: function () { return Promise.resolve(text); },
+            clone: function () { return resp(status, body); }
+        };
+    }
+    function err(status, message) { return resp(status, { error: { code: status, message: message } }); }
+    function colNum(letters) {
+        let n = 0;
+        for (let i = 0; i < letters.length; i++) n = n * 26 + (letters.charCodeAt(i) - 64);
+        return n;
+    }
+    // „List“, „List!A:A“, „List!1:1“, „List!A1:C5“, „List!B7“
+    function parseA1(a1) {
+        let title = a1, cells = '';
+        const bang = a1.lastIndexOf('!');
+        if (bang !== -1) { title = a1.slice(0, bang); cells = a1.slice(bang + 1); }
+        title = title.replace(/^'|'$/g, '');
+        const out = { title: title, r1: 1, c1: 1, r2: Infinity, c2: Infinity };
+        if (!cells) return out;
+        const parts = cells.split(':');
+        const a = /^([A-Z]*)(\d*)$/.exec(parts[0]);
+        const b = /^([A-Z]*)(\d*)$/.exec(parts.length > 1 ? parts[1] : parts[0]);
+        if (!a || !b) return null;
+        if (a[1]) out.c1 = colNum(a[1]);
+        if (a[2]) out.r1 = parseInt(a[2], 10);
+        if (b[1]) out.c2 = colNum(b[1]);
+        if (b[2]) out.r2 = parseInt(b[2], 10);
+        return out;
+    }
+    function propsOf(sh) {
+        return { properties: { sheetId: sh.sheetId, title: sh.title,
+            gridProperties: { rowCount: sh.rowCount, columnCount: sh.columnCount } } };
+    }
+    function sheetOf(book, title) { return book.sheets.find(function (s) { return s.title === title; }); }
+    function readValues(sh, rg) {
+        const out = [];
+        const lastRow = Math.min(rg.r2, sh.values.length);
+        for (let r = rg.r1; r <= lastRow; r++) {
+            const src = sh.values[r - 1] || [];
+            const row = [];
+            const lastCol = Math.min(rg.c2, src.length);
+            for (let c = rg.c1; c <= lastCol; c++) row.push(src[c - 1] == null ? '' : src[c - 1]);
+            while (row.length && row[row.length - 1] === '') row.pop();
+            out.push(row);
+        }
+        while (out.length && out[out.length - 1].length === 0) out.pop();
+        return out;
+    }
+    function checkWrite(sh, rg, values, a1) {
+        const rows = values.length;
+        const cols = Math.max.apply(null, values.map(function (r) { return (r || []).length; }).concat([0]));
+        const endRow = rg.r1 + rows - 1, endCol = rg.c1 + cols - 1;
+        if (endRow > sh.rowCount || endCol > sh.columnCount || rg.r1 > sh.rowCount || rg.c1 > sh.columnCount) {
+            return 'Range (' + a1 + ') exceeds grid limits. Max rows: ' + sh.rowCount + ', max columns: ' + sh.columnCount;
+        }
+        if ((rg.r2 !== Infinity && endRow > rg.r2) || (rg.c2 !== Infinity && endCol > rg.c2)) {
+            return 'Requested writing within range [' + a1 + '], but tried writing outside of it';
+        }
+        return '';
+    }
+    function doWrite(sh, rg, values) {
+        values.forEach(function (rowVals, i) {
+            const r = rg.r1 + i;
+            while (sh.values.length < r) sh.values.push([]);
+            const row = sh.values[r - 1];
+            (rowVals || []).forEach(function (v, j) {
+                const c = rg.c1 + j;
+                while (row.length < c) row.push('');
+                row[c - 1] = v == null ? '' : String(v);
+            });
+        });
+    }
+    function trimValues(sh) {
+        while (sh.values.length && sh.values[sh.values.length - 1].every(function (v) { return v === '' || v == null; })) {
+            sh.values.pop();
+        }
+    }
+
+    async function handle(url, options) {
+        options = options || {};
+        const method = (options.method || 'GET').toUpperCase();
+        const body = options.body ? JSON.parse(options.body) : null;
+        calls.push(method + ' ' + url.replace(/^https:\/\/[^/]+/, '').slice(0, 140));
+        if (failQueue.length) {
+            const st = failQueue.shift();
+            return err(st, st === 401 ? 'Invalid Credentials' : (st === 429 ? 'Quota exceeded' : 'Simulated error'));
+        }
+        const u = new URL(url);
+        const path = u.pathname;
+        let m;
+
+        // ---- Drive ----
+        if (path === '/drive/v3/files' && method === 'GET') {
+            const q = u.searchParams.get('q') || '';
+            const nameM = /name='((?:[^'\\]|\\.)*)'/.exec(q);
+            const mimeM = /mimeType='([^']+)'/.exec(q);
+            const parentM = /'([^']+)' in parents/.exec(q);
+            const list = files.filter(function (f) {
+                if (nameM && f.name !== nameM[1].replace(/\\'/g, "'")) return false;
+                if (mimeM && f.mimeType !== mimeM[1]) return false;
+                if (parentM && f.parents.indexOf(parentM[1]) === -1) return false;
+                return true;
+            }).map(function (f) { return { id: f.id, name: f.name, mimeType: f.mimeType }; });
+            return resp(200, { files: list });
+        }
+        if (path === '/drive/v3/files' && method === 'POST') {
+            const nf = { id: 'fld_' + (seq++), name: body.name, mimeType: body.mimeType, parents: body.parents || ['root'] };
+            files.push(nf);
+            return resp(200, { id: nf.id, name: nf.name });
+        }
+        if ((m = /^\/drive\/v3\/files\/([^/]+)$/.exec(path)) && method === 'PATCH') {
+            const f = files.find(function (x) { return x.id === m[1]; });
+            if (!f) return err(404, 'File not found');
+            const add = u.searchParams.get('addParents'), rem = u.searchParams.get('removeParents');
+            if (rem) f.parents = f.parents.filter(function (p) { return p !== rem; });
+            if (add && f.parents.indexOf(add) === -1) f.parents.push(add);
+            return resp(200, { id: f.id, parents: f.parents });
+        }
+
+        // ---- Sheets: založení souboru ----
+        if (path === '/v4/spreadsheets' && method === 'POST') {
+            const id = 'sheet_' + (seq++);
+            const nb = { title: body.properties.title, sheets: [] };
+            (body.sheets || []).forEach(function (s) {
+                const gp = (s.properties && s.properties.gridProperties) || {};
+                nb.sheets.push({ sheetId: seq++, title: s.properties.title,
+                    rowCount: gp.rowCount || 1000, columnCount: gp.columnCount || 26, values: [] });
+            });
+            books[id] = nb;
+            files.push({ id: id, name: nb.title, mimeType: 'application/vnd.google-apps.spreadsheet', parents: ['root'] });
+            return resp(200, { spreadsheetId: id, sheets: nb.sheets.map(propsOf) });
+        }
+        if (!(m = /^\/v4\/spreadsheets\/([^/:]+)(.*)$/.exec(path))) return err(404, 'Unknown endpoint ' + path);
+        const book = books[m[1]];
+        if (!book) return err(404, 'Requested entity was not found.');
+        const rest = decodeURIComponent(m[2] || '');
+
+        if (rest === '' && method === 'GET') return resp(200, { sheets: book.sheets.map(propsOf) });
+
+        if (rest === ':batchUpdate' && method === 'POST') {
+            const replies = [];
+            const reqs = body.requests || [];
+            for (let i = 0; i < reqs.length; i++) {
+                const rq = reqs[i];
+                if (rq.addSheet) {
+                    const p = rq.addSheet.properties || {};
+                    if (sheetOf(book, p.title)) return err(400, 'A sheet with the name "' + p.title + '" already exists.');
+                    const gp = p.gridProperties || {};
+                    const sh = { sheetId: seq++, title: p.title, rowCount: gp.rowCount || 1000,
+                        columnCount: gp.columnCount || 26, values: [] };
+                    book.sheets.push(sh);
+                    replies.push({ addSheet: propsOf(sh) });
+                } else if (rq.appendDimension) {
+                    const ad = rq.appendDimension;
+                    const sh = book.sheets.find(function (s) { return s.sheetId === ad.sheetId; });
+                    if (!sh) return err(400, 'No grid with id ' + ad.sheetId);
+                    if (ad.dimension === 'COLUMNS') sh.columnCount += ad.length; else sh.rowCount += ad.length;
+                    replies.push({});
+                } else if (rq.deleteDimension) {
+                    const dr = rq.deleteDimension.range;
+                    const sh = book.sheets.find(function (s) { return s.sheetId === dr.sheetId; });
+                    if (!sh) return err(400, 'No grid with id ' + dr.sheetId);
+                    if (dr.endIndex > sh.rowCount) return err(400, 'deleteDimension out of range');
+                    sh.values.splice(dr.startIndex, dr.endIndex - dr.startIndex);
+                    sh.rowCount -= (dr.endIndex - dr.startIndex);
+                    replies.push({});
+                } else {
+                    return err(400, 'Unsupported request in fake');
+                }
+            }
+            return resp(200, { replies: replies });
+        }
+
+        if (rest === '/values:batchUpdate' && method === 'POST') {
+            const plan = [];
+            const data = body.data || [];
+            for (let i = 0; i < data.length; i++) {
+                const d = data[i];
+                const rg = parseA1(d.range);
+                const sh = rg && sheetOf(book, rg.title);
+                if (!sh) return err(400, 'Unable to parse range: ' + d.range);
+                const problem = checkWrite(sh, rg, d.values || [], d.range);
+                if (problem) return err(400, problem);
+                plan.push({ sh: sh, rg: rg, values: d.values || [] });
+            }
+            plan.forEach(function (p) { doWrite(p.sh, p.rg, p.values); trimValues(p.sh); });
+            return resp(200, { totalUpdatedRanges: plan.length });
+        }
+
+        if ((m = /^\/values\/(.+)$/.exec(rest))) {
+            const a1 = m[1];
+            const rg = parseA1(a1);
+            const sh = rg && sheetOf(book, rg.title);
+            if (!sh) return err(400, 'Unable to parse range: ' + a1);
+            if (method === 'GET') return resp(200, { range: a1, values: readValues(sh, rg) });
+            if (method === 'PUT') {
+                const problem = checkWrite(sh, rg, body.values || [], a1);
+                if (problem) return err(400, problem);
+                doWrite(sh, rg, body.values || []);
+                trimValues(sh);
+                return resp(200, { updatedRange: a1 });
+            }
+        }
+        return err(404, 'Unknown endpoint ' + method + ' ' + path);
+    }
+    return {
+        fetch: handle,
+        failNext: function (status, times) { for (let i = 0; i < (times || 1); i++) failQueue.push(status); },
+        files: files, books: books, calls: calls
+    };
+}
+const fakeGoogle = DEMO ? createFakeGoogle() : null;
+if (DEMO) window.__crmFake = fakeGoogle;
+
+// ============================================================
+// GOOGLE: volání, obnovení přihlášení
+// ============================================================
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+function authError(msg) { const e = new Error(msg); e.isAuth = true; return e; }
+
+async function silentRefresh() {
+    if (DEMO) return true;   // v ukázce „obnovení“ vždy projde, zkouší se tím opakování volání
+    if (!window.ProfilendAuth) return false;
+    try {
+        store.del(TOKEN_KEY);
+        store.del(TOKEN_EXPIRY_KEY);
+        const fresh = await ProfilendAuth.getGoogleToken({ interactive: false });
+        if (fresh) {
+            state.viaDeviceAuth = true;
+            state.accessToken = fresh;
+            state.tokenExpiry = parseInt(store.get(TOKEN_EXPIRY_KEY) || '0', 10) || (Date.now() + 50 * 60000);
+            updateGoogleUi(true);
+            return true;
+        }
+    } catch (e) { /* tiché obnovení selhalo */ }
+    return false;
+}
+
+// Přihlášení vypršelo. Otevřený formulář se NEZAHAZUJE: okna zůstanou, jak jsou,
+// jen se nabídne nové připojení. Seznam se skryje, až když žádné okno otevřené není.
+function onAuthLost() {
+    state.accessToken = null;
+    store.del(TOKEN_KEY);
+    store.del(TOKEN_EXPIRY_KEY);
+    updateGoogleUi(false);
+    if (!anyModalOpen()) {
+        $('app-view').style.display = 'none';
+        $('connect-panel').style.display = '';
+        $('btn-add').style.display = 'none';
+        $('btn-import').style.display = 'none';
+    }
+}
+
+async function gfetch(url, options, ctx) {
+    options = options || {};
+    ctx = ctx || { authRetried: false, rateTries: 0 };
+    let res;
+    if (DEMO) {
+        res = await fakeGoogle.fetch(url, options);
+    } else {
+        if (!state.accessToken) throw authError('Nejste přihlášen ke Googlu. Klikněte na „Připojit Google“.');
+        const headers = Object.assign({ 'Authorization': 'Bearer ' + state.accessToken }, options.headers || {});
+        res = await fetch(url, Object.assign({}, options, { headers: headers }));
+    }
+    if (res.status === 401) {
+        if (!ctx.authRetried) {
+            ctx.authRetried = true;
+            if (await silentRefresh()) return gfetch(url, options, ctx);
+        }
+        onAuthLost();
+        throw authError('Přihlášení ke Googlu vypršelo. Klikněte na „Připojit Google“ a zkuste to znovu.');
+    }
+    if (res.status === 429 && ctx.rateTries < 3) {
+        ctx.rateTries++;
+        await sleep(DEMO ? 15 : 1000 * Math.pow(2, ctx.rateTries - 1));
+        return gfetch(url, options, ctx);
+    }
+    if (res.status === 403) {
+        const body = await res.clone().text().catch(function () { return ''; });
+        if (body.indexOf('SERVICE_DISABLED') !== -1 || body.indexOf('has not been used') !== -1) {
+            throw new Error('Google tabulky nejsou pro tento účet povolené (Sheets API).');
+        }
+    }
+    return res;
+}
+
+async function checkSheetsResponse(res, op) {
+    if (res.ok) return;
+    const body = await res.text().catch(function () { return ''; });
+    throw new Error(op + ' selhalo (HTTP ' + res.status + '): ' + body.slice(0, 300));
+}
+
+const SHEETS_URL = 'https://sheets.googleapis.com/v4/spreadsheets';
+const DRIVE_URL = 'https://www.googleapis.com/drive/v3/files';
+function valuesUrl(a1) { return SHEETS_URL + '/' + state.spreadsheetId + '/values/' + encodeURIComponent(a1); }
+
+async function driveFindFolder(name, parentId) {
+    const q = encodeURIComponent(
+        "name='" + name.replace(/'/g, "\\'") + "' and mimeType='application/vnd.google-apps.folder' and trashed=false" +
+        (parentId ? " and '" + parentId + "' in parents" : ''));
+    const res = await gfetch(DRIVE_URL + '?q=' + q + '&fields=files(id,name)&spaces=drive');
+    await checkSheetsResponse(res, 'Hledání složky');
+    const data = await res.json();
+    return data.files && data.files.length > 0 ? data.files[0].id : null;
+}
+async function driveCreateFolder(name, parentId) {
+    const meta = { name: name, mimeType: 'application/vnd.google-apps.folder' };
+    if (parentId) meta.parents = [parentId];
+    const res = await gfetch(DRIVE_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(meta)
+    });
+    await checkSheetsResponse(res, 'Založení složky');
+    return (await res.json()).id;
+}
+async function driveFindFile(name, parentId) {
+    const q = encodeURIComponent(
+        "name='" + name.replace(/'/g, "\\'") + "' and '" + parentId + "' in parents and trashed=false");
+    const res = await gfetch(DRIVE_URL + '?q=' + q + '&fields=files(id,name,mimeType)&spaces=drive');
+    await checkSheetsResponse(res, 'Hledání tabulky');
+    const data = await res.json();
+    return data.files && data.files.length > 0 ? data.files[0] : null;
+}
+async function ensureFolders() {
+    let rootId = await driveFindFolder(ROOT_FOLDER_NAME, null);
+    if (!rootId) rootId = await driveCreateFolder(ROOT_FOLDER_NAME, null);
+    let appId = await driveFindFolder(APP_FOLDER_NAME, rootId);
+    if (!appId) appId = await driveCreateFolder(APP_FOLDER_NAME, rootId);
+    return appId;
+}
+
+async function loadTabIds(sheetId) {
+    const res = await gfetch(SHEETS_URL + '/' + sheetId + '?fields=sheets(properties(sheetId,title,gridProperties))');
+    await checkSheetsResponse(res, 'Načtení listů');
+    const data = await res.json();
+    state.sheetTabIds = {};
+    (data.sheets || []).forEach(function (s) { state.sheetTabIds[s.properties.title] = s.properties.sheetId; });
+}
+
+async function ensureSpreadsheet() {
+    const cachedId = store.get(SHEET_ID_KEY);
+    if (cachedId) {
+        try {
+            await loadTabIds(cachedId);
+            state.spreadsheetId = cachedId;
+            await ensureTabsAndHeaders();
+            return cachedId;
+        } catch (e) {
+            if (e.isAuth) throw e;
+            store.del(SHEET_ID_KEY);   // tabulka mezitím zmizela → najít podle názvu, případně založit
+        }
+    }
+    const folderId = await ensureFolders();
+    const existing = await driveFindFile(SHEET_TITLE, folderId);
+    if (existing) {
+        state.spreadsheetId = existing.id;
+        store.set(SHEET_ID_KEY, existing.id);
+        await loadTabIds(existing.id);
+        await ensureTabsAndHeaders();
+        return existing.id;
+    }
+    const tabs = [TAB_LIDE, TAB_HIST, TAB_NAST].map(function (t) {
+        return { properties: { title: t, gridProperties: { rowCount: GRID[t].rows, columnCount: GRID[t].cols } } };
+    });
+    const createRes = await gfetch(SHEETS_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: { title: SHEET_TITLE }, sheets: tabs })
+    });
+    await checkSheetsResponse(createRes, 'Založení tabulky');
+    const created = await createRes.json();
+    state.spreadsheetId = created.spreadsheetId;
+    state.sheetTabIds = {};
+    (created.sheets || []).forEach(function (s) { state.sheetTabIds[s.properties.title] = s.properties.sheetId; });
+    store.set(SHEET_ID_KEY, state.spreadsheetId);
+    const moveRes = await gfetch(DRIVE_URL + '/' + state.spreadsheetId +
+        '?addParents=' + folderId + '&removeParents=root&fields=id,parents',
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+    await checkSheetsResponse(moveRes, 'Přesun tabulky do složky');
+    await ensureTabsAndHeaders();
+    return state.spreadsheetId;
+}
+
+function colLetter(n) {
+    let s = '';
+    while (n > 0) {
+        const r = (n - 1) % 26;
+        s = String.fromCharCode(65 + r) + s;
+        n = Math.floor((n - 1) / 26);
+    }
+    return s;
+}
+
+// Fronta zápisů: všechny zápisy jdou jeden po druhém, aby si dva rychlé zápisy
+// nespočítaly stejný cílový řádek (vzor database.html).
+let _writeChain = Promise.resolve();
+function enqueueWrite(fn) {
+    const run = _writeChain.then(fn, fn);
+    _writeChain = run.catch(function () {});
+    return run;
+}
+
+// Sheets neumí zapisovat mimo mřížku listu („exceeds grid limits“) → před zápisem ji rozšířit
+async function _ensureGridRaw(tabName, minCols, minRows) {
+    const sheetId = state.sheetTabIds[tabName];
+    if (sheetId === undefined) return;
+    const res = await gfetch(SHEETS_URL + '/' + state.spreadsheetId + '?fields=sheets(properties(sheetId,gridProperties))');
+    await checkSheetsResponse(res, 'Kontrola velikosti listu ' + tabName);
+    const data = await res.json();
+    const sh = (data.sheets || []).find(function (s) { return s.properties && s.properties.sheetId === sheetId; });
+    if (!sh) return;
+    const gp = sh.properties.gridProperties || {};
+    const requests = [];
+    if (minCols && (gp.columnCount || 0) < minCols) {
+        requests.push({ appendDimension: { sheetId: sheetId, dimension: 'COLUMNS', length: minCols - (gp.columnCount || 0) + 5 } });
+    }
+    if (minRows && (gp.rowCount || 0) < minRows) {
+        requests.push({ appendDimension: { sheetId: sheetId, dimension: 'ROWS', length: minRows - (gp.rowCount || 0) + 500 } });
+    }
+    if (requests.length === 0) return;
+    const res2 = await gfetch(SHEETS_URL + '/' + state.spreadsheetId + ':batchUpdate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: requests })
+    });
+    await checkSheetsResponse(res2, 'Rozšíření listu ' + tabName);
+}
+
+async function _putRowRaw(tabName, rowIndex, rowValues) {
+    await _ensureGridRaw(tabName, rowValues.length, rowIndex);
+    const a1 = tabName + '!A' + rowIndex + ':' + colLetter(rowValues.length) + rowIndex;
+    const res = await gfetch(valuesUrl(a1) + '?valueInputOption=RAW', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [rowValues] })
+    });
+    await checkSheetsResponse(res, 'Zápis řádku do listu ' + tabName);
+}
+
+async function ensureTabsAndHeaders() {
+    const wanted = [
+        { tab: TAB_LIDE, header: LIDE_HEADER },
+        { tab: TAB_HIST, header: HIST_HEADER },
+        { tab: TAB_NAST, header: NAST_HEADER }
+    ];
+    const missingTabs = wanted.filter(function (w) { return state.sheetTabIds[w.tab] === undefined; });
+    if (missingTabs.length > 0) {
+        const res = await gfetch(SHEETS_URL + '/' + state.spreadsheetId + ':batchUpdate', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requests: missingTabs.map(function (w) {
+                return { addSheet: { properties: { title: w.tab,
+                    gridProperties: { rowCount: GRID[w.tab].rows, columnCount: GRID[w.tab].cols } } } };
+            }) })
+        });
+        await checkSheetsResponse(res, 'Doplnění listů');
+        const data = await res.json();
+        (data.replies || []).forEach(function (r) {
+            if (r.addSheet) state.sheetTabIds[r.addSheet.properties.title] = r.addSheet.properties.sheetId;
+        });
+    }
+    for (let i = 0; i < wanted.length; i++) {
+        const w = wanted[i];
+        const res = await gfetch(valuesUrl(w.tab + '!1:1'));
+        await checkSheetsResponse(res, 'Čtení hlavičky listu ' + w.tab);
+        const data = await res.json();
+        const current = (data.values && data.values[0]) ? data.values[0].map(String) : [];
+        if (current.length === 0) {
+            await enqueueWrite(function () { return _putRowRaw(w.tab, 1, w.header); });
+            state.headers[w.tab] = w.header.slice();
+        } else {
+            const missing = w.header.filter(function (h) { return current.indexOf(h) === -1; });
+            if (missing.length > 0) {
+                const merged = current.concat(missing);
+                await enqueueWrite(function () { return _putRowRaw(w.tab, 1, merged); });
+                state.headers[w.tab] = merged;
+            } else {
+                state.headers[w.tab] = current;
+            }
+        }
+    }
+}
+
+async function sheetsRead(tabName) {
+    const res = await gfetch(valuesUrl(tabName));
+    await checkSheetsResponse(res, 'Čtení listu ' + tabName);
+    return (await res.json()).values || [];
+}
+
+// Přidání řádků ve dvou krocích: (1) kolik řádků má sloupec A, (2) zápis na přesný rozsah.
+// Žádný endpoint „:append“ (jeho odhad konce tabulky není spolehlivý, viz database.html).
+async function _appendRaw(tabName, rows) {
+    if (!rows || rows.length === 0) return 0;
+    const res1 = await gfetch(valuesUrl(tabName + '!A:A'));
+    await checkSheetsResponse(res1, 'Zjištění počtu řádků v listu ' + tabName);
+    const count = ((await res1.json()).values || []).length;
+    const startRow = count + 1;
+    const endRow = startRow + rows.length - 1;
+    const maxCols = Math.max.apply(null, rows.map(function (r) { return (r || []).length; }));
+    await _ensureGridRaw(tabName, maxCols, endRow);
+    const a1 = tabName + '!A' + startRow + ':' + colLetter(maxCols) + endRow;
+    const res2 = await gfetch(valuesUrl(a1) + '?valueInputOption=RAW', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: rows })
+    });
+    await checkSheetsResponse(res2, 'Zápis do listu ' + tabName);
+    return startRow;
+}
+function sheetsAppend(tabName, rows) {
+    return enqueueWrite(function () { return _appendRaw(tabName, rows); });
+}
+
+// Najde řádek podle id v AKTUÁLNÍ tabulce (ne podle čísla řádku z paměti — po smazání neplatí)
+async function _locateRaw(tabName, id) {
+    const resH = await gfetch(valuesUrl(tabName + '!1:1'));
+    await checkSheetsResponse(resH, 'Čtení hlavičky listu ' + tabName);
+    const header = ((await resH.json()).values || [[]])[0] || [];
+    const idCol = header.indexOf('id');
+    if (idCol === -1) throw new Error('V listu ' + tabName + ' chybí sloupec id.');
+    const L = colLetter(idCol + 1);
+    const resI = await gfetch(valuesUrl(tabName + '!' + L + ':' + L));
+    await checkSheetsResponse(resI, 'Čtení sloupce id v listu ' + tabName);
+    const ids = (await resI.json()).values || [];
+    let rowIdx = -1, hits = 0;
+    for (let i = 1; i < ids.length; i++) {
+        if (String((ids[i] || [])[0] || '') === String(id)) { if (rowIdx === -1) rowIdx = i; hits++; }
+    }
+    if (rowIdx === -1) {
+        const e = new Error('Záznam už v tabulce není (mezitím ho smazalo jiné zařízení).');
+        e.code = 'NOT_FOUND';
+        throw e;
+    }
+    if (hits > 1) throw new Error('Stejné id je v tabulce ' + hits + '×. Zápis zastaven.');
+    return { header: header, rowNumber: rowIdx + 1 };
+}
+
+// Bezpečná úprava člověka: zapíše jen změněná pole podle id. Když se mezitím změnil
+// čas poslední úpravy (jiné zařízení), nezapíše nic a ohlásí konflikt.
+function patchPerson(id, patch, opts) {
+    opts = opts || {};
+    return enqueueWrite(async function () {
+        const loc = await _locateRaw(TAB_LIDE, id);
+        const updCol = loc.header.indexOf('aktualizovano');
+        if (opts.expectUpdated !== undefined && updCol !== -1) {
+            const a1 = TAB_LIDE + '!' + colLetter(updCol + 1) + loc.rowNumber;
+            const resU = await gfetch(valuesUrl(a1));
+            await checkSheetsResponse(resU, 'Kontrola poslední úpravy');
+            const cur = String((((await resU.json()).values || [[]])[0] || [])[0] || '');
+            if (cur !== String(opts.expectUpdated || '')) {
+                const e = new Error('Údaje se mezitím změnily na jiném zařízení.');
+                e.code = 'CONFLICT';
+                throw e;
+            }
+        }
+        const fields = Object.assign({}, patch, { aktualizovano: nowIso() });
+        const data = [];
+        Object.keys(fields).forEach(function (field) {
+            const col = loc.header.indexOf(field);
+            if (col === -1) throw new Error('V tabulce chybí sloupec „' + field + '“.');
+            const v = fields[field];
+            data.push({ range: TAB_LIDE + '!' + colLetter(col + 1) + loc.rowNumber,
+                values: [[(v === undefined || v === null) ? '' : String(v)]] });
+        });
+        const res = await gfetch(SHEETS_URL + '/' + state.spreadsheetId + '/values:batchUpdate', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ valueInputOption: 'RAW', data: data })
+        });
+        await checkSheetsResponse(res, 'Uložení změn');
+        return fields;
+    });
+}
+
+// Smazání řádků podle id (od konce listu, aby čísla řádků zůstala platná)
+function deleteRowsByIds(tabName, idList) {
+    if (!idList || idList.length === 0) return Promise.resolve(0);
+    return enqueueWrite(async function () {
+        const tabId = state.sheetTabIds[tabName];
+        if (tabId === undefined) throw new Error('List ' + tabName + ' nebyl nalezen.');
+        const res = await gfetch(valuesUrl(tabName + '!A:A'));
+        await checkSheetsResponse(res, 'Čtení sloupce id v listu ' + tabName);
+        const ids = (await res.json()).values || [];
+        const want = {};
+        idList.forEach(function (x) { want[String(x)] = true; });
+        const rows = [];
+        for (let i = 1; i < ids.length; i++) {
+            if (want[String((ids[i] || [])[0] || '')]) rows.push(i + 1);
+        }
+        if (rows.length === 0) return 0;
+        rows.sort(function (a, b) { return b - a; });
+        const requests = rows.map(function (rowIndex) {
+            return { deleteDimension: { range: { sheetId: tabId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex } } };
+        });
+        const res2 = await gfetch(SHEETS_URL + '/' + state.spreadsheetId + ':batchUpdate', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: requests })
+        });
+        await checkSheetsResponse(res2, 'Mazání řádků v listu ' + tabName);
+        return rows.length;
+    });
+}
+
+// ============================================================
+// DATA
+// ============================================================
+async function loadAll() {
+    const parts = await Promise.all([sheetsRead(TAB_LIDE), sheetsRead(TAB_HIST), sheetsRead(TAB_NAST)]);
+    const hL = (parts[0][0] || LIDE_HEADER).map(String);
+    const hH = (parts[1][0] || HIST_HEADER).map(String);
+    state.headers[TAB_LIDE] = hL;
+    state.headers[TAB_HIST] = hH;
+    const all = parts[0].slice(1).map(function (r) { return rowToObject(r, hL); }).filter(function (o) { return o.id; });
+    state.people = all.filter(function (o) { return o.typ; });
+    state.stubs = all.filter(function (o) { return !o.typ; });
+    state.history = parts[1].slice(1).map(function (r) { return rowToObject(r, hH); }).filter(function (o) { return o.id; });
+    state.settings = {};
+    parts[2].slice(1).forEach(function (r) { if (r && r[0]) state.settings[String(r[0])] = r[1] == null ? '' : String(r[1]); });
+    state.loadedAt = Date.now();
+    state.loadedDay = todayIso();
+}
+function findPerson(id) {
+    for (let i = 0; i < state.people.length; i++) if (state.people[i].id === id) return state.people[i];
+    return null;
+}
+function blankPerson() {
+    const o = {};
+    LIDE_HEADER.forEach(function (k) { o[k] = ''; });
+    return o;
+}
+function historyOf(id) {
+    return state.history.filter(function (h) { return h.clovek_id === id; })
+        .sort(function (a, b) { return String(b.datum).localeCompare(String(a.datum)); });
+}
+function sysEntry(personId, text) {
+    return { id: genId('h'), clovek_id: personId, datum: nowIso(), typ: 'system', text: text, davka_id: '' };
+}
+async function appendHistory(entries) {
+    if (!entries || entries.length === 0) return;
+    const header = state.headers[TAB_HIST] || HIST_HEADER;
+    await sheetsAppend(TAB_HIST, entries.map(function (e) { return objectToRow(e, header); }));
+    entries.forEach(function (e) { state.history.push(e); });
+}
+
+// Přidá lidi jedním zápisem (rychlé přidání i nahrání tabulky)
+async function addPeople(list, sysText) {
+    if (!list || list.length === 0) return [];
+    const header = state.headers[TAB_LIDE] || LIDE_HEADER;
+    const stamp = nowIso();
+    const full = list.map(function (src) {
+        const p = Object.assign(blankPerson(), src);
+        p.id = genId('c');
+        p.vytvoreno = stamp;
+        p.aktualizovano = stamp;
+        return p;
+    });
+    await sheetsAppend(TAB_LIDE, full.map(function (p) { return objectToRow(p, header); }));
+    full.forEach(function (p) { state.people.push(p); });
+    if (sysText) {
+        try { await appendHistory(full.map(function (p) { return sysEntry(p.id, sysText); })); }
+        catch (e) { console.warn('Poznámka do historie se nezapsala:', e); }
+    }
+    return full;
+}
+
+// Úprava jednoho člověka s kontrolou, že ho mezitím nezměnilo jiné zařízení
+async function updatePerson(id, patch) {
+    const p = findPerson(id) || state.stubs.find(function (s) { return s.id === id; });
+    if (!p) throw new Error('Člověk nebyl nalezen.');
+    const written = await patchPerson(id, patch, { expectUpdated: p.aktualizovano });
+    Object.keys(written).forEach(function (k) { p[k] = written[k] == null ? '' : String(written[k]); });
+    return p;
+}
+
+// ---- Adresy, na které se neposílá (hlídá se podle adresy, ne podle karty) ----
+function blockedByCard(email, ignoreId) {
+    const e = normEmail(email);
+    if (!e) return null;
+    for (let i = 0; i < state.people.length; i++) {
+        const p = state.people[i];
+        if (p.id !== ignoreId && p.emaily === 'neposilat' && normEmail(p.email) === e) return p;
+    }
+    return null;
+}
+async function blockedInfo(email, ignoreId) {
+    const e = normEmail(email);
+    if (!e) return null;
+    const card = blockedByCard(e, ignoreId);
+    if (card) return { duvod: card.emaily_duvod || 'moje_volba', kdy: card.emaily_kdy, by: 'card' };
+    const h = await sha256Hex('e:' + e);
+    const st = state.stubs.find(function (s) { return s.otisk_email === h && s.emaily === 'neposilat'; });
+    return st ? { duvod: st.emaily_duvod || 'odhlasil_se', kdy: st.emaily_kdy, by: 'stub' } : null;
+}
+function findDuplicates(c, ignoreId) {
+    const e = normEmail(c.email), t = normPhone(c.telefon), n = nameKey(c), x = String(c.ext_id || '');
+    let certain = null;
+    const possible = [];
+    state.people.forEach(function (p) {
+        if (p.id === ignoreId) return;
+        if ((e && normEmail(p.email) === e) || (x && p.ext_id === x)) { if (!certain) certain = p; return; }
+        if ((t && normPhone(p.telefon) === t) || (n && nameKey(p) === n)) possible.push(p);
+    });
+    return { certain: certain, possible: possible };
+}
+function mailLabel(p) {
+    if (p.emaily === 'neposilat') {
+        return p.emaily_duvod === 'odhlasil_se' ? 'Odhlásil se' : 'Neposílat';
+    }
+    return 'Posílat';
+}
+function stavLabel(p) {
+    return (p.typ === 'klient' ? LBL.stavK : LBL.stavZ)[p.stav] || '';
+}
+
+// ============================================================
+// PŘIHLÁŠENÍ (jen živý web — v ukázce se nic z toho nenačítá ani nevolá)
+// ============================================================
+let tokenClient = null;
+function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = resolve;
+        s.onerror = function () { reject(new Error('Nepodařilo se načíst ' + src)); };
+        document.head.appendChild(s);
+    });
+}
+function updateGoogleUi(connected) {
+    $('btn-google').classList.toggle('on', !!connected);
+    $('gtext').textContent = DEMO ? 'Ukázka' : (connected ? 'Drive: připojeno' : 'Připojit Google');
+}
+function initTokenClient() {
+    if (!window.google || !google.accounts || !google.accounts.oauth2) return false;
+    if (!tokenClient) {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID, scope: GOOGLE_SCOPES, callback: handleTokenResponse
+        });
+    }
+    return true;
+}
+function handleTokenResponse(response) {
+    if (response.error) {
+        showToast('Přihlášení selhalo: ' + (response.error_description || response.error), 'error');
+        return;
+    }
+    state.viaDeviceAuth = false;
+    state.accessToken = response.access_token;
+    state.tokenExpiry = Date.now() + ((response.expires_in || 3600) * 1000) - 60000;
+    store.set(TOKEN_KEY, state.accessToken);
+    store.set(TOKEN_EXPIRY_KEY, String(state.tokenExpiry));
+    updateGoogleUi(true);
+    bootstrap();
+}
+function restoreToken() {
+    const t = store.get(TOKEN_KEY);
+    const exp = parseInt(store.get(TOKEN_EXPIRY_KEY) || '0', 10);
+    if (t && exp > Date.now()) { state.accessToken = t; state.tokenExpiry = exp; return true; }
+    store.del(TOKEN_KEY);
+    store.del(TOKEN_EXPIRY_KEY);
+    return false;
+}
+function useDeviceToken(token) {
+    state.viaDeviceAuth = true;
+    state.accessToken = token;
+    state.tokenExpiry = parseInt(store.get(TOKEN_EXPIRY_KEY) || '0', 10) || (Date.now() + 50 * 60000);
+    updateGoogleUi(true);
+    bootstrap();
+}
+async function startGisFlow(showNote) {
+    if (showNote) $('connect-note').style.display = '';
+    try { if (!window.google) await loadScript('https://accounts.google.com/gsi/client'); } catch (e) { /* ruční připojení nepůjde */ }
+    initTokenClient();
+    if (restoreToken()) { updateGoogleUi(true); bootstrap(); } else { updateGoogleUi(false); }
+}
+// Trvalé přihlášení: PIN zařízení → Google token ze serveru (vzor dashboard.html).
+// Když modul chybí nebo server Google nemá nastavený, zůstává ruční připojení.
+async function startAuth() {
+    if (DEMO) { state.accessToken = 'ukazka'; updateGoogleUi(true); bootstrap(); return; }
+    try { await loadScript('profilend-auth.js'); } catch (e) { /* modul chybí */ }
+    if (!window.ProfilendAuth) { startGisFlow(false); return; }
+    try {
+        const device = await ProfilendAuth.ensureDevice();
+        const token = device ? await ProfilendAuth.getGoogleToken({ interactive: false }) : null;
+        if (token) useDeviceToken(token); else startGisFlow(true);
+    } catch (e) { startGisFlow(true); }
+}
+async function connectGoogle() {
+    if (DEMO) { bootstrap(); return; }
+    if (window.ProfilendAuth) {
+        try {
+            const token = await ProfilendAuth.getGoogleToken({ interactive: false });
+            if (token) { useDeviceToken(token); return; }
+        } catch (e) { /* pokračovat ručně */ }
+    }
+    try { if (!window.google) await loadScript('https://accounts.google.com/gsi/client'); }
+    catch (e) { showToast('Přihlášení ke Googlu se nepodařilo načíst. Zkuste to za chvíli.', 'error'); return; }
+    if (!initTokenClient()) { showToast('Přihlášení ke Googlu ještě není připravené. Zkuste to za chvíli.', 'warn'); return; }
+    tokenClient.requestAccessToken({ prompt: state.accessToken ? '' : 'consent' });
+}
+
+// ============================================================
+// START A NAČTENÍ DAT
+// ============================================================
+async function bootstrap() {
+    if (state.loading) return;
+    state.loading = true;
+    try {
+        if (!state.spreadsheetId) showToast('Připojuji se k tabulce…');
+        await ensureSpreadsheet();
+        await loadAll();
+        if (DEMO && state.people.length === 0 && state.stubs.length === 0) await seedDemo();
+        $('connect-panel').style.display = 'none';
+        $('app-view').style.display = '';
+        $('btn-add').style.display = '';
+        $('btn-import').style.display = '';
+        renderAll();
+    } catch (e) {
+        console.error(e);
+        if (!e.isAuth) showToast('Načtení se nepovedlo: ' + e.message, 'error');
+    } finally {
+        state.loading = false;
+    }
+}
+async function reloadData(quiet) {
+    if (state.loading || !state.spreadsheetId) return;
+    state.loading = true;
+    try {
+        await loadAll();
+        renderAll();
+        if (!quiet) showToast('Data načtena znovu.');
+    } catch (e) {
+        console.error(e);
+        if (!e.isAuth) showToast('Načtení se nepovedlo: ' + e.message, 'error');
+    } finally {
+        state.loading = false;
+    }
+}
+
+// ============================================================
+// SEZNAMY
+// ============================================================
+function currentList() {
+    const tab = state.ui.tab;
+    const isK = tab === 'klient';
+    const qRaw = $('q').value;
+    const q = norm(qRaw);
+    const qDigits = qRaw.replace(/\D/g, '');
+    const fD = $('f-dulezitost').value;
+    const fS = $(isK ? 'f-stav-k' : 'f-stav-z').value;
+    const fR = $(isK ? 'f-obor' : 'f-role').value;
+    let list = state.people.filter(function (p) { return p.typ === tab; });
+    const total = list.length;
+    if (fD) list = list.filter(function (p) { return p.dulezitost === fD; });
+    if (fS) list = list.filter(function (p) { return p.stav === fS; });
+    if (fR) list = list.filter(function (p) { return (isK ? p.obor : p.role) === fR; });
+    if (q) {
+        list = list.filter(function (p) {
+            if (norm([p.titul, p.jmeno, p.prijmeni, p.firma, p.email].join(' ')).indexOf(q) !== -1) return true;
+            return qDigits.length >= 3 && normPhone(p.telefon).indexOf(qDigits) !== -1;
+        });
+    }
+    const dir = state.ui.dir;
+    const key = state.ui.sort;
+    const byName = function (a, b) {
+        return collator.compare(a.prijmeni || a.jmeno || '', b.prijmeni || b.jmeno || '') ||
+            collator.compare(a.jmeno || '', b.jmeno || '');
+    };
+    list.sort(function (a, b) {
+        let r = 0;
+        if (key === 'dulezitost') r = collator.compare(a.dulezitost || 'Z', b.dulezitost || 'Z');
+        else if (key === 'stav') r = collator.compare(stavLabel(a), stavLabel(b));
+        else if (key === 'posledni_kontakt') {
+            // prázdné datum vždy na konec, bez ohledu na směr
+            if (!a.posledni_kontakt && !b.posledni_kontakt) r = 0;
+            else if (!a.posledni_kontakt) return 1;
+            else if (!b.posledni_kontakt) return -1;
+            else r = String(a.posledni_kontakt).localeCompare(String(b.posledni_kontakt));
+        }
+        return (r * dir) || byName(a, b) * (key === 'prijmeni' ? dir : 1);
+    });
+    return { list: list, total: total };
+}
+function impPill(p) {
+    const d = (p.dulezitost || 'B').toUpperCase();
+    return '<span class="pill imp-' + escapeHtml(d.toLowerCase()) + '">' + escapeHtml(d) + '</span>';
+}
+function mailPill(p) {
+    if (!String(p.email || '').trim()) return '<span class="muted">bez e-mailu</span>';
+    const on = p.emaily !== 'neposilat';
+    return '<span class="pill ' + (on ? 'mail-on' : 'mail-off') + '">' + escapeHtml(mailLabel(p)) + '</span>';
+}
+function renderList() {
+    const tab = state.ui.tab;
+    const isK = tab === 'klient';
+    const cur = currentList();
+    const body = $('list-body');
+    const today = todayIso();
+    body.innerHTML = cur.list.map(function (p) {
+        const sub = [p.firma, p.funkce].map(function (x) { return String(x || '').trim(); }).filter(Boolean).join(' · ');
+        let krok = '';
+        if (p.dalsi_krok) {
+            const late = p.dalsi_krok_termin && p.dalsi_krok_termin <= today;
+            krok = escapeHtml(p.dalsi_krok) + (p.dalsi_krok_termin
+                ? ' <span class="' + (late ? 'pill bad' : 'muted') + '">' + escapeHtml(fmtDay(p.dalsi_krok_termin)) + '</span>' : '');
+        }
+        return '<tr data-act="person-open" data-id="' + escapeHtml(p.id) + '">' +
+            '<td><span class="p-name">' + escapeHtml(fullName(p)) + '</span>' +
+                (sub ? '<span class="p-firm">' + escapeHtml(sub) + '</span>' : '') + '</td>' +
+            '<td data-l="' + (isK ? 'Obor' : 'Role') + '">' + escapeHtml(isK ? p.obor : p.role) + '</td>' +
+            '<td data-l="Důležitost">' + impPill(p) + '</td>' +
+            '<td data-l="Stav">' + escapeHtml(stavLabel(p)) + '</td>' +
+            '<td data-l="Poslední kontakt">' + escapeHtml(fmtDay(p.posledni_kontakt)) + '</td>' +
+            '<td data-l="Další krok">' + krok + '</td>' +
+            '<td data-l="E-maily">' + mailPill(p) + '</td>' +
+            '</tr>';
+    }).join('');
+    const empty = $('list-empty');
+    if (cur.list.length === 0) {
+        $('list-wrap').style.display = 'none';
+        empty.style.display = '';
+        empty.textContent = cur.total === 0
+            ? 'Zatím tu nikdo není. Přidejte člověka, nebo nahrajte tabulku s kontakty.'
+            : 'Nikdo neodpovídá hledání nebo filtrům.';
+    } else {
+        $('list-wrap').style.display = '';
+        empty.style.display = 'none';
+    }
+    $('list-count').textContent = cur.list.length === cur.total
+        ? cur.total + ' ' + plural(cur.total, 'člověk', 'lidé', 'lidí') : cur.list.length + ' z ' + cur.total;
+    document.querySelectorAll('[data-arrow]').forEach(function (a) {
+        a.textContent = a.getAttribute('data-arrow') === state.ui.sort ? (state.ui.dir === 1 ? '↑' : '↓') : '';
+    });
+}
+function renderAll() {
+    $('num-z').textContent = state.people.filter(function (p) { return p.typ === 'zprostredkovatel'; }).length;
+    $('num-k').textContent = state.people.filter(function (p) { return p.typ === 'klient'; }).length;
+    renderList();
+    if (state.ui.openId && $('cardModal').classList.contains('show')) {
+        const p = findPerson(state.ui.openId);
+        if (p) renderCard(p); else closeModal('cardModal');
+    }
+}
+function switchTab(tab) {
+    state.ui.tab = tab;
+    document.querySelectorAll('#tabs button').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+    });
+    document.querySelectorAll('.list-tools [data-for]').forEach(function (w) {
+        w.style.display = w.getAttribute('data-for') === tab ? '' : 'none';
+    });
+    $('th-role').textContent = tab === 'klient' ? 'Obor' : 'Role';
+    renderList();
+}
+
+// ============================================================
+// KARTA ČLOVĚKA
+// ============================================================
+function kv(label, html) {
+    return '<div class="kv"><div class="kv-l">' + escapeHtml(label) + '</div><div class="kv-v">' + html + '</div></div>';
+}
+function renderCard(p) {
+    const sub = [p.firma, p.funkce].map(function (x) { return String(x || '').trim(); }).filter(Boolean).join(' · ');
+    const tel = normPhone(p.telefon);
+    const mail = isValidEmail(p.email) ? String(p.email).trim() : '';
+    const li = safeUrl(p.linkedin);
+    const today = todayIso();
+
+    let kontakt = '';
+    if (p.telefon) {
+        kontakt += tel ? '<a href="tel:+' + escapeHtml(tel) + '">' + escapeHtml(fmtPhone(p.telefon)) + '</a>' : escapeHtml(p.telefon);
+    }
+    if (p.email) {
+        kontakt += (kontakt ? '<br>' : '') + (mail
+            ? '<a href="mailto:' + escapeHtml(encodeURIComponent(mail).replace(/%40/g, '@')) + '">' + escapeHtml(mail) + '</a>'
+            : escapeHtml(p.email));
+    }
+    if (li) kontakt += (kontakt ? '<br>' : '') + '<a href="' + escapeHtml(li) + '" target="_blank" rel="noopener noreferrer">Profil na LinkedInu</a>';
+    if (!kontakt) kontakt = '<span class="muted">Zatím žádný kontakt.</span>';
+
+    let maily = '<div class="kv-row"><span class="pill ' + (p.emaily !== 'neposilat' ? 'mail-on' : 'mail-off') + '">' +
+        escapeHtml(mailLabel(p)) + '</span>' +
+        '<button type="button" class="btn btn-secondary btn-sm" data-act="mail-open">Změnit</button></div>';
+    if (p.emaily === 'neposilat') {
+        maily += '<div class="muted" style="margin-top:6px">Důvod: ' + escapeHtml(LBL.duvod[p.emaily_duvod] || 'neuveden') +
+            (p.emaily_kdy ? ' · ' + escapeHtml(fmtDay(p.emaily_kdy)) : '') + '</div>';
+    }
+    if (p.souhlas) maily += '<div class="muted" style="margin-top:6px">Souhlas: ' + escapeHtml(p.souhlas) + '</div>';
+    if (!p.email) maily += '<div class="muted" style="margin-top:6px">E-mail zatím chybí, takže mu žádný nepřijde.</div>';
+
+    const firma = [p.firma, p.ico ? 'IČO ' + p.ico : '', p.sidlo].map(function (x) { return String(x || '').trim(); })
+        .filter(Boolean).map(escapeHtml).join('<br>');
+    const odkud = escapeHtml(LBL.zdroj[p.zdroj] || '') + (p.zdroj_poznamka ? '<br><span class="muted">' + escapeHtml(p.zdroj_poznamka) + '</span>' : '');
+
+    let krok = '<span class="muted">Žádný.</span>';
+    if (p.dalsi_krok) {
+        const late = p.dalsi_krok_termin && p.dalsi_krok_termin <= today;
+        krok = escapeHtml(p.dalsi_krok) + (p.dalsi_krok_termin
+            ? ' <span class="' + (late ? 'pill bad' : 'muted') + '">do ' + escapeHtml(fmtDay(p.dalsi_krok_termin)) + '</span>' : '');
+    }
+    const hist = historyOf(p.id);
+    const histHtml = hist.length === 0
+        ? '<span class="muted">Zatím bez záznamu.</span>'
+        : '<ul class="tl">' + hist.map(function (h) {
+            return '<li><span class="tl-date">' + escapeHtml(fmtStamp(h.datum)) + '</span><span><span class="tl-kind">' +
+                escapeHtml(LBL.hist[h.typ] || h.typ) + '</span>' + (h.text ? ': ' + escapeHtml(h.text) : '') + '</span></li>';
+        }).join('') + '</ul>';
+
+    $('card-body').innerHTML =
+        '<div class="card-head">' +
+            '<div><div class="card-title">' + escapeHtml(fullName(p)) + '</div>' +
+            (sub ? '<div class="card-sub">' + escapeHtml(sub) + '</div>' : '') + '</div>' +
+            '<div class="card-badges">' +
+                '<span class="pill">' + escapeHtml(LBL.typ[p.typ] || '') + '</span>' +
+                (p.typ === 'klient' ? (p.obor ? '<span class="pill">' + escapeHtml(p.obor) + '</span>' : '')
+                    : (p.role ? '<span class="pill">' + escapeHtml(p.role) + '</span>' : '')) +
+                (stavLabel(p) ? '<span class="pill">' + escapeHtml(stavLabel(p)) + '</span>' : '') +
+                impPill(p) +
+            '</div>' +
+        '</div>' +
+        '<div class="card-cols"><div>' +
+            kv('Kontakt', kontakt) +
+            kv('E-maily', maily) +
+            (firma ? kv('Firma', firma) : '') +
+            kv('Odkud ho mám', odkud || '<span class="muted">Neuvedeno.</span>') +
+            (p.poznamka ? kv('Poznámka', escapeHtml(p.poznamka).replace(/\n/g, '<br>')) : '') +
+        '</div><div>' +
+            kv('Další krok', krok) +
+            kv('Poslední kontakt', p.posledni_kontakt ? escapeHtml(fmtDay(p.posledni_kontakt)) : '<span class="muted">Zatím žádný.</span>') +
+            kv('Historie', histHtml) +
+        '</div></div>';
+}
+function openCard(id) {
+    const p = findPerson(id);
+    if (!p) { showToast('Člověk už v seznamu není.', 'warn'); return; }
+    state.ui.openId = id;
+    renderCard(p);
+    openModal('cardModal');
+}
+
+// ============================================================
+// FORMULÁŘ: PŘIDAT / UPRAVIT
+// ============================================================
+const FORM_FIELDS = {
+    titul: 'p-titul', jmeno: 'p-jmeno', prijmeni: 'p-prijmeni', telefon: 'p-telefon', email: 'p-email',
+    firma: 'p-firma', ico: 'p-ico', funkce: 'p-funkce', sidlo: 'p-sidlo', linkedin: 'p-linkedin',
+    zdroj_poznamka: 'p-zdroj-poznamka', poznamka: 'p-poznamka', dalsi_krok: 'p-krok', dalsi_krok_termin: 'p-termin'
+};
+const form = { allowPossible: false, busy: false };
+
+function formError(msg) { $('form-err').textContent = msg || ''; }
+function clearInvalid() {
+    document.querySelectorAll('#formModal .input.invalid').forEach(function (i) { i.classList.remove('invalid'); });
+}
+function markInvalid(id) { const el = $(id); if (el) el.classList.add('invalid'); }
+function toggleFormType() {
+    const typ = $('p-typ').value;
+    document.querySelectorAll('#formModal [data-for]').forEach(function (w) {
+        w.style.display = w.getAttribute('data-for') === typ ? '' : 'none';
+    });
+}
+function applySourceDefaults() {
+    if (state.ui.editId) return;   // jen u nového člověka
+    const def = ZDROJ_DEFAULTS[$('p-zdroj').value] || ZDROJ_DEFAULTS.jine;
+    setSelect('p-stav-z', def.stavZ);
+    setSelect('p-stav-k', 'zajemce');
+    $('p-hned').checked = def.prvniKontakt;
+    $('form-mail-hint').textContent = def.emaily === 'posilat'
+        ? 'E-maily: po uložení bude mít „Posílat“. Změnit to jde na kartě.'
+        : 'E-maily: lidé z reklamy mají „Neposílat“, dokud nesouhlasí. Po prvním kontaktu to jde na kartě přepnout.';
+}
+function openForm(person) {
+    state.ui.editId = person ? person.id : null;
+    form.allowPossible = false;
+    formError('');
+    clearInvalid();
+    $('form-dup-actions').innerHTML = '';
+    $('form-title').textContent = person ? 'Upravit člověka' : 'Přidat člověka';
+    const src = person || blankPerson();
+    Object.keys(FORM_FIELDS).forEach(function (k) { $(FORM_FIELDS[k]).value = src[k] || ''; });
+    setSelect('p-typ', person ? person.typ : state.ui.tab);
+    setSelect('p-role', src.role || '');
+    setSelect('p-obor', src.obor || '');
+    setSelect('p-dulezitost', src.dulezitost || 'B');
+    setSelect('p-zdroj', src.zdroj || 'doporuceni');
+    if (person) {
+        setSelect('p-stav-z', person.typ === 'zprostredkovatel' ? (person.stav || 'novy') : 'novy');
+        setSelect('p-stav-k', person.typ === 'klient' ? (person.stav || 'zajemce') : 'zajemce');
+        $('p-hned-wrap').style.display = 'none';
+        $('form-mail-hint').textContent = '';
+    } else {
+        $('p-hned-wrap').style.display = '';
+        applySourceDefaults();
+    }
+    toggleFormType();
+    openModal('formModal');
+    setTimeout(function () { $('p-jmeno').focus(); }, 30);
+}
+function readForm() {
+    const o = {};
+    Object.keys(FORM_FIELDS).forEach(function (k) { o[k] = $(FORM_FIELDS[k]).value.trim(); });
+    o.typ = $('p-typ').value;
+    o.dulezitost = $('p-dulezitost').value;
+    o.zdroj = $('p-zdroj').value;
+    if (o.typ === 'klient') { o.stav = $('p-stav-k').value; o.obor = $('p-obor').value; o.role = ''; }
+    else { o.stav = $('p-stav-z').value; o.role = $('p-role').value; o.obor = ''; }
+    o.ico = o.ico.replace(/\s/g, '');
+    o.email = o.email.replace(/\s/g, '');
+    if (o.telefon) o.telefon = normPhone(o.telefon) ? fmtPhone(o.telefon) : o.telefon;
+    return o;
+}
+function validateForm(o) {
+    clearInvalid();
+    if (!o.jmeno && !o.prijmeni) { markInvalid('p-jmeno'); markInvalid('p-prijmeni'); return 'Zadej jméno nebo příjmení.'; }
+    if (!o.typ) return 'Vyber typ.';
+    if (o.email && !isValidEmail(o.email)) { markInvalid('p-email'); return 'E-mail nevypadá správně.'; }
+    if (o.ico && !/^\d{8}$/.test(o.ico)) { markInvalid('p-ico'); return 'IČO má mít 8 číslic.'; }
+    if (o.dalsi_krok_termin && !o.dalsi_krok) { markInvalid('p-krok'); return 'K termínu doplň, co je další krok.'; }
+    return '';
+}
+function dupButtons(person, allowForce) {
+    const box = $('form-dup-actions');
+    box.innerHTML = '';
+    const b1 = document.createElement('button');
+    b1.type = 'button';
+    b1.className = 'btn btn-secondary btn-sm';
+    b1.textContent = 'Otevřít kartu';
+    b1.setAttribute('data-act', 'dup-open');
+    b1.setAttribute('data-id', person.id);
+    box.appendChild(b1);
+    if (allowForce) {
+        const b2 = document.createElement('button');
+        b2.type = 'button';
+        b2.className = 'btn btn-secondary btn-sm';
+        b2.textContent = state.ui.editId ? 'Přesto uložit' : 'Přesto přidat';
+        b2.setAttribute('data-act', 'dup-force');
+        box.appendChild(b2);
+    }
+}
+async function savePerson() {
+    if (form.busy) return;
+    const o = readForm();
+    const problem = validateForm(o);
+    if (problem) { formError(problem); return; }
+    const editId = state.ui.editId;
+    // U úpravy se shoda hlídá jen u údajů, které se právě změnily (jinak by stará možná
+    // shoda otravovala při každém uložení).
+    let probe = o;
+    if (editId) {
+        const cur = findPerson(editId) || {};
+        const mailChanged = normEmail(cur.email) !== normEmail(o.email);
+        const telChanged = normPhone(cur.telefon) !== normPhone(o.telefon);
+        const nameChanged = nameKey(cur) !== nameKey(o);
+        probe = {
+            email: mailChanged ? o.email : '', telefon: telChanged ? o.telefon : '',
+            jmeno: nameChanged ? o.jmeno : '', prijmeni: nameChanged ? o.prijmeni : '', firma: nameChanged ? o.firma : '', ext_id: ''
+        };
+    }
+    const dup = findDuplicates(probe, editId);
+    if (dup.certain) {
+        formError('Člověk se stejným e-mailem už v CRM je: ' + fullName(dup.certain) + '.');
+        dupButtons(dup.certain, false);
+        return;
+    }
+    if (dup.possible.length > 0 && !form.allowPossible) {
+        formError('Možná shoda: ' + fullName(dup.possible[0]) + ' má stejný telefon nebo stejné jméno a firmu.');
+        dupButtons(dup.possible[0], true);
+        return;
+    }
+    form.busy = true;
+    $('form-save').disabled = true;
+    formError('');
+    try {
+        const today = todayIso();
+        const blocked = o.email ? await blockedInfo(o.email, editId) : null;
+        if (editId) {
+            const p = findPerson(editId);
+            if (!p) throw new Error('Člověk už v seznamu není.');
+            const patch = {};
+            Object.keys(o).forEach(function (k) { if (String(p[k] || '') !== String(o[k] || '')) patch[k] = o[k]; });
+            let note = '';
+            if (blocked && patch.email !== undefined && p.emaily !== 'neposilat') {
+                patch.emaily = 'neposilat';
+                patch.emaily_duvod = blocked.duvod;
+                patch.emaily_kdy = today;
+                note = 'Na tuto adresu se neposílá (' + (LBL.duvod[blocked.duvod] || 'neposílat') + '), karta má proto „Neposílat“.';
+            }
+            if (patch.stav === 'nezajem' && p.dalsi_krok && patch.dalsi_krok === undefined) {
+                const drop = await appConfirm('Člověk má stav Nezájem. Zrušit i jeho další krok „' + p.dalsi_krok + '“?',
+                    { title: 'Další krok', okLabel: 'Zrušit krok', cancelLabel: 'Nechat' });
+                if (drop) { patch.dalsi_krok = ''; patch.dalsi_krok_termin = ''; }
+            }
+            if (Object.keys(patch).length === 0) {
+                closeModal('formModal');
+                state.ui.editId = null;
+                openCard(editId);
+                return;
+            }
+            await updatePerson(editId, patch);
+            if (note) await appendHistory([sysEntry(editId, 'E-maily: Neposílat (adresa je vedená jako „neposílat“)')]);
+            closeModal('formModal');
+            state.ui.editId = null;
+            renderAll();
+            openCard(editId);
+            showToast(note || 'Uloženo.', note ? 'warn' : '');
+        } else {
+            const def = ZDROJ_DEFAULTS[o.zdroj] || ZDROJ_DEFAULTS.jine;
+            const p = Object.assign({}, o);
+            p.emaily = def.emaily;
+            p.emaily_duvod = def.emaily === 'neposilat' ? 'bez_souhlasu' : '';
+            p.emaily_kdy = def.emaily === 'neposilat' ? today : '';
+            let note = '';
+            if (blocked) {
+                p.emaily = 'neposilat';
+                p.emaily_duvod = blocked.duvod;
+                p.emaily_kdy = today;
+                note = 'Na tuto adresu se neposílá (' + (LBL.duvod[blocked.duvod] || 'neposílat') + '), karta má proto „Neposílat“.';
+            }
+            p.rytmus_od = today;
+            if ($('p-hned').checked && !p.dalsi_krok) { p.dalsi_krok = 'První kontakt'; p.dalsi_krok_termin = today; }
+            const added = await addPeople([p], 'Karta založena ručně');
+            closeModal('formModal');
+            if (added[0] && added[0].typ !== state.ui.tab) switchTab(added[0].typ);
+            renderAll();
+            showToast(note || 'Člověk přidán.', note ? 'warn' : '');
+        }
+    } catch (e) {
+        console.error(e);
+        if (e.code === 'CONFLICT' || e.code === 'NOT_FOUND') {
+            closeModal('formModal');
+            state.ui.editId = null;
+            showToast('Údaje se mezitím změnily na jiném zařízení. Načítám je znovu, nic se nepřepsalo.', 'warn');
+            await reloadData(true);
+        } else {
+            showErr('form-err', e.isAuth ? e.message : 'Uložení se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+        }
+    } finally {
+        form.busy = false;
+        $('form-save').disabled = false;
+    }
+}
+async function aresLookup() {
+    const ico = $('p-ico').value.replace(/\s/g, '');
+    if (!/^\d{8}$/.test(ico)) { markInvalid('p-ico'); formError('IČO má mít 8 číslic.'); return; }
+    formError('');
+    $('p-ico').classList.remove('invalid');
+    if (DEMO) {
+        $('p-firma').value = 'Ukázková firma s.r.o.';
+        $('p-sidlo').value = 'Ukázková 1, 110 00 Praha 1';
+        showToast('Ukázka: ARES se nevolá, doplněna vymyšlená firma.');
+        return;
+    }
+    try {
+        showToast('Hledám v ARES…');
+        const res = await fetch('/api/ares?ico=' + encodeURIComponent(ico));
+        let data = null;
+        try { data = await res.json(); } catch (e) { data = null; }
+        if (!res.ok || !data) { showToast('ARES teď neodpovídá. Vyplňte firmu ručně.', 'warn'); return; }
+        if (!data.success || !data.data || data.data.length === 0) {
+            showToast('Firmu s tímto IČO ARES nenašel. Vyplňte ji ručně.', 'warn');
+            return;
+        }
+        const s = data.data[0];
+        if (s.nazev) $('p-firma').value = s.nazev;
+        if (s.sidlo) $('p-sidlo').value = s.sidlo;
+        showToast('Doplněno z ARES.');
+    } catch (e) {
+        showToast('ARES teď neodpovídá. Vyplňte firmu ručně.', 'warn');
+    }
+}
+
+// ============================================================
+// E-MAILY: POSÍLAT / NEPOSÍLAT / ODHLÁSIL SE
+// ============================================================
+const mail = { sel: '', busy: false };
+function mailSelect(val) {
+    mail.sel = val;
+    document.querySelectorAll('#mail-opts .opt').forEach(function (b) {
+        b.classList.toggle('on', b.getAttribute('data-val') === val);
+    });
+    const p = findPerson(state.ui.openId);
+    const needConsent = !!p && val === 'posilat' && p.emaily === 'neposilat' && p.emaily_duvod === 'odhlasil_se';
+    $('mail-consent-wrap').style.display = needConsent ? '' : 'none';
+    $('mail-err').textContent = '';
+}
+function openMail() {
+    const p = findPerson(state.ui.openId);
+    if (!p) return;
+    $('mail-consent').value = '';
+    mailSelect(p.emaily === 'neposilat' ? (p.emaily_duvod === 'odhlasil_se' ? 'odhlasil_se' : 'moje_volba') : 'posilat');
+    openModal('mailModal');
+}
+// Nastavení platí pro adresu: stejná adresa na jiných kartách dostane totéž.
+async function setMail(p, sel, consent) {
+    const today = todayIso();
+    const e = normEmail(p.email);
+    const same = e ? state.people.filter(function (x) { return x.id !== p.id && normEmail(x.email) === e; }) : [];
+    const targets = [p].concat(same);
+    const entries = [];
+    for (let i = 0; i < targets.length; i++) {
+        const t = targets[i];
+        let patch, text;
+        if (sel === 'posilat') {
+            if (t.emaily !== 'neposilat') continue;
+            patch = { emaily: 'posilat', emaily_duvod: '', emaily_kdy: today };
+            if (consent) patch.souhlas = consent;
+            text = 'E-maily: Posílat' + (consent ? ' (nový souhlas: ' + consent + ')' : '');
+        } else {
+            if (t.emaily === 'neposilat' && t.emaily_duvod === sel) continue;
+            patch = { emaily: 'neposilat', emaily_duvod: sel, emaily_kdy: today };
+            text = sel === 'odhlasil_se' ? 'E-maily: Odhlásil se' : 'E-maily: Neposílat (moje rozhodnutí)';
+        }
+        await updatePerson(t.id, patch);
+        entries.push(sysEntry(t.id, text));
+    }
+    if (sel === 'posilat' && e) {
+        const h = await sha256Hex('e:' + e);
+        const blockedStubs = state.stubs.filter(function (s) { return s.otisk_email === h && s.emaily === 'neposilat'; });
+        for (let j = 0; j < blockedStubs.length; j++) {
+            await updatePerson(blockedStubs[j].id, { emaily: 'posilat', emaily_duvod: '', emaily_kdy: today });
+        }
+    }
+    await appendHistory(entries);
+    return targets.length - 1;
+}
+async function saveMail() {
+    if (mail.busy) return;
+    const p = findPerson(state.ui.openId);
+    if (!p) { closeModal('mailModal'); return; }
+    const needConsent = mail.sel === 'posilat' && p.emaily === 'neposilat' && p.emaily_duvod === 'odhlasil_se';
+    const consent = $('mail-consent').value.trim();
+    if (needConsent && !consent) { $('mail-err').textContent = 'Zapiš, kdy a jak znovu souhlasil.'; return; }
+    mail.busy = true;
+    try {
+        const others = await setMail(p, mail.sel, needConsent ? consent : '');
+        closeModal('mailModal');
+        renderAll();
+        showToast(others > 0 ? 'Uloženo. Stejná adresa je i na další kartě, nastavení platí pro obě.' : 'Uloženo.');
+    } catch (e) {
+        console.error(e);
+        if (e.code === 'CONFLICT' || e.code === 'NOT_FOUND') {
+            closeModal('mailModal');
+            showToast('Údaje se mezitím změnily na jiném zařízení. Načítám je znovu.', 'warn');
+            await reloadData(true);
+        } else {
+            showErr('mail-err', e.isAuth ? e.message : 'Uložení se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+        }
+    } finally {
+        mail.busy = false;
+    }
+}
+
+// ============================================================
+// VYMAZÁNÍ
+// ============================================================
+const erase = { busy: false };
+function openErase() {
+    const p = findPerson(state.ui.openId);
+    if (!p) return;
+    const locked = p.emaily === 'neposilat';
+    $('erase-text').textContent = 'Opravdu vymazat člověka ' + fullName(p) + '? Smaže se karta i celá historie. Nejde to vrátit.';
+    $('erase-keep').checked = true;
+    $('erase-keep').disabled = locked;
+    $('erase-hint').textContent = locked
+        ? 'U lidí s „Neposílat“ zůstává otisk vždy, aby se na jejich adresu už nic neposlalo.'
+        : 'Zůstanou jen nečitelné otisky e-mailu, telefonu a jména s firmou. Díky nim ho aplikace pozná při dalším nahrání tabulky.';
+    openModal('eraseModal');
+}
+async function erasePerson(p, keep) {
+    const histIds = state.history.filter(function (h) { return h.clovek_id === p.id; }).map(function (h) { return h.id; });
+    if (keep) {
+        const fp = await fingerprints(p);
+        const patch = {};
+        LIDE_HEADER.forEach(function (k) { if (k !== 'id' && k !== 'aktualizovano') patch[k] = ''; });
+        patch.emaily = p.emaily === 'neposilat' ? 'neposilat' : 'posilat';
+        patch.emaily_duvod = p.emaily === 'neposilat' ? (p.emaily_duvod || 'moje_volba') : '';
+        patch.emaily_kdy = p.emaily_kdy || todayIso();
+        Object.assign(patch, fp);
+        await updatePerson(p.id, patch);
+        state.people = state.people.filter(function (x) { return x.id !== p.id; });
+        state.stubs.push(p);
+    } else {
+        await deleteRowsByIds(TAB_LIDE, [p.id]);
+        state.people = state.people.filter(function (x) { return x.id !== p.id; });
+    }
+    await deleteRowsByIds(TAB_HIST, histIds);
+    state.history = state.history.filter(function (h) { return h.clovek_id !== p.id; });
+}
+async function confirmErase() {
+    if (erase.busy) return;
+    const p = findPerson(state.ui.openId);
+    if (!p) { closeModal('eraseModal'); return; }
+    erase.busy = true;
+    try {
+        await erasePerson(p, $('erase-keep').checked);
+        closeModal('eraseModal');
+        closeModal('cardModal');
+        state.ui.openId = null;
+        renderAll();
+        showToast('Člověk vymazán.');
+    } catch (e) {
+        console.error(e);
+        closeModal('eraseModal');
+        if (e.code === 'CONFLICT' || e.code === 'NOT_FOUND') {
+            showToast('Údaje se mezitím změnily na jiném zařízení. Načítám je znovu.', 'warn');
+            await reloadData(true);
+        } else {
+            showToast(e.isAuth ? e.message : 'Vymazání se nepovedlo: ' + e.message, 'error');
+        }
+    } finally {
+        erase.busy = false;
+    }
+}
+
+// ============================================================
+// NAHRÁNÍ TABULKY
+// Čtyři kroky: soubor → sloupce (jen u „jiné tabulky“) → zařazení lidí → souhrn.
+// ============================================================
+const imp = {};
+const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+const MAP_FIELDS = [
+    ['cele', 'Celé jméno v jednom sloupci', ['cele jmeno', 'jmeno a prijmeni', 'name', 'full name', 'kontaktni osoba']],
+    ['jmeno', 'Jméno', ['jmeno', 'krestni jmeno', 'first name', 'firstname']],
+    ['prijmeni', 'Příjmení', ['prijmeni', 'last name', 'lastname', 'surname']],
+    ['firma', 'Firma', ['firma', 'nazev firmy', 'spolecnost', 'company', 'company name']],
+    ['funkce', 'Funkce', ['funkce', 'pozice', 'pracovni pozice', 'job title', 'title']],
+    ['email', 'E-mail', ['e-mail', 'email', 'e-mailova adresa', 'email address']],
+    ['telefon', 'Telefon', ['telefon', 'telefonni cislo', 'mobil', 'phone', 'phone number']],
+    ['souhlas', 'Souhlas s e-maily', []],
+    ['datum', 'Datum (kdy se ozval)', ['datum', 'date', 'created', 'vytvoreno']]
+];
+function impReset() {
+    Object.assign(imp, {
+        step: 1, source: 'telefon', fileName: '', rows: [], headerIdx: 0, map: {}, consentVals: {}, extra: {},
+        zdroj: 'reklama', defTyp: 'zprostredkovatel', rytmusHned: true, prvniKontakt: false,
+        items: [], updates: [], skippedDb: 0, shown: 200, onlyTodo: false, busy: false, result: null
+    });
+}
+function impError(msg) { $('imp-err').textContent = msg || ''; }
+function headerIndexMap(headerRow) {
+    const m = {};
+    (headerRow || []).forEach(function (h, i) { const k = norm(h); if (k && m[k] === undefined) m[k] = i; });
+    return m;
+}
+function detectLayout(rows) {
+    const hm = headerIndexMap(rows[0]);
+    if (hm.kontaktniosoba !== undefined && hm.linkedinstav !== undefined) return 'database';
+    if (hm.jmeno !== undefined && hm.prijmeni !== undefined && hm.telefon !== undefined) return 'telefon';
+    return 'jina';
+}
+function impOpen() {
+    impReset();
+    impError('');
+    renderImport();
+    openModal('importModal');
+}
+function impSeg(act, i, options, value, disabled) {
+    return '<span class="seg-mini">' + options.map(function (o) {
+        return '<button type="button" data-act="' + act + '" data-i="' + i + '" data-val="' + o[0] + '"' +
+            (o[0] === value ? ' class="on"' : '') + (disabled ? ' disabled' : '') + '>' + escapeHtml(o[1]) + '</button>';
+    }).join('') + '</span>';
+}
+function impCheck(attr, checked, disabled, label) {
+    return '<label class="check-label"><input type="checkbox" class="check-input" ' + attr + (checked ? ' checked' : '') +
+        (disabled ? ' disabled' : '') + '><span class="check-visual">' + CHECK_SVG + '</span>' +
+        (label ? '<span>' + escapeHtml(label) + '</span>' : '') + '</label>';
+}
+function impImportable(it) {
+    return (it.typ === 'zprostredkovatel' || it.typ === 'klient') && it.status !== 'duplicita' && it.status !== 'bezjmena';
+}
+function impCounts() {
+    const c = { total: imp.items.length, ready: 0, todo: 0, dup: 0, maybe: 0, erased: 0, noname: 0, skip: 0 };
+    imp.items.forEach(function (it) {
+        if (it.status === 'duplicita') c.dup++;
+        else if (it.status === 'bezjmena') c.noname++;
+        else if (impImportable(it)) c.ready++;
+        else if (it.status === 'mozna') c.maybe++;
+        else if (it.status === 'vymazan') c.erased++;
+        else if (it.typ === 'skip') c.skip++;
+        else c.todo++;
+    });
+    return c;
+}
+function impStatusPill(it) {
+    if (it.status === 'duplicita') return '<span class="pill">' + escapeHtml(it.note) + '</span>';
+    if (it.status === 'bezjmena') return '<span class="pill bad">chybí jméno</span>';
+    if (it.status === 'mozna') return '<span class="pill warn" title="' + escapeHtml(it.note) + '">možná shoda</span>';
+    if (it.status === 'vymazan') return '<span class="pill warn">dříve vymazán</span>';
+    if (it.emailBad) return '<span class="pill warn">neplatný e-mail</span>';
+    if (it.typ === '') return '<span class="muted">nezařazen</span>';
+    if (it.typ === 'skip') return '<span class="muted">přeskočit</span>';
+    return '<span class="pill mail-on">nový</span>';
+}
+function impRowHtml(it) {
+    const dis = it.status === 'duplicita';
+    const off = dis || it.typ === 'skip';
+    const contact = [it.telefon ? fmtPhone(it.telefon) : '', it.email].filter(Boolean).map(escapeHtml).join('<br>');
+    return '<tr class="' + (off ? 'off' : '') + '" data-row="' + it.i + '">' +
+        '<td>' + impCheck('data-chk="' + it.i + '"', it.checked, dis || it.status === 'mozna' || it.status === 'vymazan', '') + '</td>' +
+        '<td><input class="input" data-f="jmeno" data-i="' + it.i + '" value="' + escapeHtml(it.jmeno) + '"' + (dis ? ' disabled' : '') + ' aria-label="Jméno"></td>' +
+        '<td><input class="input" data-f="prijmeni" data-i="' + it.i + '" value="' + escapeHtml(it.prijmeni) + '"' + (dis ? ' disabled' : '') + ' aria-label="Příjmení"></td>' +
+        '<td class="cell-s">' + escapeHtml(it.firma) + '</td>' +
+        '<td class="cell-s">' + contact + '</td>' +
+        '<td>' + impSeg('imp-row-typ', it.i, [['zprostredkovatel', 'Zprostř.'], ['klient', 'Klient'], ['skip', 'Přeskočit']], it.typ, dis) + '</td>' +
+        '<td>' + impSeg('imp-row-imp', it.i, [['A', 'A'], ['B', 'B'], ['C', 'C']], it.dulezitost, dis) + '</td>' +
+        '<td>' + impStatusPill(it) + '</td>' +
+        '</tr>';
+}
+function impVisibleItems() {
+    return imp.onlyTodo ? imp.items.filter(function (it) { return it.typ === '' && it.status !== 'duplicita'; }) : imp.items;
+}
+function impRefreshCounts() {
+    const c = impCounts();
+    const el = $('imp-counts');
+    if (el) {
+        const parts = ['Řádků: ' + c.total, 'k nahrání: ' + c.ready];
+        if (c.todo) parts.push('nezařazeno: ' + c.todo);
+        if (c.dup) parts.push('už v CRM: ' + c.dup);
+        if (c.maybe) parts.push('možná shoda: ' + c.maybe);
+        if (c.erased) parts.push('dříve vymazáno: ' + c.erased);
+        if (c.noname) parts.push('bez jména: ' + c.noname);
+        if (c.skip) parts.push('přeskočeno: ' + c.skip);
+        el.textContent = parts.join(' · ');
+    }
+    if (imp.step === 3) {
+        $('imp-next').textContent = c.ready > 0
+            ? 'Nahrát ' + c.ready + ' ' + plural(c.ready, 'člověka', 'lidi', 'lidí')
+            : (imp.updates.length > 0 ? 'Zapsat změny' : 'Nahrát');
+        $('imp-next').disabled = c.ready === 0 && imp.updates.length === 0;
+    }
+}
+function impRefreshRow(i) {
+    const it = imp.items[i];
+    const tr = document.querySelector('#imp-body tr[data-row="' + i + '"]');
+    if (!it || !tr) return;
+    if (imp.onlyTodo && it.typ !== '') { tr.remove(); return; }
+    const tmp = document.createElement('tbody');
+    tmp.innerHTML = impRowHtml(it);
+    tr.replaceWith(tmp.firstChild);
+}
+function impRenderRows() {
+    const list = impVisibleItems();
+    const body = $('imp-rows');
+    if (!body) return;
+    body.innerHTML = list.slice(0, imp.shown).map(impRowHtml).join('');
+    const more = $('imp-more');
+    if (more) more.style.display = list.length > imp.shown ? '' : 'none';
+    impRefreshCounts();
+}
+
+function renderImport() {
+    document.querySelectorAll('#imp-steps .step').forEach(function (s) {
+        s.classList.toggle('on', parseInt(s.getAttribute('data-step'), 10) === imp.step);
+    });
+    const body = $('imp-body');
+    const next = $('imp-next'), back = $('imp-back'), cancel = $('imp-cancel');
+    next.disabled = false;
+    back.style.display = (imp.step === 2 || imp.step === 3) ? '' : 'none';
+    cancel.style.display = imp.step === 4 ? 'none' : '';
+
+    if (imp.step === 1) {
+        next.textContent = 'Pokračovat';
+        const srcs = [
+            ['telefon', 'Kontakty z telefonu', 'Tabulka kontaktů z telefonu. U každého pak zvolíte, jestli je zprostředkovatel, nebo klient.'],
+            ['database', 'Export z Database', 'Soubor z tlačítka Export CSV v Database. Převezmou se jen lidé, kteří se ozvali.'],
+            ['jina', 'Jiná tabulka', 'Například kontakty z reklamy. Sloupce přiřadíte ručně.']
+        ];
+        body.innerHTML = '<div class="src-grid">' + srcs.map(function (s) {
+            return '<button type="button" class="opt' + (imp.source === s[0] ? ' on' : '') + '" data-act="imp-src" data-src="' + s[0] + '">' +
+                '<b>' + s[1] + '</b><span>' + s[2] + '</span></button>';
+        }).join('') + '</div>' +
+        '<div class="file-row"><button type="button" class="btn btn-secondary" data-act="imp-pick">Vybrat soubor</button>' +
+        '<span class="file-name">' + (imp.fileName
+            ? escapeHtml(imp.fileName) + ' · ' + Math.max(imp.rows.length - 1, 0) + ' řádků'
+            : 'Tabulka uložená jako CSV, nejvýš 5 000 řádků.') + '</span></div>';
+        return;
+    }
+
+    if (imp.step === 2) {
+        next.textContent = 'Pokračovat';
+        const header = imp.rows[imp.headerIdx] || [];
+        const optHtml = function (sel) {
+            return '<option value="">nepoužít</option>' + header.map(function (h, i) {
+                return '<option value="' + i + '"' + (String(sel) === String(i) ? ' selected' : '') + '>' +
+                    escapeHtml(h || ('sloupec ' + (i + 1))) + '</option>';
+            }).join('');
+        };
+        let html = '<div class="map-grid">' +
+            '<div class="form-group"><label>Řádek s hlavičkou</label>' +
+            '<input type="number" class="input" id="imp-header-row" min="1" max="' + Math.min(imp.rows.length, 50) + '" value="' + (imp.headerIdx + 1) + '"></div>' +
+            '<div class="form-group"><label>Odkud lidé jsou</label><select id="imp-zdroj" class="crm-select">' +
+            Object.keys(LBL.zdroj).map(function (k) {
+                return '<option value="' + k + '"' + (imp.zdroj === k ? ' selected' : '') + '>' + escapeHtml(LBL.zdroj[k]) + '</option>';
+            }).join('') + '</select></div>' +
+            '<div class="form-group"><label>Typ</label><select id="imp-deftyp" class="crm-select">' +
+            '<option value="zprostredkovatel"' + (imp.defTyp === 'zprostredkovatel' ? ' selected' : '') + '>Zprostředkovatelé</option>' +
+            '<option value="klient"' + (imp.defTyp === 'klient' ? ' selected' : '') + '>Klienti</option>' +
+            '<option value=""' + (imp.defTyp === '' ? ' selected' : '') + '>Zvolím u každého zvlášť</option>' +
+            '</select></div></div>' +
+            '<div class="fsec"><div class="map-grid">' + MAP_FIELDS.map(function (f) {
+                return '<div class="form-group"><label>' + escapeHtml(f[1]) + '</label><select id="imp-map-' + f[0] + '" class="crm-select" data-map="' + f[0] + '">' +
+                    optHtml(imp.map[f[0]] === undefined ? '' : imp.map[f[0]]) + '</select></div>';
+            }).join('') + '</div></div>';
+        if (imp.map.souhlas !== undefined && imp.map.souhlas !== '') {
+            const seen = {};
+            imp.rows.slice(imp.headerIdx + 1).forEach(function (r) {
+                const v = String(r[imp.map.souhlas] || '').trim();
+                seen[v === '' ? '(prázdné)' : v] = true;
+            });
+            const vals = Object.keys(seen).slice(0, 20);
+            html += '<div class="fsec"><div class="kv-l">Které hodnoty znamenají „souhlasí“</div><div class="chips">' + vals.map(function (v) {
+                return '<button type="button" class="chip' + (imp.consentVals[v] ? ' on' : '') + '" data-act="imp-consent" data-val="' + escapeHtml(v) + '">' + escapeHtml(v) + '</button>';
+            }).join('') + '</div><div class="form-hint">Lidé s neoznačenou hodnotou dostanou „Neposílat“ s důvodem „nesouhlasil“.</div></div>';
+        }
+        const used = {};
+        Object.keys(imp.map).forEach(function (k) { if (imp.map[k] !== '' && imp.map[k] !== undefined) used[imp.map[k]] = true; });
+        const extras = header.map(function (h, i) { return { h: h, i: i }; }).filter(function (x) { return !used[x.i] && String(x.h || '').trim(); });
+        if (extras.length) {
+            html += '<div class="fsec"><div class="kv-l">Další sloupce přidat do poznámky</div><div class="chips">' + extras.slice(0, 40).map(function (x) {
+                return '<button type="button" class="chip' + (imp.extra[x.i] ? ' on' : '') + '" data-act="imp-extra" data-col="' + x.i + '">' + escapeHtml(x.h) + '</button>';
+            }).join('') + '</div></div>';
+        }
+        body.innerHTML = html;
+        if (typeof window.convertSelectsToDropdowns === 'function') window.convertSelectsToDropdowns('#imp-body select.crm-select');
+        return;
+    }
+
+    if (imp.step === 3) {
+        const def = ZDROJ_DEFAULTS[imp.source === 'jina' ? imp.zdroj : imp.source] || ZDROJ_DEFAULTS.jine;
+        const mailInfo = def.emaily === 'posilat'
+            ? 'E-maily: noví lidé budou mít „Posílat“.'
+            : 'E-maily: noví lidé budou mít „Neposílat“, dokud nesouhlasí.';
+        body.innerHTML =
+            '<div class="form-hint" id="imp-counts" style="margin-top:0"></div>' +
+            '<div class="bulk-row">' +
+                impCheck('id="imp-rytmus"', imp.rytmusHned, false, 'Zařadit do rytmu hned') +
+                impCheck('id="imp-prvni"', imp.prvniKontakt, false, 'Založit všem krok „První kontakt“ na dnešek') +
+                '<span class="lbl">' + escapeHtml(mailInfo) + '</span>' +
+            '</div>' +
+            '<div class="bulk-row">' +
+                '<span class="lbl">Označené řádky:</span>' +
+                '<span class="seg-mini">' +
+                    '<button type="button" data-act="imp-bulk-typ" data-val="zprostredkovatel">Zprostředkovatel</button>' +
+                    '<button type="button" data-act="imp-bulk-typ" data-val="klient">Klient</button>' +
+                    '<button type="button" data-act="imp-bulk-typ" data-val="skip">Přeskočit</button>' +
+                '</span>' +
+                '<span class="seg-mini">' +
+                    '<button type="button" data-act="imp-bulk-imp" data-val="A">A</button>' +
+                    '<button type="button" data-act="imp-bulk-imp" data-val="B">B</button>' +
+                    '<button type="button" data-act="imp-bulk-imp" data-val="C">C</button>' +
+                '</span>' +
+                '<button type="button" class="chip" data-act="imp-check-all" data-val="1">Označit vše</button>' +
+                '<button type="button" class="chip" data-act="imp-check-all" data-val="0">Zrušit označení</button>' +
+                '<button type="button" class="chip' + (imp.onlyTodo ? ' on' : '') + '" data-act="imp-only-todo">Jen nezařazení</button>' +
+            '</div>' +
+            '<div class="tri-wrap"><table class="tri"><thead><tr>' +
+                '<th></th><th>Jméno</th><th>Příjmení</th><th>Firma</th><th>Kontakt</th><th>Typ</th><th>Důležitost</th><th>Stav řádku</th>' +
+            '</tr></thead><tbody id="imp-rows"></tbody></table></div>' +
+            '<div class="bulk-row" id="imp-more" style="display:none"><button type="button" class="btn btn-secondary btn-sm" data-act="imp-more">Zobrazit dalších 200</button></div>';
+        impRenderRows();
+        return;
+    }
+
+    // krok 4: souhrn
+    next.textContent = 'Hotovo';
+    const r = imp.result || {};
+    const lines = [];
+    if (r.dup) lines.push('Už v CRM: ' + r.dup + '. Údaje těchto lidí zůstaly beze změny.');
+    if (r.maybe) lines.push('Možná shoda, nenahráno: ' + r.maybe + '.');
+    if (r.erased) lines.push('Dříve vymazaní, nenahráno: ' + r.erased + '.');
+    if (r.noname) lines.push('Řádky bez jména, nenahráno: ' + r.noname + '.');
+    if (r.todo) lines.push('Nezařazeno: ' + r.todo + '. Stejný soubor jde nahrát znovu, přidají se jen noví lidé.');
+    if (r.skip) lines.push('Přeskočeno na vaše přání: ' + r.skip + '.');
+    if (r.skippedDb) lines.push('Z Database nepřevzato: ' + r.skippedDb + ' (neozvali se, mají „neoslovovat“, nebo jsou vymazaní).');
+    if (r.consentAdded) lines.push('Nově zapsaný souhlas s e-maily u lidí, kteří už v CRM jsou: ' + r.consentAdded + '. Pokud mají e-maily vypnuté, zapněte jim je na kartě.');
+    if (r.blockedSet) lines.push('Přepnuto na „Neposílat“ u lidí, kteří už v CRM jsou: ' + r.blockedSet + ' (nesouhlasili, nebo mají v Database „neoslovovat“).');
+    if (r.mailOff) lines.push('Nově nahraní s „Neposílat“: ' + r.mailOff + '.');
+    if (r.badEmail) lines.push('Neplatný e-mail: ' + r.badEmail + '. Nahráno bez e-mailu, původní text je v poznámce.');
+    body.innerHTML = '<div class="sum-grid">' +
+        '<div class="stat-card"><div class="stat-label">Nahráno</div><div class="stat-value">' + (r.added || 0) + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Zprostředkovatelé</div><div class="stat-value">' + (r.addedZ || 0) + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Klienti</div><div class="stat-value">' + (r.addedK || 0) + '</div></div>' +
+        '<div class="stat-card"><div class="stat-label">Nenahráno</div><div class="stat-value">' + (r.notAdded || 0) + '</div></div>' +
+        '</div>' + (lines.length ? '<ul class="sum-list">' + lines.map(function (l) { return '<li>' + escapeHtml(l) + '</li>'; }).join('') + '</ul>' : '');
+}
+
+function impMakeItem(src) {
+    const it = {
+        i: imp.items.length, checked: false,
+        titul: String(src.titul || '').trim(), jmeno: String(src.jmeno || '').trim(), prijmeni: String(src.prijmeni || '').trim(),
+        firma: String(src.firma || '').trim(), funkce: String(src.funkce || '').trim(), ico: String(src.ico || '').trim(),
+        sidlo: String(src.sidlo || '').trim(), telefon: String(src.telefon || '').trim(), email: String(src.email || '').trim(),
+        linkedin: String(src.linkedin || '').trim(), poznamka: String(src.poznamka || '').trim(), ext_id: src.ext_id || '',
+        typ: src.typ === undefined ? '' : src.typ, dulezitost: 'B', stavK: src.stavK || 'zajemce',
+        consent: src.consent === undefined ? null : src.consent, consentNote: src.consentNote || '',
+        status: 'ok', note: '', dupId: '', inFileDup: false, erased: false, erasedBlocked: false
+    };
+    it.emailBad = !!it.email && !isValidEmail(it.email);
+    imp.items.push(it);
+    return it;
+}
+function impEval(it) {
+    it.status = 'ok';
+    it.note = '';
+    it.dupId = '';
+    if (!it.jmeno && !it.prijmeni) { it.status = 'bezjmena'; it.note = 'chybí jméno'; return; }
+    const d = findDuplicates({ email: it.emailBad ? '' : it.email, telefon: it.telefon, jmeno: it.jmeno,
+        prijmeni: it.prijmeni, firma: it.firma, ext_id: it.ext_id });
+    if (d.certain) { it.status = 'duplicita'; it.note = 'už v CRM je'; it.dupId = d.certain.id; return; }
+    if (it.inFileDup) { it.status = 'duplicita'; it.note = 'v souboru dvakrát'; return; }
+    if (it.erased) { it.status = 'vymazan'; it.note = 'dříve vymazán'; return; }
+    if (d.possible.length) { it.status = 'mozna'; it.note = 'Možná shoda: ' + fullName(d.possible[0]); it.dupId = d.possible[0].id; }
+}
+async function impBuildItems() {
+    imp.items = [];
+    imp.updates = [];
+    imp.skippedDb = 0;
+    const rows = imp.rows;
+    if (imp.source === 'telefon') {
+        const hm = headerIndexMap(rows[0]);
+        const cell = function (r, k) { return hm[k] === undefined ? '' : (r[hm[k]] || ''); };
+        rows.slice(1).forEach(function (r) {
+            impMakeItem({ titul: cell(r, 'titul'), jmeno: cell(r, 'jmeno'), prijmeni: cell(r, 'prijmeni'), firma: cell(r, 'firma'),
+                telefon: cell(r, 'telefon'), email: cell(r, 'e-mail') || cell(r, 'email'), poznamka: cell(r, 'poznamka') });
+        });
+    } else if (imp.source === 'database') {
+        const hm = headerIndexMap(rows[0]);
+        const cell = function (r, k) { const i = hm[norm(k)]; return i === undefined ? '' : String(r[i] || ''); };
+        rows.slice(1).forEach(function (r) {
+            const stav = cell(r, 'stav').trim(), neo = cell(r, 'neoslovovat').trim(), liStav = cell(r, 'linkedinStav').trim();
+            const extId = cell(r, 'id') ? 'db:' + cell(r, 'id') : '';
+            const existing = extId ? state.people.find(function (p) { return p.ext_id === extId; }) : null;
+            if (neo || liStav === 'Vymazáno') {
+                if (existing && neo && existing.emaily !== 'neposilat') {
+                    imp.updates.push({ id: existing.id, kind: 'neposilat',
+                        duvod: /námitka|odmítl|nemá zájem/i.test(neo) ? 'odhlasil_se' : 'moje_volba',
+                        text: 'E-maily: Neposílat (v Database má „neoslovovat“)' });
+                }
+                imp.skippedDb++;
+                return;
+            }
+            if (['Reaguje', 'Partner', 'Klient'].indexOf(stav) === -1) { imp.skippedDb++; return; }
+            const nm = splitName(cell(r, 'kontaktniOsoba'));
+            const typDb = cell(r, 'typ').trim();
+            impMakeItem({ titul: nm.titul, jmeno: nm.jmeno, prijmeni: nm.prijmeni, firma: cell(r, 'firma'), ico: cell(r, 'ico'),
+                sidlo: cell(r, 'sidlo'), funkce: cell(r, 'role'), email: cell(r, 'email'), telefon: cell(r, 'telefon'),
+                linkedin: cell(r, 'linkedinUrl'), poznamka: cell(r, 'poznamka'), ext_id: extId,
+                typ: typDb === 'Klient' ? 'klient' : (typDb === 'Zprostředkovatel' ? 'zprostredkovatel' : ''),
+                stavK: stav === 'Klient' ? 'klient' : 'zajemce' });
+        });
+    } else {
+        const header = rows[imp.headerIdx] || [];
+        const m = imp.map;
+        const col = function (r, k) { return (m[k] === undefined || m[k] === '') ? '' : String(r[m[k]] || '').trim(); };
+        const hasConsent = m.souhlas !== undefined && m.souhlas !== '';
+        const today = fmtDay(todayIso());
+        rows.slice(imp.headerIdx + 1).forEach(function (r) {
+            let jmeno = col(r, 'jmeno'), prijmeni = col(r, 'prijmeni'), titul = '';
+            if (!jmeno && !prijmeni && col(r, 'cele')) {
+                const nm = splitName(col(r, 'cele'));
+                jmeno = nm.jmeno; prijmeni = nm.prijmeni; titul = nm.titul;
+            }
+            const notes = [];
+            Object.keys(imp.extra).forEach(function (ci) {
+                if (!imp.extra[ci]) return;
+                const v = String(r[ci] || '').trim();
+                if (v) notes.push(String(header[ci] || ('sloupec ' + (+ci + 1))).trim() + ': ' + v);
+            });
+            let consent = null, consentNote = '';
+            if (hasConsent) {
+                const raw = col(r, 'souhlas');
+                consent = !!imp.consentVals[raw === '' ? '(prázdné)' : raw];
+                if (consent) consentNote = (LBL.zdroj[imp.zdroj] || 'nahraná tabulka') + ', ' + (col(r, 'datum') || 'nahráno ' + today);
+            }
+            impMakeItem({ titul: titul, jmeno: jmeno, prijmeni: prijmeni, firma: col(r, 'firma'), funkce: col(r, 'funkce'),
+                email: col(r, 'email'), telefon: col(r, 'telefon'), poznamka: notes.join('; '),
+                typ: imp.defTyp, consent: consent, consentNote: consentNote });
+        });
+    }
+    // duplicity uvnitř souboru (stejný e-mail nebo stejný člověk z Database)
+    const seenMail = {}, seenExt = {};
+    imp.items.forEach(function (it) {
+        const e = it.emailBad ? '' : normEmail(it.email);
+        if (e) { if (seenMail[e]) it.inFileDup = true; else seenMail[e] = true; }
+        if (it.ext_id) { if (seenExt[it.ext_id]) it.inFileDup = true; else seenExt[it.ext_id] = true; }
+    });
+    // dříve vymazaní (porovnání otisků) — počítá se jen tehdy, když nějaké otisky existují
+    if (state.stubs.length > 0) {
+        const byMail = {}, byTel = {}, byName = {};
+        state.stubs.forEach(function (s) {
+            if (s.otisk_email) byMail[s.otisk_email] = s;
+            if (s.otisk_telefon) byTel[s.otisk_telefon] = s;
+            if (s.otisk_jmeno) byName[s.otisk_jmeno] = s;
+        });
+        for (let i = 0; i < imp.items.length; i++) {
+            const it = imp.items[i];
+            const fp = await fingerprints({ email: it.emailBad ? '' : it.email, telefon: it.telefon,
+                jmeno: it.jmeno, prijmeni: it.prijmeni, firma: it.firma });
+            const st = byMail[fp.otisk_email] || byTel[fp.otisk_telefon] || byName[fp.otisk_jmeno];
+            if (st) { it.erased = true; it.erasedBlocked = st.emaily === 'neposilat'; it.erasedDuvod = st.emaily_duvod; }
+        }
+    }
+    imp.items.forEach(function (it) {
+        impEval(it);
+        if (it.status === 'mozna' || it.status === 'vymazan') { it.origTyp = it.typ; it.typ = 'skip'; }
+        // souhlas a nesouhlas u lidí, kteří už v CRM jsou (údaje se nepřepisují)
+        if (it.status === 'duplicita' && it.dupId && it.consent !== null) {
+            const ex = findPerson(it.dupId);
+            if (ex && it.consent === true && ex.souhlas !== it.consentNote) {
+                imp.updates.push({ id: ex.id, kind: 'souhlas', souhlas: it.consentNote, text: 'Souhlas s e-maily: ' + it.consentNote });
+            } else if (ex && it.consent === false && ex.emaily !== 'neposilat') {
+                imp.updates.push({ id: ex.id, kind: 'neposilat', duvod: 'bez_souhlasu', text: 'E-maily: Neposílat (ve formuláři nesouhlasil)' });
+            }
+        }
+    });
+    const def = ZDROJ_DEFAULTS[imp.source === 'jina' ? imp.zdroj : imp.source] || ZDROJ_DEFAULTS.jine;
+    imp.rytmusHned = def.rytmusHned;
+    imp.prvniKontakt = def.prvniKontakt;
+    imp.shown = 200;
+    imp.onlyTodo = false;
+}
+
+function impGuessMap() {
+    const header = imp.rows[imp.headerIdx] || [];
+    const hm = headerIndexMap(header);
+    imp.map = {};
+    MAP_FIELDS.forEach(function (f) {
+        for (let i = 0; i < f[2].length; i++) {
+            if (hm[f[2][i]] !== undefined) { imp.map[f[0]] = hm[f[2][i]]; break; }
+        }
+    });
+    if (imp.map.jmeno !== undefined || imp.map.prijmeni !== undefined) delete imp.map.cele;
+    imp.consentVals = {};
+    imp.extra = {};
+}
+function impReadMapFromDom() {
+    MAP_FIELDS.forEach(function (f) {
+        const sel = $('imp-map-' + f[0]);
+        if (sel) imp.map[f[0]] = sel.value === '' ? '' : parseInt(sel.value, 10);
+    });
+    const z = $('imp-zdroj'), t = $('imp-deftyp');
+    if (z) imp.zdroj = z.value;
+    if (t) imp.defTyp = t.value;
+}
+async function impLoadFile(file) {
+    impError('');
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { impError('Soubor je příliš velký (nejvýš 5 MB).'); return; }
+    let text;
+    try { text = decodeBytes(await file.arrayBuffer()); }
+    catch (e) { impError('Soubor se nepodařilo přečíst.'); return; }
+    const rows = parseCsv(text, detectDelimiter(text));
+    if (rows.length < 2) { impError('Soubor je prázdný nebo v něm není tabulka s hlavičkou a aspoň jedním řádkem.'); return; }
+    if (rows.length > 5001) { impError('Soubor má víc než 5 000 řádků. Rozdělte ho prosím na menší.'); return; }
+    imp.rows = rows;
+    imp.fileName = file.name;
+    imp.source = detectLayout(rows);
+    imp.headerIdx = 0;
+    if (imp.source === 'jina') {
+        // první řádek s aspoň dvěma vyplněnými buňkami bereme jako hlavičku
+        for (let i = 0; i < Math.min(rows.length, 20); i++) {
+            if (rows[i].filter(function (c) { return c !== ''; }).length >= 2) { imp.headerIdx = i; break; }
+        }
+    }
+    impGuessMap();
+    renderImport();
+}
+async function impNext() {
+    if (imp.busy) return;
+    impError('');
+    if (imp.step === 1) {
+        if (!imp.fileName) { impError('Nejdřív vyberte soubor.'); return; }
+        const layout = detectLayout(imp.rows);
+        if (imp.source === 'telefon' && layout !== 'telefon') {
+            impError('Soubor nevypadá jako kontakty z telefonu (chybí sloupce Jméno, Příjmení a Telefon). Zvolte „Jiná tabulka“.');
+            return;
+        }
+        if (imp.source === 'database' && layout !== 'database') {
+            impError('Soubor nevypadá jako export z Database. Zvolte „Jiná tabulka“.');
+            return;
+        }
+        if (imp.source === 'jina') { imp.step = 2; renderImport(); return; }
+        imp.busy = true;
+        try { await impBuildItems(); } finally { imp.busy = false; }
+        if (imp.items.length === 0 && imp.updates.length === 0) {
+            impError(imp.source === 'database'
+                ? 'V exportu není nikdo se stavem Reaguje, Partner nebo Klient.'
+                : 'V souboru nejsou žádné řádky k nahrání.');
+            return;
+        }
+        imp.step = 3;
+        renderImport();
+        return;
+    }
+    if (imp.step === 2) {
+        impReadMapFromDom();
+        const m = imp.map;
+        const has = function (k) { return m[k] !== undefined && m[k] !== ''; };
+        if (!has('jmeno') && !has('prijmeni') && !has('cele')) { impError('Přiřaďte sloupec se jménem nebo příjmením.'); return; }
+        if (has('souhlas') && !Object.keys(imp.consentVals).some(function (k) { return imp.consentVals[k]; })) {
+            const ok = await appConfirm('U sloupce se souhlasem není označená žádná hodnota. Všichni tak dostanou „Neposílat“. Pokračovat?',
+                { title: 'Souhlas s e-maily', okLabel: 'Pokračovat' });
+            if (!ok) return;
+        }
+        imp.busy = true;
+        try { await impBuildItems(); } finally { imp.busy = false; }
+        if (imp.items.length === 0) { impError('Pod hlavičkou nejsou žádné řádky.'); return; }
+        imp.step = 3;
+        renderImport();
+        return;
+    }
+    if (imp.step === 3) { await impCommit(); return; }
+    closeModal('importModal');
+}
+function impBack() {
+    impError('');
+    if (imp.step === 3) imp.step = imp.source === 'jina' ? 2 : 1;
+    else if (imp.step === 2) imp.step = 1;
+    renderImport();
+}
+async function impCommit() {
+    const c = impCounts();
+    if (c.ready === 0 && imp.updates.length === 0) { impError('Není koho nahrát. Zařaďte aspoň jednoho člověka.'); return; }
+    imp.busy = true;
+    $('imp-next').disabled = true;
+    const zdroj = imp.source === 'jina' ? imp.zdroj : imp.source;
+    const def = ZDROJ_DEFAULTS[zdroj] || ZDROJ_DEFAULTS.jine;
+    const today = todayIso();
+    const result = { added: 0, addedZ: 0, addedK: 0, dup: c.dup, maybe: c.maybe, erased: c.erased, noname: c.noname,
+        todo: c.todo, skip: c.skip, skippedDb: imp.skippedDb, consentAdded: 0, blockedSet: 0, mailOff: 0, badEmail: 0 };
+    result.notAdded = c.total - c.ready;
+    try {
+        const people = [];
+        const ready = imp.items.filter(impImportable);
+        for (let i = 0; i < ready.length; i++) {
+            const it = ready[i];
+            const p = {
+                typ: it.typ, titul: it.titul, jmeno: it.jmeno, prijmeni: it.prijmeni, firma: it.firma, ico: it.ico,
+                sidlo: it.sidlo, funkce: it.funkce, telefon: normPhone(it.telefon) ? fmtPhone(it.telefon) : it.telefon,
+                email: it.emailBad ? '' : it.email, linkedin: it.linkedin, dulezitost: it.dulezitost,
+                stav: it.typ === 'klient' ? it.stavK : def.stavZ, zdroj: zdroj, poznamka: it.poznamka, ext_id: it.ext_id,
+                emaily: def.emaily, emaily_duvod: def.emaily === 'neposilat' ? 'bez_souhlasu' : '',
+                emaily_kdy: def.emaily === 'neposilat' ? today : '', souhlas: '',
+                rytmus_od: imp.rytmusHned ? '' : today
+            };
+            if (it.emailBad) {
+                p.poznamka = (p.poznamka ? p.poznamka + '; ' : '') + 'Neplatný e-mail v tabulce: ' + it.email;
+                result.badEmail++;
+            }
+            if (it.consent === true) { p.emaily = 'posilat'; p.emaily_duvod = ''; p.emaily_kdy = ''; p.souhlas = it.consentNote; }
+            else if (it.consent === false) { p.emaily = 'neposilat'; p.emaily_duvod = 'bez_souhlasu'; p.emaily_kdy = today; }
+            // adresa vedená jako „neposílat“ (jiná karta nebo otisk vymazaného) má vždy přednost
+            const blocked = p.email ? await blockedInfo(p.email) : null;
+            if (blocked) { p.emaily = 'neposilat'; p.emaily_duvod = blocked.duvod; p.emaily_kdy = today; }
+            else if (it.erased && it.erasedBlocked) { p.emaily = 'neposilat'; p.emaily_duvod = it.erasedDuvod || 'odhlasil_se'; p.emaily_kdy = today; }
+            if (imp.prvniKontakt) { p.dalsi_krok = 'První kontakt'; p.dalsi_krok_termin = today; }
+            if (p.emaily === 'neposilat') result.mailOff++;
+            people.push(p);
+        }
+        if (people.length) {
+            const added = await addPeople(people, 'Karta založena nahráním tabulky ' + imp.fileName);
+            result.added = added.length;
+            result.addedZ = added.filter(function (p) { return p.typ === 'zprostredkovatel'; }).length;
+            result.addedK = added.length - result.addedZ;
+            // Nahraní lidé už se při případném opakování (chyba v dalším kroku) nesmí přidat znovu
+            ready.forEach(function (it) { it.status = 'duplicita'; it.note = 'nahráno'; });
+        }
+        const entries = [];
+        const pending = imp.updates.slice();
+        for (let j = 0; j < pending.length; j++) {
+            const u = pending[j];
+            imp.updates = imp.updates.filter(function (x) { return x !== u; });
+            const ex = findPerson(u.id);
+            if (!ex) continue;
+            if (u.kind === 'souhlas') {
+                await updatePerson(ex.id, { souhlas: u.souhlas });
+                result.consentAdded++;
+            } else if (ex.emaily !== 'neposilat') {
+                await updatePerson(ex.id, { emaily: 'neposilat', emaily_duvod: u.duvod, emaily_kdy: today });
+                result.blockedSet++;
+            } else { continue; }
+            entries.push(sysEntry(ex.id, u.text));
+        }
+        await appendHistory(entries);
+        imp.result = result;
+        imp.step = 4;
+        renderImport();
+        renderAll();
+    } catch (e) {
+        console.error(e);
+        $('imp-next').disabled = false;
+        if (e.code === 'CONFLICT' || e.code === 'NOT_FOUND') {
+            impError('Údaje se mezitím změnily na jiném zařízení. Zavřete okno, data se načtou znovu, a nahrání zopakujte.');
+            reloadData(true);
+        } else {
+            showErr('imp-err', e.isAuth ? e.message : 'Nahrání se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+        }
+    } finally {
+        imp.busy = false;
+    }
+}
+
+// ============================================================
+// UKÁZKOVÁ DATA (jen místní náhled) — vymyšlení lidé, zapsaní stejnou cestou jako skuteční
+// ============================================================
+async function seedDemo() {
+    const today = new Date();
+    const shift = function (days) { const d = new Date(today); d.setDate(d.getDate() + days); return dayIso(d); };
+    const base = { dulezitost: 'B', emaily: 'posilat', zdroj: 'telefon', stav: 'v_kontaktu' };
+    const mk = function (o) { return Object.assign({}, base, o); };
+    await addPeople([
+        mk({ typ: 'zprostredkovatel', jmeno: 'Adam', prijmeni: 'Alfa', firma: 'Finance Alfa s.r.o.', funkce: 'jednatel',
+            role: 'Úvěrový nebo finanční poradce', telefon: '+420 700 000 001', email: 'adam.alfa@example.cz', dulezitost: 'A',
+            stav: 'posila_pripady', dalsi_krok: 'Poslat seznam podkladů', dalsi_krok_termin: shift(-2), posledni_kontakt: shift(-6) }),
+        mk({ typ: 'zprostredkovatel', titul: 'Ing.', jmeno: 'Barbora', prijmeni: 'Beta', firma: 'Hypo Beta s.r.o.', funkce: 'jednatelka',
+            role: 'Úvěrový nebo finanční poradce', telefon: '+420 700 000 002', email: 'barbora.beta@example.cz', dulezitost: 'A',
+            posledni_kontakt: shift(-34) }),
+        mk({ typ: 'zprostredkovatel', jmeno: 'Cyril', prijmeni: 'Čech', firma: 'Reality Gama s.r.o.', role: 'Realitní makléř',
+            telefon: '+420 700 000 003', email: '' }),
+        mk({ typ: 'zprostredkovatel', jmeno: 'Dana', prijmeni: 'Delta', firma: 'Makléři Delta s.r.o.', role: 'Realitní makléř',
+            telefon: '+420 700 000 004', email: 'dana.delta@example.cz', zdroj: 'reklama', stav: 'novy', emaily: 'neposilat',
+            emaily_duvod: 'bez_souhlasu', emaily_kdy: shift(0), dalsi_krok: 'První kontakt', dalsi_krok_termin: shift(0), rytmus_od: shift(0) }),
+        mk({ typ: 'zprostredkovatel', jmeno: 'Emil', prijmeni: 'Épsilon', firma: 'Účetnictví Épsilon s.r.o.', role: 'Účetní nebo daňový poradce',
+            telefon: '+420 700 000 005', email: 'emil.epsilon@example.cz', dulezitost: 'C', emaily: 'neposilat',
+            emaily_duvod: 'odhlasil_se', emaily_kdy: shift(-20) }),
+        mk({ typ: 'zprostredkovatel', titul: 'JUDr.', jmeno: 'Filip', prijmeni: 'Šťastný', firma: 'Advokátní kancelář Zéta', role: 'Advokát',
+            telefon: '+420 700 000 006', email: 'filip.stastny@example.cz', zdroj: 'doporuceni', zdroj_poznamka: 'doporučil Adam Alfa',
+            stav: 'novy', rytmus_od: shift(-3) }),
+        mk({ typ: 'klient', jmeno: 'Gustav', prijmeni: 'Gama', firma: 'Gama Invest s.r.o.', funkce: 'jednatel', obor: 'Nemovitosti a SPV',
+            telefon: '+420 700 000 007', email: 'gustav.gama@example.cz', dulezitost: 'A', stav: 'nabidka',
+            dalsi_krok: 'Zeptat se na nabídku', dalsi_krok_termin: shift(0), posledni_kontakt: shift(-9) }),
+        mk({ typ: 'klient', jmeno: 'Hana', prijmeni: 'Éta', firma: 'Sklady Éta a.s.', funkce: 'finanční ředitelka', obor: 'Výroba a sklady',
+            telefon: '+420 700 000 008', email: 'hana.eta@example.cz', stav: 'zajemce', zdroj: 'ozval_se', rytmus_od: shift(-1) }),
+        mk({ typ: 'klient', jmeno: 'Ivan', prijmeni: 'Ióta', firma: 'Ióta Reality s.r.o.', obor: 'Nemovitosti a SPV',
+            telefon: '+420 700 000 009', email: '', stav: 'byvaly', dulezitost: 'C' })
+    ], 'Ukázkový záznam');
+}
+
+// ============================================================
+// OVLÁDÁNÍ
+// ============================================================
+function debounce(fn, ms) {
+    let t = null;
+    return function () { clearTimeout(t); t = setTimeout(fn, ms); };
+}
+function impItemOf(el) { return imp.items[parseInt(el.getAttribute('data-i'), 10)]; }
+
+const ACTIONS = {
+    'google': function () {
+        if (DEMO) showToast('Ukázkový režim: Google se nepřipojuje.');
+        else if (state.accessToken) showToast('Google je připojený.');
+        else connectGoogle();
+    },
+    'google-connect': function () { connectGoogle(); },
+    'tab': function (el) { switchTab(el.getAttribute('data-tab')); },
+    'sort': function (el) {
+        const k = el.getAttribute('data-sort');
+        if (state.ui.sort === k) state.ui.dir = -state.ui.dir; else { state.ui.sort = k; state.ui.dir = 1; }
+        renderList();
+    },
+    'person-open': function (el) { openCard(el.getAttribute('data-id')); },
+    'person-add': function () { openForm(null); },
+    'person-edit': function () {
+        const p = findPerson(state.ui.openId);
+        if (p) { closeModal('cardModal'); openForm(p); }
+    },
+    'person-save': function () { savePerson(); },
+    'person-erase': function () { openErase(); },
+    'erase-confirm': function () { confirmErase(); },
+    'ares': function () { aresLookup(); },
+    'mail-open': function () { openMail(); },
+    'mail-opt': function (el) { mailSelect(el.getAttribute('data-val')); },
+    'mail-save': function () { saveMail(); },
+    'dup-open': function (el) { closeModal('formModal'); state.ui.editId = null; openCard(el.getAttribute('data-id')); },
+    'dup-force': function () { form.allowPossible = true; savePerson(); },
+    'modal-close': function (el) {
+        const id = el.getAttribute('data-modal');
+        closeModal(id);
+        if (id === 'formModal' && state.ui.editId) { const back = state.ui.editId; state.ui.editId = null; openCard(back); }
+    },
+    'import-open': function () { impOpen(); },
+    'imp-src': function (el) { if (imp.step === 1) { imp.source = el.getAttribute('data-src'); impError(''); renderImport(); } },
+    'imp-pick': function () { $('imp-file').click(); },
+    'imp-next': function () { impNext(); },
+    'imp-back': function () { impBack(); },
+    'imp-close': async function () {
+        if (imp.busy) return;
+        if (imp.step === 3 && impCounts().ready > 0) {
+            const ok = await appConfirm('Zavřít nahrání? Zařazení lidí se neuloží.', { title: 'Nahrát tabulku', okLabel: 'Zavřít' });
+            if (!ok) return;
+        }
+        closeModal('importModal');
+    },
+    'imp-consent': function (el) {
+        impReadMapFromDom();
+        const v = el.getAttribute('data-val');
+        imp.consentVals[v] = !imp.consentVals[v];
+        renderImport();
+    },
+    'imp-extra': function (el) {
+        impReadMapFromDom();
+        const c = el.getAttribute('data-col');
+        imp.extra[c] = !imp.extra[c];
+        renderImport();
+    },
+    'imp-row-typ': function (el) {
+        const it = impItemOf(el);
+        if (!it || it.status === 'duplicita') return;
+        it.typ = el.getAttribute('data-val');
+        impRefreshRow(it.i);
+        impRefreshCounts();
+    },
+    'imp-row-imp': function (el) {
+        const it = impItemOf(el);
+        if (!it || it.status === 'duplicita') return;
+        it.dulezitost = el.getAttribute('data-val');
+        impRefreshRow(it.i);
+    },
+    'imp-bulk-typ': function (el) {
+        const v = el.getAttribute('data-val');
+        let n = 0;
+        imp.items.forEach(function (it) {
+            if (it.checked && it.status !== 'duplicita' && it.status !== 'mozna' && it.status !== 'vymazan') { it.typ = v; n++; }
+        });
+        if (n === 0) { showToast('Nejdřív označte řádky zaškrtnutím vlevo.', 'warn'); return; }
+        impRenderRows();
+    },
+    'imp-bulk-imp': function (el) {
+        const v = el.getAttribute('data-val');
+        let n = 0;
+        imp.items.forEach(function (it) { if (it.checked && it.status !== 'duplicita') { it.dulezitost = v; n++; } });
+        if (n === 0) { showToast('Nejdřív označte řádky zaškrtnutím vlevo.', 'warn'); return; }
+        impRenderRows();
+    },
+    'imp-check-all': function (el) {
+        const on = el.getAttribute('data-val') === '1';
+        impVisibleItems().forEach(function (it) {
+            if (it.status === 'duplicita' || it.status === 'mozna' || it.status === 'vymazan') return;
+            it.checked = on;
+        });
+        impRenderRows();
+    },
+    'imp-only-todo': function () { imp.onlyTodo = !imp.onlyTodo; imp.shown = 200; renderImport(); },
+    'imp-more': function () { imp.shown += 200; impRenderRows(); }
+};
+
+function wireEvents() {
+    document.addEventListener('click', function (e) {
+        const el = e.target.closest('[data-act]');
+        if (!el || el.disabled) return;
+        const fn = ACTIONS[el.getAttribute('data-act')];
+        if (fn) fn(el, e);
+    });
+
+    // Zavření kliknutím vedle a klávesou Escape jen u oken, kde se nedá ztratit rozepsaná práce
+    const SOFT = ['eraseModal', 'mailModal', 'cardModal'];
+    document.querySelectorAll('.modal-overlay').forEach(function (ov) {
+        ov.addEventListener('mousedown', function (e) {
+            if (e.target === ov && SOFT.indexOf(ov.id) !== -1) closeModal(ov.id);
+        });
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || $('confirmModal').classList.contains('show')) return;
+        for (let i = 0; i < SOFT.length; i++) {
+            if ($(SOFT[i]).classList.contains('show')) { closeModal(SOFT[i]); return; }
+        }
+    });
+    $('formModal').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); savePerson(); }
+    });
+
+    $('q').addEventListener('input', debounce(renderList, 120));
+    ['f-dulezitost', 'f-stav-z', 'f-stav-k', 'f-role', 'f-obor'].forEach(function (id) {
+        $(id).addEventListener('change', renderList);
+    });
+    $('p-typ').addEventListener('change', function () { toggleFormType(); applySourceDefaults(); });
+    $('p-zdroj').addEventListener('change', applySourceDefaults);
+
+    $('imp-file').addEventListener('change', function () {
+        const f = this.files && this.files[0];
+        this.value = '';
+        if (f) impLoadFile(f);
+    });
+    const impBody = $('imp-body');
+    impBody.addEventListener('change', function (e) {
+        const t = e.target;
+        if (t.hasAttribute('data-chk')) {
+            const it = imp.items[parseInt(t.getAttribute('data-chk'), 10)];
+            if (it) it.checked = t.checked;
+        } else if (t.hasAttribute('data-f')) {
+            const it = impItemOf(t);
+            if (!it) return;
+            it[t.getAttribute('data-f')] = t.value.trim();
+            const before = it.status;
+            impEval(it);
+            if ((it.status === 'mozna' || it.status === 'vymazan') && before !== it.status) { it.origTyp = it.typ; it.typ = 'skip'; }
+            impRefreshRow(it.i);
+            impRefreshCounts();
+        } else if (t.id === 'imp-rytmus') {
+            imp.rytmusHned = t.checked;
+        } else if (t.id === 'imp-prvni') {
+            imp.prvniKontakt = t.checked;
+        } else if (t.id === 'imp-header-row') {
+            const n = Math.max(1, Math.min(parseInt(t.value, 10) || 1, imp.rows.length - 1));
+            imp.headerIdx = n - 1;
+            impGuessMap();
+            renderImport();
+        } else if (t.hasAttribute('data-map') || t.id === 'imp-zdroj' || t.id === 'imp-deftyp') {
+            impReadMapFromDom();
+            if (t.hasAttribute('data-map')) renderImport();
+        }
+    });
+    impBody.addEventListener('input', function (e) {
+        const t = e.target;
+        if (t.hasAttribute('data-f')) {
+            const it = impItemOf(t);
+            if (it) it[t.getAttribute('data-f')] = t.value.trim();
+        }
+    });
+
+    // Návrat na dlouho otevřenou stránku: načíst data znovu a přepočítat podle aktuálního dne.
+    // S otevřeným oknem se nenačítá, aby se neztratil rozepsaný formulář (při uložení hlídá konflikt zápis).
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState !== 'visible' || !state.spreadsheetId || state.loading) return;
+        const stale = (Date.now() - state.loadedAt > 5 * 60000) || state.loadedDay !== todayIso();
+        if (stale && !anyModalOpen() && state.accessToken) reloadData(true);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    if (DEMO) $('demo-bar').classList.add('show');
+    if (typeof window.convertSelectsToDropdowns === 'function') window.convertSelectsToDropdowns('select.crm-select');
+    wireEvents();
+    updateGoogleUi(false);
+    startAuth();
+});
+
+// Jen pro kontrolu v ukázkovém režimu (na živém webu neexistuje)
+if (DEMO) {
+    window.__crm = { state: state, imp: imp, parseCsv: parseCsv, detectDelimiter: detectDelimiter, decodeBytes: decodeBytes,
+        splitName: splitName, normPhone: normPhone, findDuplicates: findDuplicates, fingerprints: fingerprints,
+        daysBetween: daysBetween, reloadData: reloadData };
+}
+
+})();
+</script>
+<script src="design-system/nav.js" defer></script>
+</body>
+</html>
