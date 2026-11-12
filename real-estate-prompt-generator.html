@@ -2854,15 +2854,24 @@
         const AI_LABELS = { chatgpt: 'ChatGPT', claude: 'Claude' };
         // Doplňkové údaje ze shrnutí AI — řádek se ukáže, jen když ho má aspoň jedna AI.
         // Plochy: rodinný dům a rozestavěný projekt; hodnota po dokončení a stupeň dokončení: rozestavěný projekt;
-        // hodnota bez provozu: hotel.
+        // hodnota bez provozu: hotel; výměra celkem, zastavitelná část a rozpis podle druhu pozemku (LV): pozemek.
         const AI_EXTRA_FIELDS = [
             { key: 'hodnotaPoDokonceni', label: 'Hodnota po dokončení', short: 'Po dokončení', fmt: formatKc },
             { key: 'stupenDokonceni', label: 'Stupeň dokončení', short: 'Dokončeno', fmt: formatPct },
             { key: 'hodnotaBezProvozu', label: 'Hodnota bez provozu', short: 'Bez provozu', fmt: formatKc },
             { key: 'podlahovaPlocha', label: 'Podlahová plocha', short: 'Podlahová', fmt: formatM2 },
             { key: 'uzitnaPlocha', label: 'Užitná plocha', short: 'Užitná', fmt: formatM2 },
-            { key: 'plochaPozemku', label: 'Plocha pozemku', short: 'Pozemek', fmt: formatM2 }
+            { key: 'plochaPozemku', label: 'Plocha pozemku', short: 'Pozemek', fmt: formatM2 },
+            { key: 'vymeraCelkem', label: 'Výměra pozemků celkem', short: 'Výměra', fmt: formatM2 },
+            { key: 'vymeraZastavitelna', label: 'Z toho zastavitelná', short: 'Zastavitelná', fmt: formatM2 },
+            // Rozpis = seznam { druh, m2 }: v tabulce, kartách a obrázku po řádcích, v exportu .md (fmtText) na jednom řádku
+            { key: 'rozpisVymery', label: 'Podle druhu pozemku', short: 'Druh pozemku', fmt: list => formatRozpis(list, '<br>'), fmtText: list => formatRozpis(list, '; ') }
         ];
+        function formatRozpis(list, sep) {
+            // Název escapovat i tady — uložené ocenění může přijít z importu, ne jen z parseru
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return Array.isArray(list) && list.length ? list.map(item => esc(item.druh) + ' ' + formatM2(item.m2)).join(sep) : '—';
+        }
         function formatM2(n) {
             return n ? new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 1 }).format(n) + ' m²' : '—';
         }
@@ -3872,7 +3881,8 @@
                 prompt += `  * Dostupnost inženýrských sítí\n`;
                 prompt += `  * Tvar a svažitost\n`;
                 prompt += `  * Přístup z veřejné komunikace\n`;
-                prompt += `- Výsledek: Cena za m² × Výměra pozemku\n\n`;
+                prompt += `- Výsledek: Cena za m² × Výměra pozemku\n`;
+                prompt += `- **Soubor pozemků různého druhu nebo využití** (stavební plochy, zemědělská půda, les, voda, pozemky pod stavbami, ochranná pásma): rozděl výměru na části podle využití a každou část oceň vlastní cenou za m² — nezastavitelnou část cenou pro její druh, ne cenou stavebního pozemku; výsledek = součet částí, od kterého odečti náklady na demolici staveb, sanaci nebo vyvolané investice, pokud jsou potřeba (rozdělení uveď v Souhrnu)\n\n`;
 
                 const maRezidualniMetodu = !!(formData.developer_projekt && formData.developer_projekt.includes('Ano'));
                 if (maRezidualniMetodu) {
@@ -4445,6 +4455,14 @@
             if (propertyType === 'hotel') {
                 prompt += `- **Provoz**: kategorie, počet pokojů a lůžek, kdo hotel provozuje; obsazenost, ADR a RevPAR za poslední roky\n`;
             }
+            if (propertyType === 'land') {
+                // Výměra pozemků hned na začátku — věřitel ji nemá hledat v textu (Martin 10. 11. 2026)
+                prompt += `- **Výměra pozemků** — uveď hned na začátku Souhrnu${propertyCount > 1 ? ', u každé nemovitosti zvlášť i za všechny dohromady' : ''}:\n`;
+                prompt += `  * **Výměra celkem** v m² (i v ha) a počet parcel — součet všech oceňovaných parcel podle LV; když jiný podklad uvádí jinou výměru, uveď obě a rozpor označ\n`;
+                prompt += `  * **Podle druhu pozemku (LV)** — tabulka Druh pozemku | Počet parcel | Výměra m² | Podíl %; druhy přesně podle LV (např. orná půda, zahrada, trvalý travní porost, ostatní plocha, zastavěná plocha a nádvoří, lesní pozemek, vodní plocha), poslední řádek Celkem\n`;
+                prompt += `  * **Podle využití pro ocenění** — tabulka Část | Plocha v územním plánu | Výměra m² | Cena Kč/m² | Hodnota Kč (např. zastavitelná pro bydlení, zastavitelná pro komerci, nezastavitelná — les, voda, ochranná pásma); odpočty (demolice, sanace) jako samostatné řádky se zápornou hodnotou, poslední řádek Celkem\n`;
+                prompt += `  * U jedné parcely jednoho druhu stačí místo tabulek jedna věta\n`;
+            }
             prompt += `- Tabulka údajů z podkladů se zdrojem (viz Postup práce, bod 1) a označené rozpory\n\n`;
 
             prompt += `### 2. TRŽNÍ HODNOTA\n`;
@@ -4559,6 +4577,12 @@
                     ? `HODNOTA_BEZ_PROVOZU: [číslo v Kč, pouze číslo — hodnota, kdyby hotel skončil (prázdná budova bez vybavení); součet za všechny nemovitosti]\n`
                     : `HODNOTA_BEZ_PROVOZU: [číslo v Kč, pouze číslo — hodnota, kdyby hotel skončil (prázdná budova bez vybavení)]\n`;
             }
+            if (propertyType === 'land') {
+                // Výměra pozemků — aplikace ji ukazuje ve srovnání AI, v exportu a v obrázku ocenění (AI_EXTRA_FIELDS)
+                prompt += `VÝMĚRA_CELKEM: [m², pouze číslo — součet výměr všech oceňovaných parcel podle LV${multi ? ' za všechny nemovitosti' : ''}]\n`;
+                prompt += `VÝMĚRA_ZASTAVITELNÁ: [m², pouze číslo — z toho výměra, kterou oceňuješ jako zastavitelnou podle územního plánu; 0, pokud žádná${multi ? '; součet za všechny nemovitosti' : ''}]\n`;
+                prompt += `ROZPIS_VÝMĚRY: [druhy pozemků podle LV s výměrou v m², oddělené středníkem${multi ? ', za všechny nemovitosti dohromady' : ''}, např. orná půda 12500; zahrada 1200; ostatní plocha 830]\n`;
+            }
             if (multi) {
                 // Rozpis po nemovitostech — aplikace z něj skládá rozpis ve srovnání, obrázku, exportu a e-mailu
                 for (let i = 1; i <= propertyCount; i++) {
@@ -4577,6 +4601,10 @@
                         prompt += `PODLAHOVÁ_PLOCHA_${i}: [m², pouze číslo — po dokončení podle projektu]\n`;
                         prompt += `UŽITNÁ_PLOCHA_${i}: [m², pouze číslo — po dokončení]\n`;
                         prompt += `PLOCHA_POZEMKU_${i}: [m², pouze číslo — výměra pozemků podle LV]\n`;
+                    }
+                    if (propertyType === 'land') {
+                        prompt += `VÝMĚRA_CELKEM_${i}: [m², pouze číslo — výměra parcel podle LV]\n`;
+                        prompt += `VÝMĚRA_ZASTAVITELNÁ_${i}: [m², pouze číslo — z toho zastavitelná podle územního plánu; 0, pokud žádná]\n`;
                     }
                 }
             }
@@ -4783,6 +4811,23 @@
                     const n = m ? parseAiCzk(m[0]) : NaN;
                     return !isNaN(n) && n > 0 ? n : null;
                 }
+                // Pozemek — rozpis výměry podle druhu pozemku (LV): „ostatní plocha 153033; lesní pozemek 11498" → [{ druh, m2 }].
+                // Snese i „m²", dvojtečku, čárky místo středníků, číslo před názvem a „ha". Čárka bez mezery před číslicí
+                // je desetinná („1,15 ha"). Název jen z písmen (jde do HTML tabulky i obrázku).
+                function parseAiRozpis(raw) {
+                    const clean = (s) => s.replace(/[^A-Za-zÀ-ž\s-]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^-+|-+$/g, '').trim();
+                    const items = String(raw || '').split(/;|,(?!\d)/).map(part => {
+                        const text = part.replace(/m²|m2/gi, ' ').replace(/\([^)]*\)/g, ' ');
+                        const num = text.match(/\d[\d\s.,]*\d|\d/);
+                        if (!num) return null;
+                        let m2 = parseAiCzk(num[0]);
+                        let after = text.slice(num.index + num[0].length);
+                        if (/^\s*ha\b/i.test(after)) { m2 = Math.round(m2 * 1000000) / 100; after = after.replace(/^\s*ha\b/i, ' '); }
+                        const druh = clean(text.slice(0, num.index)) || clean(after);
+                        return druh && !isNaN(m2) && m2 > 0 ? { druh, m2 } : null;
+                    }).filter(Boolean).slice(0, 10);
+                    return items.length ? items : null;
+                }
                 // Rozestavěný projekt — hodnota po dokončení (Kč), jen informativně; hotel — hodnota bez provozu (Kč)
                 const poDokonceni = parseAiCzk(data['HODNOTA_PO_DOKONČENÍ'] || data['HODNOTA_PO_DOKONCENI']);
                 const bezProvozu = parseAiCzk(data['HODNOTA_BEZ_PROVOZU']);
@@ -4814,7 +4859,9 @@
                         stupenDokonceni: st != null && st <= 100 ? st : null,
                         podlahovaPlocha: parseAiNumber('PODLAHOVÁ_PLOCHA_' + i, 'PODLAHOVA_PLOCHA_' + i),
                         uzitnaPlocha: parseAiNumber('UŽITNÁ_PLOCHA_' + i, 'UZITNA_PLOCHA_' + i),
-                        plochaPozemku: parseAiNumber('PLOCHA_POZEMKU_' + i)
+                        plochaPozemku: parseAiNumber('PLOCHA_POZEMKU_' + i),
+                        vymeraCelkem: parseAiNumber('VÝMĚRA_CELKEM_' + i, 'VYMERA_CELKEM_' + i),
+                        vymeraZastavitelna: parseAiNumber('VÝMĚRA_ZASTAVITELNÁ_' + i, 'VYMERA_ZASTAVITELNA_' + i)
                     });
                 }
 
@@ -4834,6 +4881,9 @@
                         podlahovaPlocha: parseAiNumber('PODLAHOVÁ_PLOCHA', 'PODLAHOVA_PLOCHA'),
                         uzitnaPlocha: parseAiNumber('UŽITNÁ_PLOCHA', 'UZITNA_PLOCHA'),
                         plochaPozemku: parseAiNumber('PLOCHA_POZEMKU'),
+                        vymeraCelkem: parseAiNumber('VÝMĚRA_CELKEM', 'VYMERA_CELKEM'),
+                        vymeraZastavitelna: parseAiNumber('VÝMĚRA_ZASTAVITELNÁ', 'VYMERA_ZASTAVITELNA'),
+                        rozpisVymery: parseAiRozpis(pick('ROZPIS_VÝMĚRY', 'ROZPIS_VYMERY')),
                         nemovitosti: nemovitosti
                     };
 
@@ -5205,7 +5255,7 @@
             md += mdRow(multi ? '**Tržní hodnota (součet)**' : '**Tržní hodnota**', s => fmt(aiParsedData[s]?.trzniHodnota));
             md += mdRow(multi ? '**Zástavní hodnota (součet)**' : '**Zástavní hodnota**', s => fmt(aiParsedData[s]?.zastavniHodnota));
             AI_EXTRA_FIELDS.filter(f => sources.some(s => aiParsedData[s]?.[f.key])).forEach(f => {
-                md += mdRow(f.label, s => f.fmt(aiParsedData[s]?.[f.key]));
+                md += mdRow(f.label, s => (f.fmtText || f.fmt)(aiParsedData[s]?.[f.key]));
             });
             md += mdRow('Hlavní riziko', s => aiParsedData[s]?.riziko1 || '—');
             md += mdRow('Hodnocení', s => aiParsedData[s]?.hodnoceni || '—');
@@ -5221,7 +5271,7 @@
                         return fmt(p.trzniHodnota) + ' (zástavní ' + fmt(p.zastavniHodnota) + ')' + (p.hodnoceni ? ', ' + p.hodnoceni : '');
                     });
                     AI_EXTRA_FIELDS.filter(f => sources.some(s => aiProperty(s, i)?.[f.key])).forEach(f => {
-                        md += mdRow(f.label, s => f.fmt(aiProperty(s, i)?.[f.key]));
+                        md += mdRow(f.label, s => (f.fmtText || f.fmt)(aiProperty(s, i)?.[f.key]));
                     });
                 }
             }
