@@ -67,6 +67,7 @@
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:200;
     align-items:flex-start;justify-content:center;overflow-y:auto;padding:48px 16px}
   .modal-overlay.show{display:flex}
+  #confirmModal{z-index:220}   /* potvrzení je vždy nad oknem, ze kterého vzešlo */
   .modal-box{background:var(--bg-elevated);border:1px solid var(--line-strong);
     border-radius:var(--r-lg);padding:32px;width:100%;max-width:520px;
     box-shadow:var(--shadow-xl);margin:auto 0}
@@ -127,6 +128,7 @@
   .tl li:last-child{border-bottom:none}
   .tl .tl-date{flex:0 0 104px;color:var(--text-faint);font-family:var(--font-mono);font-size:12px;padding-top:1px;white-space:nowrap}
   .tl .tl-kind{color:var(--text);font-weight:500}
+  .tl .tl-text{flex:1;min-width:0;word-break:break-word}
 
   /* ===== Volba e-mailů ===== */
   .opt-list{display:grid;gap:10px}
@@ -171,6 +173,38 @@
   .sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}
   .sum-list{font-size:13.5px;color:var(--text-soft);line-height:1.8;margin:8px 0 0;padding-left:18px}
 
+  /* ===== Dnes ===== */
+  .dnes-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .dnes-panel{background:var(--bg-raised);border:1px solid var(--line-faint);border-radius:var(--r-lg);padding:8px 22px 14px}
+  .dnes-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:14px 0 10px}
+  .dnes-head h3{font-family:var(--font-display);font-weight:300;font-size:22px;letter-spacing:-0.02em;color:var(--text)}
+  .dnes-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--line-faint)}
+  .dnes-who{flex:1;min-width:0;cursor:pointer}
+  .dnes-who:hover .p-name{color:var(--amber-warm)}
+  .dnes-why{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:5px;font-size:12.5px;color:var(--text-mute)}
+  .dnes-acts{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+  .dnes-more{padding:12px 0 2px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .pending-bar{display:none;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .pending-bar.show{display:flex}
+  .hist-del{background:transparent;border:0;color:var(--text-faint);cursor:pointer;font:inherit;font-size:15px;
+    line-height:1;padding:2px 6px;margin-left:auto;border-radius:var(--r-xs)}
+  .hist-del:hover{color:var(--danger);background:var(--danger-tint)}
+  .log-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .copy-big{margin:14px 0 6px;font-size:14px;color:var(--text-soft);line-height:1.6}
+
+  /* ===== Seznamy příjemců a příprava e-mailu ===== */
+  #promptModal{z-index:215}   /* dotaz na název je nad oknem, ze kterého vzešel */
+  .compose-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}
+  .compose-cols .copy-big{margin-top:0}
+  textarea.cmp-body{min-height:280px}
+  .sez-lead{font-size:13px;flex:1 1 320px;line-height:1.5}
+  .sez-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  .pill.draft{border-color:var(--line-amber);color:var(--amber-warm)}
+
+  /* ===== Případy z Dashboardu ===== */
+  .no-cases .col-cases{display:none}   /* sloupec Případy se ukáže, až existuje první přiřazení */
+  .tri td.td-acts{white-space:nowrap;text-align:right}
+
   .toast.warn{border-left:3px solid var(--warning)}
   .toast.error{border-left:3px solid var(--danger)}
 
@@ -184,6 +218,14 @@
     .nav{padding:18px 20px}
     .nav-menu{display:none}
     .app-meta,.app-head,.page-foot{padding-left:20px;padding-right:20px}
+    /* Hlavička na úzké obrazovce: tlačítka pod nadpis, nic nepřetéká do strany */
+    .app-meta{flex-wrap:wrap;gap:12px;padding-top:24px}
+    .app-head{flex-direction:column;align-items:stretch;gap:18px}
+    .app-title{font-size:36px}
+    .app-actions{flex-wrap:wrap}
+    .app-actions .btn{flex:1 1 140px}
+    .segmented{max-width:100%;overflow-x:auto}
+    .segmented button{white-space:nowrap}
     .container{padding:8px 20px 60px}
     .fgrid,.fgrid-2,.map-grid{grid-template-columns:1fr}
     .fg-2{grid-column:auto}
@@ -201,6 +243,16 @@
     .crm-table tbody tr{padding:12px 16px;border-bottom:1px solid var(--line-faint)}
     .crm-table tbody td{padding:2px 0;border:none}
     .crm-table td[data-l]:not(:empty)::before{content:attr(data-l) ": ";color:var(--text-faint);font-size:12px}
+    .dnes-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .dnes-stats .stat-card{padding:16px 14px}
+    .dnes-stats .stat-label{letter-spacing:0.06em;font-size:10.5px;overflow-wrap:anywhere}
+    .dnes-panel{padding:6px 16px 12px}
+    .dnes-row{flex-direction:column;align-items:stretch}
+    .dnes-acts{justify-content:flex-start}
+    .compose-cols{grid-template-columns:minmax(0,1fr);gap:20px}
+    .sez-acts{justify-content:flex-start}
+    /* Čtyři záložky se na telefon nevejdou vedle sebe: zalomí se do dvou řad */
+    #tabs{flex-wrap:wrap;overflow-x:visible}
   }
 </style>
 </head>
@@ -274,6 +326,7 @@
     <span class="current">CRM</span>
   </div>
   <div class="app-tools">
+    <button type="button" class="gbtn" id="btn-settings" data-act="settings-open" style="display:none">Nastavení</button>
     <button type="button" class="gbtn" id="btn-google" data-act="google">
       <span class="gdot"></span><span id="gtext">Připojit Google</span>
     </button>
@@ -284,7 +337,7 @@
   <div class="app-head-left">
     <div class="eyebrow">Private Credit · Vztahy</div>
     <h1 class="app-title">CRM <em>Vztahy</em></h1>
-    <p class="app-sub">Klienti a zprostředkovatelé na jednom místě: kdo je kdo, co se s ním dělo a komu lze poslat e-mail.</p>
+    <p class="app-sub">Klienti a zprostředkovatelé na jednom místě: komu se dnes ozvat, co se s kým dělo a komu lze poslat e-mail.</p>
   </div>
   <div class="app-actions">
     <button type="button" class="btn btn-secondary" id="btn-import" data-act="import-open" style="display:none">Nahrát tabulku</button>
@@ -304,11 +357,34 @@
   <div id="app-view" style="display:none">
     <div class="crm-bar">
       <div class="segmented" id="tabs">
-        <button type="button" data-act="tab" data-tab="zprostredkovatel" class="active">Zprostředkovatelé <span class="tab-num" id="num-z">0</span></button>
+        <button type="button" data-act="tab" data-tab="dnes" class="active">Dnes <span class="tab-num" id="num-d">0</span></button>
+        <button type="button" data-act="tab" data-tab="zprostredkovatel">Zprostředkovatelé <span class="tab-num" id="num-z">0</span></button>
         <button type="button" data-act="tab" data-tab="klient">Klienti <span class="tab-num" id="num-k">0</span></button>
+        <button type="button" data-act="tab" data-tab="seznamy">Seznamy <span class="tab-num" id="num-s">0</span></button>
       </div>
     </div>
 
+    <div class="info-note pending-bar" id="pending-bar"></div>
+    <div class="info-note pending-bar" id="assign-bar"></div>
+
+    <div id="dnes-view">
+      <div class="dnes-stats">
+        <div class="stat-card"><div class="stat-label">K vyřízení dnes</div><div class="stat-value" id="st-dnes">0</div></div>
+        <div class="stat-card"><div class="stat-label">Zprostředkovatelé</div><div class="stat-value" id="st-z">0</div></div>
+        <div class="stat-card"><div class="stat-label">Klienti</div><div class="stat-value" id="st-k">0</div></div>
+        <div class="stat-card"><div class="stat-label">E-mail lze poslat</div><div class="stat-value" id="st-mail">0</div></div>
+      </div>
+      <div class="dnes-panel">
+        <div class="dnes-head"><h3>Ozvat se dnes</h3><span class="muted" id="dnes-done"></span></div>
+        <div id="dnes-list"></div>
+        <div class="dnes-more">
+          <button type="button" class="btn btn-secondary btn-sm" id="dnes-more-btn" data-act="dnes-more">Ukázat dalších 5</button>
+          <span class="muted" id="dnes-more-note"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="list-view" style="display:none">
     <div class="list-tools">
       <input type="text" class="input" id="q" placeholder="Hledat jméno, firmu, e-mail, telefon…" autocomplete="off">
       <div class="f-wrap">
@@ -360,6 +436,8 @@
         </select>
       </div>
       <span class="list-count" id="list-count"></span>
+      <button type="button" class="btn btn-secondary btn-sm" data-act="list-save-as">Uložit jako seznam</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-act="copy-open">Připravit e-mail</button>
     </div>
 
     <div class="table-wrap" id="list-wrap">
@@ -371,6 +449,7 @@
             <th class="sortable" data-act="sort" data-sort="dulezitost">Důležitost<span class="arrow" data-arrow="dulezitost"></span></th>
             <th class="sortable" data-act="sort" data-sort="stav">Stav<span class="arrow" data-arrow="stav"></span></th>
             <th class="sortable" data-act="sort" data-sort="posledni_kontakt">Poslední kontakt<span class="arrow" data-arrow="posledni_kontakt"></span></th>
+            <th class="sortable col-cases" data-act="sort" data-sort="pripady">Případy<span class="arrow" data-arrow="pripady"></span></th>
             <th>Další krok</th>
             <th>E-maily</th>
           </tr>
@@ -379,6 +458,24 @@
       </table>
     </div>
     <div class="empty" id="list-empty" style="display:none"></div>
+    </div>
+
+    <div id="seznamy-view" style="display:none">
+      <div class="list-tools">
+        <span class="muted sez-lead">Seznam je pojmenovaná skupina lidí, kterým píšete opakovaně, například partneři pro měsíční přehled.</span>
+        <span class="list-count" id="sez-count"></span>
+        <button type="button" class="btn btn-secondary btn-sm" data-act="list-new">Nový seznam</button>
+      </div>
+      <div class="table-wrap" id="sez-wrap">
+        <table class="table crm-table">
+          <thead>
+            <tr><th>Seznam</th><th>Lidí</th><th>E-mail lze poslat</th><th>Poslední rozesílka</th><th></th></tr>
+          </thead>
+          <tbody id="sez-body"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="sez-empty" style="display:none"></div>
+    </div>
   </div>
 </main>
 
@@ -524,6 +621,17 @@
         <label>LinkedIn</label>
         <input type="text" class="input" id="p-linkedin" placeholder="https://www.linkedin.com/in/…" autocomplete="off">
       </div>
+      <div class="form-group" data-for="klient" style="display:none">
+        <label>Splatnost úvěru</label>
+        <input type="date" class="input" id="p-splatnost">
+      </div>
+      <div class="form-group fg-full">
+        <label>Oslovení v e-mailu</label>
+        <div class="ico-row">
+          <input type="text" class="input" id="p-osloveni" maxlength="120" placeholder="například Vážený pane Nováku (bez čárky na konci)" autocomplete="off">
+          <button type="button" class="btn btn-secondary btn-sm" data-act="sal-suggest">Navrhnout</button>
+        </div>
+      </div>
       <div class="form-group fg-2">
         <label>Další krok</label>
         <input type="text" class="input" id="p-krok" placeholder="například zavolat kvůli podkladům" autocomplete="off">
@@ -598,6 +706,386 @@
   </div>
 </div>
 
+<!-- ============== OKNO: ZÁPIS KONTAKTU ============== -->
+<div class="modal-overlay" id="logModal">
+  <div class="modal-box">
+    <h3 id="log-title">Zápis kontaktu</h3>
+    <div class="form-hint" id="log-who" style="margin:-10px 0 16px"></div>
+    <div class="fgrid-2">
+      <div class="form-group">
+        <label>Kdy</label>
+        <input type="date" class="input" id="log-den">
+      </div>
+      <div class="form-group" id="log-email-wrap" style="display:none">
+        <label>E-mail (zatím chybí)</label>
+        <input type="email" class="input" id="log-email" autocomplete="off">
+      </div>
+      <div class="form-group fg-full">
+        <label>Krátká poznámka</label>
+        <input type="text" class="input" id="log-text" placeholder="nepovinné, například o čem jste mluvili" autocomplete="off">
+      </div>
+    </div>
+    <div class="fsec" id="log-step-wrap" style="display:none">
+      <label class="check-label">
+        <input type="checkbox" class="check-input" id="log-hotovo" checked>
+        <span class="check-visual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+        <span id="log-step-text"></span>
+      </label>
+    </div>
+    <div class="fsec">
+      <div class="fgrid-2">
+        <div class="form-group fg-full">
+          <label>Další krok</label>
+          <input type="text" class="input" id="log-krok" placeholder="nepovinné" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Termín</label>
+          <input type="date" class="input" id="log-termin">
+        </div>
+        <div class="form-group">
+          <label>Rychlá volba</label>
+          <div class="chips">
+            <button type="button" class="chip" data-act="log-quick" data-days="1">Zítra</button>
+            <button type="button" class="chip" data-act="log-quick" data-days="7">Za týden</button>
+            <button type="button" class="chip" data-act="log-quick" data-days="30">Za měsíc</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="form-err" id="log-err"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-act="modal-close" data-modal="logModal">Zrušit</button>
+      <button type="button" class="btn btn-primary" id="log-save" data-act="log-save">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: ODLOŽIT ============== -->
+<div class="modal-overlay" id="snoozeModal">
+  <div class="modal-box">
+    <h3>Odložit</h3>
+    <p class="modal-text" id="snooze-text"></p>
+    <div class="chips" style="margin-top:16px">
+      <button type="button" class="chip" data-act="snooze-pick" data-days="1">Zítra</button>
+      <button type="button" class="chip" data-act="snooze-pick" data-days="7">Za týden</button>
+      <button type="button" class="chip" data-act="snooze-pick" data-days="30">Za měsíc</button>
+    </div>
+    <div class="fsec">
+      <div class="form-group">
+        <label>Vlastní datum</label>
+        <input type="date" class="input" id="snooze-den">
+      </div>
+    </div>
+    <div class="form-err" id="snooze-err"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-act="modal-close" data-modal="snoozeModal">Zrušit</button>
+      <button type="button" class="btn btn-primary" data-act="snooze-save">Odložit na toto datum</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: ZKOPÍROVAT E-MAILY / ROZESÍLKA ============== -->
+<div class="modal-overlay" id="copyModal">
+  <div class="modal-box modal-xl">
+    <h3 id="copy-title">Připravit e-mail</h3>
+    <div id="copy-pick">
+      <div class="compose-cols">
+        <div>
+          <div class="kv-l">Příjemci</div>
+          <div class="copy-big" id="copy-counts"></div>
+          <div class="bulk-row" id="copy-recent" style="display:none"></div>
+          <div class="tri-wrap" style="max-height:44vh">
+            <table class="tri">
+              <thead><tr><th></th><th>Jméno a firma</th><th>E-mail</th><th>Poslední rozesílka</th></tr></thead>
+              <tbody id="copy-rows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="kv-l">Text e-mailu</div>
+          <div class="chips" id="tpl-chips"></div>
+          <div class="form-group" style="margin-top:14px">
+            <label>Předmět</label>
+            <input type="text" class="input" id="cmp-subject" maxlength="200" autocomplete="off">
+          </div>
+          <div class="form-group" style="margin-top:14px">
+            <label>Text</label>
+            <textarea class="input cmp-body" id="cmp-body" maxlength="20000"></textarea>
+          </div>
+          <div class="form-hint">Pod text se sám přidá podpis, údaje o firmě a věta o odhlášení. Upravíte je v Nastavení. Text jde poslat i bez předlohy, nebo zkopírovat jen adresy.</div>
+          <div class="bulk-row" id="tpl-actions"></div>
+        </div>
+      </div>
+      <div class="fsec">
+        <div class="info-note warning"><strong>Adresy vložte do pole Skrytá kopie</strong>, ne do pole Komu. Jinak by každý příjemce viděl adresy všech ostatních.</div>
+        <div class="bulk-row" id="copy-parts"></div>
+        <div class="bulk-row" id="copy-sal" style="display:none"></div>
+        <div id="copy-manual" style="display:none">
+          <div class="form-hint">Kopírování do schránky se nepovedlo. Označte text níže a zkopírujte ho ručně (Ctrl+C).</div>
+          <textarea class="input" id="copy-text" readonly style="margin-top:8px;min-height:90px"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="fsec" id="copy-after" style="display:none">
+      <div class="copy-big" id="copy-after-text"></div>
+      <div class="form-group">
+        <label>Název rozesílky</label>
+        <input type="text" class="input" id="copy-name" placeholder="například Listopadový přehled" autocomplete="off">
+      </div>
+      <div class="form-hint">Až e-mail v Outlooku odešlete, klikněte na „Odesláno, zapsat“. Do historie se zapíše přesně těm lidem, jejichž adresy jste zkopíroval nebo stáhl v tabulce.</div>
+    </div>
+    <div class="form-err" id="copy-err"></div>
+    <div class="modal-actions">
+      <div class="left-group">
+        <button type="button" class="btn btn-secondary btn-sm" data-act="copy-sentence">Zkopírovat větu o odhlášení</button>
+        <button type="button" class="btn btn-ghost btn-sm btn-danger-ghost" id="copy-drop" data-act="copy-drop" style="display:none">Zahodit rozesílku</button>
+      </div>
+      <button type="button" class="btn btn-ghost" data-act="modal-close" data-modal="copyModal">Zavřít</button>
+      <button type="button" class="btn btn-primary" id="copy-done" data-act="copy-done" style="display:none">Odesláno, zapsat</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: PŘIŘADIT PŘÍPAD Z DASHBOARDU (nad kartou člověka) ============== -->
+<div class="modal-overlay" id="caseModal">
+  <div class="modal-box modal-lg">
+    <h3 id="case-title">Přiřadit případ</h3>
+    <p class="modal-text" id="case-lead"></p>
+    <div class="form-group" style="margin-top:14px">
+      <label>Hledat případ</label>
+      <input type="text" class="input" id="case-q" placeholder="název případu, klient nebo zdroj poptávky" autocomplete="off">
+    </div>
+    <div class="tri-wrap" style="max-height:46vh;margin-top:12px">
+      <table class="tri">
+        <thead><tr><th>Případ</th><th>Stav</th><th>Založeno</th><th></th></tr></thead>
+        <tbody id="case-rows"></tbody>
+      </table>
+    </div>
+    <div class="form-hint" id="case-note"></div>
+    <div class="form-err" id="case-err"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" data-act="modal-close" data-modal="caseModal">Hotovo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: KDO PŘIVEDL PŘÍPAD ============== -->
+<div class="modal-overlay" id="assignModal">
+  <div class="modal-box modal-lg">
+    <h3>Kdo přivedl případ</h3>
+    <p class="modal-text">Případy z Dashboardu, které už prošly oceněním a nemají přiřazeného partnera. Napište jméno partnera a vyberte ho z nabídky, nebo označte, že případ nikdo nepřivedl.</p>
+    <div class="tri-wrap" style="max-height:52vh;margin-top:16px">
+      <table class="tri">
+        <thead><tr><th>Případ</th><th>Partner</th><th></th></tr></thead>
+        <tbody id="assign-rows"></tbody>
+      </table>
+    </div>
+    <datalist id="partners-dl"></datalist>
+    <div class="form-err" id="assign-err"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" data-act="modal-close" data-modal="assignModal">Hotovo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: DOPLNIT OSLOVENÍ (nad oknem e-mailu) ============== -->
+<div class="modal-overlay" id="salModal">
+  <div class="modal-box modal-lg">
+    <h3>Doplnit oslovení</h3>
+    <p class="modal-text">Návrhy skládá aplikace podle jména a příjmení a nemusí být správně. Projděte je a opravte. Prázdné pole znamená, že v tabulce bude „Dobrý den“.</p>
+    <div class="tri-wrap" style="max-height:52vh;margin-top:16px">
+      <table class="tri">
+        <thead><tr><th>Jméno</th><th>Firma</th><th>Oslovení (bez čárky na konci)</th></tr></thead>
+        <tbody id="sal-rows"></tbody>
+      </table>
+    </div>
+    <div class="form-err" id="sal-err"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-act="modal-close" data-modal="salModal">Zrušit</button>
+      <button type="button" class="btn btn-primary" id="sal-save" data-act="sal-save">Uložit oslovení</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: SEZNAM PŘÍJEMCŮ ============== -->
+<div class="modal-overlay" id="listModal">
+  <div class="modal-box modal-lg">
+    <h3 id="list-title">Nový seznam</h3>
+    <div class="fgrid-2">
+      <div class="form-group">
+        <label>Název <span class="req">*</span></label>
+        <input type="text" class="input" id="l-nazev" maxlength="80" placeholder="například Partneři, měsíční přehled" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Jak se plní</label>
+        <span class="seg-mini" id="l-druh">
+          <button type="button" data-act="list-kind" data-val="pravidlo">Podle filtrů</button>
+          <button type="button" data-act="list-kind" data-val="rucni">Ručně</button>
+        </span>
+        <div class="form-hint" id="l-druh-hint"></div>
+      </div>
+    </div>
+    <div class="fsec" id="l-rule">
+      <div class="fgrid">
+        <div class="form-group">
+          <label>Koho</label>
+          <select id="l-typ" class="crm-select">
+            <option value="zprostredkovatel">Zprostředkovatelé</option>
+            <option value="klient">Klienti</option>
+            <option value="vse">Všichni</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Důležitost</label>
+          <select id="l-dulezitost" class="crm-select">
+            <option value="">Vše</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+          </select>
+        </div>
+        <div class="form-group" data-lfor="zprostredkovatel">
+          <label>Stav</label>
+          <select id="l-stav-z" class="crm-select">
+            <option value="">Vše</option>
+            <option value="novy">Nový</option>
+            <option value="v_kontaktu">V kontaktu</option>
+            <option value="posila_pripady">Posílá případy</option>
+            <option value="spici">Spící</option>
+            <option value="nezajem">Nezájem</option>
+          </select>
+        </div>
+        <div class="form-group" data-lfor="klient" style="display:none">
+          <label>Stav</label>
+          <select id="l-stav-k" class="crm-select">
+            <option value="">Vše</option>
+            <option value="zajemce">Zájemce</option>
+            <option value="nabidka">Nabídka</option>
+            <option value="klient">Klient</option>
+            <option value="byvaly">Bývalý klient</option>
+            <option value="nezajem">Nezájem</option>
+          </select>
+        </div>
+        <div class="form-group" data-lfor="zprostredkovatel">
+          <label>Role</label>
+          <select id="l-role" class="crm-select">
+            <option value="">Vše</option>
+            <option>Úvěrový nebo finanční poradce</option>
+            <option>Realitní makléř</option>
+            <option>Správce nemovitostí</option>
+            <option>Účetní nebo daňový poradce</option>
+            <option>Advokát</option>
+            <option>Skupina Spolumajitelé</option>
+            <option>Jiné</option>
+          </select>
+        </div>
+        <div class="form-group" data-lfor="klient" style="display:none">
+          <label>Obor</label>
+          <select id="l-obor" class="crm-select">
+            <option value="">Vše</option>
+            <option>Nemovitosti a SPV</option>
+            <option>Výroba a sklady</option>
+            <option>Jiné</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-hint" id="l-preview"></div>
+    </div>
+    <div class="fsec" id="l-manual" style="display:none">
+      <div class="form-group">
+        <label>Přidat člověka</label>
+        <input type="text" class="input" id="l-q" placeholder="začněte psát jméno nebo firmu" autocomplete="off">
+      </div>
+      <div class="chips" id="l-suggest" style="margin-top:10px"></div>
+      <div class="kv-l" style="margin-top:18px" id="l-members-head">V seznamu</div>
+      <div class="tri-wrap" style="max-height:34vh">
+        <table class="tri"><tbody id="l-members"></tbody></table>
+      </div>
+    </div>
+    <div class="form-err" id="list-err"></div>
+    <div class="modal-actions">
+      <div class="left-group">
+        <button type="button" class="btn btn-ghost btn-danger-ghost" id="list-delete" data-act="list-delete" style="display:none">Smazat seznam</button>
+      </div>
+      <button type="button" class="btn btn-ghost" data-act="modal-close" data-modal="listModal">Zrušit</button>
+      <button type="button" class="btn btn-primary" id="list-save" data-act="list-save">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: NASTAVENÍ ============== -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-box">
+    <h3>Nastavení</h3>
+    <div class="fgrid">
+      <div class="form-group">
+        <label>Rytmus A (dní)</label>
+        <input type="number" class="input" id="set-a" min="1" max="365" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>Rytmus B (dní)</label>
+        <input type="number" class="input" id="set-b" min="1" max="730" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>Denní strop</label>
+        <input type="number" class="input" id="set-strop" min="0" max="50" inputmode="numeric">
+      </div>
+      <div class="form-group fg-full">
+        <label>Věta o odhlášení</label>
+        <textarea class="input" id="set-veta"></textarea>
+      </div>
+    </div>
+    <div class="form-hint">Rytmus říká, po kolika dnech bez osobního kontaktu se člověk s důležitostí A nebo B objeví v „Dnes“. Denní strop je počet osobních kontaktů, které chcete denně stihnout.</div>
+    <div class="fsec">
+      <div class="kv-l">Koncept e-mailu pro Outlook</div>
+      <div class="fgrid">
+        <div class="form-group fg-full">
+          <label>Vaše adresa do pole Komu</label>
+          <input type="email" class="input" id="set-komu" maxlength="120" placeholder="nepovinné; příjemci jdou vždy do skryté kopie" autocomplete="off">
+        </div>
+        <div class="form-group fg-full">
+          <label>Podpis pod e-mailem</label>
+          <textarea class="input" id="set-podpis" maxlength="1000" placeholder="nepovinné; když zůstane prázdný, vložíte podpis až v Outlooku"></textarea>
+        </div>
+        <div class="form-group fg-full">
+          <label>Údaje o firmě pod e-mailem</label>
+          <textarea class="input" id="set-paticka" maxlength="1000"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="kv-l">Data</div>
+      <div class="kv-row">
+        <span class="muted" id="set-conn"></span>
+        <a class="btn btn-secondary btn-sm" id="set-sheet" target="_blank" rel="noopener noreferrer" style="display:none">Otevřít tabulku</a>
+        <button type="button" class="btn btn-secondary btn-sm" data-act="backup">Stáhnout zálohu</button>
+      </div>
+      <div class="form-hint">Záloha je jeden soubor Excel se šesti listy (lidé, historie, nastavení, seznamy, předlohy, vazby na případy). Slouží pro přenos dat, ne pro úpravy. Omylem smazaná data se obnovují z historie verzí Google tabulky.</div>
+    </div>
+    <div class="form-err" id="set-err"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-act="modal-close" data-modal="settingsModal">Zavřít</button>
+      <button type="button" class="btn btn-primary" data-act="settings-save">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== OKNO: DOTAZ NA NÁZEV (nad ostatními okny) ============== -->
+<div class="modal-overlay" id="promptModal">
+  <div class="modal-box">
+    <h3 id="pr-title">Název</h3>
+    <div class="form-group">
+      <label id="pr-label">Název</label>
+      <input type="text" class="input" id="pr-input" maxlength="80" autocomplete="off">
+    </div>
+    <div class="form-err" id="pr-err"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="pr-cancel">Zrušit</button>
+      <button type="button" class="btn btn-primary" id="pr-ok">Uložit</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============== OKNO: POTVRZENÍ ============== -->
 <div class="modal-overlay" id="confirmModal">
   <div class="modal-box">
@@ -664,6 +1152,9 @@ const SHEET_TITLE = 'Investment Tools CRM';
 const TAB_LIDE = 'Lide';
 const TAB_HIST = 'Historie';
 const TAB_NAST = 'Nastaveni';
+const TAB_SEZN = 'Seznamy';     // uložené seznamy příjemců (etapa 2)
+const TAB_PRED = 'Predlohy';    // předlohy e-mailů (etapa 2)
+const TAB_VAZBY = 'Vazby';      // kdo patří ke kterému případu z Dashboardu (etapa 3)
 
 // Sdílené klíče Google tokenu pro celý web (plní je i profilend-auth.js) — názvy neměnit
 const TOKEN_KEY = 'gdrive-shared-token';
@@ -676,16 +1167,37 @@ const LIDE_HEADER = [
     'funkce', 'role', 'obor', 'telefon', 'email', 'linkedin', 'dulezitost', 'stav',
     'emaily', 'emaily_duvod', 'emaily_kdy', 'souhlas', 'zdroj', 'zdroj_poznamka',
     'dalsi_krok', 'dalsi_krok_termin', 'posledni_kontakt', 'rytmus_od', 'odlozeno_do', 'poznamka',
-    'ext_id', 'otisk_email', 'otisk_telefon', 'otisk_jmeno'
+    'ext_id', 'otisk_email', 'otisk_telefon', 'otisk_jmeno',
+    'osloveni',
+    'splatnost'      // den splatnosti úvěru klienta (etapa 3; Dashboard splatnost neeviduje)
 ];
 const HIST_HEADER = ['id', 'clovek_id', 'datum', 'typ', 'text', 'davka_id'];
 const NAST_HEADER = ['klic', 'hodnota'];
+// Seznam: druh „pravidlo“ (lidé podle filtrů, mění se sám) nebo „rucni“ (lidé přidaní ručně).
+// pravidlo = JSON { typ, dulezitost, stav, role, obor }, clenove = JSON pole id lidí.
+const SEZN_HEADER = ['id', 'vytvoreno', 'aktualizovano', 'nazev', 'druh', 'pravidlo', 'clenove', 'posledni_rozesilka'];
+const PRED_HEADER = ['id', 'vytvoreno', 'aktualizovano', 'nazev', 'predmet', 'text'];
+// Vazba člověka na případ z Dashboardu. vztah: „privedl“ (partner případ přivedl), „klient“ (případ je jeho),
+// „bez_partnera“ (případ nikdo nepřivedl; clovek_id je prázdné). Dashboard se nemění, CRM z něj jen čte.
+const VAZBY_HEADER = ['id', 'vytvoreno', 'clovek_id', 'pripad_id', 'vztah'];
 // Nový list Googlu má jen 26 sloupců × 1000 řádků a zápis mimo ně skončí chybou,
 // proto se listy zakládají s rozměry a před zápisem se velikost ověřuje.
 const GRID = {};
 GRID[TAB_LIDE] = { cols: 40, rows: 2000 };
 GRID[TAB_HIST] = { cols: 10, rows: 5000 };
 GRID[TAB_NAST] = { cols: 5, rows: 200 };
+GRID[TAB_SEZN] = { cols: 12, rows: 300 };
+GRID[TAB_PRED] = { cols: 10, rows: 300 };
+GRID[TAB_VAZBY] = { cols: 8, rows: 1000 };
+const ALL_TABS = [
+    { tab: TAB_LIDE, header: LIDE_HEADER }, { tab: TAB_HIST, header: HIST_HEADER }, { tab: TAB_NAST, header: NAST_HEADER },
+    { tab: TAB_SEZN, header: SEZN_HEADER }, { tab: TAB_PRED, header: PRED_HEADER }, { tab: TAB_VAZBY, header: VAZBY_HEADER }
+];
+// Dashboard (jen čtení): kde hledat jeho tabulku a jak se jmenuje list s případy
+const DASH_SHEET_KEY = 'dashboard-sheet-id';
+const DASH_FOLDER_NAME = 'Dashboard';
+const DASH_SHEET_TITLE = 'Investment Tools Dashboard';
+const DASH_TAB = 'Pripady';
 
 const LBL = {
     typ: { zprostredkovatel: 'Zprostředkovatel', klient: 'Klient' },
@@ -727,10 +1239,17 @@ const state = {
     stubs: [],         // řádky po vymazaných lidech: jen otisky a nastavení e-mailů
     history: [],
     settings: {},
+    lists: [],         // uložené seznamy příjemců
+    templates: [],     // předlohy e-mailů
+    links: [],         // vazby lidí na případy z Dashboardu
+    cases: [],         // případy načtené z Dashboardu (jen čtení)
+    casesOk: false,    // povedlo se Dashboard načíst?
+    dashId: null,
     loadedAt: 0,
     loadedDay: '',
     loading: false,
-    ui: { tab: 'zprostredkovatel', sort: 'prijmeni', dir: 1, openId: null, editId: null }
+    // extraSlots: lidé z rytmu přidaní tlačítkem „Ukázat dalších 5“ (platí do znovunačtení stránky)
+    ui: { tab: 'dnes', sort: 'prijmeni', dir: 1, openId: null, editId: null, extraSlots: 0 }
 };
 
 // Úložiště prohlížeče: v ukázce se NIKDY nepoužije (jen paměť stránky)
@@ -1255,6 +1774,7 @@ function onAuthLost() {
         $('connect-panel').style.display = '';
         $('btn-add').style.display = 'none';
         $('btn-import').style.display = 'none';
+        $('btn-settings').style.display = 'none';
     }
 }
 
@@ -1365,8 +1885,8 @@ async function ensureSpreadsheet() {
         await ensureTabsAndHeaders();
         return existing.id;
     }
-    const tabs = [TAB_LIDE, TAB_HIST, TAB_NAST].map(function (t) {
-        return { properties: { title: t, gridProperties: { rowCount: GRID[t].rows, columnCount: GRID[t].cols } } };
+    const tabs = ALL_TABS.map(function (w) {
+        return { properties: { title: w.tab, gridProperties: { rowCount: GRID[w.tab].rows, columnCount: GRID[w.tab].cols } } };
     });
     const createRes = await gfetch(SHEETS_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1439,11 +1959,8 @@ async function _putRowRaw(tabName, rowIndex, rowValues) {
 }
 
 async function ensureTabsAndHeaders() {
-    const wanted = [
-        { tab: TAB_LIDE, header: LIDE_HEADER },
-        { tab: TAB_HIST, header: HIST_HEADER },
-        { tab: TAB_NAST, header: NAST_HEADER }
-    ];
+    // Listy přidané později (Seznamy, Predlohy) se ve starší tabulce doplní samy
+    const wanted = ALL_TABS;
     const missingTabs = wanted.filter(function (w) { return state.sheetTabIds[w.tab] === undefined; });
     if (missingTabs.length > 0) {
         const res = await gfetch(SHEETS_URL + '/' + state.spreadsheetId + ':batchUpdate', {
@@ -1536,12 +2053,16 @@ async function _locateRaw(tabName, id) {
 // Bezpečná úprava člověka: zapíše jen změněná pole podle id. Když se mezitím změnil
 // čas poslední úpravy (jiné zařízení), nezapíše nic a ohlásí konflikt.
 function patchPerson(id, patch, opts) {
+    return patchRowById(TAB_LIDE, id, patch, opts);
+}
+// Totéž pro kterýkoli list s řádky podle id (lidé, seznamy, předlohy)
+function patchRowById(tabName, id, patch, opts) {
     opts = opts || {};
     return enqueueWrite(async function () {
-        const loc = await _locateRaw(TAB_LIDE, id);
+        const loc = await _locateRaw(tabName, id);
         const updCol = loc.header.indexOf('aktualizovano');
         if (opts.expectUpdated !== undefined && updCol !== -1) {
-            const a1 = TAB_LIDE + '!' + colLetter(updCol + 1) + loc.rowNumber;
+            const a1 = tabName + '!' + colLetter(updCol + 1) + loc.rowNumber;
             const resU = await gfetch(valuesUrl(a1));
             await checkSheetsResponse(resU, 'Kontrola poslední úpravy');
             const cur = String((((await resU.json()).values || [[]])[0] || [])[0] || '');
@@ -1557,7 +2078,7 @@ function patchPerson(id, patch, opts) {
             const col = loc.header.indexOf(field);
             if (col === -1) throw new Error('V tabulce chybí sloupec „' + field + '“.');
             const v = fields[field];
-            data.push({ range: TAB_LIDE + '!' + colLetter(col + 1) + loc.rowNumber,
+            data.push({ range: tabName + '!' + colLetter(col + 1) + loc.rowNumber,
                 values: [[(v === undefined || v === null) ? '' : String(v)]] });
         });
         const res = await gfetch(SHEETS_URL + '/' + state.spreadsheetId + '/values:batchUpdate', {
@@ -1566,6 +2087,57 @@ function patchPerson(id, patch, opts) {
         });
         await checkSheetsResponse(res, 'Uložení změn');
         return fields;
+    });
+}
+
+// Úprava více lidí najednou (hromadné doplnění oslovení). items = [{ id, patch, expect }].
+// Tři čtení a jeden zápis bez ohledu na počet lidí. Koho mezitím změnilo jiné zařízení
+// nebo kdo v tabulce už není, toho přeskočí a vrátí v „skipped“.
+function patchPeopleBulk(items) {
+    if (!items || items.length === 0) return Promise.resolve({ done: [], skipped: [] });
+    return enqueueWrite(async function () {
+        const resH = await gfetch(valuesUrl(TAB_LIDE + '!1:1'));
+        await checkSheetsResponse(resH, 'Čtení hlavičky listu ' + TAB_LIDE);
+        const header = ((await resH.json()).values || [[]])[0] || [];
+        const idCol = header.indexOf('id'), updCol = header.indexOf('aktualizovano');
+        if (idCol === -1 || updCol === -1) throw new Error('V listu ' + TAB_LIDE + ' chybí sloupec id nebo aktualizovano.');
+        const colOf = function (i) { const L = colLetter(i + 1); return TAB_LIDE + '!' + L + ':' + L; };
+        const resI = await gfetch(valuesUrl(colOf(idCol)));
+        await checkSheetsResponse(resI, 'Čtení sloupce id');
+        const ids = (await resI.json()).values || [];
+        const resU = await gfetch(valuesUrl(colOf(updCol)));
+        await checkSheetsResponse(resU, 'Kontrola poslední úpravy');
+        const upd = (await resU.json()).values || [];
+        const rowOf = {}, seen = {};
+        for (let i = 1; i < ids.length; i++) {
+            const v = String((ids[i] || [])[0] || '');
+            if (!v) continue;
+            if (rowOf[v]) seen[v] = true; else rowOf[v] = i + 1;
+        }
+        const stamp = nowIso();
+        const data = [], done = [], skipped = [];
+        items.forEach(function (it) {
+            const row = rowOf[it.id];
+            const cur = row ? String((upd[row - 1] || [])[0] || '') : '';
+            if (!row || seen[it.id] || cur !== String(it.expect || '')) { skipped.push(it.id); return; }
+            const fields = Object.assign({}, it.patch, { aktualizovano: stamp });
+            Object.keys(fields).forEach(function (field) {
+                const col = header.indexOf(field);
+                if (col === -1) throw new Error('V tabulce chybí sloupec „' + field + '“.');
+                const v = fields[field];
+                data.push({ range: TAB_LIDE + '!' + colLetter(col + 1) + row,
+                    values: [[(v === undefined || v === null) ? '' : String(v)]] });
+            });
+            done.push({ id: it.id, fields: fields });
+        });
+        if (data.length > 0) {
+            const res = await gfetch(SHEETS_URL + '/' + state.spreadsheetId + '/values:batchUpdate', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ valueInputOption: 'RAW', data: data })
+            });
+            await checkSheetsResponse(res, 'Uložení změn');
+        }
+        return { done: done, skipped: skipped };
     });
 }
 
@@ -1601,19 +2173,72 @@ function deleteRowsByIds(tabName, idList) {
 // DATA
 // ============================================================
 async function loadAll() {
-    const parts = await Promise.all([sheetsRead(TAB_LIDE), sheetsRead(TAB_HIST), sheetsRead(TAB_NAST)]);
+    const parts = await Promise.all([sheetsRead(TAB_LIDE), sheetsRead(TAB_HIST), sheetsRead(TAB_NAST),
+        sheetsRead(TAB_SEZN), sheetsRead(TAB_PRED), sheetsRead(TAB_VAZBY)]);
+    const hV = (parts[5][0] || VAZBY_HEADER).map(String);
+    state.headers[TAB_VAZBY] = hV;
+    state.links = parts[5].slice(1).map(function (r) { return rowToObject(r, hV); }).filter(function (o) { return o.id; });
     const hL = (parts[0][0] || LIDE_HEADER).map(String);
     const hH = (parts[1][0] || HIST_HEADER).map(String);
+    const hS = (parts[3][0] || SEZN_HEADER).map(String);
+    const hP = (parts[4][0] || PRED_HEADER).map(String);
     state.headers[TAB_LIDE] = hL;
     state.headers[TAB_HIST] = hH;
+    state.headers[TAB_SEZN] = hS;
+    state.headers[TAB_PRED] = hP;
+    state.lists = parts[3].slice(1).map(function (r) { return rowToObject(r, hS); }).filter(function (o) { return o.id; });
+    state.templates = parts[4].slice(1).map(function (r) { return rowToObject(r, hP); }).filter(function (o) { return o.id; });
     const all = parts[0].slice(1).map(function (r) { return rowToObject(r, hL); }).filter(function (o) { return o.id; });
     state.people = all.filter(function (o) { return o.typ; });
     state.stubs = all.filter(function (o) { return !o.typ; });
     state.history = parts[1].slice(1).map(function (r) { return rowToObject(r, hH); }).filter(function (o) { return o.id; });
     state.settings = {};
     parts[2].slice(1).forEach(function (r) { if (r && r[0]) state.settings[String(r[0])] = r[1] == null ? '' : String(r[1]); });
+    await loadCases();
     state.loadedAt = Date.now();
     state.loadedDay = todayIso();
+}
+
+// ---- Případy z Dashboardu: jen čtení. Když Dashboard nejde najít nebo přečíst, CRM běží dál bez nich. ----
+async function findDashboardId(skipStored) {
+    const known = skipStored ? '' : store.get(DASH_SHEET_KEY);   // klíč si ukládá Dashboard; CRM ho jen čte
+    if (known) return known;
+    const rootId = await driveFindFolder(ROOT_FOLDER_NAME, null);
+    if (!rootId) return null;
+    const appId = await driveFindFolder(DASH_FOLDER_NAME, rootId);
+    if (!appId) return null;
+    const f = await driveFindFile(DASH_SHEET_TITLE, appId);
+    return f ? f.id : null;
+}
+async function loadCases() {
+    state.cases = [];
+    state.casesOk = false;
+    try {
+        const read = function (sheetId) {
+            return gfetch(SHEETS_URL + '/' + sheetId + '/values/' + encodeURIComponent(DASH_TAB));
+        };
+        let id = state.dashId || await findDashboardId(false);
+        if (!id) return;
+        let res = await read(id);
+        if (!res.ok) {
+            // Zapamatované id už neplatí (tabulka byla založena znovu): zkusit ji najít podle názvu
+            state.dashId = null;
+            const found = await findDashboardId(true);
+            if (!found || found === id) return;
+            id = found;
+            res = await read(id);
+            if (!res.ok) return;
+        }
+        const rows = (await res.json()).values || [];
+        const header = (rows[0] || []).map(String);
+        if (header.indexOf('id') === -1 || header.indexOf('nazev') === -1) return;
+        state.cases = rows.slice(1).map(function (r) { return rowToObject(r, header); }).filter(function (c) { return c.id; });
+        state.dashId = id;
+        state.casesOk = true;
+    } catch (e) {
+        if (e.isAuth) throw e;
+        console.warn('Případy z Dashboardu se nenačetly:', e);
+    }
 }
 function findPerson(id) {
     for (let i = 0; i < state.people.length; i++) if (state.people[i].id === id) return state.people[i];
@@ -1810,7 +2435,11 @@ async function bootstrap() {
         $('app-view').style.display = '';
         $('btn-add').style.display = '';
         $('btn-import').style.display = '';
+        $('btn-settings').style.display = '';
         renderAll();
+        // Kontakt předaný z Database tlačítkem „Do CRM“ (jednorázově; v ukázce se nečte)
+        const handed = takeHandoff();
+        if (handed) await applyHandoff(handed);
     } catch (e) {
         console.error(e);
         if (!e.isAuth) showToast('Načtení se nepovedlo: ' + e.message, 'error');
@@ -1862,9 +2491,11 @@ function currentList() {
         return collator.compare(a.prijmeni || a.jmeno || '', b.prijmeni || b.jmeno || '') ||
             collator.compare(a.jmeno || '', b.jmeno || '');
     };
+    const caseN = key === 'pripady' ? caseCounts() : null;
     list.sort(function (a, b) {
         let r = 0;
         if (key === 'dulezitost') r = collator.compare(a.dulezitost || 'Z', b.dulezitost || 'Z');
+        else if (key === 'pripady') r = (caseN[b.id] || 0) - (caseN[a.id] || 0);   // nejvíc případů nahoře
         else if (key === 'stav') r = collator.compare(stavLabel(a), stavLabel(b));
         else if (key === 'posledni_kontakt') {
             // prázdné datum vždy na konec, bez ohledu na směr
@@ -1886,12 +2517,20 @@ function mailPill(p) {
     const on = p.emaily !== 'neposilat';
     return '<span class="pill ' + (on ? 'mail-on' : 'mail-off') + '">' + escapeHtml(mailLabel(p)) + '</span>';
 }
+// Kolik případů z Dashboardu má kdo přiřazených (id člověka → počet)
+function caseCounts() {
+    const n = {};
+    state.links.forEach(function (l) { if (l.clovek_id) n[l.clovek_id] = (n[l.clovek_id] || 0) + 1; });
+    return n;
+}
 function renderList() {
     const tab = state.ui.tab;
     const isK = tab === 'klient';
     const cur = currentList();
     const body = $('list-body');
     const today = todayIso();
+    const caseN = caseCounts();
+    $('list-wrap').classList.toggle('no-cases', Object.keys(caseN).length === 0);
     body.innerHTML = cur.list.map(function (p) {
         const sub = [p.firma, p.funkce].map(function (x) { return String(x || '').trim(); }).filter(Boolean).join(' · ');
         let krok = '';
@@ -1907,6 +2546,7 @@ function renderList() {
             '<td data-l="Důležitost">' + impPill(p) + '</td>' +
             '<td data-l="Stav">' + escapeHtml(stavLabel(p)) + '</td>' +
             '<td data-l="Poslední kontakt">' + escapeHtml(fmtDay(p.posledni_kontakt)) + '</td>' +
+            '<td class="col-cases" data-l="Případy">' + (caseN[p.id] || '') + '</td>' +
             '<td data-l="Další krok">' + krok + '</td>' +
             '<td data-l="E-maily">' + mailPill(p) + '</td>' +
             '</tr>';
@@ -1931,17 +2571,34 @@ function renderList() {
 function renderAll() {
     $('num-z').textContent = state.people.filter(function (p) { return p.typ === 'zprostredkovatel'; }).length;
     $('num-k').textContent = state.people.filter(function (p) { return p.typ === 'klient'; }).length;
-    renderList();
+    renderDnes();
+    renderPending();
+    renderAssignBar();
+    renderLists();
+    if (state.ui.tab === 'zprostredkovatel' || state.ui.tab === 'klient') renderList();
     if (state.ui.openId && $('cardModal').classList.contains('show')) {
         const p = findPerson(state.ui.openId);
         if (p) renderCard(p); else closeModal('cardModal');
     }
+    // Otisky adres se dopočítají na pozadí; změní-li počet lidí, kterým lze poslat e-mail, čísla se přepíšou
+    ensureMailHashes().then(function (changed) {
+        if (!changed) return;
+        $('st-mail').textContent = mailableCount();
+        renderLists();
+    }).catch(function () { /* počet zůstane podle karet */ });
 }
 function switchTab(tab) {
+    if (tab !== 'dnes' && tab !== 'klient' && tab !== 'seznamy') tab = 'zprostredkovatel';
     state.ui.tab = tab;
     document.querySelectorAll('#tabs button').forEach(function (b) {
         b.classList.toggle('active', b.getAttribute('data-tab') === tab);
     });
+    $('dnes-view').style.display = tab === 'dnes' ? '' : 'none';
+    $('seznamy-view').style.display = tab === 'seznamy' ? '' : 'none';
+    $('list-view').style.display = (tab === 'dnes' || tab === 'seznamy') ? 'none' : '';
+    renderAssignBar();   // upozornění na případy bez partnera je vidět jen v „Dnes“
+    if (tab === 'dnes') { renderDnes(); return; }
+    if (tab === 'seznamy') { renderLists(); return; }
     document.querySelectorAll('.list-tools [data-for]').forEach(function (w) {
         w.style.display = w.getAttribute('data-for') === tab ? '' : 'none';
     });
@@ -1994,13 +2651,25 @@ function renderCard(p) {
         krok = escapeHtml(p.dalsi_krok) + (p.dalsi_krok_termin
             ? ' <span class="' + (late ? 'pill bad' : 'muted') + '">do ' + escapeHtml(fmtDay(p.dalsi_krok_termin)) + '</span>' : '');
     }
+    const listsHtml = cardListsHtml(p);
+    const casesHtml = cardCasesHtml(p);
     const hist = historyOf(p.id);
-    const histHtml = hist.length === 0
+    // Záznamy „Systém“ smazat nejdou: drží stopu o změnách nastavení e-mailů
+    const histHtml = (hist.length === 0
         ? '<span class="muted">Zatím bez záznamu.</span>'
         : '<ul class="tl">' + hist.map(function (h) {
-            return '<li><span class="tl-date">' + escapeHtml(fmtStamp(h.datum)) + '</span><span><span class="tl-kind">' +
-                escapeHtml(LBL.hist[h.typ] || h.typ) + '</span>' + (h.text ? ': ' + escapeHtml(h.text) : '') + '</span></li>';
-        }).join('') + '</ul>';
+            const del = h.typ === 'system' ? ''
+                : '<button type="button" class="hist-del" data-act="hist-del" data-id="' + escapeHtml(h.id) +
+                    '" title="Smazat záznam" aria-label="Smazat záznam">×</button>';
+            return '<li><span class="tl-date">' + escapeHtml(fmtDay(histDay(h)) || fmtStamp(h.datum)) +
+                '</span><span class="tl-text"><span class="tl-kind">' +
+                escapeHtml(LBL.hist[h.typ] || h.typ) + '</span>' + (h.text ? ': ' + escapeHtml(h.text) : '') + '</span>' + del + '</li>';
+        }).join('') + '</ul>') +
+        '<div class="log-btns">' +
+        [['telefon', 'Telefon'], ['email', 'E-mail'], ['schuzka', 'Schůzka'], ['poznamka', 'Poznámka']].map(function (b) {
+            return '<button type="button" class="btn btn-secondary btn-sm" data-act="log-open" data-id="' + escapeHtml(p.id) +
+                '" data-typ="' + b[0] + '">' + b[1] + '</button>';
+        }).join('') + '</div>';
 
     $('card-body').innerHTML =
         '<div class="card-head">' +
@@ -2019,10 +2688,14 @@ function renderCard(p) {
             kv('E-maily', maily) +
             (firma ? kv('Firma', firma) : '') +
             kv('Odkud ho mám', odkud || '<span class="muted">Neuvedeno.</span>') +
+            (cleanSalutation(p.osloveni) ? kv('Oslovení v e-mailu', escapeHtml(cleanSalutation(p.osloveni))) : '') +
+            (listsHtml ? kv('Seznamy', listsHtml) : '') +
             (p.poznamka ? kv('Poznámka', escapeHtml(p.poznamka).replace(/\n/g, '<br>')) : '') +
         '</div><div>' +
             kv('Další krok', krok) +
             kv('Poslední kontakt', p.posledni_kontakt ? escapeHtml(fmtDay(p.posledni_kontakt)) : '<span class="muted">Zatím žádný.</span>') +
+            (p.typ === 'klient' && p.splatnost ? kv('Splatnost úvěru', escapeHtml(fmtDay(p.splatnost))) : '') +
+            (casesHtml ? kv('Případy z Dashboardu', casesHtml) : '') +
             kv('Historie', histHtml) +
         '</div></div>';
 }
@@ -2040,9 +2713,11 @@ function openCard(id) {
 const FORM_FIELDS = {
     titul: 'p-titul', jmeno: 'p-jmeno', prijmeni: 'p-prijmeni', telefon: 'p-telefon', email: 'p-email',
     firma: 'p-firma', ico: 'p-ico', funkce: 'p-funkce', sidlo: 'p-sidlo', linkedin: 'p-linkedin',
-    zdroj_poznamka: 'p-zdroj-poznamka', poznamka: 'p-poznamka', dalsi_krok: 'p-krok', dalsi_krok_termin: 'p-termin'
+    zdroj_poznamka: 'p-zdroj-poznamka', poznamka: 'p-poznamka', dalsi_krok: 'p-krok', dalsi_krok_termin: 'p-termin',
+    osloveni: 'p-osloveni', splatnost: 'p-splatnost'
 };
-const form = { allowPossible: false, busy: false };
+// extId: u karty převzaté z Database její označení („db:…“), aby se stejný člověk nezaložil dvakrát
+const form = { allowPossible: false, busy: false, extId: '' };
 
 function formError(msg) { $('form-err').textContent = msg || ''; }
 function clearInvalid() {
@@ -2068,13 +2743,14 @@ function applySourceDefaults() {
 function openForm(person) {
     state.ui.editId = person ? person.id : null;
     form.allowPossible = false;
+    form.extId = '';   // nastaví se jen při převzetí kontaktu z Database (applyHandoff)
     formError('');
     clearInvalid();
     $('form-dup-actions').innerHTML = '';
     $('form-title').textContent = person ? 'Upravit člověka' : 'Přidat člověka';
     const src = person || blankPerson();
     Object.keys(FORM_FIELDS).forEach(function (k) { $(FORM_FIELDS[k]).value = src[k] || ''; });
-    setSelect('p-typ', person ? person.typ : state.ui.tab);
+    setSelect('p-typ', person ? person.typ : (state.ui.tab === 'klient' ? 'klient' : 'zprostredkovatel'));
     setSelect('p-role', src.role || '');
     setSelect('p-obor', src.obor || '');
     setSelect('p-dulezitost', src.dulezitost || 'B');
@@ -2102,6 +2778,8 @@ function readForm() {
     else { o.stav = $('p-stav-z').value; o.role = $('p-role').value; o.obor = ''; }
     o.ico = o.ico.replace(/\s/g, '');
     o.email = o.email.replace(/\s/g, '');
+    o.osloveni = cleanSalutation(o.osloveni);
+    if (o.typ !== 'klient') o.splatnost = '';   // splatnost úvěru se vede jen u klientů
     if (o.telefon) o.telefon = normPhone(o.telefon) ? fmtPhone(o.telefon) : o.telefon;
     return o;
 }
@@ -2202,6 +2880,7 @@ async function savePerson() {
         } else {
             const def = ZDROJ_DEFAULTS[o.zdroj] || ZDROJ_DEFAULTS.jine;
             const p = Object.assign({}, o);
+            if (form.extId) p.ext_id = form.extId;   // karta převzatá z Database
             p.emaily = def.emaily;
             p.emaily_duvod = def.emaily === 'neposilat' ? 'bez_souhlasu' : '';
             p.emaily_kdy = def.emaily === 'neposilat' ? today : '';
@@ -2216,7 +2895,9 @@ async function savePerson() {
             if ($('p-hned').checked && !p.dalsi_krok) { p.dalsi_krok = 'První kontakt'; p.dalsi_krok_termin = today; }
             const added = await addPeople([p], 'Karta založena ručně');
             closeModal('formModal');
-            if (added[0] && added[0].typ !== state.ui.tab) switchTab(added[0].typ);
+            // Ze seznamu lidí přepne na záložku nového člověka; z „Dnes“ a ze „Seznamů“ se nepřepíná
+            const onPeopleTab = state.ui.tab === 'zprostredkovatel' || state.ui.tab === 'klient';
+            if (added[0] && onPeopleTab && added[0].typ !== state.ui.tab) switchTab(added[0].typ);
             renderAll();
             showToast(note || 'Člověk přidán.', note ? 'warn' : '');
         }
@@ -2381,6 +3062,10 @@ async function erasePerson(p, keep) {
     }
     await deleteRowsByIds(TAB_HIST, histIds);
     state.history = state.history.filter(function (h) { return h.clovek_id !== p.id; });
+    // Vazby na případy z Dashboardu patří k člověku, mažou se s ním (případy v Dashboardu zůstávají)
+    const linkIds = state.links.filter(function (l) { return l.clovek_id === p.id; }).map(function (l) { return l.id; });
+    await deleteRowsByIds(TAB_VAZBY, linkIds);
+    state.links = state.links.filter(function (l) { return l.clovek_id !== p.id; });
 }
 async function confirmErase() {
     if (erase.busy) return;
@@ -2997,6 +3682,2073 @@ async function impCommit() {
 }
 
 // ============================================================
+// NASTAVENÍ (list Nastaveni: klíč a hodnota)
+// ============================================================
+const DEFAULTS = {
+    rytmus_a_dni: 30, rytmus_b_dni: 90, strop_denne: 5,
+    veta_odhlaseni: 'Tento přehled posílám obchodním partnerům a klientům společnosti Spolumajitelé Private Credit. ' +
+        'Pokud ho nechcete dostávat, stačí odpovědět na tento e-mail a další už nepošlu.',
+    // Koncept e-mailu (etapa 2). Údaje o firmě jsou veřejné údaje z obchodního rejstříku.
+    podpis: '',
+    adresa_komu: '',
+    paticka_firmy: 'Spolumajitelé Private Credit a.s., Pařížská 68/9, Josefov, 110 00 Praha 1, IČO 30147778, ' +
+        'zapsaná v obchodním rejstříku vedeném Městským soudem v Praze, oddíl B, vložka 31031'
+};
+function setNum(key) {
+    const n = parseInt(state.settings[key], 10);
+    return (isNaN(n) || n < 0) ? DEFAULTS[key] : n;
+}
+function setText(key) {
+    const v = state.settings[key];
+    return (v === undefined || v === null || String(v).trim() === '') ? DEFAULTS[key] : String(v);
+}
+// Existující klíč přepíše, nový přidá na konec. Jedno volání.
+function saveSettings(obj) {
+    return enqueueWrite(async function () {
+        const res = await gfetch(valuesUrl(TAB_NAST + '!A:A'));
+        await checkSheetsResponse(res, 'Čtení nastavení');
+        const keys = ((await res.json()).values || []).map(function (r) { return String((r || [])[0] || ''); });
+        let next = Math.max(keys.length, 1) + 1;
+        const data = [];
+        Object.keys(obj).forEach(function (k) {
+            const v = obj[k] == null ? '' : String(obj[k]);
+            const idx = keys.indexOf(k);
+            if (idx > 0) data.push({ range: TAB_NAST + '!B' + (idx + 1), values: [[v]] });
+            else { data.push({ range: TAB_NAST + '!A' + next + ':B' + next, values: [[k, v]] }); next++; }
+        });
+        if (data.length === 0) return;
+        await _ensureGridRaw(TAB_NAST, 2, next);
+        const res2 = await gfetch(SHEETS_URL + '/' + state.spreadsheetId + '/values:batchUpdate', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ valueInputOption: 'RAW', data: data })
+        });
+        await checkSheetsResponse(res2, 'Uložení nastavení');
+        Object.keys(obj).forEach(function (k) { state.settings[k] = obj[k] == null ? '' : String(obj[k]); });
+    });
+}
+function openSettings() {
+    $('set-a').value = setNum('rytmus_a_dni');
+    $('set-b').value = setNum('rytmus_b_dni');
+    $('set-strop').value = setNum('strop_denne');
+    $('set-veta').value = setText('veta_odhlaseni');
+    $('set-komu').value = setText('adresa_komu');
+    $('set-podpis').value = setText('podpis');
+    $('set-paticka').value = setText('paticka_firmy');
+    $('set-conn').textContent = DEMO ? 'Ukázkový režim, data se nikam neukládají.' : 'Google tabulka „' + SHEET_TITLE + '“ na vašem Disku.';
+    const link = $('set-sheet');
+    if (!DEMO && state.spreadsheetId) {
+        link.href = 'https://docs.google.com/spreadsheets/d/' + encodeURIComponent(state.spreadsheetId);
+        link.style.display = '';
+    } else { link.style.display = 'none'; }
+    $('set-err').textContent = '';
+    openModal('settingsModal');
+}
+async function saveSettingsForm() {
+    const a = parseInt($('set-a').value, 10), b = parseInt($('set-b').value, 10), s = parseInt($('set-strop').value, 10);
+    const veta = $('set-veta').value.trim();
+    if (!(a >= 1 && a <= 365)) { $('set-err').textContent = 'Rytmus A má být 1 až 365 dní.'; return; }
+    if (!(b >= 1 && b <= 730)) { $('set-err').textContent = 'Rytmus B má být 1 až 730 dní.'; return; }
+    if (!(s >= 0 && s <= 50)) { $('set-err').textContent = 'Denní strop má být 0 až 50.'; return; }
+    if (!veta) { $('set-err').textContent = 'Věta o odhlášení nesmí být prázdná.'; return; }
+    const komu = $('set-komu').value.replace(/\s/g, '');
+    if (komu && !isValidEmail(komu)) { $('set-err').textContent = 'Adresa do pole Komu nevypadá správně.'; return; }
+    try {
+        await saveSettings({ rytmus_a_dni: a, rytmus_b_dni: b, strop_denne: s, veta_odhlaseni: veta,
+            adresa_komu: komu, podpis: $('set-podpis').value.trim(), paticka_firmy: $('set-paticka').value.trim() });
+        closeModal('settingsModal');
+        state.ui.extraSlots = 0;
+        renderAll();
+        showToast('Nastavení uloženo.');
+    } catch (e) {
+        console.error(e);
+        showErr('set-err', e.isAuth ? e.message : 'Uložení se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+    }
+}
+
+// ============================================================
+// DNES: KOMU SE OZVAT
+// 1) krok s termínem dnes nebo dřív (vždy všichni), 2) rytmus podle důležitosti (do denního stropu)
+// ============================================================
+const PERSONAL = { telefon: true, email: true, schuzka: true };
+function shiftDay(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return dayIso(d);
+}
+// Den záznamu v historii (místní). Ručně zadaný den se ukládá jako RRRR-MM-DDT12:00:00 bez zóny.
+function histDay(h) {
+    const d = String(h.datum || '');
+    const m = /^(\d{4}-\d{2}-\d{2})(T12:00:00)?$/.exec(d);
+    if (m) return m[1];
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? '' : dayIso(dt);
+}
+function contactedTodayCount() {
+    const today = todayIso();
+    const seen = {};
+    let n = 0;
+    state.history.forEach(function (h) {
+        if (PERSONAL[h.typ] && histDay(h) === today && !seen[h.clovek_id]) { seen[h.clovek_id] = true; n++; }
+    });
+    return n;
+}
+function byNameCmp(a, b) {
+    return collator.compare(a.prijmeni || a.jmeno || '', b.prijmeni || b.jmeno || '') ||
+        collator.compare(a.jmeno || '', b.jmeno || '');
+}
+function computeDnes() {
+    const today = todayIso();
+    const limA = setNum('rytmus_a_dni'), limB = setNum('rytmus_b_dni');
+    const steps = [], rhythm = [];
+    state.people.forEach(function (p) {
+        if (p.dalsi_krok_termin && p.dalsi_krok_termin <= today) { steps.push(p); return; }
+        if (p.stav === 'nezajem') return;
+        if (p.dalsi_krok_termin && p.dalsi_krok_termin > today) return;   // má krok v budoucnu
+        if (p.odlozeno_do && p.odlozeno_do > today) return;                 // odložený
+        const imp = String(p.dulezitost || 'B').toUpperCase();
+        let lim = imp === 'A' ? limA : (imp === 'B' ? limB : 0);
+        // Událost (partner 60 dní bez případu, blížící se splatnost úvěru) zkracuje rytmus na 30 dní
+        // a platí i pro důležitost C
+        const trig = eventTrigger(p, today);
+        if (trig) lim = lim ? Math.min(lim, EVENT_RHYTHM_DAYS) : EVENT_RHYTHM_DAYS;
+        if (!lim) return;
+        const orig = [p.posledni_kontakt, p.rytmus_od].filter(Boolean).sort().pop() || '';
+        // Kontakt z doby před událostí se nepočítá: člověk se ukáže hned
+        const base = (trig && trig.since && (!p.posledni_kontakt || p.posledni_kontakt < trig.since)) ? '' : orig;
+        const days = base ? daysBetween(base, today) : null;                // null = ještě nikdy
+        if (days === null || days >= lim) {
+            // days = kolik dní od posledního osobního kontaktu se u člověka ukáže (null = ještě žádný nebyl)
+            rhythm.push({ p: p, days: p.posledni_kontakt ? daysBetween(p.posledni_kontakt, today) : null, imp: imp, why: trig ? trig.text : '' });
+        }
+    });
+    steps.sort(function (a, b) {
+        return String(a.dalsi_krok_termin).localeCompare(String(b.dalsi_krok_termin)) || byNameCmp(a, b);
+    });
+    rhythm.sort(function (x, y) {
+        if (!!x.why !== !!y.why) return x.why ? -1 : 1;                     // události nahoře
+        if (x.imp !== y.imp) return x.imp < y.imp ? -1 : 1;
+        const dx = x.days === null ? Infinity : x.days, dy = y.days === null ? Infinity : y.days;
+        if (dx !== dy) return dy > dx ? 1 : -1;                             // nejdéle bez kontaktu nahoře
+        return byNameCmp(x.p, y.p);
+    });
+    // Strop = denní kapacita. Nejdřív sliby (kroky), zbytek doplní rytmus.
+    const done = contactedTodayCount();
+    const slots = Math.max(0, setNum('strop_denne') - steps.length - done) + (state.ui.extraSlots || 0);
+    return { steps: steps, rhythm: rhythm.slice(0, slots), rhythmTotal: rhythm.length, done: done };
+}
+
+// ---- Komu lze poslat e-mail ('' = dostane ho, jinak důvod, proč ne) ----
+const mailHash = {};
+function stubBlockedSet() {
+    const s = {};
+    let n = 0;
+    state.stubs.forEach(function (st) {
+        if (st.emaily === 'neposilat' && st.otisk_email) { s[st.otisk_email] = true; n++; }
+    });
+    return n ? s : null;
+}
+// Otisky adres se počítají jen tehdy, když po vymazaných lidech nějaká zablokovaná adresa zůstala.
+// Vrací true, když přibyl nový otisk (počty je pak potřeba přepsat).
+async function ensureMailHashes() {
+    if (!stubBlockedSet()) return false;
+    let changed = false;
+    for (let i = 0; i < state.people.length; i++) {
+        const e = normEmail(state.people[i].email);
+        if (e && mailHash[e] === undefined) { mailHash[e] = await sha256Hex('e:' + e); changed = true; }
+    }
+    return changed;
+}
+// Seznam adres, na které se neposílá: karty s „Neposílat“ a otisky po vymazaných lidech
+function mailContext() {
+    const blocked = {};
+    state.people.forEach(function (p) {
+        if (p.emaily !== 'neposilat') return;
+        const e = normEmail(p.email);
+        if (e) blocked[e] = true;
+    });
+    return { blocked: blocked, stubs: stubBlockedSet() };
+}
+function mailBlockReason(p, ctx) {
+    ctx = ctx || mailContext();
+    if (!String(p.email || '').trim()) return 'bez e-mailu';
+    if (!isValidEmail(p.email)) return 'neplatný e-mail';
+    if (p.emaily === 'neposilat') return p.emaily_duvod === 'odhlasil_se' ? 'odhlásil se' : 'neposílat';
+    if (p.stav === 'nezajem') return 'nezájem';
+    const e = normEmail(p.email);
+    if (ctx.blocked[e]) return 'adresa je „neposílat“ na jiné kartě';
+    if (ctx.stubs && ctx.stubs[mailHash[e]]) return 'adresa byla odhlášena';
+    return '';
+}
+function mailableCount() {
+    const ctx = mailContext();
+    return state.people.filter(function (p) { return !mailBlockReason(p, ctx); }).length;
+}
+
+function daysWord(n) { return n + ' ' + plural(n, 'den', 'dny', 'dní'); }
+function renderDnes() {
+    const d = computeDnes();
+    const today = todayIso();
+    const rows = [];
+    const rowHtml = function (p, pillHtml, text, kind) {
+        const firm = String(p.firma || '').trim();
+        const id = escapeHtml(p.id);
+        return '<div class="dnes-row">' +
+            '<div class="dnes-who" data-act="person-open" data-id="' + id + '">' +
+                '<span class="p-name">' + escapeHtml(fullName(p)) + '</span>' +
+                (firm ? ' <span class="muted">· ' + escapeHtml(firm) + '</span>' : '') +
+                '<div class="dnes-why">' + pillHtml + '<span>' + escapeHtml(text) + '</span></div>' +
+            '</div>' +
+            '<div class="dnes-acts">' +
+                '<button type="button" class="btn btn-secondary btn-sm" data-act="log-open" data-id="' + id + '" data-typ="telefon">Volal jsem</button>' +
+                '<button type="button" class="btn btn-secondary btn-sm" data-act="log-open" data-id="' + id + '" data-typ="email">Napsal jsem</button>' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-act="snooze-open" data-id="' + id + '" data-kind="' + kind + '">Odložit</button>' +
+            '</div></div>';
+    };
+    d.steps.forEach(function (p) {
+        const late = daysBetween(p.dalsi_krok_termin, today);
+        const pill = late > 0
+            ? '<span class="pill bad">' + escapeHtml(daysWord(late)) + ' po termínu</span>'
+            : '<span class="pill warn">Termín dnes</span>';
+        rows.push(rowHtml(p, pill, p.dalsi_krok || 'Krok bez popisu', 'step'));
+    });
+    d.rhythm.forEach(function (r) {
+        const contact = r.days === null ? 'Zatím bez osobního kontaktu' : daysWord(r.days) + ' bez osobního kontaktu';
+        rows.push(rowHtml(r.p, r.why ? '<span class="pill warn">' + escapeHtml(r.why) + '</span>' : impPill(r.p), contact, 'rhythm'));
+    });
+    const total = d.steps.length + d.rhythm.length;
+    const left = d.rhythmTotal - d.rhythm.length;
+    $('dnes-list').innerHTML = rows.length ? rows.join('')
+        : '<div class="empty">' + (state.people.length === 0
+            ? 'Zatím tu nikdo není. Přidejte člověka, nebo nahrajte tabulku s kontakty.'
+            : 'Dnes máte hotovo.') + '</div>';
+    $('st-dnes').textContent = total;
+    $('num-d').textContent = total;
+    $('st-z').textContent = state.people.filter(function (p) { return p.typ === 'zprostredkovatel'; }).length;
+    $('st-k').textContent = state.people.filter(function (p) { return p.typ === 'klient'; }).length;
+    $('st-mail').textContent = mailableCount();
+    $('dnes-done').textContent = d.done ? 'Dnes vyřízeno: ' + d.done : '';
+    $('dnes-more-btn').style.display = left > 0 ? '' : 'none';
+    $('dnes-more-note').textContent = left > 0
+        ? 'V rytmu ' + plural(left, 'čeká', 'čekají', 'čeká') + ' ještě ' + left + ' ' + plural(left, 'člověk', 'lidé', 'lidí') + '.' : '';
+}
+
+// ============================================================
+// ZÁPIS KONTAKTU
+// ============================================================
+const LOG_TITLES = { telefon: 'Volal jsem', email: 'Napsal jsem', schuzka: 'Schůzka', poznamka: 'Poznámka' };
+const log = { personId: null, typ: 'telefon', entryId: '', busy: false };
+function openLog(id, typ) {
+    const p = findPerson(id);
+    if (!p) { showToast('Člověk už v seznamu není.', 'warn'); return; }
+    log.personId = id;
+    log.typ = LOG_TITLES[typ] ? typ : 'telefon';
+    log.entryId = genId('h');   // jedno id na jedno otevření okna: opakované uložení záznam nezdvojí
+    $('log-title').textContent = LOG_TITLES[log.typ];
+    $('log-who').textContent = fullName(p) + (p.firma ? ' · ' + p.firma : '');
+    $('log-den').value = todayIso();
+    $('log-den').max = todayIso();
+    $('log-text').value = '';
+    $('log-krok').value = '';
+    $('log-termin').value = '';
+    $('log-email').value = '';
+    $('log-email-wrap').style.display = (!String(p.email || '').trim() && log.typ !== 'poznamka') ? '' : 'none';
+    // Krok může mít i jen termín bez popisu (například z nahrané tabulky): i ten musí jít odškrtnout
+    const hasStep = !!(p.dalsi_krok || p.dalsi_krok_termin);
+    $('log-step-wrap').style.display = hasStep ? '' : 'none';
+    $('log-hotovo').checked = log.typ !== 'poznamka';
+    $('log-step-text').textContent = hasStep
+        ? 'Hotovo: ' + (p.dalsi_krok || 'krok bez popisu') + (p.dalsi_krok_termin ? ' (do ' + fmtDay(p.dalsi_krok_termin) + ')' : '') : '';
+    $('log-err').textContent = '';
+    openModal('logModal');
+    setTimeout(function () { $('log-text').focus(); }, 30);
+}
+// Záznam do historie a změny na kartě jdou JEDNÍM voláním. Opakování po chybě nejdřív ověří,
+// jestli záznam s daným id už v historii není, takže ho nezdvojí.
+function logContact(p, entry, patch) {
+    return enqueueWrite(async function () {
+        const hHeader = state.headers[TAB_HIST] || HIST_HEADER;
+        const resA = await gfetch(valuesUrl(TAB_HIST + '!A:A'));
+        await checkSheetsResponse(resA, 'Čtení historie');
+        const ids = ((await resA.json()).values || []).map(function (r) { return String((r || [])[0] || ''); });
+        const exists = ids.indexOf(entry.id) !== -1;
+        const nextRow = Math.max(ids.length, 1) + 1;
+        const data = [];
+        if (!exists) {
+            await _ensureGridRaw(TAB_HIST, hHeader.length, nextRow);
+            data.push({ range: TAB_HIST + '!A' + nextRow + ':' + colLetter(hHeader.length) + nextRow,
+                values: [objectToRow(entry, hHeader)] });
+        }
+        let fields = null;
+        if (Object.keys(patch).length > 0) {
+            const loc = await _locateRaw(TAB_LIDE, p.id);
+            const updCol = loc.header.indexOf('aktualizovano');
+            if (updCol !== -1) {
+                const resU = await gfetch(valuesUrl(TAB_LIDE + '!' + colLetter(updCol + 1) + loc.rowNumber));
+                await checkSheetsResponse(resU, 'Kontrola poslední úpravy');
+                const cur = String((((await resU.json()).values || [[]])[0] || [])[0] || '');
+                if (cur !== String(p.aktualizovano || '')) {
+                    const e = new Error('Údaje se mezitím změnily na jiném zařízení.');
+                    e.code = 'CONFLICT';
+                    throw e;
+                }
+            }
+            fields = Object.assign({}, patch, { aktualizovano: nowIso() });
+            Object.keys(fields).forEach(function (field) {
+                const col = loc.header.indexOf(field);
+                if (col === -1) throw new Error('V tabulce chybí sloupec „' + field + '“.');
+                const v = fields[field];
+                data.push({ range: TAB_LIDE + '!' + colLetter(col + 1) + loc.rowNumber,
+                    values: [[(v === undefined || v === null) ? '' : String(v)]] });
+            });
+        }
+        if (data.length > 0) {
+            const res = await gfetch(SHEETS_URL + '/' + state.spreadsheetId + '/values:batchUpdate', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ valueInputOption: 'RAW', data: data })
+            });
+            await checkSheetsResponse(res, 'Uložení zápisu');
+        }
+        return { fields: fields, added: !exists };
+    });
+}
+async function saveLog() {
+    if (log.busy) return;
+    const p = findPerson(log.personId);
+    if (!p) { closeModal('logModal'); return; }
+    const today = todayIso();
+    const den = $('log-den').value || today;
+    const text = $('log-text').value.trim();
+    const krok = $('log-krok').value.trim();
+    const termin = $('log-termin').value;
+    const email = $('log-email-wrap').style.display === 'none' ? '' : $('log-email').value.replace(/\s/g, '');
+    const err = function (msg) { $('log-err').textContent = msg; };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(den) || den > today) { err('Datum nemůže být v budoucnu.'); return; }
+    if (termin && !krok) { err('K termínu doplň, co je další krok.'); return; }
+    if (email && !isValidEmail(email)) { err('E-mail nevypadá správně.'); return; }
+    if (email) {
+        const dup = findDuplicates({ email: email }, p.id);
+        if (dup.certain) { err('Tento e-mail už má jiná karta: ' + fullName(dup.certain) + '.'); return; }
+    }
+    if (log.typ === 'poznamka' && !text) { err('Napiš poznámku.'); return; }
+    log.busy = true;
+    $('log-save').disabled = true;
+    err('');
+    try {
+        const patch = {};
+        if (PERSONAL[log.typ]) {
+            if (!p.posledni_kontakt || den > p.posledni_kontakt) patch.posledni_kontakt = den;
+            if (p.odlozeno_do) patch.odlozeno_do = '';   // zápis kontaktu odložení ruší
+        }
+        if (krok) { patch.dalsi_krok = krok; patch.dalsi_krok_termin = termin || ''; }
+        else if ((p.dalsi_krok || p.dalsi_krok_termin) && $('log-hotovo').checked) { patch.dalsi_krok = ''; patch.dalsi_krok_termin = ''; }
+        let note = '';
+        if (email) {
+            patch.email = email;
+            const blocked = await blockedInfo(email, p.id);
+            if (blocked && p.emaily !== 'neposilat') {
+                patch.emaily = 'neposilat';
+                patch.emaily_duvod = blocked.duvod;
+                patch.emaily_kdy = today;
+                note = 'Na tuto adresu se neposílá, karta má proto „Neposílat“.';
+            }
+        }
+        const entry = { id: log.entryId, clovek_id: p.id, datum: den === today ? nowIso() : den + 'T12:00:00',
+            typ: log.typ, text: text, davka_id: '' };
+        const out = await logContact(p, entry, patch);
+        if (out.added) state.history.push(entry);
+        if (out.fields) Object.keys(out.fields).forEach(function (k) { p[k] = out.fields[k] == null ? '' : String(out.fields[k]); });
+        if (note) {
+            try { await appendHistory([sysEntry(p.id, 'E-maily: Neposílat (adresa je vedená jako „neposílat“)')]); }
+            catch (e2) { console.warn('Poznámka do historie se nezapsala:', e2); }
+        }
+        closeModal('logModal');
+        renderAll();
+        showToast(note || 'Zapsáno.', note ? 'warn' : '');
+    } catch (e) {
+        console.error(e);
+        if (e.code === 'CONFLICT' || e.code === 'NOT_FOUND') {
+            closeModal('logModal');
+            await reloadData(true);
+            // Když se zápis povedl už napoprvé a jen se ztratila odpověď, záznam v načtených datech je
+            const saved = state.history.some(function (h) { return h.id === log.entryId; });
+            showToast(saved ? 'Zapsáno.'
+                : 'Údaje se mezitím změnily na jiném zařízení. Jsou načtené znovu, nic se nepřepsalo. Zápis zopakujte.', saved ? '' : 'warn');
+        } else {
+            showErr('log-err', e.isAuth ? e.message : 'Uložení se nepovedlo. Zkuste to znovu, záznam se nezdvojí. (' + e.message + ')', e);
+        }
+    } finally {
+        log.busy = false;
+        $('log-save').disabled = false;
+    }
+}
+async function deleteHistoryEntry(entryId) {
+    const h = state.history.find(function (x) { return x.id === entryId; });
+    if (!h) return;
+    const ok = await appConfirm('Smazat tento záznam z historie? Nejde to vrátit.', { title: 'Smazat záznam', okLabel: 'Smazat' });
+    if (!ok) return;
+    try {
+        await deleteRowsByIds(TAB_HIST, [entryId]);
+        state.history = state.history.filter(function (x) { return x.id !== entryId; });
+        const p = findPerson(h.clovek_id);
+        // Poslední kontakt se přepočítá jen tehdy, když ho určoval právě smazaný záznam
+        if (p && PERSONAL[h.typ] && histDay(h) === p.posledni_kontakt) {
+            const days = state.history.filter(function (x) { return x.clovek_id === p.id && PERSONAL[x.typ]; })
+                .map(histDay).filter(Boolean).sort();
+            const last = days.length ? days[days.length - 1] : '';
+            if (last !== p.posledni_kontakt) await updatePerson(p.id, { posledni_kontakt: last });
+        }
+        renderAll();
+        showToast('Záznam smazán.');
+    } catch (e) {
+        console.error(e);
+        if (e.code === 'CONFLICT' || e.code === 'NOT_FOUND') {
+            showToast('Údaje se mezitím změnily na jiném zařízení. Načítám je znovu.', 'warn');
+            await reloadData(true);
+        } else {
+            showToast(e.isAuth ? e.message : 'Smazání se nepovedlo: ' + e.message, 'error');
+        }
+    }
+}
+
+// ============================================================
+// ODLOŽIT
+// ============================================================
+const snooze = { id: null, kind: 'rhythm', busy: false };
+function openSnooze(id, kind) {
+    const p = findPerson(id);
+    if (!p) return;
+    snooze.id = id;
+    snooze.kind = kind === 'step' ? 'step' : 'rhythm';
+    $('snooze-text').textContent = snooze.kind === 'step'
+        ? 'Posune termín kroku „' + (p.dalsi_krok || 'bez popisu') + '“ u člověka ' + fullName(p) + '.'
+        : fullName(p) + ' se v „Dnes“ do zvoleného dne neukáže.';
+    $('snooze-den').value = '';
+    $('snooze-den').min = shiftDay(1);
+    $('snooze-err').textContent = '';
+    openModal('snoozeModal');
+}
+async function doSnooze(day) {
+    if (snooze.busy) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) || day <= todayIso()) {
+        $('snooze-err').textContent = 'Vyber den v budoucnu.';
+        return;
+    }
+    snooze.busy = true;
+    try {
+        await updatePerson(snooze.id, snooze.kind === 'step' ? { dalsi_krok_termin: day } : { odlozeno_do: day });
+        closeModal('snoozeModal');
+        renderAll();
+        showToast('Odloženo do ' + fmtDay(day) + '.');
+    } catch (e) {
+        console.error(e);
+        if (e.code === 'CONFLICT' || e.code === 'NOT_FOUND') {
+            closeModal('snoozeModal');
+            showToast('Údaje se mezitím změnily na jiném zařízení. Načítám je znovu.', 'warn');
+            await reloadData(true);
+        } else {
+            showErr('snooze-err', e.isAuth ? e.message : 'Uložení se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+        }
+    } finally {
+        snooze.busy = false;
+    }
+}
+
+// ============================================================
+// ROZESÍLKA: VÝBĚR PŘÍJEMCŮ, ZKOPÍROVÁNÍ ADRES, ZÁPIS DO HISTORIE
+// ============================================================
+const COPY_PART = 300;
+const PENDING_MAX_CHARS = 45000;   // jedna buňka Google tabulky pojme 50 000 znaků
+// parts: které části adres už jsou zkopírované (číslo části → id lidí); davka: společné id rozesílky
+// listId: uložený seznam, ze kterého okno vzešlo ('' = lidé vidění v záložce); salNote: ukázat upozornění na chybějící oslovení
+const copy = { rows: [], parts: {}, davka: '', mode: 'pick', busy: false, listId: '', title: '', salNote: false };
+function copiedIds() {
+    const seen = {}, out = [];
+    Object.keys(copy.parts).forEach(function (k) {
+        copy.parts[k].forEach(function (id) { if (!seen[id]) { seen[id] = true; out.push(id); } });
+    });
+    return out;
+}
+function lastBulkDay(id) {
+    let last = '';
+    state.history.forEach(function (h) {
+        if (h.clovek_id === id && h.typ === 'hromadny_email') { const d = histDay(h); if (d > last) last = d; }
+    });
+    return last;
+}
+function pendingBatch() {
+    try {
+        const raw = state.settings.rozesilka_rozpracovana;
+        if (!raw) return null;
+        const o = JSON.parse(raw);
+        return (o && Array.isArray(o.ids) && o.ids.length > 0) ? o : null;
+    } catch (e) { return null; }
+}
+async function toClipboard(text) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+    } catch (e) { /* zkusit starší způsob */ }
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        return !!ok;
+    } catch (e) { return false; }
+}
+function copySelected() {
+    return copy.rows.filter(function (r) { return !r.reason && r.checked; });
+}
+function renderCopy() {
+    const pend = pendingBatch();
+    const pendingMode = copy.mode === 'pending';
+    $('copy-title').textContent = pendingMode ? 'Zapsat rozesílku' : (copy.title || 'Připravit e-mail');
+    $('copy-pick').style.display = pendingMode ? 'none' : '';
+    $('copy-err').textContent = '';
+    const copiedCount = copiedIds().length;
+    const showAfter = pendingMode ? !!pend : copiedCount > 0;
+    $('copy-after').style.display = showAfter ? '' : 'none';
+    $('copy-done').style.display = showAfter ? '' : 'none';
+    $('copy-drop').style.display = (pendingMode && pend) ? '' : 'none';
+    if (showAfter) {
+        const n = pendingMode ? pend.ids.length : copiedCount;
+        $('copy-after-text').textContent = (pendingMode
+            ? 'Rozpracovaná rozesílka z ' + fmtDay(pend.den) + ': '
+            : 'Zkopírováno: ') + n + ' ' + plural(n, 'příjemce', 'příjemci', 'příjemců') + '.';
+    }
+    if (pendingMode) return;
+
+    const eligible = copy.rows.filter(function (r) { return !r.reason; });
+    const selected = copySelected();
+    const reasons = {};
+    copy.rows.forEach(function (r) { if (r.reason) reasons[r.reason] = (reasons[r.reason] || 0) + 1; });
+    const skipped = copy.rows.length - eligible.length;
+    let text = 'E-mail dostane ' + selected.length + ' z ' + copy.rows.length + ' ' +
+        (copy.listId ? plural(copy.rows.length, 'člověka v seznamu', 'lidí v seznamu', 'lidí v seznamu') : 'zobrazených lidí') + '.';
+    if (skipped > 0) {
+        text += ' Vynecháno ' + skipped + ': ' + Object.keys(reasons).map(function (k) { return k + ' ' + reasons[k]; }).join(', ') + '.';
+    }
+    $('copy-counts').textContent = text;
+
+    const recent = eligible.filter(function (r) { return r.recent; });
+    const recentBox = $('copy-recent');
+    recentBox.innerHTML = '';
+    if (recent.length > 0) {
+        const span = document.createElement('span');
+        span.className = 'lbl';
+        span.textContent = recent.length + ' z nich dostalo hromadný e-mail před méně než 30 dny.';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'chip';
+        btn.textContent = 'Vynechat je';
+        btn.setAttribute('data-act', 'copy-skip-recent');
+        recentBox.appendChild(span);
+        recentBox.appendChild(btn);
+        recentBox.style.display = '';
+    } else { recentBox.style.display = 'none'; }
+
+    $('copy-rows').innerHTML = eligible.length === 0
+        ? '<tr><td colspan="4" class="cell-s">Nikdo ' + (copy.listId ? 'ze seznamu' : 'ze zobrazených lidí') + ' nemá e-mail, na který lze poslat.</td></tr>'
+        : eligible.map(function (r) {
+            const i = copy.rows.indexOf(r);
+            const firm = String(r.p.firma || '').trim();
+            return '<tr class="' + (r.checked ? '' : 'off') + '">' +
+                '<td>' + impCheck('data-copy="' + i + '"', r.checked, false, '') + '</td>' +
+                '<td>' + escapeHtml(fullName(r.p)) + (firm ? '<span class="p-firm">' + escapeHtml(firm) + '</span>' : '') + '</td>' +
+                '<td class="cell-s">' + escapeHtml(String(r.p.email).trim()) + '</td>' +
+                '<td class="cell-s">' + (r.last ? escapeHtml(fmtDay(r.last)) + (r.recent ? ' <span class="pill warn">méně než 30 dní</span>' : '') : '') + '</td>' +
+                '</tr>';
+        }).join('');
+
+    const parts = $('copy-parts');
+    parts.innerHTML = '';
+    const mk = function (label, cls, act, part) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = cls;
+        b.textContent = label;
+        b.setAttribute('data-act', act);
+        if (part !== undefined) b.setAttribute('data-part', String(part));
+        parts.appendChild(b);
+    };
+    if (selected.length === 0) {
+        const s = document.createElement('span');
+        s.className = 'lbl';
+        s.textContent = eligible.length === 0 ? 'Nikdo z vybraných nemá e-mail.' : 'Není vybraný žádný příjemce.';
+        parts.appendChild(s);
+    } else {
+        const count = Math.ceil(selected.length / COPY_PART);
+        mk('Stáhnout koncept pro Outlook', 'btn btn-primary btn-sm', 'draft-make');
+        if (count > 1) {
+            const s = document.createElement('span');
+            s.className = 'lbl';
+            s.textContent = 'Adres je hodně, zkopírujte a odešlete je po částech:';
+            parts.appendChild(s);
+        }
+        for (let k = 0; k < count; k++) {
+            const from = k * COPY_PART + 1, to = Math.min((k + 1) * COPY_PART, selected.length);
+            mk((count === 1 ? 'Zkopírovat adresy (' + selected.length + ')' : 'Zkopírovat ' + from + '–' + to) +
+                (copy.parts[k] ? ' · zkopírováno' : ''), 'btn btn-secondary btn-sm', 'copy-part', k);
+        }
+        mk('Tabulka pro hromadnou korespondenci' + (copy.parts.merge ? ' · stažena' : ''), 'btn btn-secondary btn-sm', 'merge-make');
+    }
+    renderTemplates();
+    renderCopySal(copy.salNote);
+}
+// Bez parametru: lidé, kteří jsou právě vidět v záložce Zprostředkovatelé nebo Klienti.
+// S uloženým seznamem: lidé z něj.
+async function openCopy(list) {
+    if (!list && state.ui.tab !== 'zprostredkovatel' && state.ui.tab !== 'klient') return;
+    // Vždy jen jedna rozpracovaná rozesílka: nová by tu starou přepsala a ta by se nikdy nezapsala
+    if (pendingBatch()) {
+        openPending();
+        showToast('Nejdřív zapište nebo zahoďte rozpracovanou rozesílku.', 'warn');
+        return;
+    }
+    await ensureMailHashes();
+    const today = todayIso();
+    const ctx = mailContext();
+    const seen = {};
+    copy.listId = list ? list.id : '';
+    copy.title = list ? 'Připravit e-mail: ' + list.nazev : 'Připravit e-mail';
+    copy.salNote = false;
+    copy.rows = (list ? listPeople(list) : currentList().list).map(function (p) {
+        let reason = mailBlockReason(p, ctx);
+        const e = normEmail(p.email);
+        if (!reason) { if (seen[e]) reason = 'stejná adresa dvakrát'; else seen[e] = true; }
+        const last = lastBulkDay(p.id);
+        const gap = last ? daysBetween(last, today) : null;
+        return { p: p, reason: reason, checked: !reason, last: last, recent: gap !== null && gap < 30 };
+    });
+    copy.parts = {};
+    copy.davka = genId('d');
+    copy.mode = 'pick';
+    $('copy-name').value = '';
+    $('copy-manual').style.display = 'none';
+    renderCopy();
+    openModal('copyModal');
+}
+function openPending() {
+    const pend = pendingBatch();
+    if (!pend) return;
+    copy.mode = 'pending';
+    copy.parts = {};
+    copy.salNote = false;
+    $('copy-name').value = pend.nazev || '';
+    $('copy-manual').style.display = 'none';
+    renderCopy();
+    openModal('copyModal');
+}
+// Změna výběru po zkopírování: dřív zkopírované části už neplatí, kopíruje se znovu
+function copySelectionChanged() {
+    const had = Object.keys(copy.parts).length > 0;
+    copy.parts = {};
+    renderCopy();
+    if (had) $('copy-err').textContent = 'Výběr se změnil. Zkopírujte adresy znovu, ať sedí s tím, co pošlete.';
+}
+function showManualCopy(text) {
+    $('copy-text').value = text;
+    $('copy-manual').style.display = '';
+    $('copy-text').focus();
+    $('copy-text').select();
+}
+// Rozpracovanou rozesílku si aplikace zapamatuje v tabulce, vydrží tak i zavření stránky
+async function savePendingBatch() {
+    const json = JSON.stringify({ den: todayIso(), ids: copiedIds(), nazev: $('copy-name').value.trim(),
+        davka: copy.davka, seznam: copy.listId || '' });
+    if (json.length > PENDING_MAX_CHARS) return false;
+    try { await saveSettings({ rozesilka_rozpracovana: json }); return true; }
+    catch (e) { console.warn('Rozpracovaná rozesílka se neuložila:', e); return false; }
+}
+// opts.draft: voláno po stažení konceptu, hláška pak říká, co s konceptem a adresami udělat
+async function copyPart(part, opts) {
+    opts = opts || {};
+    const selected = copySelected();
+    const slice = selected.slice(part * COPY_PART, (part + 1) * COPY_PART);
+    if (slice.length === 0) return;
+    const text = slice.map(function (r) { return String(r.p.email).trim(); }).join('; ');
+    const ok = await toClipboard(text);
+    copy.parts[part] = slice.map(function (r) { return r.p.id; });
+    const saved = await savePendingBatch();
+    renderCopy();
+    renderPending();
+    const more = selected.length > slice.length;
+    if (ok) {
+        $('copy-manual').style.display = 'none';
+        showToast(opts.draft
+            ? 'Koncept je stažený a ' + (more ? 'první část adres je' : 'adresy jsou') + ' ve schránce. Otevřete koncept a vložte je do pole Skrytá kopie (Ctrl+V).'
+            : 'Zkopírováno: ' + slice.length + ' ' + plural(slice.length, 'adresa', 'adresy', 'adres') + '. Vložte je do pole Skrytá kopie.');
+    } else {
+        showManualCopy(text);
+        if (opts.draft) showToast('Koncept je stažený. Adresy zkopírujte ručně z pole níže a vložte je do pole Skrytá kopie.', 'warn');
+    }
+    if (!saved) {
+        $('copy-err').textContent = 'Rozpracovanou rozesílku se nepodařilo zapamatovat. Nezavírejte toto okno, dokud ji nezapíšete.';
+    }
+}
+async function copySentence() {
+    const text = setText('veta_odhlaseni');
+    if (await toClipboard(text)) showToast('Věta o odhlášení je ve schránce. Vložte ji na konec e-mailu.');
+    else if (copy.mode === 'pick') showManualCopy(text);
+    else showToast('Kopírování do schránky se nepovedlo. Větu najdete v Nastavení.', 'warn');
+}
+async function copyDone() {
+    if (copy.busy) return;
+    const pend = pendingBatch();
+    const ids = copy.mode === 'pending' ? (pend ? pend.ids : []) : copiedIds();
+    if (ids.length === 0) { closeModal('copyModal'); return; }
+    copy.busy = true;
+    $('copy-done').disabled = true;
+    try {
+        const name = $('copy-name').value.trim() || ('Hromadný e-mail ' + fmtDay(todayIso()));
+        const people = ids.filter(function (id) { return !!findPerson(id); });
+        const davka = String((copy.mode === 'pending' ? (pend && pend.davka) : copy.davka) || '') || genId('d');
+        // Opakování po chybě: rozesílka se stejným id už v historii je, podruhé se nezapisuje
+        const already = state.history.some(function (h) { return h.davka_id === davka; });
+        if (!already && people.length > 0) {
+            const stamp = nowIso();
+            await appendHistory(people.map(function (id) {
+                return { id: genId('h'), clovek_id: id, datum: stamp, typ: 'hromadny_email', text: name, davka_id: davka };
+            }));
+        }
+        await saveSettings({ rozesilka_rozpracovana: '' });
+        // U uloženého seznamu se poznamená den poslední rozesílky. Když se to nepovede, rozesílka zapsaná zůstává.
+        const listId = copy.mode === 'pending' ? String((pend && pend.seznam) || '') : copy.listId;
+        const sentList = listId ? findList(listId) : null;
+        if (sentList) {
+            try {
+                const w = await patchRowById(TAB_SEZN, sentList.id, { posledni_rozesilka: todayIso() });
+                Object.keys(w).forEach(function (k) { sentList[k] = w[k] == null ? '' : String(w[k]); });
+            } catch (e2) { console.warn('Den poslední rozesílky se u seznamu nezapsal:', e2); }
+        }
+        copy.parts = {};
+        composeSet('', '', '');   // text e-mailu je odeslaný, příště se začíná načisto
+        closeModal('copyModal');
+        renderAll();
+        showToast('Rozesílka zapsána do historie: ' + people.length + ' ' + plural(people.length, 'člověk', 'lidé', 'lidí') + '.');
+    } catch (e) {
+        console.error(e);
+        showErr('copy-err', e.isAuth ? e.message : 'Zápis se nepovedl. Zkuste to znovu. (' + e.message + ')', e);
+    } finally {
+        copy.busy = false;
+        $('copy-done').disabled = false;
+    }
+}
+async function copyDrop() {
+    const ok = await appConfirm('Zahodit rozpracovanou rozesílku? Do historie se nic nezapíše.', { title: 'Rozesílka', okLabel: 'Zahodit' });
+    if (!ok) return;
+    try {
+        await saveSettings({ rozesilka_rozpracovana: '' });
+        copy.parts = {};
+        closeModal('copyModal');
+        renderAll();
+        showToast('Rozesílka zahozena.');
+    } catch (e) {
+        console.error(e);
+        showToast(e.isAuth ? e.message : 'Nepodařilo se: ' + e.message, 'error');
+    }
+}
+function renderPending() {
+    const bar = $('pending-bar');
+    const pend = pendingBatch();
+    bar.innerHTML = '';
+    if (!pend) { bar.classList.remove('show'); return; }
+    const n = pend.ids.length;
+    const span = document.createElement('span');
+    span.textContent = 'Rozpracovaná rozesílka z ' + fmtDay(pend.den) + ': ' + n + ' ' +
+        plural(n, 'příjemce', 'příjemci', 'příjemců') + '. Až e-mail odešlete, zapište ji do historie.';
+    const b1 = document.createElement('button');
+    b1.type = 'button';
+    b1.className = 'btn btn-secondary btn-sm';
+    b1.textContent = 'Odesláno, zapsat';
+    b1.setAttribute('data-act', 'pending-open');
+    const b2 = document.createElement('button');
+    b2.type = 'button';
+    b2.className = 'btn btn-ghost btn-sm';
+    b2.textContent = 'Zahodit';
+    b2.setAttribute('data-act', 'copy-drop');
+    bar.appendChild(span);
+    bar.appendChild(b1);
+    bar.appendChild(b2);
+    bar.classList.add('show');
+}
+
+// ============================================================
+// ZÁLOHA: jeden soubor Excel, každý list tabulky jako jeden list, všechno jako text
+// ============================================================
+const XLSX_URL = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
+async function buildBackup() {
+    const parts = await Promise.all(ALL_TABS.map(function (w) { return sheetsRead(w.tab); }));
+    if (!window.XLSX) await loadScript(XLSX_URL);
+    const wb = XLSX.utils.book_new();
+    ALL_TABS.forEach(function (w, i) {
+        const rows = (parts[i] || []).map(function (r) {
+            return (r || []).map(function (c) { return String(c == null ? '' : c); });
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows.length ? rows : [['']]);
+        Object.keys(ws).forEach(function (k) {
+            if (k.charAt(0) === '!' || !ws[k]) return;
+            ws[k].t = 's';                               // telefon ani IČO se nesmí stát číslem
+            ws[k].v = String(ws[k].v == null ? '' : ws[k].v);
+        });
+        XLSX.utils.book_append_sheet(wb, ws, w.tab);
+    });
+    return wb;
+}
+async function downloadBackup() {
+    try {
+        showToast('Připravuji zálohu…');
+        const wb = await buildBackup();
+        XLSX.writeFile(wb, 'crm-zaloha-' + todayIso() + '.xlsx');
+        showToast('Záloha je stažená.');
+    } catch (e) {
+        console.error(e);
+        showToast(e.isAuth ? e.message : 'Zálohu se nepodařilo připravit: ' + e.message, 'error');
+    }
+}
+
+// ============================================================
+// SEZNAMY PŘÍJEMCŮ (etapa 2)
+// Seznam „pravidlo“ = lidé, kteří právě odpovídají uloženým filtrům (mění se sám).
+// Seznam „rucni“ = lidé přidaní ručně (id v JSON poli „clenove“).
+// ============================================================
+const KOHO_LBL = { zprostredkovatel: 'Zprostředkovatelé', klient: 'Klienti', vse: 'Všichni' };
+function listRule(l) {
+    try {
+        const o = JSON.parse(l.pravidlo || '{}');
+        return (o && typeof o === 'object' && !Array.isArray(o)) ? o : {};
+    } catch (e) { return {}; }
+}
+function listMemberIds(l) {
+    try {
+        const a = JSON.parse(l.clenove || '[]');
+        return Array.isArray(a) ? a.map(String) : [];
+    } catch (e) { return []; }
+}
+// Stejná pravidla jako filtry v záložkách Zprostředkovatelé a Klienti
+function matchRule(p, r) {
+    const typ = r.typ || 'zprostredkovatel';
+    if (typ !== 'vse' && p.typ !== typ) return false;
+    if (r.dulezitost && p.dulezitost !== r.dulezitost) return false;
+    if (typ !== 'vse') {
+        if (r.stav && p.stav !== r.stav) return false;
+        if (typ === 'zprostredkovatel' && r.role && p.role !== r.role) return false;
+        if (typ === 'klient' && r.obor && p.obor !== r.obor) return false;
+    }
+    return true;
+}
+function listPeople(l) {
+    let out;
+    if (l.druh === 'rucni') {
+        const set = {};
+        listMemberIds(l).forEach(function (id) { set[id] = true; });
+        out = state.people.filter(function (p) { return set[p.id]; });
+    } else {
+        const r = listRule(l);
+        out = state.people.filter(function (p) { return matchRule(p, r); });
+    }
+    return out.sort(byNameCmp);
+}
+function ruleText(r) {
+    const typ = r.typ || 'zprostredkovatel';
+    const parts = [KOHO_LBL[typ] || KOHO_LBL.zprostredkovatel];
+    if (r.dulezitost) parts.push('důležitost ' + r.dulezitost);
+    if (typ !== 'vse') {
+        if (r.stav) parts.push('stav ' + ((typ === 'klient' ? LBL.stavK : LBL.stavZ)[r.stav] || r.stav));
+        if (typ === 'zprostredkovatel' && r.role) parts.push(r.role);
+        if (typ === 'klient' && r.obor) parts.push(r.obor);
+    }
+    return parts.join(' · ');
+}
+function findList(id) {
+    for (let i = 0; i < state.lists.length; i++) if (state.lists[i].id === id) return state.lists[i];
+    return null;
+}
+function sortedLists() {
+    return state.lists.slice().sort(function (a, b) { return collator.compare(a.nazev || '', b.nazev || ''); });
+}
+// Kolik lidí v seznamu je a kolika lze poslat e-mail (každá adresa jen jednou)
+function listStats(l) {
+    const people = listPeople(l);
+    const ctx = mailContext();
+    const seen = {};
+    let mailableN = 0;
+    people.forEach(function (p) {
+        if (mailBlockReason(p, ctx)) return;
+        const e = normEmail(p.email);
+        if (seen[e]) return;
+        seen[e] = true;
+        mailableN++;
+    });
+    return { people: people.length, mailable: mailableN };
+}
+function renderLists() {
+    const lists = sortedLists();
+    $('num-s').textContent = lists.length;
+    $('sez-body').innerHTML = lists.map(function (l) {
+        const st = listStats(l);
+        const id = escapeHtml(l.id);
+        const sub = l.druh === 'rucni' ? 'Ruční seznam' : 'Podle filtrů: ' + ruleText(listRule(l));
+        return '<tr data-act="list-mail" data-id="' + id + '">' +
+            '<td><span class="p-name">' + escapeHtml(l.nazev) + '</span><span class="p-firm">' + escapeHtml(sub) + '</span></td>' +
+            '<td data-l="Lidí">' + st.people + '</td>' +
+            '<td data-l="E-mail lze poslat">' + st.mailable + '</td>' +
+            '<td data-l="Poslední rozesílka">' + escapeHtml(fmtDay(l.posledni_rozesilka)) + '</td>' +
+            '<td><div class="sez-acts">' +
+                '<button type="button" class="btn btn-secondary btn-sm" data-act="list-mail" data-id="' + id + '">Připravit e-mail</button>' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-act="list-edit" data-id="' + id + '">Upravit</button>' +
+            '</div></td></tr>';
+    }).join('');
+    const none = lists.length === 0;
+    $('sez-wrap').style.display = none ? 'none' : '';
+    $('sez-empty').style.display = none ? '' : 'none';
+    $('sez-empty').textContent = none
+        ? 'Zatím žádný seznam. Založte ho tlačítkem „Nový seznam“, nebo v záložce Zprostředkovatelé či Klienti nastavte filtry a klikněte na „Uložit jako seznam“.'
+        : '';
+    $('sez-count').textContent = none ? '' : lists.length + ' ' + plural(lists.length, 'seznam', 'seznamy', 'seznamů');
+}
+
+// ---- Okno seznamu: nový / úprava ----
+const listForm = { id: null, druh: 'pravidlo', members: [], busy: false };
+function listRuleFromDom() {
+    const typ = $('l-typ').value || 'zprostredkovatel';
+    const r = { typ: typ, dulezitost: $('l-dulezitost').value, stav: '', role: '', obor: '' };
+    if (typ === 'zprostredkovatel') { r.stav = $('l-stav-z').value; r.role = $('l-role').value; }
+    else if (typ === 'klient') { r.stav = $('l-stav-k').value; r.obor = $('l-obor').value; }
+    return r;
+}
+function toggleListType() {
+    const typ = $('l-typ').value;
+    document.querySelectorAll('#listModal [data-lfor]').forEach(function (w) {
+        w.style.display = w.getAttribute('data-lfor') === typ ? '' : 'none';
+    });
+}
+function renderListPreview() {
+    const st = listStats({ druh: 'pravidlo', pravidlo: JSON.stringify(listRuleFromDom()) });
+    $('l-preview').textContent = 'Teď filtrům ' + plural(st.people, 'odpovídá', 'odpovídají', 'odpovídá') + ' ' + st.people + ' ' +
+        plural(st.people, 'člověk', 'lidé', 'lidí') + ', e-mail lze poslat ' + st.mailable + '.';
+}
+function renderListSuggest() {
+    const box = $('l-suggest');
+    const q = norm($('l-q').value);
+    box.innerHTML = '';
+    if (q.length < 2) return;
+    const set = {};
+    listForm.members.forEach(function (id) { set[id] = true; });
+    const hits = state.people.filter(function (p) {
+        return !set[p.id] && norm([p.titul, p.jmeno, p.prijmeni, p.firma, p.email].join(' ')).indexOf(q) !== -1;
+    }).sort(byNameCmp).slice(0, 12);
+    if (hits.length === 0) {
+        const s = document.createElement('span');
+        s.className = 'muted';
+        s.textContent = 'Nikdo takový v CRM není, nebo už v seznamu je.';
+        box.appendChild(s);
+        return;
+    }
+    hits.forEach(function (p) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip';
+        b.textContent = '+ ' + fullName(p) + (p.firma ? ' · ' + p.firma : '');
+        b.setAttribute('data-act', 'list-add');
+        b.setAttribute('data-id', p.id);
+        box.appendChild(b);
+    });
+}
+function renderListMembers() {
+    const set = {};
+    listForm.members.forEach(function (id) { set[id] = true; });
+    const people = state.people.filter(function (p) { return set[p.id]; }).sort(byNameCmp);
+    $('l-members-head').textContent = 'V seznamu: ' + people.length;
+    $('l-members').innerHTML = people.length === 0
+        ? '<tr><td class="cell-s">Zatím nikdo. Najděte člověka podle jména nebo firmy v poli nahoře.</td></tr>'
+        : people.map(function (p) {
+            return '<tr><td>' + escapeHtml(fullName(p)) + '</td><td class="cell-s">' + escapeHtml(p.firma) + '</td>' +
+                '<td class="cell-s">' + escapeHtml(String(p.email || '').trim() || 'bez e-mailu') + '</td>' +
+                '<td style="text-align:right"><button type="button" class="hist-del" data-act="list-remove" data-id="' + escapeHtml(p.id) +
+                '" title="Odebrat ze seznamu" aria-label="Odebrat ze seznamu">×</button></td></tr>';
+        }).join('');
+    renderListSuggest();
+}
+function listKind(kind) {
+    listForm.druh = kind === 'rucni' ? 'rucni' : 'pravidlo';
+    document.querySelectorAll('#l-druh button').forEach(function (b) {
+        b.classList.toggle('on', b.getAttribute('data-val') === listForm.druh);
+    });
+    const isRule = listForm.druh === 'pravidlo';
+    $('l-rule').style.display = isRule ? '' : 'none';
+    $('l-manual').style.display = isRule ? 'none' : '';
+    $('l-druh-hint').textContent = isRule
+        ? 'Seznam se mění sám: patří do něj každý, kdo právě odpovídá filtrům.'
+        : 'Do seznamu patří jen lidé, které do něj přidáte.';
+    if (isRule) renderListPreview(); else renderListMembers();
+}
+// preset (jen u nového seznamu): { rule, members, name, kind }
+function openListForm(list, preset) {
+    preset = preset || {};
+    listForm.id = list ? list.id : null;
+    const r = list ? listRule(list) : (preset.rule || { typ: 'zprostredkovatel' });
+    listForm.members = (list ? listMemberIds(list) : (preset.members || []))
+        .filter(function (id) { return !!findPerson(id); });
+    $('list-title').textContent = list ? 'Upravit seznam' : 'Nový seznam';
+    $('l-nazev').value = list ? list.nazev : (preset.name || '');
+    const typ = KOHO_LBL[r.typ] ? r.typ : 'zprostredkovatel';
+    setSelect('l-typ', typ);
+    setSelect('l-dulezitost', r.dulezitost || '');
+    setSelect('l-stav-z', typ === 'zprostredkovatel' ? (r.stav || '') : '');
+    setSelect('l-stav-k', typ === 'klient' ? (r.stav || '') : '');
+    setSelect('l-role', r.role || '');
+    setSelect('l-obor', r.obor || '');
+    toggleListType();
+    $('l-q').value = '';
+    $('list-err').textContent = '';
+    $('list-delete').style.display = list ? '' : 'none';
+    listKind(list ? list.druh : (preset.kind || 'pravidlo'));
+    openModal('listModal');
+    setTimeout(function () { $('l-nazev').focus(); }, 30);
+}
+// Ze záložky Zprostředkovatelé nebo Klienti: aktuální filtry jako nový seznam.
+// Hledaný text do pravidla převést nejde, proto se s ním nabídne ruční seznam z lidí, kteří jsou vidět.
+function openListFromFilters() {
+    const tab = state.ui.tab;
+    if (tab !== 'zprostredkovatel' && tab !== 'klient') return;
+    const isK = tab === 'klient';
+    const rule = { typ: tab, dulezitost: $('f-dulezitost').value, stav: $(isK ? 'f-stav-k' : 'f-stav-z').value,
+        role: isK ? '' : $('f-role').value, obor: isK ? $('f-obor').value : '' };
+    const searching = $('q').value.trim() !== '';
+    openListForm(null, {
+        rule: rule,
+        members: currentList().list.map(function (p) { return p.id; }),
+        name: searching ? '' : ruleText(rule).replace(/ · /g, ', '),
+        kind: searching ? 'rucni' : 'pravidlo'
+    });
+}
+async function saveList() {
+    if (listForm.busy) return;
+    const name = $('l-nazev').value.replace(/\s+/g, ' ').trim();
+    const err = function (m) { $('list-err').textContent = m; };
+    if (!name) { err('Zadej název seznamu.'); return; }
+    const clash = state.lists.find(function (l) { return l.id !== listForm.id && norm(l.nazev) === norm(name); });
+    if (clash) { err('Seznam s tímto názvem už existuje.'); return; }
+    const isRule = listForm.druh === 'pravidlo';
+    const members = listForm.members.filter(function (id) { return !!findPerson(id); });
+    const clenove = JSON.stringify(isRule ? [] : members);
+    if (clenove.length > PENDING_MAX_CHARS) { err('Seznam je příliš velký. Rozdělte ho na dva.'); return; }
+    const data = { nazev: name, druh: listForm.druh, pravidlo: isRule ? JSON.stringify(listRuleFromDom()) : '', clenove: clenove };
+    listForm.busy = true;
+    $('list-save').disabled = true;
+    err('');
+    try {
+        if (listForm.id) {
+            const cur = findList(listForm.id);
+            if (!cur) { const e0 = new Error('Seznam už neexistuje.'); e0.code = 'NOT_FOUND'; throw e0; }
+            const written = await patchRowById(TAB_SEZN, cur.id, data, { expectUpdated: cur.aktualizovano });
+            Object.keys(written).forEach(function (k) { cur[k] = written[k] == null ? '' : String(written[k]); });
+        } else {
+            const stamp = nowIso();
+            const row = Object.assign({ id: genId('s'), vytvoreno: stamp, aktualizovano: stamp, posledni_rozesilka: '' }, data);
+            await sheetsAppend(TAB_SEZN, [objectToRow(row, state.headers[TAB_SEZN] || SEZN_HEADER)]);
+            state.lists.push(row);
+        }
+        closeModal('listModal');
+        if (state.ui.tab !== 'seznamy') switchTab('seznamy');
+        renderAll();
+        showToast('Seznam uložen.');
+    } catch (e) {
+        console.error(e);
+        if (e.code === 'CONFLICT' || e.code === 'NOT_FOUND') {
+            closeModal('listModal');
+            showToast('Seznam se mezitím změnil na jiném zařízení. Načítám data znovu, nic se nepřepsalo.', 'warn');
+            await reloadData(true);
+        } else {
+            showErr('list-err', e.isAuth ? e.message : 'Uložení se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+        }
+    } finally {
+        listForm.busy = false;
+        $('list-save').disabled = false;
+    }
+}
+async function deleteList() {
+    const cur = findList(listForm.id);
+    if (!cur) { closeModal('listModal'); return; }
+    const ok = await appConfirm('Smazat seznam „' + cur.nazev + '“? Lidé v CRM zůstanou, smaže se jen seznam.',
+        { title: 'Smazat seznam', okLabel: 'Smazat' });
+    if (!ok) return;
+    try {
+        await deleteRowsByIds(TAB_SEZN, [cur.id]);
+        state.lists = state.lists.filter(function (l) { return l.id !== cur.id; });
+        closeModal('listModal');
+        renderAll();
+        showToast('Seznam smazán.');
+    } catch (e) {
+        console.error(e);
+        showErr('list-err', e.isAuth ? e.message : 'Smazání se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+    }
+}
+// Přidání nebo odebrání člověka z ručního seznamu přímo na jeho kartě
+let memberBusy = false;
+async function toggleMember(listId, personId) {
+    const l = findList(listId);
+    if (memberBusy || !l || l.druh !== 'rucni' || !findPerson(personId)) return;
+    const ids = listMemberIds(l).filter(function (id) { return !!findPerson(id); });
+    const i = ids.indexOf(personId);
+    if (i === -1) ids.push(personId); else ids.splice(i, 1);
+    memberBusy = true;
+    try {
+        const written = await patchRowById(TAB_SEZN, l.id, { clenove: JSON.stringify(ids) }, { expectUpdated: l.aktualizovano });
+        Object.keys(written).forEach(function (k) { l[k] = written[k] == null ? '' : String(written[k]); });
+        renderAll();
+        showToast((i === -1 ? 'Přidáno do seznamu „' : 'Odebráno ze seznamu „') + l.nazev + '“.');
+    } catch (e) {
+        console.error(e);
+        if (e.code === 'CONFLICT' || e.code === 'NOT_FOUND') {
+            showToast('Seznam se mezitím změnil na jiném zařízení. Načítám data znovu.', 'warn');
+            await reloadData(true);
+        } else {
+            showToast(e.isAuth ? e.message : 'Uložení se nepovedlo: ' + e.message, 'error');
+        }
+    } finally {
+        memberBusy = false;
+    }
+}
+// Seznamy na kartě člověka: ruční jde přepnout kliknutím, seznamy podle filtrů se jen ukazují
+function cardListsHtml(p) {
+    const out = sortedLists().map(function (l) {
+        if (l.druh === 'rucni') {
+            const on = listMemberIds(l).indexOf(p.id) !== -1;
+            return '<button type="button" class="chip' + (on ? ' on' : '') + '" data-act="list-toggle" data-list="' + escapeHtml(l.id) +
+                '" title="' + (on ? 'Odebrat ze seznamu' : 'Přidat do seznamu') + '">' + escapeHtml(l.nazev) + '</button>';
+        }
+        return matchRule(p, listRule(l))
+            ? '<span class="pill mail-on" title="Patří sem podle filtrů seznamu">' + escapeHtml(l.nazev) + '</span>' : '';
+    }).join('');
+    return out ? '<div class="chips" style="align-items:center">' + out + '</div>' : '';
+}
+
+// ============================================================
+// OSLOVENÍ (etapa 2): návrh podle jména a příjmení. Vždy jen návrh, který Martin potvrdí.
+// ============================================================
+const SAL_FEMALE = { dagmar: 1, miriam: 1, ester: 1, ingrid: 1, nikol: 1, nicol: 1, karin: 1, rut: 1, ruth: 1, carmen: 1,
+    ines: 1, iris: 1, doris: 1, vivien: 1, edit: 1, elisabeth: 1, jennifer: 1 };
+const SAL_MALE_VOWEL = { honza: 1, jirka: 1, pepa: 1, tonda: 1, franta: 1, jarda: 1, standa: 1, ota: 1, olda: 1, kuba: 1,
+    ilja: 1, jura: 1, venca: 1, luca: 1, george: 1, mike: 1, steve: 1, dave: 1, pierre: 1, jose: 1, joe: 1 };
+// Jména, u kterých se pohlaví odhadnout nedá: aplikace nic nenavrhne
+const SAL_AMBIG = { nikola: 1, sasa: 1, misa: 1, peta: 1, kaja: 1, vlasta: 1, jindra: 1, mira: 1, lada: 1, vlada: 1, slava: 1,
+    andrea: 1, rene: 1, jean: 1, kim: 1, alex: 1, robin: 1, simone: 1, michele: 1 };
+const VOC_EL_MOVABLE = { havel: 1, pavel: 1, karel: 1, kozel: 1, orel: 1, posel: 1, osel: 1, uzel: 1, kotel: 1, pytel: 1 };
+function guessGender(p) {
+    const sur = String(p.prijmeni || '').trim().toLowerCase();
+    const first = norm(String(p.jmeno || '').trim().split(/\s+/)[0] || '');
+    if (/ov[aá]$/.test(sur) || /[^aeiouyáéíóúůýě]á$/.test(sur)) return 'f';   // Nováková, Novotná
+    if (/ý$/.test(sur)) return 'm';                                            // Novotný
+    if (!first || SAL_AMBIG[first]) return '';
+    if (SAL_FEMALE[first]) return 'f';
+    if (SAL_MALE_VOWEL[first]) return 'm';
+    return /[ae]$/.test(first) ? 'f' : 'm';
+}
+// 5. pád mužského příjmení podle koncovky. Pokrývá běžná česká příjmení, výjimky opraví Martin.
+function vocWord(w) {
+    const l = w.toLowerCase();
+    const end = function (cut, add) { return w.slice(0, w.length - cut) + add; };
+    if (/[ýíůeéěiyouóúá]$/.test(l)) return w;                        // Novotný, Krejčí, Janů, Janko
+    if (/a$/.test(l)) return end(1, 'o');                             // Svoboda → Svobodo
+    if (/něk$/.test(l)) return end(3, 'ňku');                         // Vaněk → Vaňku
+    if (/děk$/.test(l)) return end(3, 'ďku');
+    if (/těk$/.test(l)) return end(3, 'ťku');
+    if (/[eě]k$/.test(l) && l.length > 3) return end(2, 'ku');        // Marek → Marku
+    if (norm(w) === 'svec') return 'Ševče';                           // nepravidelné
+    if (norm(w) === 'kadlec') return end(1, 'če');                    // Kadlec → Kadleče (e tu nevypadává)
+    if (/ec$/.test(l) && l.length > 3) return end(2, 'če');           // Němec → Němče
+    if (/el$/.test(l)) return VOC_EL_MOVABLE[norm(w)] ? end(2, 'le') : w + 'e';   // Havel → Havle, Šindel → Šindele
+    if (norm(w) === 'kral') return w + 'i';                           // Král → Králi
+    if (/(ch|[kgh])$/.test(l)) return w + 'u';                        // Novák → Nováku, Čech → Čechu
+    if (/[šžčřcjďťňx]$/.test(l)) return w + 'i';                      // Tomáš → Tomáši, Kříž → Kříži
+    if (/[^aeiouyáéíóúůýě]r$/.test(l)) return end(1, 'ře');           // Petr → Petře
+    if (/[sz]$/.test(l)) return w + 'i';                              // Kraus → Krausi
+    return w + 'e';                                                   // Holub → Holube, Zeman → Zemane
+}
+function vocSurname(s) {
+    const parts = String(s || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '';
+    parts[parts.length - 1] = vocWord(parts[parts.length - 1]);
+    return parts.join(' ');
+}
+function suggestSalutation(p) {
+    const sur = String(p.prijmeni || '').replace(/\s+/g, ' ').trim();
+    if (!sur) return '';
+    const g = guessGender(p);
+    if (g === 'f') return 'Vážená paní ' + sur;
+    if (g === 'm') return 'Vážený pane ' + vocSurname(sur);
+    return '';
+}
+function cleanSalutation(v) {
+    return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().replace(/[,\s]+$/, '');
+}
+
+// ---- Hromadné doplnění oslovení (z okna e-mailu, pro vybrané příjemce) ----
+const sal = { rows: [], busy: false };
+function openSal() {
+    const selected = copySelected();
+    if (selected.length === 0) return;
+    sal.rows = selected.map(function (r) {
+        const cur = cleanSalutation(r.p.osloveni);
+        return { p: r.p, value: cur || suggestSalutation(r.p), suggested: !cur };
+    });
+    // Lidé bez uloženého oslovení nahoře
+    sal.rows.sort(function (a, b) { return a.suggested === b.suggested ? byNameCmp(a.p, b.p) : (a.suggested ? -1 : 1); });
+    $('sal-rows').innerHTML = sal.rows.map(function (s, i) {
+        return '<tr><td>' + escapeHtml(fullName(s.p)) + (s.suggested && s.value ? ' <span class="pill draft">návrh</span>' : '') + '</td>' +
+            '<td class="cell-s">' + escapeHtml(s.p.firma) + '</td>' +
+            '<td><input type="text" class="input" data-sal="' + i + '" maxlength="120" value="' + escapeHtml(s.value) +
+            '" placeholder="Dobrý den" autocomplete="off"></td></tr>';
+    }).join('');
+    $('sal-err').textContent = '';
+    openModal('salModal');
+}
+async function saveSal() {
+    if (sal.busy) return;
+    const items = [];
+    document.querySelectorAll('#sal-rows input[data-sal]').forEach(function (inp) {
+        const s = sal.rows[parseInt(inp.getAttribute('data-sal'), 10)];
+        if (!s) return;
+        const v = cleanSalutation(inp.value);
+        if (v !== cleanSalutation(s.p.osloveni)) items.push({ id: s.p.id, patch: { osloveni: v }, expect: s.p.aktualizovano });
+    });
+    if (items.length === 0) { closeModal('salModal'); return; }
+    sal.busy = true;
+    $('sal-save').disabled = true;
+    try {
+        const out = await patchPeopleBulk(items);
+        out.done.forEach(function (d) {
+            const p = findPerson(d.id);
+            if (p) Object.keys(d.fields).forEach(function (k) { p[k] = d.fields[k] == null ? '' : String(d.fields[k]); });
+        });
+        closeModal('salModal');
+        renderAll();
+        if ($('copyModal').classList.contains('show')) renderCopy();
+        const n = out.done.length, m = out.skipped.length;
+        showToast('Oslovení uloženo: ' + n + '.' + (m > 0
+            ? ' U ' + m + ' ' + plural(m, 'člověka', 'lidí', 'lidí') + ' se neuložilo, mezitím se změnili na jiném zařízení.' : ''), m > 0 ? 'warn' : '');
+    } catch (e) {
+        console.error(e);
+        showErr('sal-err', e.isAuth ? e.message : 'Uložení se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+    } finally {
+        sal.busy = false;
+        $('sal-save').disabled = false;
+    }
+}
+
+// ============================================================
+// PŘEDLOHY A KONCEPT E-MAILU PRO KLASICKÝ OUTLOOK (etapa 2)
+// Koncept = stažený soubor .eml s hlavičkou X-Unsent: 1 (vzor buildReviewEml v real-estate-prompt-generator.html).
+// Příjemci se do souboru NEZAPISUJÍ: Outlook skrytou kopii ze souboru spolehlivě nenačte,
+// proto se adresy kopírují do schránky a Martin je vloží do pole Skrytá kopie.
+// ============================================================
+const BUILTIN_TPL = [
+    { id: 'vzor:partneri', nazev: 'Vzor: přehled pro partnery',
+        predmet: 'Financování zajištěné nemovitostí: přehled pro partnery, [měsíc a rok]',
+        text: 'Dobrý den,\n\n' +
+            'posílám krátký měsíční přehled pro partnery Spolumajitelé Private Credit.\n\n' +
+            'Co je nového\n[Jedna až dvě věty o novince tohoto měsíce.]\n\n' +
+            'Modelový příklad\n[Typová situace, například: firma kupuje skladovou halu a financování potřebuje do termínu podpisu kupní smlouvy.]\n' +
+            'Úvěr 20 mil. Kč, úrok 12 % p.a.: při modelu pouze úroky je měsíční splátka 200 000 Kč a jistina 20 mil. Kč se splatí na konci.\n' +
+            'Orientační výpočet. Konkrétní podmínky stanovíme po posouzení případu.\n\n' +
+            'Jaké případy hledáme\n' +
+            '- Úvěry 3–100 mil. Kč pro právnické osoby se sídlem v ČR\n' +
+            '- Zajištění nemovitostí v ČR, LTV standardně do 70 %\n' +
+            '- Akvizice nemovitostí, uvolnění kapitálu, refinancování a konsolidace\n' +
+            '- Úrok od 12 % p.a., indikativní nabídka do 48 hodin od dodání kompletních podkladů\n\n' +
+            'Máte klienta, který hledá financování zajištěné nemovitostí? Stačí odpovědět na tento e-mail.\n\n' +
+            'S pozdravem' },
+    { id: 'vzor:klienti', nazev: 'Vzor: přehled pro klienty',
+        predmet: 'Spolumajitelé Private Credit: přehled pro klienty, [čtvrtletí a rok]',
+        text: 'Dobrý den,\n\n' +
+            'posílám krátký přehled novinek ze Spolumajitelé Private Credit.\n\n' +
+            'Co je nového\n[Jedna až dvě věty o novince.]\n\n' +
+            'Co financujeme\n' +
+            '- Akvizice nemovitostí\n' +
+            '- Uvolnění kapitálu z nemovitosti, kterou nechcete prodat\n' +
+            '- Refinancování a konsolidace\n\n' +
+            'Úvěry 3–100 mil. Kč poskytujeme právnickým osobám se sídlem v ČR a zajišťujeme je nemovitostmi v ČR. ' +
+            'Úrok je od 12 % p.a., LTV standardně do 70 %. Indikativní nabídku posíláme do 48 hodin od dodání kompletních podkladů.\n\n' +
+            'Chystáte nákup nemovitosti nebo refinancování? Představte mi projekt, stačí odpovědět na tento e-mail.\n\n' +
+            'S pozdravem' }
+];
+function sortedTemplates() {
+    return state.templates.slice().sort(function (a, b) { return collator.compare(a.nazev || '', b.nazev || ''); });
+}
+function findTemplate(id) {
+    if (!id) return null;
+    for (let i = 0; i < BUILTIN_TPL.length; i++) if (BUILTIN_TPL[i].id === id) return BUILTIN_TPL[i];
+    for (let j = 0; j < state.templates.length; j++) if (state.templates[j].id === id) return state.templates[j];
+    return null;
+}
+function isBuiltinTpl(id) { return String(id || '').indexOf('vzor:') === 0; }
+// Rozepsaný text přežije zavření okna (jen v paměti stránky), zmizí po zápisu nebo zahození rozesílky
+const compose = { tplId: '', loadedSubject: '', loadedText: '' };
+function composeDirty() {
+    const s = $('cmp-subject').value, t = $('cmp-body').value;
+    return (s.trim() !== '' || t.trim() !== '') && (s !== compose.loadedSubject || t !== compose.loadedText);
+}
+function composeSet(tplId, subject, text) {
+    compose.tplId = tplId || '';
+    compose.loadedSubject = subject || '';
+    compose.loadedText = text || '';
+    $('cmp-subject').value = compose.loadedSubject;
+    $('cmp-body').value = compose.loadedText;
+}
+function renderTemplates() {
+    if (compose.tplId && !findTemplate(compose.tplId)) compose.tplId = '';
+    const box = $('tpl-chips');
+    box.innerHTML = '';
+    const chip = function (id, label) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip' + (compose.tplId === id ? ' on' : '');
+        b.textContent = label;
+        b.setAttribute('data-act', 'tpl-pick');
+        b.setAttribute('data-id', id);
+        box.appendChild(b);
+    };
+    chip('', 'Bez předlohy');
+    BUILTIN_TPL.concat(sortedTemplates()).forEach(function (t) { chip(t.id, t.nazev); });
+    const acts = $('tpl-actions');
+    acts.innerHTML = '';
+    const btn = function (label, act, cls) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = cls;
+        b.textContent = label;
+        b.setAttribute('data-act', act);
+        acts.appendChild(b);
+    };
+    btn('Uložit jako předlohu', 'tpl-save-as', 'btn btn-secondary btn-sm');
+    if (compose.tplId && !isBuiltinTpl(compose.tplId)) {
+        btn('Uložit změny v předloze', 'tpl-save', 'btn btn-secondary btn-sm');
+        btn('Smazat předlohu', 'tpl-delete', 'btn btn-ghost btn-sm btn-danger-ghost');
+    }
+}
+async function pickTemplate(id) {
+    if (id === compose.tplId && !composeDirty()) return;
+    if (composeDirty()) {
+        const ok = await appConfirm(id ? 'Nahradit rozepsaný text předlohou?' : 'Smazat rozepsaný text?',
+            { title: 'Text e-mailu', okLabel: id ? 'Nahradit' : 'Smazat' });
+        if (!ok) return;
+    }
+    const t = findTemplate(id);
+    composeSet(t ? t.id : '', t ? t.predmet : '', t ? t.text : '');
+    renderTemplates();
+}
+async function saveTemplateAs() {
+    const subject = $('cmp-subject').value.trim(), text = $('cmp-body').value.trim();
+    if (!subject && !text) { $('copy-err').textContent = 'Nejdřív napiš předmět nebo text, předloha nemůže být prázdná.'; return; }
+    const cur = findTemplate(compose.tplId);
+    const name = await appPrompt('Uložit jako předlohu', 'Název předlohy',
+        cur && !isBuiltinTpl(cur.id) ? cur.nazev + ' (kopie)' : '');
+    if (!name) return;
+    if (state.templates.some(function (t) { return norm(t.nazev) === norm(name); })) {
+        $('copy-err').textContent = 'Předloha s tímto názvem už existuje. Zvol jiný název.';
+        return;
+    }
+    try {
+        const stamp = nowIso();
+        const row = { id: genId('t'), vytvoreno: stamp, aktualizovano: stamp, nazev: name, predmet: subject, text: text };
+        await sheetsAppend(TAB_PRED, [objectToRow(row, state.headers[TAB_PRED] || PRED_HEADER)]);
+        state.templates.push(row);
+        composeSet(row.id, $('cmp-subject').value, $('cmp-body').value);
+        renderTemplates();
+        $('copy-err').textContent = '';
+        showToast('Předloha uložena.');
+    } catch (e) {
+        console.error(e);
+        showErr('copy-err', e.isAuth ? e.message : 'Uložení předlohy se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+    }
+}
+async function saveTemplate() {
+    const t = findTemplate(compose.tplId);
+    if (!t || isBuiltinTpl(t.id)) return;
+    const subject = $('cmp-subject').value.trim(), text = $('cmp-body').value.trim();
+    if (!subject && !text) { $('copy-err').textContent = 'Předloha nemůže být prázdná.'; return; }
+    try {
+        const written = await patchRowById(TAB_PRED, t.id, { predmet: subject, text: text }, { expectUpdated: t.aktualizovano });
+        Object.keys(written).forEach(function (k) { t[k] = written[k] == null ? '' : String(written[k]); });
+        compose.loadedSubject = $('cmp-subject').value;
+        compose.loadedText = $('cmp-body').value;
+        $('copy-err').textContent = '';
+        showToast('Předloha „' + t.nazev + '“ uložena.');
+    } catch (e) {
+        console.error(e);
+        if (e.code === 'CONFLICT' || e.code === 'NOT_FOUND') {
+            $('copy-err').textContent = 'Předloha se mezitím změnila na jiném zařízení. Uložte text jako novou předlohu.';
+        } else {
+            showErr('copy-err', e.isAuth ? e.message : 'Uložení předlohy se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+        }
+    }
+}
+async function deleteTemplate() {
+    const t = findTemplate(compose.tplId);
+    if (!t || isBuiltinTpl(t.id)) return;
+    const ok = await appConfirm('Smazat předlohu „' + t.nazev + '“? Rozepsaný text v okně zůstane.',
+        { title: 'Smazat předlohu', okLabel: 'Smazat' });
+    if (!ok) return;
+    try {
+        await deleteRowsByIds(TAB_PRED, [t.id]);
+        state.templates = state.templates.filter(function (x) { return x.id !== t.id; });
+        compose.tplId = '';
+        compose.loadedSubject = '';
+        compose.loadedText = '';
+        renderTemplates();
+        showToast('Předloha smazána.');
+    } catch (e) {
+        console.error(e);
+        showErr('copy-err', e.isAuth ? e.message : 'Smazání se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+    }
+}
+
+// ---- Text e-mailu: to, co Martin napsal, a pod tím podpis, údaje o firmě a věta o odhlášení ----
+function mailFooterLines() {
+    return [setText('paticka_firmy').trim(), setText('veta_odhlaseni').trim()].filter(Boolean);
+}
+function buildMailText(body) {
+    const sig = setText('podpis').trim();
+    return [String(body || '').replace(/\r\n?/g, '\n').trim(), sig, mailFooterLines().join('\n')]
+        .filter(Boolean).join('\n\n') + '\n';
+}
+// Odstavce dělí prázdný řádek, řádky začínající pomlčkou jsou odrážky. Všechno prochází escapeHtml.
+function textToHtml(text) {
+    const P = '<p style="margin:0 0 12px 0">';
+    return String(text || '').replace(/\r\n?/g, '\n').trim().split(/\n{2,}/).map(function (block) {
+        const out = [];
+        let para = [], items = [];
+        const flushPara = function () { if (para.length) { out.push(P + para.map(escapeHtml).join('<br>') + '</p>'); para = []; } };
+        const flushList = function () {
+            if (items.length) {
+                out.push('<ul style="margin:0 0 12px 0;padding-left:24px">' + items.map(function (i) { return '<li>' + escapeHtml(i) + '</li>'; }).join('') + '</ul>');
+                items = [];
+            }
+        };
+        block.split('\n').forEach(function (line) {
+            const m = /^\s*[-•]\s+(.*)$/.exec(line);
+            if (m) { flushPara(); items.push(m[1]); } else { flushList(); para.push(line); }
+        });
+        flushPara();
+        flushList();
+        return out.join('');
+    }).join('');
+}
+// Barvy v patičce jsou součást e-mailu (v poště proměnné vzhledu neplatí), ne vzhledu aplikace
+function buildMailHtml(body) {
+    const sig = setText('podpis').trim();
+    const foot = mailFooterLines();
+    return '<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a1a;line-height:1.45">' +
+        textToHtml(body) + (sig ? textToHtml(sig) : '') +
+        (foot.length ? '<p style="margin:18px 0 0 0;font-size:9pt;color:#666666">' + foot.map(escapeHtml).join('<br>') + '</p>' : '') +
+        '</div>';
+}
+function b64Utf8(str) {
+    const bytes = new TextEncoder().encode(String(str));
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+}
+// Předmět s diakritikou jako UTF-8 encoded-words (RFC 2047), nejvýš 42 bajtů na slovo
+function encodeMimeHeader(str) {
+    const enc = new TextEncoder();
+    const words = [];
+    let chunk = '';
+    Array.from(String(str)).forEach(function (ch) {
+        if (chunk && enc.encode(chunk + ch).length > 42) { words.push(chunk); chunk = ''; }
+        chunk += ch;
+    });
+    if (chunk) words.push(chunk);
+    return words.map(function (w) { return '=?UTF-8?B?' + b64Utf8(w) + '?='; }).join('\r\n ');
+}
+function buildDraftEml(subject, html, text, to) {
+    const boundary = '=_crm_' + Date.now().toString(36);
+    const wrap = function (b64) { return (b64.match(/.{1,76}/g) || []).join('\r\n'); };
+    const head = ['X-Unsent: 1'];   // klasický Outlook otevře soubor jako neodeslanou zprávu
+    if (to && isValidEmail(to)) head.push('To: ' + String(to).trim());
+    return head.concat([
+        'Subject: ' + encodeMimeHeader(String(subject || '').replace(/[\r\n]+/g, ' ')),
+        'MIME-Version: 1.0',
+        'Content-Type: multipart/alternative; boundary="' + boundary + '"',
+        '',
+        '--' + boundary,
+        'Content-Type: text/plain; charset="UTF-8"',
+        'Content-Transfer-Encoding: base64',
+        '',
+        wrap(b64Utf8(text)),
+        '--' + boundary,
+        'Content-Type: text/html; charset="UTF-8"',
+        'Content-Transfer-Encoding: base64',
+        '',
+        wrap(b64Utf8(html)),
+        '--' + boundary + '--',
+        ''
+    ]).join('\r\n');
+}
+function downloadFile(name, blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+}
+function fileSlug(s) {
+    return norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50).replace(/-+$/, '');
+}
+async function makeDraft() {
+    const subject = $('cmp-subject').value.replace(/\s+/g, ' ').trim();
+    const body = $('cmp-body').value.trim();
+    if (copySelected().length === 0) { $('copy-err').textContent = 'Není vybraný žádný příjemce.'; return; }
+    if (!subject || !body) {
+        $('copy-err').textContent = 'Vyplň předmět i text e-mailu. Bez textu jde jen zkopírovat adresy.';
+        return;
+    }
+    if (/\[[^\]\n]{1,200}\]/.test(subject + '\n' + body)) {
+        const ok = await appConfirm('V textu zůstala místa k doplnění v hranatých závorkách. Stáhnout koncept i tak?',
+            { title: 'Koncept e-mailu', okLabel: 'Stáhnout', cancelLabel: 'Zpět k textu' });
+        if (!ok) return;
+    }
+    const eml = buildDraftEml(subject, buildMailHtml(body), buildMailText(body), setText('adresa_komu'));
+    downloadFile('e-mail-' + (fileSlug(subject) || 'koncept') + '-' + todayIso() + '.eml', new Blob([eml], { type: 'message/rfc822' }));
+    if (!$('copy-name').value.trim()) $('copy-name').value = subject.slice(0, 80);
+    await copyPart(0, { draft: true });
+}
+
+// ---- Tabulka pro hromadnou korespondenci (Word): jeden řádek na příjemce, s oslovením ----
+const MERGE_HEADER = ['Osloveni', 'Titul', 'Jmeno', 'Prijmeni', 'Firma', 'Funkce', 'Email'];
+async function buildMergeWorkbook(people) {
+    if (!window.XLSX) await loadScript(XLSX_URL);
+    const rows = [MERGE_HEADER].concat(people.map(function (p) {
+        return [cleanSalutation(p.osloveni) || 'Dobrý den', p.titul, p.jmeno, p.prijmeni, p.firma, p.funkce, String(p.email || '').trim()]
+            .map(function (c) { return String(c == null ? '' : c); });
+    }));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    Object.keys(ws).forEach(function (k) {
+        if (k.charAt(0) === '!' || !ws[k]) return;
+        ws[k].t = 's';
+        ws[k].v = String(ws[k].v == null ? '' : ws[k].v);
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Prijemci');
+    return wb;
+}
+function missingSalutations() {
+    return copySelected().filter(function (r) { return !cleanSalutation(r.p.osloveni); }).length;
+}
+function renderCopySal(show) {
+    const box = $('copy-sal');
+    const n = missingSalutations();
+    box.innerHTML = '';
+    if (!show || n === 0) { box.style.display = 'none'; return; }
+    const s = document.createElement('span');
+    s.className = 'lbl';
+    s.textContent = 'U ' + n + ' ' + plural(n, 'vybraného člověka', 'vybraných lidí', 'vybraných lidí') +
+        ' chybí oslovení. V tabulce ' + plural(n, 'bude mít', 'budou mít', 'budou mít') + ' „Dobrý den“.';
+    const b1 = document.createElement('button');
+    b1.type = 'button';
+    b1.className = 'btn btn-secondary btn-sm';
+    b1.textContent = 'Doplnit oslovení';
+    b1.setAttribute('data-act', 'sal-open');
+    const b2 = document.createElement('button');
+    b2.type = 'button';
+    b2.className = 'btn btn-ghost btn-sm';
+    b2.textContent = 'Stáhnout tabulku i tak';
+    b2.setAttribute('data-act', 'merge-force');
+    box.appendChild(s);
+    box.appendChild(b1);
+    box.appendChild(b2);
+    box.style.display = '';
+}
+async function makeMerge(force) {
+    const selected = copySelected();
+    if (selected.length === 0) { $('copy-err').textContent = 'Není vybraný žádný příjemce.'; return; }
+    if (!force && missingSalutations() > 0) { copy.salNote = true; renderCopySal(true); return; }
+    copy.salNote = false;
+    try {
+        const wb = await buildMergeWorkbook(selected.map(function (r) { return r.p; }));
+        XLSX.writeFile(wb, 'crm-hromadna-korespondence-' + todayIso() + '.xlsx');
+    } catch (e) {
+        console.error(e);
+        $('copy-err').textContent = 'Tabulku se nepodařilo připravit: ' + e.message;
+        return;
+    }
+    // Příjemci z tabulky jsou rozpracovaná rozesílka, stejně jako zkopírované adresy
+    copy.parts = { merge: selected.map(function (r) { return r.p.id; }) };
+    const saved = await savePendingBatch();
+    renderCopy();
+    renderPending();
+    showToast('Tabulka je stažená. Ve Wordu ji použijte jako seznam příjemců pro hromadnou korespondenci.');
+    if (!saved) $('copy-err').textContent = 'Rozpracovanou rozesílku se nepodařilo zapamatovat. Nezavírejte toto okno, dokud ji nezapíšete.';
+}
+
+// ---- Dotaz na název (vrací text, nebo null při zrušení) ----
+function appPrompt(title, label, value) {
+    return new Promise(function (resolve) {
+        $('pr-title').textContent = title;
+        $('pr-label').textContent = label;
+        $('pr-err').textContent = '';
+        const inp = $('pr-input'), ok = $('pr-ok'), cancel = $('pr-cancel');
+        inp.value = value || '';
+        function done(val) {
+            document.removeEventListener('keydown', onKey, true);
+            closeModal('promptModal');
+            resolve(val);
+        }
+        function submit() {
+            const v = inp.value.replace(/\s+/g, ' ').trim();
+            if (!v) { $('pr-err').textContent = 'Zadej název.'; return; }
+            done(v);
+        }
+        function onKey(e) {
+            if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(null); }
+            else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); submit(); }
+        }
+        ok.onclick = submit;
+        cancel.onclick = function () { done(null); };
+        document.addEventListener('keydown', onKey, true);
+        openModal('promptModal');
+        setTimeout(function () { inp.focus(); inp.select(); }, 30);
+    });
+}
+
+// ============================================================
+// PŘÍPADY Z DASHBOARDU (etapa 3)
+// Dashboard se nemění: CRM z něj případy jen čte (loadCases) a vazby na lidi si drží ve vlastním listu Vazby.
+// ============================================================
+const FAZE_LBL = { nova: 'Nová', oceneni: 'Ocenění', provereni: 'Prověření', termsheet: 'Term Sheet',
+    dokumentace: 'Dokumentace', cerpani: 'Podpis a čerpání', uzavreno: 'Uzavřeno' };
+// „slouceno“ = případ pokračuje v jiném případu; v nabídkách se neukazuje, ale existující vazba se dál zobrazí
+const VYSLEDEK_LBL = { vyplaceno: 'Vyplaceno', zamitnuto: 'Zamítnuto', ztraceno: 'Ztraceno', slouceno: 'Sloučeno do jiného případu' };
+const PIPELINE_FAZE = { provereni: 1, termsheet: 1, dokumentace: 1, cerpani: 1 };   // případ už prošel oceněním
+const SILENT_DAYS = 60;         // partner „bez nového případu“
+const MATURITY_DAYS = 90;       // kolik dní před splatností úvěru se klient připomene
+const EVENT_RHYTHM_DAYS = 30;   // u těchto událostí se člověk připomíná nejpozději po 30 dnech bez osobního kontaktu
+const CASE_PAGE = 60;
+
+function findCase(id) {
+    for (let i = 0; i < state.cases.length; i++) if (state.cases[i].id === id) return state.cases[i];
+    return null;
+}
+function caseStatus(c) {
+    return c.stav === 'uzavreno' ? (VYSLEDEK_LBL[c.vysledek] || 'Uzavřeno') : (FAZE_LBL[c.faze] || c.faze || '');
+}
+function caseAmount(c) {
+    const n = parseInt(String(c.castka || '').replace(/[^\d]/g, ''), 10);
+    return isNaN(n) ? 0 : n;
+}
+function fmtMoney(n, mena) {
+    if (!n) return '';
+    return n.toLocaleString('cs-CZ') + ' ' + (mena === 'EUR' || mena === 'USD' ? mena : 'Kč');
+}
+function caseDay(c) { return histDay({ datum: c.vytvoreno }); }
+function linksOf(personId) {
+    return state.links.filter(function (l) { return l.clovek_id === personId; });
+}
+// [{ link, c }], nejnovější případ nahoře; c je null, když případ v Dashboardu není vidět
+function personCases(p) {
+    return linksOf(p.id).map(function (l) { return { link: l, c: findCase(l.pripad_id) }; })
+        .sort(function (a, b) {
+            return String((b.c && b.c.vytvoreno) || '').localeCompare(String((a.c && a.c.vytvoreno) || ''));
+        });
+}
+// Čísla partnera: případy, které přivedl
+function partnerStats(p) {
+    const today = todayIso();
+    const out = { total: 0, recent: 0, paid: 0, paidSum: 0, lastDay: '' };
+    linksOf(p.id).forEach(function (l) {
+        if (l.vztah !== 'privedl') return;
+        const c = findCase(l.pripad_id);
+        if (!c || c.vysledek === 'slouceno') return;   // sloučený případ se počítá jen jednou, v tom, kde pokračuje
+        out.total++;
+        const d = caseDay(c);
+        if (d > out.lastDay) out.lastDay = d;
+        const gap = d ? daysBetween(d, today) : null;
+        if (gap !== null && gap <= SILENT_DAYS) out.recent++;
+        if (c.stav === 'uzavreno' && c.vysledek === 'vyplaceno') { out.paid++; out.paidSum += caseAmount(c); }
+    });
+    return out;
+}
+function statsText(st) {
+    const parts = ['Přivedené případy: ' + st.total, 'za posledních ' + SILENT_DAYS + ' dní ' + st.recent];
+    if (st.paid) parts.push('vyplaceno ' + st.paid + (st.paidSum ? ' (' + fmtMoney(st.paidSum, 'CZK') + ')' : ''));
+    if (st.lastDay) parts.push('poslední ' + fmtDay(st.lastDay));
+    return parts.join(' · ');
+}
+// Událost, kvůli které se má Martin ozvat i mimo běžný rytmus. Vrací { text, since } nebo null.
+// since = den, od kterého se počítá osobní kontakt (dřívější kontakt se k události nevztahuje).
+function eventTrigger(p, today) {
+    if (p.typ === 'klient' && /^\d{4}-\d{2}-\d{2}$/.test(String(p.splatnost || ''))) {
+        const left = daysBetween(today, p.splatnost);
+        if (left !== null && left <= MATURITY_DAYS) {
+            const when = left > 0 ? 'za ' + daysWord(left) : (left === 0 ? 'dnes' : (left === -1 ? 'před 1 dnem' : 'před ' + (-left) + ' dny'));
+            const start = new Date(p.splatnost + 'T12:00:00');
+            start.setDate(start.getDate() - MATURITY_DAYS);
+            return { text: 'Splatnost úvěru ' + fmtDay(p.splatnost) + ' (' + when + ')', since: dayIso(start) };
+        }
+    }
+    if (p.typ === 'zprostredkovatel' && state.casesOk) {
+        const st = partnerStats(p);
+        if (st.total > 0 && st.recent === 0 && st.lastDay) {
+            return { text: daysBetween(st.lastDay, today) + ' dní bez nového případu', since: '' };
+        }
+    }
+    return null;
+}
+
+// ---- Zápis vazeb ----
+async function addLink(personId, caseId, vztah) {
+    const dup = state.links.some(function (l) { return l.clovek_id === personId && l.pripad_id === caseId && l.vztah === vztah; });
+    if (dup) return null;
+    const row = { id: genId('v'), vytvoreno: nowIso(), clovek_id: personId, pripad_id: caseId, vztah: vztah };
+    await sheetsAppend(TAB_VAZBY, [objectToRow(row, state.headers[TAB_VAZBY] || VAZBY_HEADER)]);
+    state.links.push(row);
+    return row;
+}
+async function removeLinks(ids) {
+    if (!ids || ids.length === 0) return;
+    await deleteRowsByIds(TAB_VAZBY, ids);
+    const gone = {};
+    ids.forEach(function (i) { gone[i] = true; });
+    state.links = state.links.filter(function (l) { return !gone[l.id]; });
+}
+function linkError(elId, e) {
+    console.error(e);
+    showErr(elId, e.isAuth ? e.message : 'Uložení se nepovedlo. Zkuste to znovu. (' + e.message + ')', e);
+}
+
+// ---- Karta člověka: jeho případy ----
+function cardCasesHtml(p) {
+    const items = personCases(p);
+    if (!state.casesOk && items.length === 0) return '';
+    let html = '';
+    if (p.typ === 'zprostredkovatel') {
+        const st = partnerStats(p);
+        if (st.total > 0) html += '<div class="muted" style="margin-bottom:8px">' + escapeHtml(statsText(st)) + '</div>';
+    }
+    if (items.length === 0) {
+        html += '<span class="muted">Zatím žádný.</span>';
+    } else {
+        html += '<ul class="tl">' + items.map(function (it) {
+            const c = it.c;
+            const detail = c ? [caseStatus(c), fmtMoney(caseAmount(c), c.mena)].filter(Boolean).join(' · ') : '';
+            return '<li><span class="tl-date">' + escapeHtml(c ? fmtDay(caseDay(c)) : '') + '</span><span class="tl-text"><span class="tl-kind">' +
+                escapeHtml(c ? c.nazev : 'Případ teď v Dashboardu není vidět') + '</span>' + (detail ? ' · ' + escapeHtml(detail) : '') + '</span>' +
+                '<button type="button" class="hist-del" data-act="case-unlink" data-id="' + escapeHtml(it.link.id) +
+                '" title="Zrušit přiřazení" aria-label="Zrušit přiřazení">×</button></li>';
+        }).join('') + '</ul>';
+    }
+    html += state.casesOk
+        ? '<div class="log-btns"><button type="button" class="btn btn-secondary btn-sm" data-act="case-open">Přiřadit případ</button></div>'
+        : '<div class="muted" style="margin-top:6px">Dashboard teď nejde načíst. Přiřadit další případ půjde, až se načte.</div>';
+    return html;
+}
+
+// ---- Okno: přiřadit případy člověku (otevírá se z karty) ----
+const casePick = { personId: null, busy: false };
+// Je v textu dané jméno jako slovo? Musí začínat na začátku slova a smí mít nejvýš tři písmena
+// koncovky („od Nováka“ najde Nováka, ale „Beta“ nenajde příjmení Éta).
+function hasWord(hay, needle) {
+    if (!needle || needle.length < 3) return false;
+    const alnum = /[a-z0-9]/;
+    let i = hay.indexOf(needle);
+    while (i !== -1) {
+        const startsWord = i === 0 || !alnum.test(hay.charAt(i - 1));
+        if (startsWord) {
+            let extra = 0, j = i + needle.length;
+            while (j < hay.length && alnum.test(hay.charAt(j))) { extra++; j++; }
+            if (extra <= 3) return true;
+        }
+        i = hay.indexOf(needle, i + 1);
+    }
+    return false;
+}
+function caseMatchScore(c, p) {
+    const ico = String(p.ico || '').replace(/\D/g, '');
+    if (ico && String(c.ico || '').replace(/\D/g, '') === ico) return 2;
+    const hay = norm([c.nazev, c.klient, c.zdroj, c.kontakt_jmeno].join(' '));
+    return (hasWord(hay, norm(p.prijmeni)) || hasWord(hay, normFirm(p.firma))) ? 1 : 0;
+}
+function renderCasePicker() {
+    const p = findPerson(casePick.personId);
+    if (!p) { closeModal('caseModal'); return; }
+    const isClient = p.typ === 'klient';
+    const q = norm($('case-q').value);
+    const mine = {};
+    linksOf(p.id).forEach(function (l) { mine[l.pripad_id] = l; });
+    const broughtBy = {};
+    if (!isClient) {
+        state.links.forEach(function (l) {
+            if (l.vztah === 'privedl' && l.clovek_id !== p.id) broughtBy[l.pripad_id] = findPerson(l.clovek_id);
+        });
+    }
+    let list = state.cases.filter(function (c) { return c.vysledek !== 'slouceno' || mine[c.id]; })
+        .map(function (c) { return { c: c, score: caseMatchScore(c, p) }; });
+    if (q) {
+        list = list.filter(function (x) {
+            return norm([x.c.nazev, x.c.klient, x.c.zdroj, x.c.ico].join(' ')).indexOf(q) !== -1;
+        });
+    }
+    list.sort(function (a, b) {
+        return ((mine[b.c.id] ? 1 : 0) - (mine[a.c.id] ? 1 : 0)) || (b.score - a.score) ||
+            String(b.c.vytvoreno).localeCompare(String(a.c.vytvoreno));
+    });
+    const total = list.length;
+    list = list.slice(0, CASE_PAGE);
+    $('case-rows').innerHTML = total === 0
+        ? '<tr><td colspan="4" class="cell-s">' + (state.cases.length === 0 ? 'V Dashboardu zatím žádný případ není.' : 'Žádný případ neodpovídá hledání.') + '</td></tr>'
+        : list.map(function (x) {
+            const c = x.c;
+            const sub = [c.klient, c.zdroj ? 'zdroj: ' + c.zdroj : '', fmtMoney(caseAmount(c), c.mena)].filter(Boolean).join(' · ');
+            let act;
+            if (mine[c.id]) {
+                act = '<button type="button" class="btn btn-ghost btn-sm" data-act="case-unlink" data-id="' + escapeHtml(mine[c.id].id) + '">Odebrat</button>';
+            } else if (broughtBy[c.id]) {
+                act = '<span class="cell-s">přivedl ' + escapeHtml(fullName(broughtBy[c.id])) + '</span>';
+            } else {
+                act = '<button type="button" class="btn btn-secondary btn-sm" data-act="case-link" data-id="' + escapeHtml(c.id) + '">Přiřadit</button>';
+            }
+            return '<tr><td>' + escapeHtml(c.nazev) + (mine[c.id] ? ' <span class="pill mail-on">přiřazeno</span>'
+                    : (x.score > 0 ? ' <span class="pill draft">návrh</span>' : '')) +
+                (sub ? '<span class="p-firm">' + escapeHtml(sub) + '</span>' : '') + '</td>' +
+                '<td class="cell-s">' + escapeHtml(caseStatus(c)) + '</td>' +
+                '<td class="cell-s">' + escapeHtml(fmtDay(caseDay(c))) + '</td>' +
+                '<td class="td-acts">' + act + '</td></tr>';
+        }).join('');
+    $('case-note').textContent = total > CASE_PAGE ? 'Zobrazeno prvních ' + CASE_PAGE + ' z ' + total + '. Zpřesněte hledání.' : '';
+}
+function openCasePicker() {
+    const p = findPerson(state.ui.openId);
+    if (!p || !state.casesOk) return;
+    casePick.personId = p.id;
+    $('case-title').textContent = 'Případy: ' + fullName(p);
+    $('case-lead').textContent = p.typ === 'klient'
+        ? 'Vyberte případy z Dashboardu, které patří tomuto klientovi. Návrhy jsou podle IČO, firmy a jména.'
+        : 'Vyberte případy z Dashboardu, které tento partner přivedl. Návrhy jsou podle pole „Zdroj poptávky“.';
+    $('case-q').value = '';
+    $('case-err').textContent = '';
+    renderCasePicker();
+    openModal('caseModal');
+    setTimeout(function () { $('case-q').focus(); }, 30);
+}
+async function caseLink(caseId) {
+    const p = findPerson(casePick.personId);
+    if (!p || casePick.busy || !findCase(caseId)) return;
+    casePick.busy = true;
+    try {
+        const vztah = p.typ === 'klient' ? 'klient' : 'privedl';
+        await addLink(p.id, caseId, vztah);
+        // Partner je přiřazený, značka „bez partnera“ u případu už neplatí
+        if (vztah === 'privedl') {
+            await removeLinks(state.links.filter(function (l) { return l.pripad_id === caseId && l.vztah === 'bez_partnera'; })
+                .map(function (l) { return l.id; }));
+        }
+        $('case-err').textContent = '';
+        renderCasePicker();
+        renderAll();
+    } catch (e) { linkError('case-err', e); }
+    finally { casePick.busy = false; }
+}
+// Zrušení přiřazení: z okna i přímo z karty
+async function caseUnlink(linkId) {
+    if (casePick.busy) return;
+    casePick.busy = true;
+    const inPicker = $('caseModal').classList.contains('show');
+    try {
+        await removeLinks([linkId]);
+        if (inPicker) renderCasePicker();
+        renderAll();
+        if (!inPicker) showToast('Přiřazení zrušeno.');
+    } catch (e) {
+        if (inPicker) linkError('case-err', e);
+        else { console.error(e); showToast(e.isAuth ? e.message : 'Nepodařilo se: ' + e.message, 'error'); }
+    } finally { casePick.busy = false; }
+}
+
+// ---- Případy, u kterých chybí, kdo je přivedl (jen ty, které už prošly oceněním, nebo jsou vyplacené) ----
+function unassignedCases() {
+    if (!state.casesOk) return [];
+    const done = {};
+    state.links.forEach(function (l) { if (l.vztah === 'privedl' || l.vztah === 'bez_partnera') done[l.pripad_id] = true; });
+    return state.cases.filter(function (c) {
+        if (done[c.id]) return false;
+        return (c.stav !== 'uzavreno' && PIPELINE_FAZE[c.faze]) || (c.stav === 'uzavreno' && c.vysledek === 'vyplaceno');
+    }).sort(function (a, b) { return String(b.vytvoreno).localeCompare(String(a.vytvoreno)); });
+}
+function renderAssignBar() {
+    const bar = $('assign-bar');
+    const n = state.ui.tab === 'dnes' ? unassignedCases().length : 0;
+    bar.innerHTML = '';
+    if (n === 0) { bar.classList.remove('show'); return; }
+    const span = document.createElement('span');
+    span.textContent = 'Na Dashboardu ' + plural(n, 'je', 'jsou', 'je') + ' ' + n + ' ' + plural(n, 'případ', 'případy', 'případů') +
+        ' bez přiřazeného partnera.';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn btn-secondary btn-sm';
+    b.textContent = 'Přiřadit partnery';
+    b.setAttribute('data-act', 'assign-open');
+    bar.appendChild(span);
+    bar.appendChild(b);
+    bar.classList.add('show');
+}
+const assign = { opts: [], busy: false };
+// Nabídka partnerů pro našeptávač: každý popisek jen jednou
+function partnerOptions() {
+    const seen = {};
+    return state.people.filter(function (p) { return p.typ === 'zprostredkovatel'; }).sort(byNameCmp).map(function (p) {
+        const base = [p.prijmeni, p.jmeno].map(function (x) { return String(x || '').trim(); }).filter(Boolean).join(' ') +
+            (String(p.firma || '').trim() ? ' · ' + String(p.firma).trim() : '');
+        let label = base, k = 2;
+        while (seen[label]) label = base + ' (' + (k++) + ')';
+        seen[label] = true;
+        return { id: p.id, label: label };
+    });
+}
+// Když pole „Zdroj poptávky“ ukazuje právě na jednoho partnera, nabídne se předem
+function suggestPartner(c) {
+    const hay = norm(c.zdroj);
+    if (hay.length < 3) return null;
+    const hits = state.people.filter(function (p) {
+        return p.typ === 'zprostredkovatel' && (hasWord(hay, norm(p.prijmeni)) || hasWord(hay, normFirm(p.firma)));
+    });
+    return hits.length === 1 ? hits[0] : null;
+}
+function renderAssign() {
+    const list = unassignedCases();
+    assign.opts = partnerOptions();
+    const dl = $('partners-dl');
+    dl.innerHTML = '';
+    assign.opts.forEach(function (o) {
+        const opt = document.createElement('option');
+        opt.value = o.label;
+        dl.appendChild(opt);
+    });
+    $('assign-rows').innerHTML = list.length === 0
+        ? '<tr><td colspan="3" class="cell-s">Všechny případy mají partnera přiřazeného.</td></tr>'
+        : list.map(function (c) {
+            const sug = suggestPartner(c);
+            const sugOpt = sug ? assign.opts.find(function (o) { return o.id === sug.id; }) : null;
+            const sub = [caseStatus(c), c.zdroj ? 'zdroj: ' + c.zdroj : 'zdroj neuveden'].join(' · ');
+            const id = escapeHtml(c.id);
+            return '<tr><td>' + escapeHtml(c.nazev) + '<span class="p-firm">' + escapeHtml(sub) + '</span></td>' +
+                '<td><input type="text" class="input" list="partners-dl" data-assign="' + id + '" value="' + escapeHtml(sugOpt ? sugOpt.label : '') +
+                '" placeholder="jméno partnera" autocomplete="off"></td>' +
+                '<td class="td-acts"><button type="button" class="btn btn-secondary btn-sm" data-act="assign-save" data-id="' + id + '">Přiřadit</button> ' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-act="assign-none" data-id="' + id + '">Bez partnera</button></td></tr>';
+        }).join('');
+}
+function openAssign() {
+    if (!state.casesOk) return;
+    $('assign-err').textContent = '';
+    renderAssign();
+    openModal('assignModal');
+}
+function assignInput(caseId) {
+    const inputs = document.querySelectorAll('#assign-rows input[data-assign]');
+    for (let i = 0; i < inputs.length; i++) if (inputs[i].getAttribute('data-assign') === caseId) return inputs[i];
+    return null;
+}
+async function assignSave(caseId, none) {
+    if (assign.busy || !findCase(caseId)) return;
+    let personId = '';
+    if (!none) {
+        const inp = assignInput(caseId);
+        const typed = inp ? inp.value.replace(/\s+/g, ' ').trim() : '';
+        if (!typed) { $('assign-err').textContent = 'Napiš jméno partnera a vyber ho z nabídky.'; return; }
+        let hit = assign.opts.filter(function (o) { return o.label === typed; });
+        if (hit.length === 0) hit = assign.opts.filter(function (o) { return norm(o.label).indexOf(norm(typed)) !== -1; });
+        if (hit.length !== 1) {
+            $('assign-err').textContent = hit.length === 0
+                ? 'Partner „' + typed + '“ v CRM není. Nejdřív ho přidejte mezi zprostředkovatele.'
+                : 'Tomu odpovídá víc partnerů. Vyber jednoho z nabídky.';
+            return;
+        }
+        personId = hit[0].id;
+    }
+    assign.busy = true;
+    try {
+        await addLink(personId, caseId, none ? 'bez_partnera' : 'privedl');
+        $('assign-err').textContent = '';
+        renderAssign();
+        renderAll();
+    } catch (e) { linkError('assign-err', e); }
+    finally { assign.busy = false; }
+}
+
+// ============================================================
+// PŘEVZETÍ KONTAKTU Z DATABASE (etapa 3)
+// Database po kliknutí na „Do CRM“ uloží údaje kontaktu do localStorage (klíč crm-handoff, platnost
+// 10 minut, stejný princip jako dashboard-bridge.js) a otevře CRM. CRM si je jednou převezme
+// a otevře předvyplněný formulář; kartu uloží až Martin. V ukázce se úložiště prohlížeče nečte.
+// ============================================================
+const HANDOFF_KEY = 'crm-handoff';
+const HANDOFF_TTL = 10 * 60 * 1000;
+function takeHandoff() {
+    if (DEMO) return null;
+    try {
+        const raw = localStorage.getItem(HANDOFF_KEY);
+        if (!raw) return null;
+        localStorage.removeItem(HANDOFF_KEY);
+        const h = JSON.parse(raw);
+        if (!h || !h.ts || (Date.now() - h.ts) > HANDOFF_TTL || !h.data || typeof h.data !== 'object') return null;
+        return h.data;
+    } catch (e) { return null; }
+}
+async function erasedBefore(person) {
+    if (state.stubs.length === 0) return false;
+    const fp = await fingerprints(person);
+    return state.stubs.some(function (s) {
+        return (fp.otisk_email && s.otisk_email === fp.otisk_email) || (fp.otisk_telefon && s.otisk_telefon === fp.otisk_telefon) ||
+            (fp.otisk_jmeno && s.otisk_jmeno === fp.otisk_jmeno);
+    });
+}
+async function applyHandoff(d) {
+    if (!d || typeof d !== 'object') return;
+    const s = function (v, max) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max || 200); };
+    const nm = splitName(s(d.kontaktniOsoba));
+    const extId = /^db:[\w-]{1,80}$/.test(String(d.ext_id || '')) ? String(d.ext_id) : '';
+    const person = {
+        titul: nm.titul, jmeno: nm.jmeno, prijmeni: nm.prijmeni, firma: s(d.firma), ico: s(d.ico, 20).replace(/\s/g, ''),
+        sidlo: s(d.sidlo), funkce: s(d.role), email: s(d.email).replace(/\s/g, ''), telefon: s(d.telefon, 40),
+        linkedin: safeUrl(s(d.linkedinUrl, 300)), poznamka: String(d.poznamka == null ? '' : d.poznamka).trim().slice(0, 2000)
+    };
+    if (!person.jmeno && !person.prijmeni) {
+        showToast('Kontakt z Database nemá jméno, kartu nejde předvyplnit.', 'warn');
+        return;
+    }
+    const dup = findDuplicates({ email: isValidEmail(person.email) ? person.email : '', ext_id: extId }, null);
+    if (dup.certain) {
+        openCard(dup.certain.id);
+        showToast('Tento člověk už v CRM je. Otevírám jeho kartu.');
+        return;
+    }
+    const isClient = s(d.typ) === 'Klient';
+    if (state.ui.tab !== 'dnes') switchTab('dnes');
+    openForm(null);
+    form.extId = extId;
+    Object.keys(person).forEach(function (k) { if (FORM_FIELDS[k]) $(FORM_FIELDS[k]).value = person[k] || ''; });
+    setSelect('p-typ', isClient ? 'klient' : 'zprostredkovatel');
+    toggleFormType();
+    setSelect('p-zdroj', 'database');
+    applySourceDefaults();
+    if (isClient && s(d.stav) === 'Klient') setSelect('p-stav-k', 'klient');
+    $('form-title').textContent = 'Přidat člověka z Database';
+    let warned = false;
+    try { warned = await erasedBefore(person); } catch (e) { warned = false; }
+    if (warned) formError('Pozor: tohoto člověka jste dříve z CRM vymazal. Uložte ho jen tehdy, když ho v CRM opravdu chcete.');
+    showToast('Kontakt z Database je předvyplněný. Zkontrolujte ho a uložte.');
+}
+
+// ============================================================
 // UKÁZKOVÁ DATA (jen místní náhled) — vymyšlení lidé, zapsaní stejnou cestou jako skuteční
 // ============================================================
 async function seedDemo() {
@@ -3004,7 +5756,7 @@ async function seedDemo() {
     const shift = function (days) { const d = new Date(today); d.setDate(d.getDate() + days); return dayIso(d); };
     const base = { dulezitost: 'B', emaily: 'posilat', zdroj: 'telefon', stav: 'v_kontaktu' };
     const mk = function (o) { return Object.assign({}, base, o); };
-    await addPeople([
+    const added = await addPeople([
         mk({ typ: 'zprostredkovatel', jmeno: 'Adam', prijmeni: 'Alfa', firma: 'Finance Alfa s.r.o.', funkce: 'jednatel',
             role: 'Úvěrový nebo finanční poradce', telefon: '+420 700 000 001', email: 'adam.alfa@example.cz', dulezitost: 'A',
             stav: 'posila_pripady', dalsi_krok: 'Poslat seznam podkladů', dalsi_krok_termin: shift(-2), posledni_kontakt: shift(-6) }),
@@ -3030,6 +5782,62 @@ async function seedDemo() {
         mk({ typ: 'klient', jmeno: 'Ivan', prijmeni: 'Ióta', firma: 'Ióta Reality s.r.o.', obor: 'Nemovitosti a SPV',
             telefon: '+420 700 000 009', email: '', stav: 'byvaly', dulezitost: 'C' })
     ], 'Ukázkový záznam');
+    // Pár vymyšlených záznamů v historii, ať je v ukázce vidět karta i upozornění u rozesílky
+    const idOf = {};
+    added.forEach(function (p) { idOf[p.prijmeni] = p.id; });
+    const h = function (who, days, typ, text, davka) {
+        return { id: genId('h'), clovek_id: idOf[who], datum: shift(days) + 'T12:00:00', typ: typ, text: text, davka_id: davka || '' };
+    };
+    await appendHistory([
+        h('Alfa', -6, 'telefon', 'Probrali jsme nový případ'),
+        h('Beta', -34, 'schuzka', 'Oběd, představení nabídky'),
+        h('Gama', -9, 'email', 'Poslána indikativní nabídka'),
+        h('Alfa', -12, 'hromadny_email', 'Říjnový přehled', 'd_ukazka'),
+        h('Beta', -12, 'hromadny_email', 'Říjnový přehled', 'd_ukazka')
+    ]);
+    // Dva vymyšlené seznamy: jeden podle filtrů, jeden ruční
+    const stamp = nowIso();
+    const demoLists = [
+        { id: genId('s'), vytvoreno: stamp, aktualizovano: stamp, nazev: 'Partneři, měsíční přehled', druh: 'pravidlo',
+            pravidlo: JSON.stringify({ typ: 'zprostredkovatel', dulezitost: '', stav: '', role: '', obor: '' }), clenove: '[]',
+            posledni_rozesilka: shift(-12) },
+        { id: genId('s'), vytvoreno: stamp, aktualizovano: stamp, nazev: 'Pozvaní na snídani', druh: 'rucni', pravidlo: '',
+            clenove: JSON.stringify([idOf['Alfa'], idOf['Gama']]), posledni_rozesilka: '' }
+    ];
+    await sheetsAppend(TAB_SEZN, demoLists.map(function (l) { return objectToRow(l, state.headers[TAB_SEZN] || SEZN_HEADER); }));
+    demoLists.forEach(function (l) { state.lists.push(l); });
+
+    // Vymyšlený Dashboard (druhá tabulka nanečisto, jen v paměti stránky) a pár vazeb na případy
+    const dashHead = ['id', 'vytvoreno', 'aktualizovano', 'nazev', 'klient', 'ico', 'kontakt_jmeno', 'kontakt_telefon', 'kontakt_email',
+        'zdroj', 'castka', 'mena', 'ucel', 'faze', 'ci_tah', 'dalsi_krok', 'termin', 'pozastaveno', 'stav', 'vysledek',
+        'duvod_uzavreni', 'datum_uzavreni', 'nemovitosti_json', 'poznamka', 'poradi'];
+    const dc = function (id, days, nazev, klient, zdroj, castka, faze, stav, vysledek) {
+        const o = { id: id, vytvoreno: shift(days) + 'T09:00:00.000Z', aktualizovano: shift(days) + 'T09:00:00.000Z', nazev: nazev,
+            klient: klient, zdroj: zdroj, castka: castka, mena: 'CZK', faze: faze, ci_tah: 'ja', stav: stav, vysledek: vysledek || '',
+            nemovitosti_json: '[]', poradi: '10' };
+        return dashHead.map(function (k) { return o[k] == null ? '' : String(o[k]); });
+    };
+    fakeGoogle.books.sheet_dash_ukazka = { title: DASH_SHEET_TITLE, sheets: [{ sheetId: 9001, title: DASH_TAB, rowCount: 1000, columnCount: 26,
+        values: [dashHead,
+            dc('case_u1', -10, 'Skladová hala Kolín, 11/2026', 'Gama Invest s.r.o.', 'Alfa (poradce)', '20000000', 'termsheet', 'aktivni'),
+            dc('case_u2', -95, 'Bytový dům Brno, 08/2026', 'Sklady Éta a.s.', 'Adam Alfa', '12000000', 'uzavreno', 'uzavreno', 'vyplaceno'),
+            dc('case_u3', -120, 'Kanceláře Plzeň, 07/2026', '', 'Beta', '8000000', 'uzavreno', 'uzavreno', 'zamitnuto'),
+            dc('case_u4', -3, 'Pozemek Říčany, 11/2026', '', '', '', 'oceneni', 'aktivni'),
+            dc('case_u5', -20, 'Výrobní areál Jihlava, 10/2026', '', 'Makléři Delta', '15000000', 'provereni', 'aktivni'),
+            dc('case_u6', -40, 'Polyfunkční dům Liberec, 09/2026', '', '', '9000000', 'dokumentace', 'aktivni'),
+            dc('case_u7', -130, 'Kanceláře Plzeň (duplicitní záznam)', '', 'Beta', '8000000', 'uzavreno', 'uzavreno', 'slouceno')] }] };
+    store.set(DASH_SHEET_KEY, 'sheet_dash_ukazka');   // v ukázce jen paměť stránky, ne úložiště prohlížeče
+    const dl = function (who, caseId, vztah) {
+        return { id: genId('v'), vytvoreno: stamp, clovek_id: idOf[who], pripad_id: caseId, vztah: vztah };
+    };
+    const demoLinks = [dl('Alfa', 'case_u1', 'privedl'), dl('Alfa', 'case_u2', 'privedl'), dl('Beta', 'case_u3', 'privedl'),
+        dl('Gama', 'case_u1', 'klient')];
+    await sheetsAppend(TAB_VAZBY, demoLinks.map(function (l) { return objectToRow(l, state.headers[TAB_VAZBY] || VAZBY_HEADER); }));
+    demoLinks.forEach(function (l) { state.links.push(l); });
+    // Jedna klientka s blížící se splatností úvěru
+    const eta = added.find(function (p) { return p.prijmeni === 'Éta'; });
+    if (eta) await updatePerson(eta.id, { splatnost: shift(45) });
+    await loadCases();
 }
 
 // ============================================================
@@ -3073,6 +5881,79 @@ const ACTIONS = {
         const id = el.getAttribute('data-modal');
         closeModal(id);
         if (id === 'formModal' && state.ui.editId) { const back = state.ui.editId; state.ui.editId = null; openCard(back); }
+    },
+    // ---- Dnes, zápis kontaktu, odložení ----
+    'dnes-more': function () { state.ui.extraSlots += 5; renderDnes(); },
+    'log-open': function (el, e) {
+        if (e) e.stopPropagation();
+        openLog(el.getAttribute('data-id'), el.getAttribute('data-typ'));
+    },
+    'log-quick': function (el) {
+        $('log-termin').value = shiftDay(parseInt(el.getAttribute('data-days'), 10) || 1);
+        if (!$('log-krok').value.trim()) $('log-krok').focus();
+    },
+    'log-save': function () { saveLog(); },
+    'hist-del': function (el) { deleteHistoryEntry(el.getAttribute('data-id')); },
+    'snooze-open': function (el) { openSnooze(el.getAttribute('data-id'), el.getAttribute('data-kind')); },
+    'snooze-pick': function (el) { doSnooze(shiftDay(parseInt(el.getAttribute('data-days'), 10) || 1)); },
+    'snooze-save': function () { doSnooze($('snooze-den').value); },
+    // ---- Rozesílka ----
+    'copy-open': function () { openCopy(); },
+    'copy-part': function (el) { copyPart(parseInt(el.getAttribute('data-part'), 10) || 0); },
+    'copy-skip-recent': function () {
+        copy.rows.forEach(function (r) { if (!r.reason && r.recent) r.checked = false; });
+        copySelectionChanged();
+    },
+    'copy-sentence': function () { copySentence(); },
+    'copy-done': function () { copyDone(); },
+    'copy-drop': function () { copyDrop(); },
+    'pending-open': function () { openPending(); },
+    // ---- Nastavení a záloha ----
+    'settings-open': function () { openSettings(); },
+    'settings-save': function () { saveSettingsForm(); },
+    'backup': function () { downloadBackup(); },
+    // ---- Případy z Dashboardu (etapa 3) ----
+    'case-open': function () { openCasePicker(); },
+    'case-link': function (el) { caseLink(el.getAttribute('data-id')); },
+    'case-unlink': function (el) { caseUnlink(el.getAttribute('data-id')); },
+    'assign-open': function () { openAssign(); },
+    'assign-save': function (el) { assignSave(el.getAttribute('data-id'), false); },
+    'assign-none': function (el) { assignSave(el.getAttribute('data-id'), true); },
+    // ---- Seznamy příjemců (etapa 2) ----
+    'list-new': function () { openListForm(null); },
+    'list-save-as': function () { openListFromFilters(); },
+    'list-mail': function (el) { const l = findList(el.getAttribute('data-id')); if (l) openCopy(l); },
+    'list-edit': function (el) { const l = findList(el.getAttribute('data-id')); if (l) openListForm(l); },
+    'list-kind': function (el) { listKind(el.getAttribute('data-val')); },
+    'list-add': function (el) {
+        const id = el.getAttribute('data-id');
+        if (listForm.members.indexOf(id) === -1) listForm.members.push(id);
+        $('l-q').value = '';
+        renderListMembers();
+        $('l-q').focus();
+    },
+    'list-remove': function (el) {
+        const id = el.getAttribute('data-id');
+        listForm.members = listForm.members.filter(function (x) { return x !== id; });
+        renderListMembers();
+    },
+    'list-save': function () { saveList(); },
+    'list-delete': function () { deleteList(); },
+    'list-toggle': function (el) { toggleMember(el.getAttribute('data-list'), state.ui.openId); },
+    // ---- Předlohy, koncept pro Outlook, tabulka pro hromadnou korespondenci, oslovení (etapa 2) ----
+    'tpl-pick': function (el) { pickTemplate(el.getAttribute('data-id') || ''); },
+    'tpl-save-as': function () { saveTemplateAs(); },
+    'tpl-save': function () { saveTemplate(); },
+    'tpl-delete': function () { deleteTemplate(); },
+    'draft-make': function () { makeDraft(); },
+    'merge-make': function () { makeMerge(false); },
+    'merge-force': function () { makeMerge(true); },
+    'sal-open': function () { openSal(); },
+    'sal-save': function () { saveSal(); },
+    'sal-suggest': function () {
+        const s = suggestSalutation({ jmeno: $('p-jmeno').value, prijmeni: $('p-prijmeni').value });
+        if (s) $('p-osloveni').value = s;
+        else showToast('Oslovení se z tohoto jména odhadnout nedá. Napište ho ručně.', 'warn');
     },
     'import-open': function () { impOpen(); },
     'imp-src': function (el) { if (imp.step === 1) { imp.source = el.getAttribute('data-src'); impError(''); renderImport(); } },
@@ -3149,7 +6030,7 @@ function wireEvents() {
     });
 
     // Zavření kliknutím vedle a klávesou Escape jen u oken, kde se nedá ztratit rozepsaná práce
-    const SOFT = ['eraseModal', 'mailModal', 'cardModal'];
+    const SOFT = ['snoozeModal', 'eraseModal', 'mailModal', 'caseModal', 'assignModal', 'cardModal'];
     document.querySelectorAll('.modal-overlay').forEach(function (ov) {
         ov.addEventListener('mousedown', function (e) {
             if (e.target === ov && SOFT.indexOf(ov.id) !== -1) closeModal(ov.id);
@@ -3157,12 +6038,41 @@ function wireEvents() {
     });
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape' || $('confirmModal').classList.contains('show')) return;
-        for (let i = 0; i < SOFT.length; i++) {
-            if ($(SOFT[i]).classList.contains('show')) { closeModal(SOFT[i]); return; }
-        }
+        // Zavírá se jen okno, které je navrchu. Je-li navrchu okno s rozepsanou prací, Escape nedělá nic
+        // (jinak by se pod ním zavřela karta).
+        const open = document.querySelectorAll('.modal-overlay.show');
+        if (open.length === 0) return;
+        const top = open[open.length - 1].id;
+        if (SOFT.indexOf(top) !== -1) closeModal(top);
     });
     $('formModal').addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); savePerson(); }
+    });
+    $('logModal').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); saveLog(); }
+    });
+    $('copy-rows').addEventListener('change', function (e) {
+        const t = e.target;
+        if (!t.hasAttribute('data-copy')) return;
+        const r = copy.rows[parseInt(t.getAttribute('data-copy'), 10)];
+        if (r) { r.checked = t.checked; copySelectionChanged(); }
+    });
+    // Okno seznamu: změna filtrů přepočítá náhled, psaní do hledání nabídne lidi
+    $('l-typ').addEventListener('change', function () { toggleListType(); renderListPreview(); });
+    ['l-dulezitost', 'l-stav-z', 'l-stav-k', 'l-role', 'l-obor'].forEach(function (id) {
+        $(id).addEventListener('change', renderListPreview);
+    });
+    $('l-q').addEventListener('input', debounce(renderListSuggest, 120));
+    $('case-q').addEventListener('input', debounce(renderCasePicker, 120));
+    // Enter v poli se jménem partnera rovnou přiřadí
+    $('assign-rows').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target.hasAttribute('data-assign')) {
+            e.preventDefault();
+            assignSave(e.target.getAttribute('data-assign'), false);
+        }
+    });
+    $('l-nazev').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); saveList(); }
     });
 
     $('q').addEventListener('input', debounce(renderList, 120));
@@ -3235,7 +6145,18 @@ document.addEventListener('DOMContentLoaded', function () {
 if (DEMO) {
     window.__crm = { state: state, imp: imp, parseCsv: parseCsv, detectDelimiter: detectDelimiter, decodeBytes: decodeBytes,
         splitName: splitName, normPhone: normPhone, findDuplicates: findDuplicates, fingerprints: fingerprints,
-        daysBetween: daysBetween, reloadData: reloadData };
+        daysBetween: daysBetween, reloadData: reloadData,
+        computeDnes: computeDnes, mailBlockReason: mailBlockReason, mailableCount: mailableCount, histDay: histDay,
+        pendingBatch: pendingBatch, copy: copy, log: log, setNum: setNum, setText: setText,
+        saveSettings: saveSettings, buildBackup: buildBackup, shiftDay: shiftDay,
+        // etapa 2
+        listPeople: listPeople, matchRule: matchRule, ruleText: ruleText, listStats: listStats,
+        suggestSalutation: suggestSalutation, vocWord: vocWord, guessGender: guessGender,
+        buildDraftEml: buildDraftEml, buildMailHtml: buildMailHtml, buildMailText: buildMailText,
+        buildMergeWorkbook: buildMergeWorkbook, compose: compose, listForm: listForm, patchPeopleBulk: patchPeopleBulk,
+        // etapa 3
+        applyHandoff: applyHandoff, partnerStats: partnerStats, eventTrigger: eventTrigger, unassignedCases: unassignedCases,
+        loadCases: loadCases, form: form };
 }
 
 })();

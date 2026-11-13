@@ -2502,6 +2502,7 @@
     <div class="detail-foot">
         <div class="detail-foot-left">
             <button class="btn btn-secondary" id="btn-delete" onclick="deleteContact()" style="color:var(--danger);border-color:var(--danger);display:none;">Smazat</button>
+            <button class="btn btn-secondary" id="btn-crm" onclick="sendToCrm(state.selectedId)" style="display:none;" title="Otevře CRM s předvyplněnou kartou tohoto člověka. V Database se nic nemění.">Do CRM</button>
         </div>
         <div class="detail-foot-right">
             <button class="btn btn-secondary" onclick="closeDetail()">Zavřít</button>
@@ -4145,6 +4146,7 @@ function openNewContact() {
     state.selectedId = null;
     document.getElementById('detail-title').textContent = 'Nový kontakt';
     document.getElementById('btn-delete').style.display = 'none';
+    document.getElementById('btn-crm').style.display = 'none';
     document.getElementById('form-meta').style.display = 'none';
     resetForm();
     populateSegmentSelect('f-segment');
@@ -4157,6 +4159,7 @@ function openEditContact(id) {
     state.selectedId = id;
     document.getElementById('detail-title').textContent = c.kontaktniOsoba || c.firma || 'Kontakt';
     document.getElementById('btn-delete').style.display = 'inline-flex';
+    document.getElementById('btn-crm').style.display = 'inline-flex';
     document.getElementById('form-meta').style.display = 'block';
     populateSegmentSelect('f-segment');
     populateForm(c);
@@ -7741,6 +7744,44 @@ function openSheetInDrive() {
 }
 
 // ============================================================
+// PŘEDÁNÍ KONTAKTU DO CRM
+// Kdo se ozval, patří do CRM (crm.html). Tlačítko „Do CRM“ předá údaje přes localStorage
+// (stejný princip jako dashboard-bridge.js: jednorázově, platnost 10 minut) a otevře CRM
+// v nové záložce, kde se objeví předvyplněná karta. V Database se nic nemění ani neukládá.
+// ============================================================
+const CRM_HANDOFF_KEY = 'crm-handoff';
+function sendToCrm(id) {
+    const c = state.contacts.find(x => x.id === id);
+    if (!c) return;
+    if (String(c.linkedinStav || '') === 'Vymazáno' || String(c.neoslovovat || '').trim()) {
+        toast('warning', 'Tento kontakt je označený „neoslovovat“ nebo má vymazané údaje. Do CRM ho předat nejde.');
+        return;
+    }
+    if (['Reaguje', 'Partner', 'Klient'].indexOf(String(c.stav || '')) === -1) {
+        toast('warning', 'Do CRM patří lidé, kteří se ozvali. Nejdřív u kontaktu nastavte stav Reaguje, Partner nebo Klient a uložte ho.');
+        return;
+    }
+    if (!String(c.kontaktniOsoba || '').trim()) {
+        toast('warning', 'Kontakt nemá vyplněnou kontaktní osobu. CRM eviduje lidi, nejdřív doplňte jméno a uložte.');
+        return;
+    }
+    const data = {
+        ext_id: 'db:' + c.id,
+        kontaktniOsoba: c.kontaktniOsoba || '', role: c.role || '', firma: c.firma || '', ico: c.ico || '',
+        sidlo: c.sidlo || '', email: c.email || '', telefon: c.telefon || '', linkedinUrl: c.linkedinUrl || '',
+        poznamka: c.poznamka || '', typ: c.typ || '', stav: c.stav || ''
+    };
+    try {
+        localStorage.setItem(CRM_HANDOFF_KEY, JSON.stringify({ ts: Date.now(), data: data }));
+    } catch (e) {
+        toast('error', 'Předání do CRM se nepovedlo, prohlížeč nedovolil údaje předat.');
+        return;
+    }
+    window.open('crm.html', '_blank');
+    toast('info', 'Otevírám CRM s předvyplněnou kartou. V Database se nic nemění.');
+}
+
+// ============================================================
 // TOAST
 // ============================================================
 let toastCounter = 0;
@@ -8684,6 +8725,7 @@ function liCardHtml(c, kind) {
             (undo && undo.code === 'intro' ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + id + '\')">Vrátit představení</button>' : '');
     } else if (kind === 'odpovedel') {
         actions = '<a class="btn btn-secondary li-btn" href="' + escapeHtml(liProfileHref(c)) + '" target="_blank" rel="noopener noreferrer">Otevřít konverzaci</a>' +
+            '<button class="btn btn-ghost li-btn li-btn-small" onclick="sendToCrm(\'' + id + '\')" title="Otevře CRM s předvyplněnou kartou tohoto člověka">Do CRM</button>' +
             liNegButtons(id) +
             (undo && (undo.code === 'zajem' || undo.code === 'ozval') ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="liUndo(\'' + id + '\')">Vrátit</button>' : '');
     }
