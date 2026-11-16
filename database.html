@@ -1926,8 +1926,8 @@
         <!-- ===== SECTION: Web (oslovení firem přes kontaktní formulář nebo e-mailem) ===== -->
         <section class="db-section" data-section="web">
             <div class="info-note warning" id="web-blocker" style="display:none;"></div>
-            <div class="li-stats" id="web-stats"></div>
             <div class="web-kat" id="web-kat" style="display:none;"></div>
+            <div class="li-stats" id="web-stats"></div>
 
             <div id="web-copy-fallback" style="display:none;margin-bottom:12px;"></div>
             <div class="web-msgs" id="web-msgs"></div>
@@ -11708,13 +11708,24 @@ function renderWebToday() {
         return;
     }
     w.li = webLinkedInIndex(today);
+    // Kategorie: když seznamy obsahují i jinou kategorii než poradce, ukazuje celá záložka (počítadla, fronta i sekce pod ní)
+    // jen vybranou kategorii (Martin 16. 11. 2026: e-maily stavebním firmám nebyly v součtu se stovkami poradců vidět).
+    // Součet za všechny kategorie je v řádku u přepínače. Hledání jde dál přes všechno.
+    const viceKat = rows.some(function (r) { return r.kat !== 'poradci'; });
+    if (!viceKat && w.kat !== 'poradci') { w.kat = 'poradci'; webRenderMessages(); }
     const by = { ceka: [], cekali: [], jinde: [], odeslano: [], nejde: [], ozval: [], nezajem: [] };
+    const katCount = {}, katDnes = {};
+    Object.keys(WEB_KATEGORIE).forEach(function (key) { katCount[key] = 0; katDnes[key] = 0; });
     // „Odesláno“ = firma je zapsaná jako odeslaná (nebo už odpověděla). „Nejde“ se do odeslaných nepočítá, má vlastní počet.
     let dnes = 0, dnesNejde = 0;
     rows.forEach(function (r) {
         const st = webView(r);
+        const sentToday = (st === 'odeslano' || st === 'ozval' || st === 'nezajem') && r.datum === today;
+        if (st === 'ceka') katCount[r.kat]++;
+        if (sentToday) katDnes[r.kat]++;
+        if (viceKat && r.kat !== w.kat) return;
         by[st].push(r);
-        if ((st === 'odeslano' || st === 'ozval' || st === 'nezajem') && r.datum === today) dnes++;
+        if (sentToday) dnes++;
         if (st === 'nejde' && r.datum === today) dnesNejde++;
     });
     const sentAll = by.odeslano.length + by.ozval.length + by.nezajem.length;
@@ -11743,24 +11754,22 @@ function renderWebToday() {
     }
     srEl.innerHTML = searchHtml;
 
-    // Kategorie: přepínač se ukáže, až seznam obsahuje i jinou kategorii než poradce
-    const katCount = {};
-    Object.keys(WEB_KATEGORIE).forEach(function (key) { katCount[key] = 0; });
-    by.ceka.forEach(function (r) { katCount[r.kat]++; });
-    const viceKat = rows.some(function (r) { return r.kat !== 'poradci'; });
-    if (!viceKat && w.kat !== 'poradci') { w.kat = 'poradci'; webRenderMessages(); }
+    // Přepínač kategorií se ukáže, až seznamy obsahují i jinou kategorii než poradce. Číslo v tlačítku = kolik firem čeká.
     if (katEl) {
+        const dnesCelkem = Object.keys(katDnes).reduce(function (n, key) { return n + katDnes[key]; }, 0);
         katEl.style.display = viceKat ? 'flex' : 'none';
         katEl.innerHTML = !viceKat ? '' : '<span>Komu píšete:</span><div class="web-filters" role="group" aria-label="Kategorie firem">' +
             Object.keys(WEB_KATEGORIE).map(function (key) {
                 return '<button type="button" class="filter-pill' + (w.kat === key ? ' active' : '') + '" aria-pressed="' + (w.kat === key) + '" onclick="webSetKat(\'' + key + '\')">' +
                     WEB_KATEGORIE[key].nazev + ' ' + katCount[key] + '</button>';
             }).join('') + '</div>' +
-            '<span>' + (w.kat === 'stavebni' ? 'Zpráva představuje společnost a možnost financování.' : 'Zpráva nabízí spolupráci.') + ' Tlačítka u firmy vždy zkopírují text pro její kategorii.</span>';
+            '<span>Počítadla a seznamy níže patří jen k vybrané kategorii. Dnes odesláno celkem ' + dnesCelkem + ' (' +
+                Object.keys(WEB_KATEGORIE).map(function (key) { return WEB_KATEGORIE[key].nazev.toLowerCase() + ' ' + katDnes[key]; }).join(', ') + ').</span>';
     }
 
-    // Fronta: firmy bez stavu v pořadí ze seznamu, jen z vybrané kategorie
-    const cekaKat = by.ceka.filter(function (r) { return r.kat === w.kat; });
+    // Fronta: firmy bez stavu v pořadí ze seznamu (při více kategoriích už jen z té vybrané)
+    const cekaKat = by.ceka;
+    const jinde = Object.keys(katCount).some(function (key) { return key !== w.kat && katCount[key] > 0; });
     const fcount = { vse: cekaKat.length, form: 0, email: 0, jine: 0 };
     cekaKat.forEach(function (r) { fcount[webFilterKey(r)]++; });
     const queue = w.filter === 'vse' ? cekaKat : cekaKat.filter(function (r) { return webFilterKey(r) === w.filter; });
@@ -11780,8 +11789,8 @@ function renderWebToday() {
         (w.warn ? '<div class="li-empty li-red" style="margin-bottom:8px;">' + escapeHtml(w.warn) + '</div>' : '') +
         (shown.length ? '<div class="li-batch">' + shown.map(webQueueRowHtml).join('') + '</div>'
             : '<div class="li-empty">' + (cekaKat.length ? 'V tomto filtru už nikdo nečeká.'
-                : by.cekali.some(function (r) { return r.kat === w.kat; }) ? 'Fronta je prázdná. Další firmy přibudou, až na LinkedInu u jejich lidí kliknete „Nenašel“.'
-                : by.ceka.length ? 'V této kategorii už nikdo nečeká. Další firmy jsou v druhé kategorii nahoře.' : 'Všechny firmy ze seznamu jsou vyřízené.') + '</div>') +
+                : by.cekali.length ? 'Fronta je prázdná. Další firmy přibudou, až na LinkedInu u jejich lidí kliknete „Nenašel“.'
+                : jinde ? 'V této kategorii už nikdo nečeká. Další firmy jsou v druhé kategorii nahoře.' : 'Všechny firmy ze seznamu jsou vyřízené.') + '</div>') +
         (more > 0 ? '<div class="web-more"><strong>Dalších ' + more + ' čeká.</strong>' +
             '<button class="btn btn-secondary li-btn" onclick="webShowMore()">Zobrazit dalších ' + Math.min(25, more) + '</button></div>' : '') +
     '</div>';
