@@ -553,6 +553,10 @@
         .web-row-busy { opacity: 0.55; }
         .web-more { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; padding: 10px 14px; border: 1px solid var(--line-amber); border-radius: 8px; background: var(--amber-tint); font-size: 14px; color: var(--text); }
         .web-more strong { color: var(--amber-warm); font-weight: 600; }
+        .web-last { margin-bottom: 12px; padding: 12px 14px; border-color: var(--line-amber); border-left: 4px solid var(--amber); background: var(--amber-glow); }
+        .web-last .li-msg-head { font-size: 14px; }
+        .web-last-label { margin-right: 10px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--amber-warm); }
+        .web-last-firma { font-size: 16px; font-weight: 600; color: var(--text); }
         @media (max-width: 1100px) {
             .db-layout[data-active="linkedin"] .db-sidebar,
             .db-layout[data-active="web"] .db-sidebar { display: none; }
@@ -11505,8 +11509,9 @@ function webLastHtml(today) {
     const dis = w.busy[r.k] ? ' disabled' : '';
     const url = sanitizeUrl(r.url || r.web);
     const viaMail = webSentVia(r) === 'email';
-    return '<div class="li-msg" style="margin-bottom:10px;"><div class="li-msg-head">' +
-        '<span><strong>Právě otevřeno:</strong> ' + escapeHtml(r.firma) + ' <span class="li-muted">· zapsáno jako odesláno (' + (viaMail ? 'e-mail' : 'formulář') + ')</span></span>' +
+    // Zvýrazněná (Martin 16. 11. 2026: lišta byla nevýrazná): jantarový rámeček jako u „Dalších N čeká“, název firmy větší
+    return '<div class="li-msg web-last"><div class="li-msg-head">' +
+        '<span><span class="web-last-label">Právě otevřeno</span><span class="web-last-firma">' + escapeHtml(r.firma) + '</span> <span class="li-muted">· zapsáno jako odesláno (' + (viaMail ? 'e-mail' : 'formulář') + ')</span></span>' +
         '<span class="li-actions">' +
             (url !== '#' ? '<a class="btn btn-ghost li-btn li-btn-small" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" onclick="webCopyText(\'form\', \'' + r.kat + '\')">Otevřít znovu</a>' : '') +
             (webEmailOk(r.email) ? '<button class="btn btn-ghost li-btn li-btn-small"' + dis + ' onclick="webDraft(\'' + k + '\')" title="' + escapeHtml(r.email) + '">' + (viaMail ? 'Koncept znovu' : 'Koncept e-mailu') + '</button>' : '') +
