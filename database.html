@@ -548,6 +548,8 @@
         .web-filters .filter-pill:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
         .web-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; font-size: 12.5px; color: var(--text-mute); }
         .web-row-busy { opacity: 0.55; }
+        .web-more { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; padding: 10px 14px; border: 1px solid var(--line-amber); border-radius: 8px; background: var(--amber-tint); font-size: 14px; color: var(--text); }
+        .web-more strong { color: var(--amber-warm); font-weight: 600; }
         @media (max-width: 1100px) {
             .db-layout[data-active="linkedin"] .db-sidebar,
             .db-layout[data-active="web"] .db-sidebar { display: none; }
@@ -11576,8 +11578,8 @@ function renderWebToday() {
         (shown.length ? '<div class="li-batch">' + shown.map(webQueueRowHtml).join('') + '</div>'
             : '<div class="li-empty">' + (by.ceka.length ? 'V tomto filtru už nikdo nečeká.'
                 : by.cekali.length ? 'Fronta je prázdná. Další firmy přibudou, až na LinkedInu u jejich lidí kliknete „Nenašel“.' : 'Všechny firmy ze seznamu jsou vyřízené.') + '</div>') +
-        (more > 0 ? '<div class="li-actions" style="margin-top:8px;align-items:center;"><span class="li-hint" style="flex:0 1 auto;">Dalších ' + more + ' čeká.</span>' +
-            '<button class="btn btn-ghost li-btn li-btn-small" onclick="webShowMore()">Zobrazit dalších ' + Math.min(25, more) + '</button></div>' : '') +
+        (more > 0 ? '<div class="web-more"><strong>Dalších ' + more + ' čeká.</strong>' +
+            '<button class="btn btn-secondary li-btn" onclick="webShowMore()">Zobrazit dalších ' + Math.min(25, more) + '</button></div>' : '') +
     '</div>';
 
     // Vyřízené: naposledy kliknuté nahoře, pak podle data
