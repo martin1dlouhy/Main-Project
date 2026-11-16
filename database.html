@@ -546,6 +546,9 @@
         .web-filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
         .web-filters .filter-pill { font-family: inherit; }
         .web-filters .filter-pill:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+        .web-kat { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; font-size: 13px; color: var(--text-mute); }
+        .web-kat .filter-pill { font-family: inherit; font-size: 13.5px; padding: 7px 14px; }
+        .web-kat .filter-pill:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
         .web-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; font-size: 12.5px; color: var(--text-mute); }
         .web-row-busy { opacity: 0.55; }
         .web-more { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; padding: 10px 14px; border: 1px solid var(--line-amber); border-radius: 8px; background: var(--amber-tint); font-size: 14px; color: var(--text); }
@@ -1920,6 +1923,7 @@
         <section class="db-section" data-section="web">
             <div class="info-note warning" id="web-blocker" style="display:none;"></div>
             <div class="li-stats" id="web-stats"></div>
+            <div class="web-kat" id="web-kat" style="display:none;"></div>
 
             <div id="web-copy-fallback" style="display:none;margin-bottom:12px;"></div>
             <div class="web-msgs" id="web-msgs"></div>
@@ -5066,6 +5070,10 @@ function isLiSegment(seg) {
     const s = String(seg || '').replace(/[‐-―-]/g, '–').replace(/\s+/g, ' ').trim();
     return s.indexOf('Poradci –') === 0;
 }
+// Druhá kategorie oslovování (Martin 16. 11. 2026): stavební firmy, které vydaly dluhopisy, tedy shánějí financování.
+// Nejde o partnery, ale o možné klienty: jiný text zprávy (představení společnosti a možnosti financování), typ Klient.
+const LI_SEGMENT_STAVEBNI = 'Stavební firmy';
+function liIsStavebni(seg) { return /^stavebn/.test(_liNormName(seg)); }
 
 // ---------- F3: jednorázové označení starých kontaktů ----------
 const OLD_CUTOFF_LOCAL = new Date(2026, 9, 13, 0, 0, 0); // 13. 10. 2026 00:00 místního času
@@ -9300,6 +9308,7 @@ function liBatchRowHtml(r, today) {
     return '<div class="li-batch-row' + (opened || ch ? ' li-batch-opened' : '') + '">' +
         '<div class="li-batch-who">' + status +
             '<span class="li-name">' + escapeHtml(r.kontaktniOsoba) + '</span> <span class="li-batch-sub">· ' + escapeHtml([r.role, r.firma].filter(Boolean).join(', ')) + '</span>' +
+            (liIsStavebni(r.segment) ? ' <span class="li-badge li-badge-sit" title="Možný klient, ne partner. Po přijetí pozvánky mu patří zpráva pro stavební firmy.">stavební firma</span>' : '') +
             (r.sit ? ' <span class="li-badge li-badge-sit">' + escapeHtml(r.sit) + '</span>' : '') + lateBadge +
             (r.maybeKnown ? ' <button class="li-badge li-badge-warn li-badge-btn" onclick="openEditContact(\'' + escapeAttr(r.maybeKnown.id) + '\')" title="Otevřít kontakt se stejným jménem">možná už v databázi – ověřte</button>' : '') +
             (r.poznamka ? ' <span class="li-badge" title="' + escapeHtml(r.poznamka) + '">' + escapeHtml(String(r.poznamka).slice(0, 60)) + '</span>' : '') + '</div>' +
@@ -9425,10 +9434,13 @@ async function liBatchDone() {
         if (!rows.length) { toast('info', 'Nic k zápisu – lidé už jsou v databázi (nejspíš z jiného zařízení).'); return; }
         const now = new Date().toISOString();
         let nLi = 0, nJ = 0;
+        // Lidé ze stavebních firem jsou možní klienti: vlastní segment (zpráva po přijetí se řídí podle něj) a typ Klient
+        if (rows.some(function (r) { return liIsStavebni(r.segment); })) await liEnsureSegmentStavebni();
         const recs = rows.map(function (r) {
+            const stavebni = liIsStavebni(r.segment);
             const c = {
-                id: generateId(), createdAt: now, updatedAt: now, typ: 'Zprostředkovatel',
-                segment: isLiSegment(r.segment) ? r.segment : (LI_SEGMENT_PREFIX + 'menší sítě'), priorita: r.priorita || '1', stav: 'Osloven',
+                id: generateId(), createdAt: now, updatedAt: now, typ: stavebni ? 'Klient' : 'Zprostředkovatel',
+                segment: stavebni ? LI_SEGMENT_STAVEBNI : isLiSegment(r.segment) ? r.segment : (LI_SEGMENT_PREFIX + 'menší sítě'), priorita: r.priorita || '1', stav: 'Osloven',
                 kontaktniOsoba: r.kontaktniOsoba, role: r.role, firma: r.firma, ico: r.ico, web: r.web, sit: r.sit, poznamka: r.poznamka,
                 li_otisk: r.fp,   // dávka člověka pozná i po úpravě jména nebo firmy
                 spolehlivost: 'claude-kandidat', zdrojUrl: 'Claude – dávka ' + r.den
@@ -9522,17 +9534,21 @@ function liPrimaryVariant(c) {
 }
 // Obecná zpráva pro lidi z dávek, kteří přijali pozvánku. Martin ji pošle ručně, dál už píše individuálně.
 // Text podle Martina (16. 10. 2026), bez údajů o firmě a o zpracování osobních údajů – posoudí právník.
-function liTextObecna() {
+// kat === 'stavebni' (16. 11. 2026): lidem ze stavebních firem místo nabídky spolupráce představení společnosti
+// a možnosti financování; zbytek textu je stejný.
+function liTextObecna(kat) {
     return 'Dobrý den,\n\n' +
         'děkuji za spojení.\n\n' +
         'V rámci nově vytvořené společnosti financujeme firmy: poskytujeme podnikatelské úvěry 3–100 mil. Kč zajištěné nemovitostmi v ČR, na nákup nemovitosti, uvolnění kapitálu nebo refinancování. Indikativní nabídku připravíme do 48 hodin od dodání kompletních podkladů.\n\n' +
-        'Hledáme spolupráci s poradci, kteří pracují s firemními klienty. Pokud by vás spolupráce zajímala nebo máte klienta, který takové financování poptává, budu rád, když dáte vědět.\n\n' +
+        (kat === 'stavebni'
+            ? 'Rád bych vám představil naši společnost a možnost financování pro vaši firmu. Pokud financování řešíte nebo budete řešit, dejte mi prosím vědět.\n\n'
+            : 'Hledáme spolupráci s poradci, kteří pracují s firemními klienty. Pokud by vás spolupráce zajímala nebo máte klienta, který takové financování poptává, budu rád, když dáte vědět.\n\n') +
         'Martin Dlouhý';
 }
-function liCopyObecna() {
-    const text = liTextObecna();
+function liCopyObecna(kat) {
+    const text = liTextObecna(kat);
     liCopy(text).then(function () {
-        toast('success', 'Zpráva je ve schránce – vložte ji na LinkedInu a odešlete.');
+        toast('success', (kat === 'stavebni' ? 'Zpráva pro stavební firmy' : 'Zpráva') + ' je ve schránce – vložte ji na LinkedInu a odešlete.');
     }, function () {
         liShowCopyFallback(text, function () {}, 'Hotovo');
     });
@@ -9554,12 +9570,16 @@ function liInvitedRowHtml(c) {
     const id = escapeAttr(c.id);
     const inv = liDaysSince(c.li_pozvanka_kdy);
     const gate = liCardGate(c);
-    const badges = (String(c.linkedinStav || '') === 'Přijato' ? ' <span class="li-badge li-badge-sit">přijal</span>' : '') +
+    const stavebni = liIsStavebni(c.segment);
+    const badges = (stavebni ? ' <span class="li-badge li-badge-sit" title="Možný klient, ne partner: patří mu zpráva pro stavební firmy.">stavební firma</span>' : '') +
+        (String(c.linkedinStav || '') === 'Přijato' ? ' <span class="li-badge li-badge-sit">přijal</span>' : '') +
         (inv !== null && inv >= 14 && !liIsProtected(c) ? ' <span class="li-badge li-badge-warn">' + (liIsCampaignRecord(c) ? 'výmaz za ' : 'LinkedIn údaje se zruší za ') + Math.max(0, LI_VYMAZ_PO_DNECH - inv) + ' d</span>' : '') +
         (gate ? ' <span class="li-badge li-badge-warn">' + escapeHtml(gate) + '</span>' : '');
     return '<div class="li-batch-row">' +
         '<div class="li-batch-who"><span class="li-name">' + escapeHtml(c.kontaktniOsoba || '(bez jména)') + '</span> <span class="li-batch-sub">· ' + escapeHtml([c.role, c.firma].filter(Boolean).join(', ')) + '</span>' + badges + '</div>' +
         '<div class="li-actions">' +
+            // U člověka ze stavební firmy tlačítko rovnou zkopíruje správnou zprávu (ne tu pro poradce)
+            (stavebni && !gate ? '<button class="btn btn-secondary li-btn li-btn-small" onclick="liCopyObecna(\'stavebni\')" title="Zkopíruje zprávu pro stavební firmy: představení společnosti a možnosti financování">Zpráva</button>' : '') +
             (gate ? '' : '<button class="btn btn-ghost li-btn li-btn-small" onclick="liReplied(\'' + id + '\')">Ozval se</button>') +
             '<button class="btn btn-ghost li-btn li-btn-small" onclick="liNegative(\'' + id + '\', \'nemá zájem\')">Nemá zájem</button>' +
             '<button class="li-open" onclick="openEditContact(\'' + id + '\')" title="Otevřít detail" aria-label="Otevřít detail ' + escapeHtml(c.kontaktniOsoba || '') + '">⋯</button>' +
@@ -9571,9 +9591,16 @@ function liInvitedGroupsHtml(q, today) {
     list.forEach(function (c) { (groups[c.li_pozvanka_kdy] = groups[c.li_pozvanka_kdy] || []).push(c); });
     const days = Object.keys(groups).sort().reverse();
     const recent = days.filter(function (d) { return d < today; }).slice(0, 2);   // poslední 2 dny rozbalené
-    const msg = '<div class="li-msg"><div class="li-msg-head"><strong>Zpráva pro ty, kdo přijali</strong>' +
+    // Druhá zpráva se ukáže, jakmile jsou mezi pozvanými nebo v dávkách lidé ze stavebních firem
+    const maStavebni = list.some(function (c) { return liIsStavebni(c.segment); }) ||
+        (state.liBatches || []).some(function (r) { return liIsStavebni(r.segment); });
+    const msg = '<div class="li-msg"><div class="li-msg-head"><strong>' + (maStavebni ? 'Zpráva pro poradce, kteří přijali' : 'Zpráva pro ty, kdo přijali') + '</strong>' +
             '<button class="btn btn-primary li-btn li-btn-small" onclick="liCopyObecna()">Zkopírovat zprávu</button></div>' +
-        '<details><summary>Zobrazit text</summary><pre class="li-msg-text">' + escapeHtml(liTextObecna()) + '</pre></details></div>';
+        '<details><summary>Zobrazit text</summary><pre class="li-msg-text">' + escapeHtml(liTextObecna()) + '</pre></details></div>' +
+        (maStavebni ? '<div class="li-msg"><div class="li-msg-head"><strong>Zpráva pro stavební firmy</strong>' +
+            '<button class="btn btn-secondary li-btn li-btn-small" onclick="liCopyObecna(\'stavebni\')">Zkopírovat zprávu</button></div>' +
+        '<details><summary>Zobrazit text</summary><pre class="li-msg-text">' + escapeHtml(liTextObecna('stavebni')) + '</pre></details>' +
+        '<div class="li-hint" style="margin-top:6px;">Patří lidem se štítkem „stavební firma“. U nich ji zkopíruje i tlačítko „Zpráva“ přímo v řádku.</div></div>' : '');
     const head = '<div class="li-section"><div class="li-section-head"><h4>Pozvaní – kdo přijal <span class="li-count">' + list.length + '</span></h4></div>' +
         '<div class="li-hint" style="margin-bottom:8px;">Ráno se na LinkedInu podívejte, kdo přijal (Moje síť → Spojení → seřadit „Nedávno přidaní“), a pošlete mu zprávu níže. Dál pokračujte individuálně. Kdo se ozve, klikněte „Ozval se“ – zůstane v databázi. Kdo nemá zájem, „Nemá zájem“. Ostatní nechte, po ' + LI_VYMAZ_PO_DNECH + ' dnech je aplikace navrhne k výmazu.</div>' + msg;
     if (!days.length) return head + '<div class="li-empty">Zatím nikdo. Po prvním „Zapsat“ u dávky se tu lidé objeví den po dni.</div></div>';
@@ -10570,6 +10597,21 @@ function liSetupDropZone() {
 }
 
 // Založí v listu Segments chybějící segmenty pro LinkedIn oslovování (nový list se nezakládá)
+// Segment „Stavební firmy“ musí být v listu Segments: karta kontaktu nabízí jen segmenty odtud a neznámý segment by
+// se při uložení karty ztratil. Založí se sám před prvním zápisem kontaktu z této kategorie. Chyba zápis kontaktu nezastaví.
+async function liEnsureSegmentStavebni() {
+    if ((state.segments || []).some(function (s) { return liIsStavebni(s.nazev); })) return;
+    const seg = { nazev: LI_SEGMENT_STAVEBNI, typ: 'Klient', priorita: '2', useCase: 'Stavební firmy, které vydaly dluhopisy: představení společnosti a možnosti financování (zadání 16. 11. 2026)', pocetZdroju: 0 };
+    try {
+        const header = (state.headerOrders.segments && state.headerOrders.segments.length) ? state.headerOrders.segments : SEGMENTS_HEADER;
+        await sheetsAppend(SHEET_TABS.segments, [objectToRow(seg, header, SEGMENTS_HEADER)]);
+        state.segments.push(seg);
+        await logActivity('', 'li-segmenty', LI_SEGMENT_STAVEBNI);
+    } catch (err) {
+        console.warn('Segment „' + LI_SEGMENT_STAVEBNI + '“ se nepodařilo založit:', err);
+    }
+}
+
 async function liEnsureSegments() {
     const want = ['Poradci – menší sítě', 'Poradci – nezávislí brokeři', 'Poradci – pooly', 'Poradci – realitky'];
     const have = state.segments.map(function (s) { return String(s.nazev || '').replace(/[\u2010-\u2015-]/g, '–').trim(); });
@@ -10610,18 +10652,26 @@ const WEB_PREDMET = 'Spolumajitelé Private Credit – financování pro vaše k
 const WEB_PRILOHA_URL = 'assets/spolumajitele-private-credit-predstaveni.pdf';
 const WEB_PRILOHA_NAZEV = 'Spolumajitelé Private Credit - představení.pdf';
 const WEB_FILTRY = { vse: 'Vše', form: 'Formulář', email: 'E-mail', jine: 'Bez kontaktu / ověřit' };
+// Kategorie oslovení (Martin 16. 11. 2026). Řádek seznamu do ní patří podle sloupce „skupina“ (webKat):
+// poradcům nabízíme spolupráci, stavebním firmám představujeme společnost a možnost financování.
+const WEB_KATEGORIE = {
+    poradci: { nazev: 'Poradci', predmet: WEB_PREDMET },
+    stavebni: { nazev: 'Stavební firmy', predmet: 'Spolumajitelé Private Credit – financování pro vaši firmu' }
+};
 
 // Stav záložky — jen v paměti, nic se neukládá do prohlížeče
 state.web = {
-    rows: null,            // řádky seznamu
-    cols: null,            // pozice sloupců v tabulce (podle hlavičky)
+    rows: null,            // řádky všech seznamů (r.src = ID tabulky, ze které řádek je)
+    colsBy: null,          // ID tabulky → pozice sloupců (podle hlavičky)
     status: '',            // '', 'loading', 'ok', 'error'
     error: '',
-    loadedId: '',          // ID načtené tabulky ('' = při dalším otevření záložky načíst znovu)
-    lastId: '',            // ID naposledy načtené tabulky (zůstává i během nového načítání)
-    mailbox: null,         // { fileId, src } — schránka s odkazem na seznam
+    warn: '',              // některý ze seznamů se nenačetl nebo má stejné pořadí jako jiný
+    loadedId: '',          // ID načtených tabulek oddělená mezerou ('' = při dalším otevření záložky načíst znovu)
+    lastId: '',            // totéž, zůstává i během nového načítání
+    mailbox: null,         // { fileId, srcs } — schránka s odkazy na seznamy (hlavní je poslední)
     mailboxChecked: false,
     filter: 'vse',
+    kat: 'poradci',        // kategorie, kterou fronta právě ukazuje (klíč z WEB_KATEGORIE)
     search: '',
     show: WEB_RADKU,
     last: '',              // pořadí firmy, kterou Martin naposledy otevřel (lišta „Právě otevřeno“)
@@ -10638,22 +10688,31 @@ state.web = {
     persistTried: {}       // pořadí → zápis „osloveno jinde“ už se v tomto načtení zkoušel
 };
 
-// ---------- Texty (Martinovo znění z 16. 10. 2026, marketing/predstaveni/texty-oslovovani.md) ----------
+// ---------- Texty ----------
+// Poradci: Martinovo znění z 16. 10. 2026 (marketing/predstaveni/texty-oslovovani.md), beze změny.
+// Stavební firmy (16. 11. 2026): tentýž text, jen odstavec o spolupráci nahrazuje představení společnosti a možnosti
+// financování. O výstavbě v něm záměrně nic není (development nefinancujeme, pokyny pro marketing kap. 6).
+function webKat(r) { return /stavebn/.test(webNorm(r && r.skupina)) ? 'stavebni' : 'poradci'; }
+function webPredmet(kat) { return (WEB_KATEGORIE[kat] || WEB_KATEGORIE.poradci).predmet; }
 // Zpráva do kontaktního formuláře
-function webTextFormular() {
+function webTextFormular(kat) {
     return 'Dobrý den,\n\n' +
         'zastupuji společnost Spolumajitelé Private Credit a.s. z investiční skupiny Spolumajitelé.\n\n' +
         'Financujeme firmy: poskytujeme podnikatelské úvěry 3–100 mil. Kč zajištěné nemovitostmi v ČR, na nákup nemovitosti, uvolnění kapitálu nebo refinancování. Indikativní nabídku připravíme do 48 hodin od dodání kompletních podkladů.\n\n' +
-        'Hledáme spolupráci s poradci a makléři, kteří pracují s firemními klienty. Pokud by vás spolupráce zajímala, rád vám pošlu představení společnosti. Více najdete na privatecredit.spolumajitele.cz.\n\n' +
+        (kat === 'stavebni'
+            ? 'Rád bych vám představil naši společnost a možnost financování pro vaši firmu. Pokud vás to zaujme, pošlu vám představení společnosti. Více najdete na privatecredit.spolumajitele.cz.\n\n'
+            : 'Hledáme spolupráci s poradci a makléři, kteří pracují s firemními klienty. Pokud by vás spolupráce zajímala, rád vám pošlu představení společnosti. Více najdete na privatecredit.spolumajitele.cz.\n\n') +
         'Děkuji\n\n' +
         'Martin Dlouhý\nSpolumajitelé Private Credit a.s.\n+420 721 847 777 | martin.dlouhy@spolumajitele.cz';
 }
 // E-mail; podpis je součást textu, protože koncept otevřený ze souboru si podpis z Outlooku nepřidá
-function webTextEmail() {
+function webTextEmail(kat) {
     return 'Dobrý den,\n\n' +
         'zastupuji společnost Spolumajitelé Private Credit a.s. z investiční skupiny Spolumajitelé.\n\n' +
         'Financujeme firmy: poskytujeme podnikatelské úvěry 3–100 mil. Kč zajištěné nemovitostmi v ČR, na nákup nemovitosti, uvolnění kapitálu nebo refinancování. Indikativní nabídku připravíme do 48 hodin od dodání kompletních podkladů.\n\n' +
-        'Hledáme spolupráci s poradci, kteří pracují s firemními klienty. Pokud by Vás spolupráce zajímala nebo máte klienta, který takové financování poptává, budu rád, když mi dáte vědět.\n\n' +
+        (kat === 'stavebni'
+            ? 'Rád bych Vám představil naši společnost a možnost financování pro Vaši firmu. Pokud financování řešíte nebo budete řešit, dejte mi prosím vědět.\n\n'
+            : 'Hledáme spolupráci s poradci, kteří pracují s firemními klienty. Pokud by Vás spolupráce zajímala nebo máte klienta, který takové financování poptává, budu rád, když mi dáte vědět.\n\n') +
         'Představení společnosti přikládám, více najdete na privatecredit.spolumajitele.cz.\n\n' +
         'Děkuji\n\n' +
         'Martin Dlouhý\nSpolumajitelé Private Credit a.s.\n+420 721 847 777 | martin.dlouhy@spolumajitele.cz';
@@ -10738,6 +10797,7 @@ function webParseRows(vals) {
             li: parseInt(g('li'), 10) || 0, web: g('web'), ico: ico, zdroj: g('zdroj')
         };
         r.kind = webKind(r.kanal);
+        r.kat = webKat(r);
         r.host = webHost(r.web || r.url);
         r.nq = webNorm([r.firma, r.host, r.email, r.ico, r.obec].join(' '));
         rows.push(r);
@@ -10747,8 +10807,12 @@ function webParseRows(vals) {
 }
 
 // ---------- Načtení seznamu ----------
-function webSourceId() {
-    return (state.web.mailbox && state.web.mailbox.src) || WEB_SEZNAM_VYCHOZI;
+// Seznamů může být víc (každá kategorie má vlastní tabulku, aby se rozpracovaný seznam nemusel kopírovat):
+// název schránky končí jejich ID oddělenými mezerou. Poslední je hlavní seznam (poradci) – starší verze aplikace
+// čte jen to poslední ID, takže přidání dalšího seznamu jí nic nezmění.
+function webSourceIds() {
+    const m = state.web.mailbox;
+    return m && m.srcs && m.srcs.length ? m.srcs : [WEB_SEZNAM_VYCHOZI];
 }
 // Najde (případně založí) schránku a přečte z jejího názvu ID tabulky se seznamem. Stejný princip jako liResolveMailbox:
 // aplikace na Disku vidí jen soubory, které sama založila, proto Claude nový seznam předává přejmenováním schránky.
@@ -10761,8 +10825,8 @@ async function webResolveMailbox() {
         const res = await gfetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&spaces=drive');
         const files = ((await res.json()).files || []);
         if (files.length) {
-            const m = String(files[0].name || '').match(/([A-Za-z0-9_-]{30,})\s*$/);
-            w.mailbox = { fileId: files[0].id, src: m ? m[1] : '' };
+            const ids = (String(files[0].name || '').match(/[A-Za-z0-9_-]{30,}/g) || []).filter(function (x, i, a) { return a.indexOf(x) === i; });
+            w.mailbox = { fileId: files[0].id, srcs: ids };
             return;
         }
         if (TEST_SHEET_REQUESTED) return;          // v testovacím režimu nic nezakládat
@@ -10772,7 +10836,7 @@ async function webResolveMailbox() {
             body: JSON.stringify({ name: WEB_SCHRANKA_NAZEV + ' – ' + WEB_SEZNAM_VYCHOZI, mimeType: 'application/vnd.google-apps.document', parents: [parent] })
         });
         const f = await cr.json();
-        if (f && f.id) w.mailbox = { fileId: f.id, src: WEB_SEZNAM_VYCHOZI };
+        if (f && f.id) w.mailbox = { fileId: f.id, srcs: [WEB_SEZNAM_VYCHOZI] };
     } catch (err) {
         console.warn('Schránku s odkazem na seznam webů se nepodařilo načíst:', err);
     }
@@ -10786,30 +10850,52 @@ async function webLoad(force) {
     renderWebToday();
     if (force) { w.mailboxChecked = false; w.persistFailed = false; }
     await webResolveMailbox();
-    const id = webSourceId();
-    try {
-        // Přes frontu zápisů: seznam se čte až po dokončení rozpracovaných zápisů stavu
-        const vals = await enqueueWrite(async function () {
-            const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + id + '/values/' + encodeURIComponent('A1:Z5000'));
-            await checkSheetsResponse(res, 'seznam webů');
-            return (await res.json()).values || [];
-        });
-        const parsed = webParseRows(vals);
-        w.rows = parsed.rows;
-        w.cols = parsed.cols;
+    const ids = webSourceIds();
+    const all = [], colsBy = {}, errs = [], seen = {};
+    let dup = 0;
+    // Hlavní seznam první: při stejném pořadí ve dvou seznamech platí jeho řádek
+    for (const id of ids.slice().reverse()) {
+        try {
+            // Přes frontu zápisů: seznam se čte až po dokončení rozpracovaných zápisů stavu
+            const vals = await enqueueWrite(async function () {
+                const res = await gfetch('https://sheets.googleapis.com/v4/spreadsheets/' + id + '/values/' + encodeURIComponent('A1:Z5000'));
+                await checkSheetsResponse(res, 'seznam webů');
+                return (await res.json()).values || [];
+            });
+            const parsed = webParseRows(vals);
+            colsBy[id] = parsed.cols;
+            parsed.rows.forEach(function (r) {
+                if (seen[r.k]) { dup++; return; }      // pořadí je klíč řádku, musí být jedinečné přes všechny seznamy
+                seen[r.k] = true;
+                r.src = id;
+                all.push(r);
+            });
+        } catch (err) {
+            errs.push(webErrText(err));
+        }
+    }
+    if (Object.keys(colsBy).length) {
+        all.sort(function (a, b) { return a.n - b.n; });
+        w.rows = all;
+        w.colsBy = colsBy;
         w.status = 'ok';
         w.error = '';
+        w.warn = (errs.length ? 'Jeden ze seznamů se nepodařilo načíst: ' + errs[0] + ' Jeho firmy tu teď nejsou. ' : '') +
+            (dup ? 'Řádků se stejným pořadím jako v jiném seznamu: ' + dup + ' (nezobrazují se, řekněte Claudovi).' : '');
         w.persistTried = {};
-    } catch (err) {
+    } else {
         w.rows = null;
-        w.cols = null;
+        w.colsBy = null;
         w.status = 'error';
-        w.error = webErrText(err);
+        w.error = errs[0] || 'Seznam je prázdný.';
+        w.warn = '';
     }
-    // Jiný seznam než minule (Claude přepnul schránku): značky z relace patřily k jiným řádkům
-    if (w.lastId && w.lastId !== id) { w.last = ''; w.failed = {}; w.undo = {}; w.seq = {}; w.show = WEB_RADKU; }
-    w.lastId = id;
-    w.loadedId = id;   // znovu jen přes „Načíst znovu“ nebo po synchronizaci
+    // Některý seznam z minula chybí (Claude ho vyměnil): značky z relace patřily k jiným řádkům.
+    // Když seznam jen přibyl, značky zůstávají (rozpracovaná firma se neztratí).
+    const key = ids.join(' ');
+    if (w.lastId && w.lastId.split(' ').some(function (x) { return ids.indexOf(x) === -1; })) { w.last = ''; w.failed = {}; w.undo = {}; w.seq = {}; w.show = WEB_RADKU; }
+    w.lastId = key;
+    w.loadedId = key;   // znovu jen přes „Načíst znovu“ nebo po synchronizaci
     renderWebToday();
 }
 
@@ -10847,8 +10933,8 @@ function webStateCells(cols, rowNumber, stav, datum) {
 async function webWriteState(r, stav, datum) {
     const w = state.web;
     if (TEST_SHEET_REQUESTED) throw new Error('V testovacím režimu se do seznamu webů nezapisuje (je společný s ostrou databází).');
-    if (!w.cols || !w.loadedId) throw new Error('Seznam webů není načtený.');
-    const id = w.loadedId, cols = w.cols;
+    const id = r.src, cols = w.colsBy && w.colsBy[id];      // zapisuje se do tabulky, ze které řádek je
+    if (!cols || !w.loadedId) throw new Error('Seznam webů není načtený.');
     return enqueueWrite(async function () {
         const loc = await _webLocateRaw(id, cols);
         const rowNumber = loc.rowOf[r.k];
@@ -10868,27 +10954,35 @@ async function webWriteState(r, stav, datum) {
 async function webWriteStates(items) {
     const w = state.web;
     if (TEST_SHEET_REQUESTED) throw new Error('V testovacím režimu se do seznamu webů nezapisuje (je společný s ostrou databází).');
-    if (!w.cols || !w.loadedId) throw new Error('Seznam webů není načtený.');
-    const id = w.loadedId, cols = w.cols;
+    if (!w.colsBy || !w.loadedId) throw new Error('Seznam webů není načtený.');
+    const colsBy = w.colsBy;
+    const groups = {};                                      // každý řádek do své tabulky
+    items.forEach(function (it) { (groups[it.r.src] = groups[it.r.src] || []).push(it); });
     return enqueueWrite(async function () {
-        const loc = await _webLocateRaw(id, cols);
-        let data = [];
-        const done = [];
-        items.forEach(function (it) {
-            const rowNumber = loc.rowOf[it.r.k];
-            if (!rowNumber || loc.hits[it.r.k] > 1) return;
-            data = data.concat(webStateCells(cols, rowNumber, it.stav, it.datum));
-            done.push(it);
-        });
-        for (let i = 0; i < data.length; i += 1000) {
-            const up = await gfetch(loc.base + ':batchUpdate', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ valueInputOption: 'RAW', data: data.slice(i, i + 1000) })
+        let n = 0;
+        for (const id of Object.keys(groups)) {
+            const cols = colsBy[id];
+            if (!cols) continue;
+            const loc = await _webLocateRaw(id, cols);
+            let data = [];
+            const done = [];
+            groups[id].forEach(function (it) {
+                const rowNumber = loc.rowOf[it.r.k];
+                if (!rowNumber || loc.hits[it.r.k] > 1) return;
+                data = data.concat(webStateCells(cols, rowNumber, it.stav, it.datum));
+                done.push(it);
             });
-            await checkSheetsResponse(up, 'seznam webů – hromadný zápis');
+            for (let i = 0; i < data.length; i += 1000) {
+                const up = await gfetch(loc.base + ':batchUpdate', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ valueInputOption: 'RAW', data: data.slice(i, i + 1000) })
+                });
+                await checkSheetsResponse(up, 'seznam webů – hromadný zápis');
+            }
+            done.forEach(function (it) { it.r.stav = it.stav; it.r.datum = it.datum; });
+            n += done.length;
         }
-        done.forEach(function (it) { it.r.stav = it.stav; it.r.datum = it.datum; });
-        return done.length;
+        return n;
     });
 }
 
@@ -10964,9 +11058,11 @@ async function webUpsertContact(r, fields, sentDate) {
         return { contact: existing, created: false };
     }
     const now = new Date().toISOString();
+    const stavebni = r.kat === 'stavebni';         // stavební firma je možný klient, ne partner
+    if (stavebni) await liEnsureSegmentStavebni();
     const c = Object.assign({
-        id: generateId(), createdAt: now, updatedAt: now, typ: 'Zprostředkovatel',
-        segment: LI_SEGMENT_PREFIX + 'nezávislí brokeři', priorita: '2',
+        id: generateId(), createdAt: now, updatedAt: now, typ: stavebni ? 'Klient' : 'Zprostředkovatel',
+        segment: stavebni ? LI_SEGMENT_STAVEBNI : LI_SEGMENT_PREFIX + 'nezávislí brokeři', priorita: '2',
         firma: r.firma, ico: r.ico, sidlo: r.obec, web: r.web || r.url, email: '',
         osloven_kdy: sentDate, osloven_kanal: webSentVia(r) === 'email' ? 'Email' : 'Web formulář',
         spolehlivost: WEB_SPOLEHLIVOST, zdrojUrl: WEB_ZDROJ
@@ -11206,17 +11302,22 @@ function webShowCopyFallback(text) {
     ta.focus();
     ta.select();
 }
-function webCopyText(which) {
-    if (which === 'form') webCopy(webTextFormular(), 'Zpráva je ve schránce – vložte ji do formuláře (Ctrl+V).');
-    else if (which === 'email') webCopy(webTextEmail(), 'Text e-mailu je ve schránce.');
-    else webCopy(WEB_PREDMET, 'Předmět je ve schránce.');
+// kat = kategorie textu; bez ní ta, kterou fronta právě ukazuje
+function webCopyText(which, kat) {
+    kat = WEB_KATEGORIE[kat] ? kat : state.web.kat;
+    if (which === 'form') webCopy(webTextFormular(kat), 'Zpráva je ve schránce – vložte ji do formuláře (Ctrl+V).');
+    else if (which === 'email') webCopy(webTextEmail(kat), 'Text e-mailu je ve schránce.');
+    else webCopy(webPredmet(kat), 'Předmět je ve schránce.');
 }
 // Klik na „Otevřít formulář“ / „Otevřít web“: odkaz se otevře sám (výchozí chování), zpráva je ve schránce
 // a firma se rovnou zapíše jako odeslaná. Zápis až po otevření odkazu: překreslení fronty by klik zrušilo.
 function webOpened(k) {
     const r = webFind(k);
     if (!r) return true;
-    webCopy(webTextFormular(), 'Zpráva je ve schránce – vložte ji do formuláře (Ctrl+V).');
+    // Text podle kategorie firmy, ne podle toho, co je zrovna vybrané ve frontě (firmu jde otevřít i z hledání)
+    webCopy(webTextFormular(r.kat), r.kat === 'stavebni'
+        ? 'Zpráva pro stavební firmy je ve schránce – vložte ji do formuláře (Ctrl+V).'
+        : 'Zpráva je ve schránce – vložte ji do formuláře (Ctrl+V).');
     setTimeout(function () { webAutoSent(r.k, 'web'); }, 0);
     return true;
 }
@@ -11299,7 +11400,7 @@ async function webDraft(k) {
         console.warn('Přílohu se nepodařilo načíst:', err);
         toast('warning', 'Představení se nepodařilo přiložit (' + (err.message || err) + '). Koncept je bez přílohy – přiložte ji v Outlooku ručně.', 12000);
     }
-    const eml = webBuildEml(r.email.trim(), WEB_PREDMET, webTextEmail(), pdf, r.k);
+    const eml = webBuildEml(r.email.trim(), webPredmet(r.kat), webTextEmail(r.kat), pdf, r.k);
     const url = URL.createObjectURL(new Blob([eml], { type: 'message/rfc822' }));
     const a = document.createElement('a');
     a.href = url;
@@ -11320,6 +11421,13 @@ function webSetFilter(key) {
     state.web.show = WEB_RADKU;
     renderWebToday();
 }
+function webSetKat(key) {
+    if (!WEB_KATEGORIE[key]) return;
+    state.web.kat = key;
+    state.web.filter = 'vse';
+    state.web.show = WEB_RADKU;
+    renderWebToday();
+}
 function webShowMore() {
     state.web.show += 25;
     renderWebToday();
@@ -11335,7 +11443,11 @@ function webBadgesHtml(r) {
     const check = /overit/.test(webNorm(r.kanal));
     if (r.kanal) b.push('<span class="li-badge' + (check || r.kind === 'jine' ? ' li-badge-warn' : '') + '">' + escapeHtml(r.kanal) + '</span>');
     if (/overit/.test(webNorm(r.zdroj))) b.push('<span class="li-badge li-badge-warn" title="Web je dohledaný jen podle názvu firmy. Než napíšete, ověřte, že jí patří.">web ověřit</span>');
-    if (r.skupina) {
+    if (r.kat === 'stavebni') {
+        // U stavební firmy je ve sloupci „co nabízejí…“ důvod oslovení (kdy vydala dluhopisy)
+        b.push('<span class="li-badge li-badge-sit" title="' + escapeHtml(r.skupina) + '">stavební firma</span>');
+        if (r.nabidka) b.push('<span class="li-badge" title="' + escapeHtml(r.nabidka) + '">' + escapeHtml(r.nabidka.slice(0, 40)) + '</span>');
+    } else if (r.skupina) {
         const m = r.skupina.match(/^(\d+)\s*[–-]/);
         b.push('<span class="li-badge" title="' + escapeHtml(r.skupina) + '">' + (m ? 'skupina ' + m[1] : escapeHtml(r.skupina.slice(0, 24))) + '</span>');
     }
@@ -11396,7 +11508,7 @@ function webLastHtml(today) {
     return '<div class="li-msg" style="margin-bottom:10px;"><div class="li-msg-head">' +
         '<span><strong>Právě otevřeno:</strong> ' + escapeHtml(r.firma) + ' <span class="li-muted">· zapsáno jako odesláno (' + (viaMail ? 'e-mail' : 'formulář') + ')</span></span>' +
         '<span class="li-actions">' +
-            (url !== '#' ? '<a class="btn btn-ghost li-btn li-btn-small" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" onclick="webCopyText(\'form\')">Otevřít znovu</a>' : '') +
+            (url !== '#' ? '<a class="btn btn-ghost li-btn li-btn-small" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" onclick="webCopyText(\'form\', \'' + r.kat + '\')">Otevřít znovu</a>' : '') +
             (webEmailOk(r.email) ? '<button class="btn btn-ghost li-btn li-btn-small"' + dis + ' onclick="webDraft(\'' + k + '\')" title="' + escapeHtml(r.email) + '">' + (viaMail ? 'Koncept znovu' : 'Koncept e-mailu') + '</button>' : '') +
             '<button class="btn btn-secondary li-btn li-btn-small"' + dis + ' onclick="webCant(\'' + k + '\')" title="Formulář nefunguje, na webu není kontakt, web nepatří firmě…">Nejde</button>' +
             '<button class="btn btn-ghost li-btn li-btn-small"' + dis + ' onclick="webUndo(\'' + k + '\')" title="Omyl: firma se vrátí do fronty">Vrátit do fronty</button>' +
@@ -11458,7 +11570,8 @@ function webListSectionHtml(key, title, list, hint, opts) {
     const w = state.web;
     const rowFn = opts.row || webDoneRowHtml;
     const expanded = !!w.expand[key];
-    const limit = opts.collapsed ? 0 : WEB_RADKU_HOTOVO;
+    // opts.min: kolik řádků ukázat vždy (dnešní odeslané firmy jsou vidět všechny, aby počet seděl s tím, co je na očích)
+    const limit = opts.collapsed ? 0 : Math.min(WEB_RADKU_MAX, Math.max(WEB_RADKU_HOTOVO, opts.min || 0));
     const shown = expanded ? list.slice(0, WEB_RADKU_MAX) : list.slice(0, limit);
     const toggle = list.length > limit
         ? '<button class="btn btn-ghost li-btn li-btn-small" onclick="state.web.expand[\'' + key + '\']=' + (expanded ? 'false' : 'true') + ';renderWebToday()">' +
@@ -11469,21 +11582,27 @@ function webListSectionHtml(key, title, list, hint, opts) {
         (list.length === 0 ? '<div class="li-empty">' + escapeHtml(opts.empty || 'Zatím nic.') + '</div>'
             : (shown.length ? '<div class="li-batch">' + shown.map(rowFn).join('') + '</div>' : '')) +
         (expanded && list.length > WEB_RADKU_MAX ? '<div class="li-hint" style="margin-top:6px;">Zobrazeno prvních ' + WEB_RADKU_MAX + '. Ostatní najdete hledáním nahoře.</div>' : '') +
+        // Sbalený seznam, ve kterém není vidět všechno: říct to přímo pod řádky (tlačítko v záhlaví se snadno přehlédne)
+        (!expanded && shown.length && list.length > shown.length ? '<div class="li-hint" style="margin-top:6px;">Zobrazeno ' + shown.length + ' z ' + list.length + ', starší jsou skryté. ' +
+            '<button class="btn btn-ghost li-btn li-btn-small" onclick="state.web.expand[\'' + key + '\']=true;renderWebToday()">Zobrazit všech ' + list.length + '</button></div>' : '') +
     '</div>';
 }
 
+// Texty nad frontou patří ke kategorii, kterou fronta právě ukazuje (při přepnutí kategorie se vymění)
 function webRenderMessages() {
     const el = document.getElementById('web-msgs');
-    if (!el || el.dataset.init) return;
-    el.dataset.init = '1';
+    const kat = state.web.kat;
+    if (!el || el.dataset.kat === kat) return;
+    el.dataset.kat = kat;
+    const pro = kat === 'stavebni' ? ' – stavební firmy' : '';
     el.innerHTML =
-        '<div class="li-msg"><div class="li-msg-head"><strong>Zpráva do formuláře</strong>' +
+        '<div class="li-msg"><div class="li-msg-head"><strong>Zpráva do formuláře' + pro + '</strong>' +
             '<button class="btn btn-secondary li-btn li-btn-small" onclick="webCopyText(\'form\')">Zkopírovat zprávu</button></div>' +
-            '<details><summary>Zobrazit text</summary><pre class="li-msg-text">' + escapeHtml(webTextFormular()) + '</pre></details></div>' +
-        '<div class="li-msg"><div class="li-msg-head"><strong>E-mail</strong><span class="li-actions">' +
+            '<details><summary>Zobrazit text</summary><pre class="li-msg-text">' + escapeHtml(webTextFormular(kat)) + '</pre></details></div>' +
+        '<div class="li-msg"><div class="li-msg-head"><strong>E-mail' + pro + '</strong><span class="li-actions">' +
             '<button class="btn btn-secondary li-btn li-btn-small" onclick="webCopyText(\'predmet\')">Zkopírovat předmět</button>' +
             '<button class="btn btn-secondary li-btn li-btn-small" onclick="webCopyText(\'email\')">Zkopírovat text</button></span></div>' +
-            '<details><summary>Zobrazit předmět a text</summary><pre class="li-msg-text">' + escapeHtml('Předmět: ' + WEB_PREDMET + '\n\n' + webTextEmail()) + '</pre>' +
+            '<details><summary>Zobrazit předmět a text</summary><pre class="li-msg-text">' + escapeHtml('Předmět: ' + webPredmet(kat) + '\n\n' + webTextEmail(kat)) + '</pre>' +
             '<div class="li-hint" style="margin-top:6px;">Příloha: ' + escapeHtml(WEB_PRILOHA_NAZEV) + '. Koncept e-mailu ji přiloží sám.</div></details></div>';
 }
 
@@ -11497,7 +11616,8 @@ function renderWebToday() {
     const statsEl = document.getElementById('web-stats');
     const metaEl = document.getElementById('web-meta');
     const srEl = document.getElementById('web-search-results');
-    const only = function (html) { statsEl.innerHTML = ''; srEl.innerHTML = ''; metaEl.innerHTML = ''; host.innerHTML = html; };
+    const katEl = document.getElementById('web-kat');
+    const only = function (html) { statsEl.innerHTML = ''; srEl.innerHTML = ''; metaEl.innerHTML = ''; if (katEl) katEl.style.display = 'none'; host.innerHTML = html; };
     webRenderMessages();
     if (state.migrationIssue) {
         blocker.style.display = 'block';
@@ -11528,16 +11648,20 @@ function renderWebToday() {
     }
     w.li = webLinkedInIndex(today);
     const by = { ceka: [], cekali: [], jinde: [], odeslano: [], nejde: [], ozval: [], nezajem: [] };
-    let dnes = 0;
+    // „Odesláno“ = firma je zapsaná jako odeslaná (nebo už odpověděla). „Nejde“ se do odeslaných nepočítá, má vlastní počet.
+    let dnes = 0, dnesNejde = 0;
     rows.forEach(function (r) {
         const st = webView(r);
         by[st].push(r);
         if ((st === 'odeslano' || st === 'ozval' || st === 'nezajem') && r.datum === today) dnes++;
+        if (st === 'nejde' && r.datum === today) dnesNejde++;
     });
     const sentAll = by.odeslano.length + by.ozval.length + by.nezajem.length;
     statsEl.innerHTML =
         '<div class="li-stat"><div class="li-stat-val">' + dnes + '</div><div class="li-stat-lbl">dnes odesláno</div></div>' +
+        '<div class="li-stat"><div class="li-stat-val">' + dnesNejde + '</div><div class="li-stat-lbl">dnes nejde</div></div>' +
         '<div class="li-stat"><div class="li-stat-val">' + sentAll + '</div><div class="li-stat-lbl">odesláno celkem</div></div>' +
+        '<div class="li-stat"><div class="li-stat-val">' + by.nejde.length + '</div><div class="li-stat-lbl">nejde celkem</div></div>' +
         '<div class="li-stat"><div class="li-stat-val">' + by.ceka.length + '</div><div class="li-stat-lbl">čeká na oslovení</div></div>' +
         '<div class="li-stat"><div class="li-stat-val">' + by.ozval.length + '</div><div class="li-stat-lbl">ozvali se</div></div>' +
         '<div class="li-stat"><div class="li-stat-val">' + (by.jinde.length + by.cekali.length) + '</div><div class="li-stat-lbl">řeší se přes LinkedIn</div></div>';
@@ -11558,10 +11682,27 @@ function renderWebToday() {
     }
     srEl.innerHTML = searchHtml;
 
-    // Fronta: firmy bez stavu v pořadí ze seznamu
-    const fcount = { vse: by.ceka.length, form: 0, email: 0, jine: 0 };
-    by.ceka.forEach(function (r) { fcount[webFilterKey(r)]++; });
-    const queue = w.filter === 'vse' ? by.ceka : by.ceka.filter(function (r) { return webFilterKey(r) === w.filter; });
+    // Kategorie: přepínač se ukáže, až seznam obsahuje i jinou kategorii než poradce
+    const katCount = {};
+    Object.keys(WEB_KATEGORIE).forEach(function (key) { katCount[key] = 0; });
+    by.ceka.forEach(function (r) { katCount[r.kat]++; });
+    const viceKat = rows.some(function (r) { return r.kat !== 'poradci'; });
+    if (!viceKat && w.kat !== 'poradci') { w.kat = 'poradci'; webRenderMessages(); }
+    if (katEl) {
+        katEl.style.display = viceKat ? 'flex' : 'none';
+        katEl.innerHTML = !viceKat ? '' : '<span>Komu píšete:</span><div class="web-filters" role="group" aria-label="Kategorie firem">' +
+            Object.keys(WEB_KATEGORIE).map(function (key) {
+                return '<button type="button" class="filter-pill' + (w.kat === key ? ' active' : '') + '" aria-pressed="' + (w.kat === key) + '" onclick="webSetKat(\'' + key + '\')">' +
+                    WEB_KATEGORIE[key].nazev + ' ' + katCount[key] + '</button>';
+            }).join('') + '</div>' +
+            '<span>' + (w.kat === 'stavebni' ? 'Zpráva představuje společnost a možnost financování.' : 'Zpráva nabízí spolupráci.') + ' Tlačítka u firmy vždy zkopírují text pro její kategorii.</span>';
+    }
+
+    // Fronta: firmy bez stavu v pořadí ze seznamu, jen z vybrané kategorie
+    const cekaKat = by.ceka.filter(function (r) { return r.kat === w.kat; });
+    const fcount = { vse: cekaKat.length, form: 0, email: 0, jine: 0 };
+    cekaKat.forEach(function (r) { fcount[webFilterKey(r)]++; });
+    const queue = w.filter === 'vse' ? cekaKat : cekaKat.filter(function (r) { return webFilterKey(r) === w.filter; });
     const shown = queue.slice(0, w.show);
     const more = queue.length - shown.length;
     const pills = '<div class="web-filters" role="group" aria-label="Filtr podle způsobu oslovení">' + Object.keys(WEB_FILTRY).map(function (key) {
@@ -11575,9 +11716,11 @@ function renderWebToday() {
             'Když to u firmy nejde, klikněte u ní „Nejde“. Firmy, kterým jste psal přes LinkedIn, tu nejsou.</div>' +
         webLastHtml(today) +
         (liState === 'error' ? '<div class="li-empty li-red" style="margin-bottom:8px;">Dávky pro LinkedIn se nepodařilo načíst. Ve frontě proto můžou být i firmy, jejichž lidé na LinkedIn teprve čekají.</div>' : '') +
+        (w.warn ? '<div class="li-empty li-red" style="margin-bottom:8px;">' + escapeHtml(w.warn) + '</div>' : '') +
         (shown.length ? '<div class="li-batch">' + shown.map(webQueueRowHtml).join('') + '</div>'
-            : '<div class="li-empty">' + (by.ceka.length ? 'V tomto filtru už nikdo nečeká.'
-                : by.cekali.length ? 'Fronta je prázdná. Další firmy přibudou, až na LinkedInu u jejich lidí kliknete „Nenašel“.' : 'Všechny firmy ze seznamu jsou vyřízené.') + '</div>') +
+            : '<div class="li-empty">' + (cekaKat.length ? 'V tomto filtru už nikdo nečeká.'
+                : by.cekali.some(function (r) { return r.kat === w.kat; }) ? 'Fronta je prázdná. Další firmy přibudou, až na LinkedInu u jejich lidí kliknete „Nenašel“.'
+                : by.ceka.length ? 'V této kategorii už nikdo nečeká. Další firmy jsou v druhé kategorii nahoře.' : 'Všechny firmy ze seznamu jsou vyřízené.') + '</div>') +
         (more > 0 ? '<div class="web-more"><strong>Dalších ' + more + ' čeká.</strong>' +
             '<button class="btn btn-secondary li-btn" onclick="webShowMore()">Zobrazit dalších ' + Math.min(25, more) + '</button></div>' : '') +
     '</div>';
@@ -11587,10 +11730,13 @@ function renderWebToday() {
         return (w.seq[b.k] || 0) - (w.seq[a.k] || 0) || String(b.datum || '').localeCompare(String(a.datum || '')) || a.n - b.n;
     };
     ['odeslano', 'nejde', 'ozval', 'nezajem'].forEach(function (key) { by[key].sort(recent); });
+    // Dnes odeslané firmy jsou v sekci vidět všechny (počet nahoře pak sedí s řádky), starší až po rozbalení
+    let dnesVidet = 0;
+    by.odeslano.forEach(function (r, i) { if (r.datum === today) dnesVidet = i + 1; });
     host.innerHTML = queueHtml +
         webListSectionHtml('odeslano', 'Odesláno – čeká na odpověď', by.odeslano,
             'Odpovědi chodí do e-mailu. Kdo odpoví, tomu klikněte „Ozval se“ a firma se zapíše do Kontaktů. Kdo odmítne, „Nemá zájem“ a už se nenabídne.',
-            { empty: 'Zatím nic. Firmy se tu objeví po kliknutí na „Odesláno“.' }) +
+            { empty: 'Zatím nic. Firmy se tu objeví, jakmile u nich otevřete formulář nebo koncept e-mailu.', min: dnesVidet }) +
         webListSectionHtml('ozval', 'Ozvali se', by.ozval,
             'Firma je v Kontaktech se stavem Reaguje. V kartě kontaktu doplňte jméno člověka, potom ho můžete předat do CRM.', { empty: 'Zatím nikdo.' }) +
         (by.nejde.length ? webListSectionHtml('nejde', 'Nejde', by.nejde, '', { collapsed: true }) : '') +
@@ -11604,8 +11750,22 @@ function renderWebToday() {
     // Firmy oslovené jinde zapsat do seznamu natrvalo (jen když je záložka otevřená; bez klikání)
     if (active) setTimeout(webPersistLinkedIn, 0);
 
-    metaEl.innerHTML = '<span>Seznam: ' + rows.length + (rows.length === 1 ? ' web' : rows.length >= 2 && rows.length <= 4 ? ' weby' : ' webů') + ' z tabulky, kterou připravuje Claude.</span>' +
-        '<a class="btn btn-ghost li-btn li-btn-small" href="https://docs.google.com/spreadsheets/d/' + escapeHtml(w.lastId || webSourceId()) + '" target="_blank" rel="noopener noreferrer">Otevřít tabulku</a>' +
+    // Odkaz na každou načtenou tabulku (hlavní seznam první)
+    const tabulky = webSourceIds().slice().reverse().filter(function (id) { return !!(w.colsBy && w.colsBy[id]); });
+    const jeStavebni = function (id) {
+        const jeji = rows.filter(function (r) { return r.src === id; });
+        return jeji.length > 0 && jeji.every(function (r) { return r.kat === 'stavebni'; });
+    };
+    const pocetStavebnich = tabulky.filter(jeStavebni).length;
+    let cisloStavebni = 0;
+    const odkazy = tabulky.map(function (id) {
+        // stavební firmy můžou být ve více tabulkách (části seznamu): odkazy se číslují
+        const nazev = tabulky.length === 1 ? 'Otevřít tabulku'
+            : jeStavebni(id) ? 'Tabulka: stavební firmy' + (pocetStavebnich > 1 ? ' ' + (++cisloStavebni) : '') : 'Tabulka: poradci';
+        return '<a class="btn btn-ghost li-btn li-btn-small" href="https://docs.google.com/spreadsheets/d/' + escapeHtml(id) + '" target="_blank" rel="noopener noreferrer">' + nazev + '</a>';
+    }).join('');
+    metaEl.innerHTML = '<span>Seznam: ' + rows.length + (rows.length === 1 ? ' web' : rows.length >= 2 && rows.length <= 4 ? ' weby' : ' webů') +
+            (tabulky.length > 1 ? ' z tabulek, které připravuje Claude.' : ' z tabulky, kterou připravuje Claude.') + '</span>' + odkazy +
         '<button class="btn btn-ghost li-btn li-btn-small"' + (w.status === 'loading' ? ' disabled' : '') + ' onclick="webLoad(true)">' + (w.status === 'loading' ? 'Načítám…' : 'Načíst znovu') + '</button>' +
         (TEST_SHEET_REQUESTED ? '<span class="li-red">Testovací režim: do seznamu webů se nezapisuje.</span>' : '');
 }
