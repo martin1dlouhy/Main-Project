@@ -10622,8 +10622,8 @@ state.web = {
     filter: 'vse',
     search: '',
     show: WEB_RADKU,
-    opened: {},            // pořadí → kliknuto „Otevřít“ nebo „Koncept“ v této relaci
-    via: {},               // pořadí → 'email' (použit koncept nebo adresa): podle toho se zapíše „Odesláno“
+    last: '',              // pořadí firmy, kterou Martin naposledy otevřel (lišta „Právě otevřeno“)
+    failed: {},            // pořadí → { stav, datum } zápisu po otevření, který selhal („Zapsat znovu“)
     busy: {},              // pořadí → probíhá zápis
     undo: {},              // pořadí → { stav, datum } před „Ozval se“ / „Nemá zájem“ (pro „Vrátit“)
     seq: {},               // pořadí → kolikátý klik v této relaci (naposledy vyřízený je nahoře)
@@ -10805,7 +10805,7 @@ async function webLoad(force) {
         w.error = webErrText(err);
     }
     // Jiný seznam než minule (Claude přepnul schránku): značky z relace patřily k jiným řádkům
-    if (w.lastId && w.lastId !== id) { w.opened = {}; w.via = {}; w.undo = {}; w.seq = {}; w.show = WEB_RADKU; }
+    if (w.lastId && w.lastId !== id) { w.last = ''; w.failed = {}; w.undo = {}; w.seq = {}; w.show = WEB_RADKU; }
     w.lastId = id;
     w.loadedId = id;   // znovu jen přes „Načíst znovu“ nebo po synchronizaci
     renderWebToday();
@@ -10891,7 +10891,8 @@ async function webWriteStates(items) {
 }
 
 // Zapíše stav jednoho řádku. V aplikaci se změna ukáže hned, při chybě se vrátí zpět.
-async function webMark(k, stav, datum) {
+// opts.retry: při chybě si zápis zapamatuje, aby šel zopakovat tlačítkem „Zapsat znovu“ (bez nového otevírání webu).
+async function webMark(k, stav, datum, opts) {
     const w = state.web;
     const r = webFind(k);
     if (!r || w.busy[r.k]) return false;
@@ -10899,6 +10900,7 @@ async function webMark(k, stav, datum) {
     const prev = { stav: r.stav, datum: r.datum };
     w.busy[r.k] = true;
     w.seq[r.k] = ++w.seqN;
+    delete w.failed[r.k];
     r.stav = stav;
     r.datum = datum;
     renderWebToday();
@@ -10910,8 +10912,11 @@ async function webMark(k, stav, datum) {
         console.error('Zápis do seznamu webů selhal:', err);
         r.stav = prev.stav;
         r.datum = prev.datum;
-        toast('error', 'Zápis u firmy ' + r.firma + ' se nepovedl. ' + webErrText(err) + (err && err.code === 'WEB_ZMENA' ? ' Načítám seznam znovu.' : ' Klikněte na tlačítko znovu.'), 10000);
-        if (err && err.code === 'WEB_ZMENA') webLoad(true);
+        const zmena = !!(err && err.code === 'WEB_ZMENA');
+        if (opts && opts.retry && !zmena) w.failed[r.k] = { stav: stav, datum: datum };
+        toast('error', 'Zápis u firmy ' + r.firma + ' se nepovedl. ' + webErrText(err) +
+            (zmena ? ' Načítám seznam znovu.' : opts && opts.retry ? ' U firmy klikněte „Zapsat znovu“.' : ' Klikněte na tlačítko znovu.'), 10000);
+        if (zmena) webLoad(true);
     } finally {
         delete w.busy[r.k];
         renderWebToday();
@@ -10919,11 +10924,22 @@ async function webMark(k, stav, datum) {
     return ok;
 }
 
-function webSent(k) {
+// Otevření = odesláno (Martin 16. 11. 2026): kliknutím na „Otevřít formulář“, „Koncept e-mailu“ nebo „Zkopírovat adresu“
+// se firma rovnou zapíše jako odeslaná a zmizí z fronty. Když to nejde, klikne u ní „Nejde“.
+function webAutoSent(k, via) {
+    const w = state.web;
     const r = webFind(k);
     if (!r) return;
-    const via = state.web.via[r.k] || (r.kind === 'email' ? 'email' : 'web');
-    return webMark(k, 'odesláno – ' + (via === 'email' ? 'e-mail' : 'formulář'), liToday());
+    const st = webState(r);
+    if (st !== 'ceka' && st !== 'odeslano') return;                 // ozval se, nemá zájem, nejde… se otevřením nepřepisuje
+    w.last = r.k;
+    const stav = 'odesláno – ' + (via === 'email' ? 'e-mail' : 'formulář');
+    if (st === 'odeslano' && String(r.stav || '').trim() === stav) { renderWebToday(); return; }
+    return webMark(r.k, stav, st === 'odeslano' && r.datum ? r.datum : liToday(), { retry: true });
+}
+function webRetry(k) {
+    const f = state.web.failed[String(k)];
+    if (f) return webMark(k, f.stav, f.datum, { retry: true });
 }
 function webCant(k) {
     return webMark(k, 'nejde', liToday());
@@ -11193,23 +11209,20 @@ function webCopyText(which) {
     else if (which === 'email') webCopy(webTextEmail(), 'Text e-mailu je ve schránce.');
     else webCopy(WEB_PREDMET, 'Předmět je ve schránce.');
 }
-// Klik na „Otevřít formulář“: odkaz se otevře sám (výchozí chování), zpráva je mezitím ve schránce
+// Klik na „Otevřít formulář“ / „Otevřít web“: odkaz se otevře sám (výchozí chování), zpráva je ve schránce
+// a firma se rovnou zapíše jako odeslaná. Zápis až po otevření odkazu: překreslení fronty by klik zrušilo.
 function webOpened(k) {
-    const w = state.web;
     const r = webFind(k);
     if (!r) return true;
-    webCopy(webTextFormular(), w.opened[r.k] ? '' : 'Zpráva je ve schránce – vložte ji do formuláře (Ctrl+V).');
-    if (!w.opened[r.k]) { w.opened[r.k] = true; setTimeout(renderWebToday, 0); }
+    webCopy(webTextFormular(), 'Zpráva je ve schránce – vložte ji do formuláře (Ctrl+V).');
+    setTimeout(function () { webAutoSent(r.k, 'web'); }, 0);
     return true;
 }
 function webCopyAddr(k) {
-    const w = state.web;
     const r = webFind(k);
     if (!r || !webEmailOk(r.email)) return;
     webCopy(r.email.trim(), 'Adresa ' + r.email.trim() + ' je ve schránce.');
-    w.via[r.k] = 'email';
-    w.opened[r.k] = true;
-    renderWebToday();
+    webAutoSent(r.k, 'email');
 }
 
 // ---------- Koncept e-mailu pro klasický Outlook ----------
@@ -11274,7 +11287,6 @@ function webDraftFileName(r) {
     return String(r.n).padStart(4, '0') + ' ' + (name || 'firma') + '.eml';
 }
 async function webDraft(k) {
-    const w = state.web;
     const r = webFind(k);
     if (!r) return;
     if (!webEmailOk(r.email)) { toast('warning', 'U firmy není platná e-mailová adresa.'); return; }
@@ -11294,10 +11306,8 @@ async function webDraft(k) {
     a.click();
     a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
-    w.via[r.k] = 'email';
-    w.opened[r.k] = true;
-    if (pdf) toast('success', 'Koncept je stažený. Otevřete ho (Outlook), zkontrolujte a odešlete, pak tady klikněte „Odesláno“.', 7000);
-    renderWebToday();
+    if (pdf) toast('success', 'Koncept je stažený. Otevřete ho v Outlooku a odešlete. Firma je zapsaná jako odeslaná.', 7000);
+    webAutoSent(r.k, 'email');
 }
 
 // ---------- Vykreslení ----------
@@ -11343,28 +11353,52 @@ function webQueueRowHtml(r) {
     const w = state.web;
     const k = escapeAttr(r.k);
     const busy = !!w.busy[r.k];
-    const opened = !!w.opened[r.k];
     const dis = busy ? ' disabled' : '';
     const url = sanitizeUrl(r.url || r.web);
     const mailOk = webEmailOk(r.email);
-    const mark = ' onclick="webOpened(\'' + k + '\')" onauxclick="webOpened(\'' + k + '\')"';
+    // Otevřel a zápis „odesláno“ selhal: hlavní je „Zapsat znovu“, ať nemusí web otevírat podruhé
+    const failed = !!w.failed[r.k];
+    const main = function (on) { return on && !failed ? 'btn-primary' : 'btn-ghost'; };
+    // auxclick = i pravé tlačítko; zapsat jen při otevření prostředním tlačítkem (nová záložka)
+    const mark = ' onclick="webOpened(\'' + k + '\')" onauxclick="if (event.button === 1) webOpened(\'' + k + '\')"';
     let openBtn = '';
     if (url !== '#') {
         openBtn = r.kind === 'email'
             ? '<a class="btn btn-ghost li-btn li-btn-small" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">Web</a>'
-            : '<a class="btn ' + (opened ? 'btn-ghost' : 'btn-primary') + ' li-btn li-btn-small" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer"' + mark + '>' +
-                (opened ? 'Otevřít znovu' : (r.kind === 'form' ? 'Otevřít formulář' : 'Otevřít web')) + '</a>';
+            : '<a class="btn ' + main(true) + ' li-btn li-btn-small" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer"' + mark + '>' +
+                (r.kind === 'form' ? 'Otevřít formulář' : 'Otevřít web') + '</a>';
     }
     const draftBtn = mailOk
-        ? '<button class="btn ' + (r.kind === 'email' && !opened ? 'btn-primary' : 'btn-ghost') + ' li-btn li-btn-small" onclick="webDraft(\'' + k + '\')" title="' + escapeHtml(r.email) + '">Koncept e-mailu</button>' +
-          '<button class="btn btn-ghost li-btn li-btn-small" onclick="webCopyAddr(\'' + k + '\')" title="' + escapeHtml(r.email) + '">Zkopírovat adresu</button>'
+        ? '<button class="btn ' + main(r.kind === 'email') + ' li-btn li-btn-small"' + dis + ' onclick="webDraft(\'' + k + '\')" title="' + escapeHtml(r.email) + '">Koncept e-mailu</button>' +
+          '<button class="btn btn-ghost li-btn li-btn-small"' + dis + ' onclick="webCopyAddr(\'' + k + '\')" title="' + escapeHtml(r.email) + '">Zkopírovat adresu</button>'
         : '';
-    const actions = (r.kind === 'email' ? draftBtn + openBtn : openBtn + draftBtn) +
-        '<button class="btn ' + (opened ? 'btn-primary' : 'btn-secondary') + ' li-btn li-btn-small"' + dis + ' onclick="webSent(\'' + k + '\')">Odesláno</button>' +
+    const retryBtn = failed
+        ? '<button class="btn btn-primary li-btn li-btn-small"' + dis + ' onclick="webRetry(\'' + k + '\')" title="Zapíše firmu jako odeslanou, web se znovu neotevírá">Zapsat znovu</button>' : '';
+    const actions = retryBtn + (r.kind === 'email' ? draftBtn + openBtn : openBtn + draftBtn) +
         '<button class="btn btn-ghost li-btn li-btn-small"' + dis + ' onclick="webCant(\'' + k + '\')" title="Formulář nefunguje, na webu není kontakt, web nepatří firmě…">Nejde</button>';
-    return '<div class="li-batch-row' + (opened ? ' li-batch-opened' : '') + (busy ? ' web-row-busy' : '') + '">' +
-        webWhoHtml(r, opened ? 'otevřeno' : '', webBadgesHtml(r)) +
+    return '<div class="li-batch-row' + (busy ? ' web-row-busy' : '') + '">' +
+        webWhoHtml(r, '', (failed ? '<span class="li-badge li-badge-warn">otevřeno, zápis se nepovedl</span> ' : '') + webBadgesHtml(r)) +
         '<div class="li-actions">' + actions + '</div></div>';
+}
+
+// Lišta nad frontou: firma, kterou Martin právě otevřel (už je zapsaná jako odeslaná). Když formulář nefunguje,
+// klikne tady „Nejde“; „Vrátit do fronty“ je na omyl. Po vyřízení další firmy ji nahradí ta nová.
+function webLastHtml(today) {
+    const w = state.web;
+    const r = w.last ? webFind(w.last) : null;
+    if (!r || webState(r) !== 'odeslano' || r.datum !== today) return '';
+    const k = escapeAttr(r.k);
+    const dis = w.busy[r.k] ? ' disabled' : '';
+    const url = sanitizeUrl(r.url || r.web);
+    const viaMail = webSentVia(r) === 'email';
+    return '<div class="li-msg" style="margin-bottom:10px;"><div class="li-msg-head">' +
+        '<span><strong>Právě otevřeno:</strong> ' + escapeHtml(r.firma) + ' <span class="li-muted">· zapsáno jako odesláno (' + (viaMail ? 'e-mail' : 'formulář') + ')</span></span>' +
+        '<span class="li-actions">' +
+            (url !== '#' ? '<a class="btn btn-ghost li-btn li-btn-small" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" onclick="webCopyText(\'form\')">Otevřít znovu</a>' : '') +
+            (webEmailOk(r.email) ? '<button class="btn btn-ghost li-btn li-btn-small"' + dis + ' onclick="webDraft(\'' + k + '\')" title="' + escapeHtml(r.email) + '">' + (viaMail ? 'Koncept znovu' : 'Koncept e-mailu') + '</button>' : '') +
+            '<button class="btn btn-secondary li-btn li-btn-small"' + dis + ' onclick="webCant(\'' + k + '\')" title="Formulář nefunguje, na webu není kontakt, web nepatří firmě…">Nejde</button>' +
+            '<button class="btn btn-ghost li-btn li-btn-small"' + dis + ' onclick="webUndo(\'' + k + '\')" title="Omyl: firma se vrátí do fronty">Vrátit do fronty</button>' +
+        '</span></div></div>';
 }
 
 // Vyřízená firma (odesláno, nejde, ozval se, nemá zájem)
@@ -11388,7 +11422,7 @@ function webDoneRowHtml(r) {
     const c = st === 'ozval' || st === 'nezajem' ? webFindContact(r) : null;
     const btn = function (fn, label, cls) { return '<button class="btn ' + (cls || 'btn-ghost') + ' li-btn li-btn-small"' + dis + ' onclick="' + fn + '(\'' + k + '\')">' + label + '</button>'; };
     let act = '';
-    if (st === 'odeslano') act = btn('webReplied', 'Ozval se', 'btn-secondary') + btn('webRefused', 'Nemá zájem');
+    if (st === 'odeslano') act = btn('webReplied', 'Ozval se', 'btn-secondary') + btn('webRefused', 'Nemá zájem') + btn('webCant', 'Nejde');
     if (st === 'ozval') {
         act = (c ? '<button class="btn btn-secondary li-btn li-btn-small" onclick="openEditContact(\'' + escapeAttr(c.id) + '\')">Otevřít kontakt</button>' +
                 '<button class="btn btn-ghost li-btn li-btn-small" onclick="sendToCrm(\'' + escapeAttr(c.id) + '\')" title="Otevře CRM s předvyplněnou kartou. Nejdřív v kartě kontaktu doplňte jméno člověka.">Do CRM</button>' : '') +
@@ -11534,9 +11568,10 @@ function renderWebToday() {
     }).join('') + '</div>';
     const queueHtml = '<div class="li-section li-day li-day-today">' +
         '<div class="li-section-head" style="flex-wrap:wrap;"><h4>Oslovit <span class="li-count">' + queue.length + '</span></h4>' + pills + '</div>' +
-        '<div class="li-hint" style="margin-bottom:8px;">Formulář: „Otevřít formulář“ zkopíruje zprávu a otevře kontaktní stránku. Vložte ji (Ctrl+V), odešlete a tady klikněte „Odesláno“. ' +
-            'E-mail: „Koncept e-mailu“ stáhne zprávu pro Outlook s adresou, textem a představením v příloze. Otevřete ji, odešlete a klikněte „Odesláno“. ' +
-            'Co nejde, označte „Nejde“. Firmy, kterým jste psal přes LinkedIn, tu nejsou.</div>' +
+        '<div class="li-hint" style="margin-bottom:8px;">„Otevřít formulář“ zkopíruje zprávu, otevře kontaktní stránku a firmu rovnou zapíše jako odeslanou. Stačí vložit zprávu (Ctrl+V) a odeslat. ' +
+            '„Koncept e-mailu“ stáhne zprávu pro Outlook s adresou, textem a představením v příloze a firmu také rovnou zapíše. ' +
+            'Když to u firmy nejde, klikněte u ní „Nejde“. Firmy, kterým jste psal přes LinkedIn, tu nejsou.</div>' +
+        webLastHtml(today) +
         (liState === 'error' ? '<div class="li-empty li-red" style="margin-bottom:8px;">Dávky pro LinkedIn se nepodařilo načíst. Ve frontě proto můžou být i firmy, jejichž lidé na LinkedIn teprve čekají.</div>' : '') +
         (shown.length ? '<div class="li-batch">' + shown.map(webQueueRowHtml).join('') + '</div>'
             : '<div class="li-empty">' + (by.ceka.length ? 'V tomto filtru už nikdo nečeká.'
