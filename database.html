@@ -10655,6 +10655,11 @@ const WEB_RADKU_MAX = 300;         // strop rozbalené sekce (zbytek přes hled�
 const WEB_PREDMET = 'Spolumajitelé Private Credit – financování pro vaše klienty';
 const WEB_PRILOHA_URL = 'assets/spolumajitele-private-credit-predstaveni.pdf';
 const WEB_PRILOHA_NAZEV = 'Spolumajitelé Private Credit - představení.pdf';
+// Podpis v konceptu e-mailu = Martinův podpis z Outlooku „CZ 5.0“ (Martin 16. 11. 2026): logo a pět řádků.
+// Obrázek je kopie image001.png z toho podpisu; když Martin podpis změní, vyměnit obrázek i webPodpisHtml.
+const WEB_PODPIS_LOGO_URL = 'assets/podpis-martin-dlouhy.png';
+const WEB_PODPIS_CID = 'podpis-logo@spolumajitele.cz';
+const WEB_PODPIS_TEXT = 'Martin Dlouhý\nředitel private credit\nSkupina Spolumajitelé, Pařížská 9, 110 00 Praha 1\n+420 721 847 777, martin.dlouhy@spolumajitele.cz\nprivatecredit.spolumajitele.cz';
 const WEB_FILTRY = { vse: 'Vše', form: 'Formulář', email: 'E-mail', jine: 'Bez kontaktu / ověřit' };
 // Kategorie oslovení (Martin 16. 11. 2026). Řádek seznamu do ní patří podle sloupce „skupina“ (webKat):
 // poradcům nabízíme spolupráci, stavebním firmám představujeme společnost a možnost financování.
@@ -10686,6 +10691,7 @@ state.web = {
     seqN: 0,
     expand: {},            // sekce → rozbaleno
     pdf: null,             // příloha v base64 (načte se jednou za relaci)
+    logo: null,            // obrázek do podpisu v base64 (načte se jednou za relaci)
     li: null,              // přehled firem oslovených přes LinkedIn / čekajících v dávce (webLinkedInIndex, při každém vykreslení)
     persisting: false,     // běží zápis firem oslovených jinde do seznamu
     persistFailed: false,  // ten zápis selhal → další pokus až po novém načtení
@@ -10709,7 +10715,8 @@ function webTextFormular(kat) {
         'Děkuji\n\n' +
         'Martin Dlouhý\nSpolumajitelé Private Credit a.s.\n+420 721 847 777 | martin.dlouhy@spolumajitele.cz';
 }
-// E-mail; podpis je součást textu, protože koncept otevřený ze souboru si podpis z Outlooku nepřidá
+// E-mail končí slovem „Děkuji“ (Martin 16. 11. 2026). Podpis přidává koncept sám (webPodpisHtml, WEB_PODPIS_TEXT),
+// protože koncept otevřený ze souboru si podpis z Outlooku nepřidá.
 function webTextEmail(kat) {
     return 'Dobrý den,\n\n' +
         'zastupuji společnost Spolumajitelé Private Credit a.s. z investiční skupiny Spolumajitelé.\n\n' +
@@ -10718,8 +10725,7 @@ function webTextEmail(kat) {
             ? 'Rád bych Vám představil naši společnost a možnost financování pro Vaši firmu. Pokud financování řešíte nebo budete řešit, dejte mi prosím vědět.\n\n'
             : 'Hledáme spolupráci s poradci, kteří pracují s firemními klienty. Pokud by Vás spolupráce zajímala nebo máte klienta, který takové financování poptává, budu rád, když mi dáte vědět.\n\n') +
         'Představení společnosti přikládám, více najdete na privatecredit.spolumajitele.cz.\n\n' +
-        'Děkuji\n\n' +
-        'Martin Dlouhý\nSpolumajitelé Private Credit a.s.\n+420 721 847 777 | martin.dlouhy@spolumajitele.cz';
+        'Děkuji';
 }
 
 // ---------- Řádek seznamu: druh kontaktu a stav ----------
@@ -11353,25 +11359,57 @@ function webMimeHeader(str) {
     if (chunk) words.push(chunk);
     return words.map(function (x) { return '=?UTF-8?B?' + webB64Utf8(x) + '?='; }).join('\r\n ');
 }
-// Barva a písmo tady patří e-mailu (v poště proměnné vzhledu aplikace neplatí)
-function webMailHtml(text) {
+// Barvy a písma tady patří e-mailu (v poště proměnné vzhledu aplikace neplatí).
+// Podpis je opsaný z Martinova podpisu v Outlooku „CZ 5.0“ (tabulka 500 px na pozadí #FAFAFA, logo 160 × 160,
+// písmo Arial, barvy z podpisu). sLogem = false, když se obrázek nepodařilo načíst: podpis je pak jen textový.
+function webPodpisHtml(sLogem) {
+    const p = function (inner) { return '<p style="margin:0;line-height:150%">' + inner + '</p>'; };
+    const odkaz = 'color:#3C4A45;text-decoration:none';
+    const radek = 'font-size:10.0pt;line-height:150%;font-family:Arial,sans-serif;color:#3C4A45';
+    return '<table border="0" cellspacing="0" cellpadding="0" width="500" style="width:375.0pt;background:#FAFAFA;border-collapse:collapse"><tr>' +
+        (sLogem ? '<td width="160" valign="top" style="width:120.0pt;padding:0"><p style="margin:0"><a href="https://www.spolumajitele.cz">' +
+            '<img border="0" width="160" height="160" src="cid:' + WEB_PODPIS_CID + '" alt="Spolumajitelé" style="display:block;border:0;outline:none;text-decoration:none"></a></p></td>' : '') +
+        '<td width="20" style="width:15.0pt;padding:0"><p style="margin:0;font-size:1.0pt;line-height:1.0pt">&nbsp;</p></td>' +
+        '<td style="padding:0">' +
+            p('<b><span style="font-size:12.0pt;font-family:Arial,sans-serif;color:#2E3D38">Martin Dlouhý</span></b>') +
+            p('<span style="font-size:10.5pt;line-height:150%;font-family:Arial,sans-serif;color:#CBA55A">ředitel private credit</span>') +
+            p('<span style="' + radek + '">Skupina Spolumajitelé, Pařížská 9, 110 00 Praha 1</span>') +
+            p('<span style="' + radek + '"><a href="tel:+420721847777" style="' + odkaz + '"><span style="' + odkaz + '">+420 721 847 777</span></a>, ' +
+                '<a href="mailto:martin.dlouhy@spolumajitele.cz" style="' + odkaz + '"><span style="' + odkaz + '">martin.dlouhy@spolumajitele.cz</span></a></span>') +
+            p('<span style="' + radek + '"><a href="https://privatecredit.spolumajitele.cz" style="' + odkaz + '"><span style="' + odkaz + '">privatecredit.spolumajitele.cz</span></a></span>') +
+        '</td></tr></table>';
+}
+// Text e-mailu písmem Calibri 11 b. (Martin 16. 11. 2026), pod ním prázdný řádek a podpis
+function webMailHtml(text, sLogem) {
+    const pismo = 'font-family:Calibri,Arial,sans-serif;font-size:11.0pt;color:#000000';
     const body = String(text).split(/\n{2,}/).map(function (p) {
         const h = escapeHtml(p).replace(/\n/g, '<br>')
             .replace(/(privatecredit\.spolumajitele\.cz)/g, '<a href="https://$1">$1</a>')
             .replace(/([\w.+-]+@[\w-]+(?:\.[\w-]+)+)/g, '<a href="mailto:$1">$1</a>');
-        return '<p style="margin:0 0 11pt 0">' + h + '</p>';
+        return '<p style="margin:0 0 11pt 0;' + pismo + '">' + h + '</p>';
     }).join('');
-    return '<html><body><div style="font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000000">' + body + '</div></body></html>';
+    return '<html><body><div style="' + pismo + '">' + body + '<p style="margin:0;' + pismo + '">&nbsp;</p></div>' + webPodpisHtml(sLogem) + '</body></html>';
 }
-function webBuildEml(to, subject, text, pdfB64, n) {
+// logoB64 = obrázek do podpisu (vložený do zprávy, ne jako příloha); bez něj je podpis jen textový
+function webBuildEml(to, subject, text, pdfB64, n, logoB64) {
     const wrap = function (b64) { return (b64.match(/.{1,76}/g) || []).join('\r\n'); };
-    const bm = '=_mix_' + n, ba = '=_alt_' + n;
+    const bm = '=_mix_' + n, ba = '=_alt_' + n, br = '=_rel_' + n;
     const lines = ['X-Unsent: 1', 'To: ' + to, 'Subject: ' + webMimeHeader(subject), 'MIME-Version: 1.0'];
     if (pdfB64) lines.push('Content-Type: multipart/mixed; boundary="' + bm + '"', '', '--' + bm);
+    const plain = String(text) + '\n\n' + WEB_PODPIS_TEXT;
+    const html = ['Content-Type: text/html; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', wrap(webB64Utf8(webMailHtml(text, !!logoB64)))];
     lines.push('Content-Type: multipart/alternative; boundary="' + ba + '"', '',
-        '--' + ba, 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', wrap(webB64Utf8(String(text).replace(/\r?\n/g, '\r\n'))),
-        '--' + ba, 'Content-Type: text/html; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', wrap(webB64Utf8(webMailHtml(text))),
-        '--' + ba + '--', '');
+        '--' + ba, 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', wrap(webB64Utf8(plain.replace(/\r?\n/g, '\r\n'))),
+        '--' + ba);
+    if (logoB64) {
+        lines.push('Content-Type: multipart/related; boundary="' + br + '"; type="text/html"', '', '--' + br);
+        html.forEach(function (l) { lines.push(l); });
+        lines.push('--' + br, 'Content-Type: image/png; name="podpis.png"', 'Content-Transfer-Encoding: base64', 'Content-ID: <' + WEB_PODPIS_CID + '>',
+            'Content-Disposition: inline; filename="podpis.png"', '', wrap(logoB64), '--' + br + '--', '');
+    } else {
+        html.forEach(function (l) { lines.push(l); });
+    }
+    lines.push('--' + ba + '--', '');
     if (pdfB64) {
         const name = webMimeHeader(WEB_PRILOHA_NAZEV);
         lines.push('--' + bm, 'Content-Type: application/pdf; name="' + name + '"', 'Content-Transfer-Encoding: base64',
@@ -11389,6 +11427,17 @@ async function webLoadAttachment() {
     w.pdf = webB64Bytes(bytes);
     return w.pdf;
 }
+// Logo do podpisu (jednou za relaci)
+async function webLoadLogo() {
+    const w = state.web;
+    if (w.logo) return w.logo;
+    const res = await fetch(WEB_PODPIS_LOGO_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.length < 500 || bytes[0] !== 0x89 || String.fromCharCode(bytes[1], bytes[2], bytes[3]) !== 'PNG') throw new Error('soubor není PNG');
+    w.logo = webB64Bytes(bytes);
+    return w.logo;
+}
 function webDraftFileName(r) {
     const name = r.firma.replace(/\s*\(\+.*$/, '').replace(/[\\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').replace(/^\s+|[\s.]+$/g, '').slice(0, 60);
     return String(r.n).padStart(4, '0') + ' ' + (name || 'firma') + '.eml';
@@ -11404,7 +11453,14 @@ async function webDraft(k) {
         console.warn('Přílohu se nepodařilo načíst:', err);
         toast('warning', 'Představení se nepodařilo přiložit (' + (err.message || err) + '). Koncept je bez přílohy – přiložte ji v Outlooku ručně.', 12000);
     }
-    const eml = webBuildEml(r.email.trim(), webPredmet(r.kat), webTextEmail(r.kat), pdf, r.k);
+    let logo = '';
+    try {
+        logo = await webLoadLogo();
+    } catch (err) {
+        console.warn('Logo do podpisu se nepodařilo načíst:', err);
+        toast('warning', 'Logo do podpisu se nepodařilo načíst, podpis v konceptu je jen textový.', 9000);
+    }
+    const eml = webBuildEml(r.email.trim(), webPredmet(r.kat), webTextEmail(r.kat), pdf, r.k, logo);
     const url = URL.createObjectURL(new Blob([eml], { type: 'message/rfc822' }));
     const a = document.createElement('a');
     a.href = url;
@@ -11608,7 +11664,7 @@ function webRenderMessages() {
             '<button class="btn btn-secondary li-btn li-btn-small" onclick="webCopyText(\'predmet\')">Zkopírovat předmět</button>' +
             '<button class="btn btn-secondary li-btn li-btn-small" onclick="webCopyText(\'email\')">Zkopírovat text</button></span></div>' +
             '<details><summary>Zobrazit předmět a text</summary><pre class="li-msg-text">' + escapeHtml('Předmět: ' + webPredmet(kat) + '\n\n' + webTextEmail(kat)) + '</pre>' +
-            '<div class="li-hint" style="margin-top:6px;">Příloha: ' + escapeHtml(WEB_PRILOHA_NAZEV) + '. Koncept e-mailu ji přiloží sám.</div></details></div>';
+            '<div class="li-hint" style="margin-top:6px;">Příloha: ' + escapeHtml(WEB_PRILOHA_NAZEV) + '. Koncept e-mailu ji přiloží sám a pod text vloží váš podpis s logem (písmo Calibri).</div></details></div>';
 }
 
 function renderWebToday() {
