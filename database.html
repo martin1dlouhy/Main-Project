@@ -549,6 +549,46 @@
         .web-kat { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; font-size: 13px; color: var(--text-mute); }
         .web-kat .filter-pill { font-family: inherit; font-size: 13.5px; padding: 7px 14px; }
         .web-kat .filter-pill:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+        /* Skupiny podle zaměření na firmy: čtyři dlaždice nad frontou (pořadí oslovení zleva doprava) */
+        .web-zam { margin: 12px 0 14px; }
+        .web-zam-label { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-soft); }
+        .web-zam-label span + span { font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+        .web-zam-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+        .web-zam-card { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 11px 14px 12px; text-align: left; font: inherit; color: var(--text-soft); background: var(--bg-input); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
+        .web-zam-card:hover { border-color: var(--line-strong); background: var(--bg-input-hover); }
+        .web-zam-card:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+        .web-zam-card.active { border-color: var(--amber); background: var(--amber-tint); }
+        .web-zam-krok { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-soft); }
+        .web-zam-card.active .web-zam-krok { color: var(--amber-warm); }
+        .web-zam-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 10px; }
+        .web-zam-name { font-size: 14.5px; font-weight: 600; color: var(--text); }
+        .web-zam-num { font-size: 12.5px; color: var(--text-soft); white-space: nowrap; }
+        .web-zam-num b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 500; color: var(--text); }
+        .web-zam-card.active .web-zam-num b { color: var(--amber-warm); }
+        .web-zam-desc { font-size: 12px; line-height: 1.45; color: var(--text-soft); }
+        /* Krátká připomínka nad frontou, celý postup až po rozbalení */
+        .web-help { margin: 0 0 12px; font-size: 12.5px; line-height: 1.5; color: var(--text-soft); }
+        .web-help summary { cursor: pointer; }
+        .web-help summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+        .web-help-more { margin-left: 6px; color: var(--amber-warm); white-space: nowrap; }
+        .web-help-body { margin-top: 6px; padding: 10px 12px; border: 1px solid var(--line-faint); border-radius: 8px; }
+        .web-help-body p { margin: 0 0 4px; }
+        .web-help-body p:last-child { margin-bottom: 0; }
+        /* Věta z webu firmy pod jejím názvem (proč je ve skupině) */
+        .web-doklad { margin-top: 3px; font-size: 12px; color: var(--text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .web-doklad-lbl { margin-right: 4px; color: var(--text-mute); }
+        .li-badge-pozor { color: var(--warning); background: var(--warning-tint); }
+        /* Skupina je hotová: co dál */
+        .web-done { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px; border: 1px solid var(--line-amber); border-radius: 8px; background: var(--amber-tint); font-size: 14px; color: var(--text); }
+        .web-done strong { color: var(--amber-warm); font-weight: 600; }
+        .web-queue .li-batch-row { padding: 9px 0; }
+        @media (max-width: 720px) {
+            /* na telefonu dvě dlaždice vedle sebe a bez popisu, ať fronta nezačíná až pod obrazovkou */
+            .web-zam-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .web-zam-card { padding: 9px 11px 10px; }
+            .web-zam-top { flex-direction: column; align-items: flex-start; }
+            .web-zam-desc, .web-zam-label span + span { display: none; }
+        }
         .web-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; font-size: 12.5px; color: var(--text-mute); }
         .web-row-busy { opacity: 0.55; }
         .web-more { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; padding: 10px 14px; border: 1px solid var(--line-amber); border-radius: 8px; background: var(--amber-tint); font-size: 14px; color: var(--text); }
@@ -10661,6 +10701,14 @@ const WEB_PODPIS_LOGO_URL = 'assets/podpis-martin-dlouhy.png';
 const WEB_PODPIS_CID = 'podpis-logo@spolumajitele.cz';
 const WEB_PODPIS_TEXT = 'Martin Dlouhý\nředitel private credit\nSkupina Spolumajitelé, Pařížská 9, 110 00 Praha 1\n+420 721 847 777, martin.dlouhy@spolumajitele.cz\nprivatecredit.spolumajitele.cz';
 const WEB_FILTRY = { vse: 'Vše', form: 'Formulář', email: 'E-mail', jine: 'Bez kontaktu / ověřit' };
+// Skupiny podle zaměření na firmy (Martin 18. 11. 2026); ukazují se, jen když je načtený doplněk s pořadím
+// Dlaždice nad frontou: „krok“ = kdy na skupinu přijde řada, „popis“ = co má taková firma na webu
+const WEB_ZAMERENI = {
+    uvery: { nazev: 'Úvěry pro firmy', krok: 'Nejdřív', popis: 'Na webu zmiňují úvěry nebo financování pro firmy.' },
+    sluzby: { nazev: 'Služby pro firmy', krok: 'Potom', popis: 'Firmám slouží jinak, třeba pojištěním podnikatelů.' },
+    ostatni: { nazev: 'Ostatní', krok: 'Nakonec', popis: 'O firmách na webu nic, nebo se to nepodařilo zjistit.' },
+    vse: { nazev: 'Všechny', krok: 'Celá fronta', popis: 'Všechny tři skupiny za sebou.' }
+};
 // Kategorie oslovení (Martin 16. 11. 2026). Řádek seznamu do ní patří podle sloupce „skupina“ (webKat):
 // poradcům nabízíme spolupráci, stavebním firmám představujeme společnost a možnost financování.
 const WEB_KATEGORIE = {
@@ -10693,6 +10741,10 @@ state.web = {
     pdf: null,             // příloha v base64 (načte se jednou za relaci)
     logo: null,            // obrázek do podpisu v base64 (načte se jednou za relaci)
     li: null,              // přehled firem oslovených přes LinkedIn / čekajících v dávce (webLinkedInIndex, při každém vykreslení)
+    razeno: false,         // seznamy mají doplněk s pořadím podle zaměření na firmy (webParseDoplnek)
+    zam: '',               // vybraná skupina zaměření (klíč z WEB_ZAMERENI); '' = ještě se nevybírala, při vykreslení se nastaví první neprázdná
+    zamShown: '',          // skupina, kterou fronta právě ukazuje ('' = bez skupin); řádek podle ní ví, jestli má štítek zaměření opakovat
+    help: false,           // rozbalený „Celý postup“ nad frontou (aby se po každém kliknutí nezavíral)
     persisting: false,     // běží zápis firem oslovených jinde do seznamu
     persistFailed: false,  // ten zápis selhal → další pokus až po novém načtení
     persistTried: {}       // pořadí → zápis „osloveno jinde“ už se v tomto načtení zkoušel
@@ -10816,6 +10868,33 @@ function webParseRows(vals) {
     return { rows: rows, cols: cols };
 }
 
+// ---------- Doplněk: pořadí fronty podle zaměření na firmy ----------
+// Tabulka od Clauda se sloupci „pořadí“ (klíč řádku v seznamu), „řazení“ (nové pořadí ve frontě), „stupeň“
+// (1 = úvěry pro firmy, 2 = služby pro firmy, 3 = o firmách nic, 0 = nezjištěno), „zaměření“ (text štítku) a „doklad“
+// (věta z webu firmy). Její ID je v názvu schránky mezi ostatními; pozná se podle hlavičky. Seznamy se kvůli pořadí
+// nepřepisují (Martin do nich celý den zapisuje stavy), proto je pořadí zvlášť.
+function webIsDoplnek(vals) {
+    const header = (vals[0] || []).map(webNorm);
+    return header.indexOf('poradi') !== -1 && header.indexOf('razeni') !== -1 && header.indexOf('firma') === -1;
+}
+function webParseDoplnek(vals, into) {
+    const header = (vals[0] || []).map(webNorm);
+    const ix = function (n) { return header.indexOf(n); };
+    const cP = ix('poradi'), cR = ix('razeni'), cS = ix('stupen'), cZ = ix('zamereni'), cD = ix('doklad');
+    for (let i = 1; i < vals.length; i++) {
+        const src = vals[i] || [];
+        const k = webKey(src[cP]);
+        const rank = parseInt(webKey(src[cR]), 10);
+        if (!/^\d{1,6}$/.test(k) || !(rank > 0)) continue;
+        const st = cS >= 0 ? parseInt(webKey(src[cS]), 10) : 0;
+        into[k] = {
+            rank: rank, stupen: st === 1 || st === 2 || st === 3 ? st : 0,
+            zamereni: cZ >= 0 ? String(src[cZ] == null ? '' : src[cZ]).trim() : '',
+            doklad: cD >= 0 ? String(src[cD] == null ? '' : src[cD]).trim() : ''
+        };
+    }
+}
+
 // ---------- Načtení seznamu ----------
 // Seznamů může být víc (každá kategorie má vlastní tabulku, aby se rozpracovaný seznam nemusel kopírovat):
 // název schránky končí jejich ID oddělenými mezerou. Poslední je hlavní seznam (poradci) – starší verze aplikace
@@ -10861,7 +10940,7 @@ async function webLoad(force) {
     if (force) { w.mailboxChecked = false; w.persistFailed = false; }
     await webResolveMailbox();
     const ids = webSourceIds();
-    const all = [], colsBy = {}, errs = [], seen = {};
+    const all = [], colsBy = {}, errs = [], seen = {}, doplnek = {};
     let dup = 0;
     // Hlavní seznam první: při stejném pořadí ve dvou seznamech platí jeho řádek
     for (const id of ids.slice().reverse()) {
@@ -10872,6 +10951,8 @@ async function webLoad(force) {
                 await checkSheetsResponse(res, 'seznam webů');
                 return (await res.json()).values || [];
             });
+            // Doplněk (ne seznam firem): pořadí fronty podle zaměření na firmy, řádky se párují podle sloupce „pořadí“
+            if (webIsDoplnek(vals)) { webParseDoplnek(vals, doplnek); continue; }
             const parsed = webParseRows(vals);
             colsBy[id] = parsed.cols;
             parsed.rows.forEach(function (r) {
@@ -10885,12 +10966,20 @@ async function webLoad(force) {
         }
     }
     if (Object.keys(colsBy).length) {
-        all.sort(function (a, b) { return a.n - b.n; });
+        // Zaměření na firmy (Martin 18. 11. 2026): nejdřív poradci, kteří na webu nabízejí úvěry pro firmy, pak ti, kdo firmám
+        // slouží jinak, nakonec ostatní. Nikdo se nevyřazuje. Řádek bez doplňku (jiná kategorie, vrácená firma) jde za seřazené.
+        all.forEach(function (r) {
+            const d = doplnek[r.k];
+            if (d) { r.rank = d.rank; r.stupen = d.stupen; r.zamereni = d.zamereni; r.doklad = d.doklad; }
+        });
+        w.razeno = Object.keys(doplnek).length > 0;
+        // Bez doplňku pořadí ze seznamů jako dosud (sloupec „pořadí“); s doplňkem napřed firmy podle „řazení“, ostatní za nimi
+        all.sort(function (a, b) { return (a.rank || 1e9) - (b.rank || 1e9) || a.n - b.n; });
         w.rows = all;
         w.colsBy = colsBy;
         w.status = 'ok';
         w.error = '';
-        w.warn = (errs.length ? 'Jeden ze seznamů se nepodařilo načíst: ' + errs[0] + ' Jeho firmy tu teď nejsou. ' : '') +
+        w.warn = (errs.length ? 'Jednu z tabulek se nepodařilo načíst: ' + errs[0] + ' Může chybět část firem nebo pořadí podle zaměření. ' : '') +
             (dup ? 'Řádků se stejným pořadím jako v jiném seznamu: ' + dup + ' (nezobrazují se, řekněte Claudovi).' : '');
         w.persistTried = {};
     } else {
@@ -11481,6 +11570,17 @@ function webSetFilter(key) {
     state.web.show = WEB_RADKU;
     renderWebToday();
 }
+// Zaměření na firmy: skupiny podle stupně z doplňku (1 = úvěry pro firmy, 2 = služby pro firmy, ostatní = nic nebo nezjištěno)
+function webZamKey(r) { return r.stupen === 1 ? 'uvery' : r.stupen === 2 ? 'sluzby' : 'ostatni'; }
+function webSetZam(key) {
+    if (!WEB_ZAMERENI[key]) return;
+    state.web.zam = key;
+    state.web.show = WEB_RADKU;      // filtr způsobu oslovení (formulář / e-mail) zůstává, Martin jede skupinu po skupině stejným způsobem
+    renderWebToday();
+}
+function webCeka(n) { return n >= 2 && n <= 4 ? 'čekají' : 'čeká'; }
+// „Celý postup“ nad frontou: jen si zapamatovat, jestli je rozbalený (fronta se po každém kliknutí kreslí znovu)
+function webHelpToggle(open) { state.web.help = !!open; }
 function webSetKat(key) {
     if (!WEB_KATEGORIE[key]) return;
     state.web.kat = key;
@@ -11507,6 +11607,20 @@ function webBadgesHtml(r) {
         // U stavební firmy je ve sloupci „co nabízejí…“ důvod oslovení (kdy vydala dluhopisy)
         b.push('<span class="li-badge li-badge-sit" title="' + escapeHtml(r.skupina) + '">stavební firma</span>');
         if (r.nabidka) b.push('<span class="li-badge" title="' + escapeHtml(r.nabidka) + '">' + escapeHtml(r.nabidka.slice(0, 40)) + '</span>');
+    } else if (r.rank) {
+        // Zaměření na firmy z doplňku. Ve skupině, kterou fronta právě ukazuje, se štítek u každé firmy neopakuje (říká to dlaždice
+        // nahoře a věta z webu pod názvem); zůstává jen upozornění ze závorky („web o půjčkách“, „možná věřitel“). Jinde je štítek celý.
+        const txt = r.zamereni || (r.stupen === 1 ? 'úvěry pro firmy' : r.stupen === 2 ? 'služby pro firmy' : r.stupen === 3 ? 'o firmách nic' : 'zaměření nezjištěno');
+        const vybrana = !!state.web.zamShown && webZamKey(r) === state.web.zamShown;
+        const pozor = txt.match(/\(([^)]+)\)\s*$/);
+        if (pozor) {
+            const proc = /veritel/.test(webNorm(pozor[1])) ? 'Podle webu firma nejspíš půjčuje sama.'
+                : /pujck/.test(webNorm(pozor[1])) ? 'Web o rychlých půjčkách pro podnikatele, většinou zástupce jednoho věřitele.' : '';
+            b.push('<span class="li-badge li-badge-pozor"' + (proc ? ' title="' + escapeHtml(proc) + '"' : '') + '>' + escapeHtml((vybrana ? pozor[1] : txt).slice(0, 40)) + '</span>');
+        } else if (!vybrana) {
+            const tip = r.stupen === 3 ? 'Na webu jsme nenašli zmínku o firmách ani o úvěrech pro firmy.' : r.stupen === 0 ? 'Zaměření se nepodařilo zjistit: web nešel načíst nebo je na něm málo textu.' : '';
+            b.push('<span class="li-badge' + (r.stupen === 1 ? ' li-badge-sit' : '') + '"' + (tip ? ' title="' + escapeHtml(tip) + '"' : '') + '>' + escapeHtml(txt.slice(0, 40)) + '</span>');
+        }
     } else if (r.skupina) {
         const m = r.skupina.match(/^(\d+)\s*[–-]/);
         b.push('<span class="li-badge" title="' + escapeHtml(r.skupina) + '">' + (m ? 'skupina ' + m[1] : escapeHtml(r.skupina.slice(0, 24))) + '</span>');
@@ -11515,11 +11629,16 @@ function webBadgesHtml(r) {
     if (r.poznamka) b.push('<span class="li-badge" title="' + escapeHtml(r.poznamka) + '">' + escapeHtml(r.poznamka.slice(0, 50)) + '</span>');
     return b.join(' ');
 }
-function webWhoHtml(r, mark, extra) {
+function webWhoHtml(r, mark, extra, below) {
     const sub = [r.obec, r.host].filter(Boolean).map(escapeHtml).join(' · ');
     return '<div class="li-batch-who">' + (mark ? '<span class="li-check" aria-label="' + escapeHtml(mark) + '">✓</span> ' : '') +
         '<span class="li-name"' + (r.nabidka ? ' title="' + escapeHtml(r.nabidka) + '"' : '') + '>' + escapeHtml(r.firma) + '</span>' +
-        (sub ? ' <span class="li-batch-sub">· ' + sub + '</span>' : '') + ' ' + (extra || '') + '</div>';
+        (sub ? ' <span class="li-batch-sub">· ' + sub + '</span>' : '') + ' ' + (extra || '') + (below || '') + '</div>';
+}
+// Věta z webu firmy, podle které je ve své skupině (jeden řádek pod názvem, celá věta v nápovědě)
+function webDokladHtml(r) {
+    if (!r.rank || !r.doklad || r.kat === 'stavebni') return '';
+    return '<div class="web-doklad" title="' + escapeHtml(r.doklad) + '"><span class="web-doklad-lbl">Na webu:</span>' + escapeHtml(r.doklad) + '</div>';
 }
 
 // Firma, která čeká na oslovení
@@ -11551,7 +11670,7 @@ function webQueueRowHtml(r) {
     const actions = retryBtn + (r.kind === 'email' ? draftBtn + openBtn : openBtn + draftBtn) +
         '<button class="btn btn-ghost li-btn li-btn-small"' + dis + ' onclick="webCant(\'' + k + '\')" title="Formulář nefunguje, na webu není kontakt, web nepatří firmě…">Nejde</button>';
     return '<div class="li-batch-row' + (busy ? ' web-row-busy' : '') + '">' +
-        webWhoHtml(r, '', (failed ? '<span class="li-badge li-badge-warn">otevřeno, zápis se nepovedl</span> ' : '') + webBadgesHtml(r)) +
+        webWhoHtml(r, '', (failed ? '<span class="li-badge li-badge-warn">otevřeno, zápis se nepovedl</span> ' : '') + webBadgesHtml(r), webDokladHtml(r)) +
         '<div class="li-actions">' + actions + '</div></div>';
 }
 
@@ -11738,6 +11857,17 @@ function renderWebToday() {
         '<div class="li-stat"><div class="li-stat-val">' + by.ozval.length + '</div><div class="li-stat-lbl">ozvali se</div></div>' +
         '<div class="li-stat"><div class="li-stat-val">' + (by.jinde.length + by.cekali.length) + '</div><div class="li-stat-lbl">řeší se přes LinkedIn</div></div>';
 
+    // Zaměření na firmy (doplněk s pořadím): skupiny, mezi kterými jde přepínat. Poprvé se vybere první neprázdná
+    // v pořadí úvěry pro firmy → služby pro firmy → všechny a výběr pak drží: když Martin skupinu dojede, uvidí,
+    // že je hotová, a na další přejde sám (tiché přeskočení by vypadalo, že firmy zmizely).
+    const cekaVse = by.ceka;
+    const maZam = w.razeno && cekaVse.some(function (r) { return r.rank; });
+    const zcount = { uvery: 0, sluzby: 0, ostatni: 0, vse: cekaVse.length };
+    if (maZam) cekaVse.forEach(function (r) { zcount[webZamKey(r)]++; });
+    if (maZam && !WEB_ZAMERENI[w.zam]) w.zam = zcount.uvery ? 'uvery' : zcount.sluzby ? 'sluzby' : 'vse';
+    const zam = maZam ? w.zam : 'vse';
+    w.zamShown = maZam ? zam : '';     // řádky (i ve výsledcích hledání) podle toho vědí, jestli štítek zaměření opakovat
+
     // Hledání přes celý seznam (čekající, vyřízené i firmy řešené přes LinkedIn)
     const sq = webNorm(w.search);
     let searchHtml = '';
@@ -11767,30 +11897,58 @@ function renderWebToday() {
                 Object.keys(WEB_KATEGORIE).map(function (key) { return WEB_KATEGORIE[key].nazev.toLowerCase() + ' ' + katDnes[key]; }).join(', ') + ').</span>';
     }
 
-    // Fronta: firmy bez stavu v pořadí ze seznamu (při více kategoriích už jen z té vybrané)
-    const cekaKat = by.ceka;
+    // Fronta: firmy bez stavu v pořadí ze seznamu (při více kategoriích už jen z té vybrané, se skupinami jen z vybrané skupiny)
     const jinde = Object.keys(katCount).some(function (key) { return key !== w.kat && katCount[key] > 0; });
+    const cekaKat = zam === 'vse' ? cekaVse : cekaVse.filter(function (r) { return webZamKey(r) === zam; });
     const fcount = { vse: cekaKat.length, form: 0, email: 0, jine: 0 };
     cekaKat.forEach(function (r) { fcount[webFilterKey(r)]++; });
     const queue = w.filter === 'vse' ? cekaKat : cekaKat.filter(function (r) { return webFilterKey(r) === w.filter; });
     const shown = queue.slice(0, w.show);
     const more = queue.length - shown.length;
+    // Dlaždice skupin: číslo = kolik firem ve skupině čeká (bez ohledu na filtr způsobu oslovení vpravo nahoře)
+    let zamHtml = '';
+    if (maZam) {
+        zamHtml = '<div class="web-zam"><div class="web-zam-label"><span>Zaměření na firmy</span><span>Skupiny podle toho, co má firma na webu. Nikdo ze seznamu nevypadl.</span></div>' +
+            '<div class="web-zam-grid" role="group" aria-label="Zaměření na firmy">' +
+            Object.keys(WEB_ZAMERENI).map(function (key) {
+                const z = WEB_ZAMERENI[key], n = zcount[key];
+                return '<button type="button" class="web-zam-card' + (zam === key ? ' active' : '') + '" aria-pressed="' + (zam === key) + '" onclick="webSetZam(\'' + key + '\')">' +
+                    '<span class="web-zam-krok">' + z.krok + '</span>' +
+                    '<span class="web-zam-top"><span class="web-zam-name">' + z.nazev + '</span>' +
+                        '<span class="web-zam-num">' + (n ? '<b>' + n + '</b> ' + webCeka(n) : 'hotovo') + '</span></span>' +
+                    '<span class="web-zam-desc">' + z.popis + '</span></button>';
+            }).join('') + '</div></div>';
+    }
+    // Nad frontou jen to hlavní, celý postup po rozbalení
+    const helpHtml = '<details class="web-help"' + (w.help ? ' open' : '') + ' ontoggle="webHelpToggle(this.open)">' +
+        '<summary>Otevřením formuláře nebo konceptu e-mailu se firma rovnou zapíše jako odeslaná. Když to u ní nejde, klikněte „Nejde“.<span class="web-help-more">Celý postup</span></summary>' +
+        '<div class="web-help-body">' +
+            '<p>„Otevřít formulář“ zkopíruje zprávu, otevře kontaktní stránku a firmu rovnou zapíše jako odeslanou. Stačí vložit zprávu (Ctrl+V) a odeslat.</p>' +
+            '<p>„Koncept e-mailu“ stáhne zprávu pro Outlook s adresou, textem a představením v příloze a firmu také rovnou zapíše.</p>' +
+            '<p>Když to u firmy nejde, klikněte u ní „Nejde“. Firmy, kterým jste psal přes LinkedIn, tu nejsou.</p>' +
+            (maZam ? '<p>Skupiny „Zaměření na firmy“ jsou podle toho, co má firma na webu. Větu, podle které je firma ve své skupině, máte pod jejím názvem.</p>' : '') +
+        '</div></details>';
+    // Prázdná fronta: říct proč a co dál. Hotová skupina nabídne další, ve které ještě někdo čeká.
+    const dalsiZam = maZam ? ['uvery', 'sluzby', 'ostatni'].filter(function (key) { return key !== zam && zcount[key] > 0; })[0] : '';
+    const emptyHtml = cekaKat.length ? '<div class="li-empty">V tomto filtru už nikdo nečeká.</div>'
+        : maZam && zam !== 'vse' && cekaVse.length
+            ? '<div class="web-done"><span><strong>Skupina „' + WEB_ZAMERENI[zam].nazev + '“ je hotová.</strong>' +
+                (dalsiZam ? ' Další na řadě: ' + WEB_ZAMERENI[dalsiZam].nazev + ' (' + zcount[dalsiZam] + ').' : '') + '</span>' +
+                (dalsiZam ? '<button class="btn btn-primary li-btn" onclick="webSetZam(\'' + dalsiZam + '\')">Pokračovat další skupinou</button>' : '') + '</div>'
+        : '<div class="li-empty">' + (by.cekali.length ? 'Fronta je prázdná. Další firmy přibudou, až na LinkedInu u jejich lidí kliknete „Nenašel“.'
+            : jinde ? 'V této kategorii už nikdo nečeká. Další firmy jsou v druhé kategorii nahoře.' : 'Všechny firmy ze seznamu jsou vyřízené.') + '</div>';
     const pills = '<div class="web-filters" role="group" aria-label="Filtr podle způsobu oslovení">' + Object.keys(WEB_FILTRY).map(function (key) {
         return '<button type="button" class="filter-pill' + (w.filter === key ? ' active' : '') + '" aria-pressed="' + (w.filter === key) + '" onclick="webSetFilter(\'' + key + '\')">' +
             WEB_FILTRY[key] + ' ' + fcount[key] + '</button>';
     }).join('') + '</div>';
-    const queueHtml = '<div class="li-section li-day li-day-today">' +
+    const queueHtml = '<div class="li-section li-day li-day-today web-queue">' +
         '<div class="li-section-head" style="flex-wrap:wrap;"><h4>Oslovit <span class="li-count">' + queue.length + '</span></h4>' + pills + '</div>' +
-        '<div class="li-hint" style="margin-bottom:8px;">„Otevřít formulář“ zkopíruje zprávu, otevře kontaktní stránku a firmu rovnou zapíše jako odeslanou. Stačí vložit zprávu (Ctrl+V) a odeslat. ' +
-            '„Koncept e-mailu“ stáhne zprávu pro Outlook s adresou, textem a představením v příloze a firmu také rovnou zapíše. ' +
-            'Když to u firmy nejde, klikněte u ní „Nejde“. Firmy, kterým jste psal přes LinkedIn, tu nejsou.</div>' +
+        zamHtml +
+        helpHtml +
         webLastHtml(today) +
         (liState === 'error' ? '<div class="li-empty li-red" style="margin-bottom:8px;">Dávky pro LinkedIn se nepodařilo načíst. Ve frontě proto můžou být i firmy, jejichž lidé na LinkedIn teprve čekají.</div>' : '') +
         (w.warn ? '<div class="li-empty li-red" style="margin-bottom:8px;">' + escapeHtml(w.warn) + '</div>' : '') +
-        (shown.length ? '<div class="li-batch">' + shown.map(webQueueRowHtml).join('') + '</div>'
-            : '<div class="li-empty">' + (cekaKat.length ? 'V tomto filtru už nikdo nečeká.'
-                : by.cekali.length ? 'Fronta je prázdná. Další firmy přibudou, až na LinkedInu u jejich lidí kliknete „Nenašel“.'
-                : jinde ? 'V této kategorii už nikdo nečeká. Další firmy jsou v druhé kategorii nahoře.' : 'Všechny firmy ze seznamu jsou vyřízené.') + '</div>') +
+        (shown.length ? '<div class="li-batch">' + shown.map(webQueueRowHtml).join('') + '</div>' : emptyHtml) +
         (more > 0 ? '<div class="web-more"><strong>Dalších ' + more + ' čeká.</strong>' +
             '<button class="btn btn-secondary li-btn" onclick="webShowMore()">Zobrazit dalších ' + Math.min(25, more) + '</button></div>' : '') +
     '</div>';
