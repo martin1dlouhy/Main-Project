@@ -506,6 +506,15 @@
         .li-section > .li-day:first-of-type { margin-top: 4px; }
         .li-day-head { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; background: transparent; border: none; padding: 0; cursor: pointer; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; }
         .li-day-head:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+        /* Filtr fronty „Dnes oslovit“: komu a jaká priorita */
+        .li-filtr { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 2px 0 10px; }
+        .li-filtr-lbl { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-soft); }
+        .li-filtr-group { display: flex; flex-wrap: wrap; gap: 6px; margin-right: 10px; }
+        .li-filtr .filter-pill { font-family: inherit; font-size: 12.5px; padding: 5px 12px; }
+        .li-filtr .filter-pill:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+        .li-filtr-n { margin-left: 6px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 11.5px; color: var(--text-soft); }
+        .li-filtr .filter-pill.active .li-filtr-n { color: var(--amber-warm); }
+        .li-filtr-note { margin: -4px 0 10px; }
         .li-batch { display: flex; flex-direction: column; }
         .li-batch-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line-faint); flex-wrap: wrap; }
         .li-batch-row:first-child { border-top: none; }
@@ -8900,6 +8909,7 @@ state.liHidden = {};               // otisk řádku → skryto (Nenašel) v tét
 state.liOpened = {};               // otisk řádku → kliknuto „Hledat“ v této relaci
 state.liChannel = {};              // otisk řádku → 'email' / 'web' / '' (vráceno) v této relaci
 state.liExtra = { day: '', n: 0 }; // „Načíst další“: kolik lidí navíc ukázat dnes (jen v této relaci)
+state.liFiltr = null;              // filtr fronty zvolený v této relaci { typ, prio }; null = naposledy uložený (značka li-filtr v Activity)
 // Lidé bez LinkedInu: Martin jim napíše e-mailem nebo přes kontaktní formulář na webu firmy
 const LI_JINE_KANALY = {
     email: { label: 'e-mail', zapis: 'Email', tlacitko: 'Poslal e-mail' },
@@ -8988,9 +8998,10 @@ async function liWriteMailbox(src) {
 function liMarks() {
     const act = state.activity || [];
     if (state._liMarks && state._liMarks.len === act.length && state._liMarks.ref === act) return state._liMarks;
-    const m = { len: act.length, ref: act, days: {}, nenasel: {}, otevreno: {}, kanal: {} };
+    const m = { len: act.length, ref: act, days: {}, nenasel: {}, otevreno: {}, kanal: {}, filtr: '' };
     act.forEach(function (a) {
         if (!a.detail) return;
+        if (a.what === 'li-filtr') { m.filtr = a.detail; return; }      // naposledy zvolený filtr fronty („typ|priorita“), platí poslední
         if (a.what === 'li-davka-hotova' || a.what === 'li-davka-preskocena') m.days[a.detail] = a.what;
         else if (a.what === 'li-nenasel') m.nenasel[a.detail] = String(a.when || '').slice(0, 10) || true;
         else if (a.what === 'li-nenasel-zpet') delete m.nenasel[a.detail];
@@ -9256,12 +9267,38 @@ function liBatchView(rows, contacts, done) {
     return byDay;
 }
 
-function liPendingBatches(today) {
+// ---------- Filtr fronty: komu (poradci / stavební firmy) a jaká priorita (Martin 19. 11. 2026) ----------
+// Dávky jsou naplánované po dnech, ale poradci s prioritou 1 mohou být až v dávkách na příští týden. Zapnutý filtr proto
+// bere lidi ze všech dávek, i z těch na další dny (napřed vyšší priorita, potom dřívější den). Bez filtru jde fronta
+// podle dnů jako dřív. Volba se pamatuje značkou li-filtr v Activity (žádné úložiště prohlížeče), takže vydrží do změny.
+const LI_FILTR_TYPY = { vse: 'Všichni', poradci: 'Poradci', stavebni: 'Stavební firmy' };
+function liFiltr() {
+    if (state.liFiltr) return state.liFiltr;
+    const p = String(liMarks().filtr || '').split('|');
+    return { typ: LI_FILTR_TYPY[p[0]] ? p[0] : 'vse', prio: /^[1-9]$/.test(p[1] || '') ? p[1] : '' };
+}
+function liFiltrOn(f) { return f.typ !== 'vse' || f.prio !== ''; }
+function liRowTyp(r) { return liIsStavebni(r.segment) ? 'stavebni' : 'poradci'; }
+function liRowPrio(r) { const m = String(r.priorita || '').match(/[1-9]/); return m ? m[0] : ''; }
+function liFiltrMatch(r, f) { return (f.typ === 'vse' || liRowTyp(r) === f.typ) && (!f.prio || liRowPrio(r) === f.prio); }
+function liSetFiltr(f) {
+    if (!LI_FILTR_TYPY[f.typ] || !/^[1-9]?$/.test(f.prio)) return;
+    state.liFiltr = f;
+    renderLinkedInToday();
+    logActivity('', 'li-filtr', f.typ + '|' + f.prio);
+}
+// Změna typu ruší prioritu: stavební firmy prioritu 3 nemají a fronta by byla bez vysvětlení prázdná
+function liSetFiltrTyp(typ) { liSetFiltr({ typ: typ, prio: '' }); }
+function liSetFiltrPrio(prio) { liSetFiltr({ typ: liFiltr().typ, prio: String(prio || '') }); }
+
+// vcetneBudoucich = i dávky na další dny (pro filtr fronty a pro řádky vyřízené dřív, než na ně přišel den)
+function liPendingBatches(today, vcetneBudoucich) {
     if (!state.liBatches) return [];
     const byDay = liBatchView(state.liBatches, state.contacts, liBatchDays());
     return Object.keys(byDay).filter(function (d) {
         const age = liDaysSince(d, today);
-        if (age === null || age < 0) return false;
+        if (age === null) return false;
+        if (age < 0) return !!vcetneBudoucich;
         return !liDayExpired(d, today, byDay[d].rows);
     }).sort(function (a, b) { return a === today ? -1 : b === today ? 1 : b.localeCompare(a); })
       .map(function (d) { return byDay[d]; });
@@ -9305,15 +9342,35 @@ function liLoadMore(n) {
 // Fronta na dnešek: nejdřív nevyřízení z minulých dnů (nejvýš LI_DAVKA_MAX_STARI dní po plánovaném dni – lhůta
 // podle čl. 14 GDPR), pak dnešní dávka. Kdo se dnes nestihne, posune se na další den.
 function liQueue(today) {
-    const days = liPendingBatches(today).slice().sort(function (a, b) { return a.den.localeCompare(b.den); });
-    const q = { days: days, rows: [], linkedin: 0, jinak: 0, waiting: 0, more: 0, hidden: [], known: 0, neo: 0, handledToday: 0 };
-    const all = [];
+    const f = liFiltr(), filtr = liFiltrOn(f);
+    const days = liPendingBatches(today, true).slice().sort(function (a, b) { return a.den.localeCompare(b.den); });
+    // pool = kolik lidí v dávkách čeká (i na další dny) podle typu a priority; mimo = čekající z dnešní a starších dávek,
+    // které zapnutý filtr odkládá (mimoDen = nejstarší taková dávka, po LI_DAVKA_MAX_STARI dnech propadne)
+    const q = { days: days, rows: [], linkedin: 0, jinak: 0, waiting: 0, more: 0, hidden: [], known: 0, neo: 0, handledToday: 0,
+        filtr: f, filtrOn: filtr, pool: { typ: { vse: 0, poradci: 0, stavebni: 0 }, prio: {} }, mimo: 0, mimoDen: '' };
+    let all = [];
     days.forEach(function (b) {
         const age = liDaysSince(b.den, today);
-        b.rows.forEach(function (r) { if (liIsHandled(r) || age <= LI_DAVKA_MAX_STARI) all.push(r); });
+        b.rows.forEach(function (r) {
+            // Vyřízený (nezapsaný) řádek je ve frontě vždy, i z dávky na další den a i mimo filtr: čeká na „Zapsat“
+            if (liIsHandled(r)) { all.push(r); return; }
+            if (age > LI_DAVKA_MAX_STARI) return;
+            const typ = liRowTyp(r), prio = liRowPrio(r);
+            q.pool.typ.vse++;
+            q.pool.typ[typ]++;
+            if (prio && (f.typ === 'vse' || f.typ === typ)) q.pool.prio[prio] = (q.pool.prio[prio] || 0) + 1;
+            if (filtr ? liFiltrMatch(r, f) : age >= 0) all.push(r);
+            else if (filtr && age >= 0) { q.mimo++; if (!q.mimoDen || b.den < q.mimoDen) q.mimoDen = b.den; }
+        });
         q.hidden = q.hidden.concat(b.hidden);
         if (b.den === today) { q.known = b.skippedKnown; q.neo = b.skippedNeo; }
     });
+    if (filtr) {
+        // Napřed vyřízení (čekají na zápis), potom čekající podle priority; při shodě dřívější den a pořadí v dávce
+        const ord = all.map(function (r, i) { return { r: r, i: i, h: liIsHandled(r) ? 0 : 1, p: parseInt(liRowPrio(r) || '9', 10) }; });
+        ord.sort(function (a, b) { return a.h - b.h || (a.h ? a.p - b.p : 0) || a.i - b.i; });
+        all = ord.map(function (x) { return x.r; });
+    }
     q.handledToday = liHandledToday(today, all, q.hidden);
     q.cap = liDailyCap(today);
     let room = Math.max(0, q.cap - q.handledToday);
@@ -9336,6 +9393,8 @@ function liBatchRowHtml(r, today) {
     const lateBadge = late && !ch && !opened
         ? ' <span class="li-badge' + (left <= 1 ? ' li-badge-warn' : '') + '" title="Odloženo z dávky ' + escapeHtml(liDayLabel(r.den)) + '">z ' + escapeHtml(liDayLabel(r.den)) + (left <= 0 ? ' – dnes naposledy' : left === 1 ? ' – zítra naposledy' : '') + '</span>' : '';
     const status = ch ? '<span class="li-check" aria-label="osloven">✓</span> ' : opened ? '<span class="li-check" aria-label="otevřeno">✓</span> ' : '';
+    // Člověk z dávky na další den, kterého sem dostal filtr: ukázat, na kdy byl naplánovaný
+    const futureBadge = r.den > today ? ' <span class="li-badge" title="Z dávky naplánované na ' + escapeHtml(liDayLabel(r.den)) + ', filtr ho vzal dřív">dávka ' + escapeHtml(liDayLabel(r.den)) + '</span>' : '';
     let actions;
     if (ch) {
         actions = '<span class="li-badge li-badge-sit">' + escapeHtml(LI_JINE_KANALY[ch].label) + '</span>' +
@@ -9353,10 +9412,36 @@ function liBatchRowHtml(r, today) {
         '<div class="li-batch-who">' + status +
             '<span class="li-name">' + escapeHtml(r.kontaktniOsoba) + '</span> <span class="li-batch-sub">· ' + escapeHtml([r.role, r.firma].filter(Boolean).join(', ')) + '</span>' +
             (liIsStavebni(r.segment) ? ' <span class="li-badge li-badge-sit" title="Možný klient, ne partner. Po přijetí pozvánky mu patří zpráva pro stavební firmy.">stavební firma</span>' : '') +
-            (r.sit ? ' <span class="li-badge li-badge-sit">' + escapeHtml(r.sit) + '</span>' : '') + lateBadge +
+            (r.sit ? ' <span class="li-badge li-badge-sit">' + escapeHtml(r.sit) + '</span>' : '') + lateBadge + futureBadge +
             (r.maybeKnown ? ' <button class="li-badge li-badge-warn li-badge-btn" onclick="openEditContact(\'' + escapeAttr(r.maybeKnown.id) + '\')" title="Otevřít kontakt se stejným jménem">možná už v databázi – ověřte</button>' : '') +
             (r.poznamka ? ' <span class="li-badge" title="' + escapeHtml(r.poznamka) + '">' + escapeHtml(String(r.poznamka).slice(0, 60)) + '</span>' : '') + '</div>' +
         '<div class="li-actions">' + actions + '</div></div>';
+}
+
+// Filtr nad frontou: komu a jaká priorita. Číslo = kolik lidí v dávkách čeká, i na další dny.
+function liFiltrHtml(qd) {
+    const f = qd.filtr, p = qd.pool;
+    const pill = function (active, call, label, n, tip) {
+        return '<button type="button" class="filter-pill' + (active ? ' active' : '') + '" aria-pressed="' + active + '" onclick="' + call + '"' + (tip ? ' title="' + tip + '"' : '') + '>' +
+            label + (n == null ? '' : '<span class="li-filtr-n">' + n + '</span>') + '</button>';
+    };
+    const typy = Object.keys(LI_FILTR_TYPY).filter(function (k) { return k === 'vse' || p.typ[k] > 0 || f.typ === k; });
+    const prios = Object.keys(p.prio).sort();
+    if (f.prio && prios.indexOf(f.prio) === -1) prios.push(f.prio);      // zvolená priorita zůstává vidět, i když v ní už nikdo nečeká
+    let html = '<div class="li-filtr"><span class="li-filtr-lbl">Komu</span><div class="li-filtr-group" role="group" aria-label="Komu">' +
+        typy.map(function (k) { return pill(f.typ === k, 'liSetFiltrTyp(\'' + k + '\')', LI_FILTR_TYPY[k], p.typ[k], 'V dávkách čeká ' + liPeople(p.typ[k]) + ' (i na další dny)'); }).join('') + '</div>';
+    if (prios.length > 1 || f.prio) {
+        html += '<span class="li-filtr-lbl">Priorita</span><div class="li-filtr-group" role="group" aria-label="Priorita">' +
+            pill(!f.prio, 'liSetFiltrPrio(\'\')', 'Vše', null, '') +
+            // počet v závorce, ať se nečte dohromady s číslem priority („1 (74)“, ne „1 74“)
+            prios.sort().map(function (k) { return pill(f.prio === k, 'liSetFiltrPrio(\'' + k + '\')', k, '(' + (p.prio[k] || 0) + ')', 'Priorita ' + k + ': v dávkách čeká ' + liPeople(p.prio[k] || 0) + ' (i na další dny)'); }).join('') + '</div>';
+    }
+    html += '</div>';
+    if (qd.filtrOn) {
+        html += '<div class="li-hint li-filtr-note">Fronta bere lidi podle filtru ze všech dávek, i z těch na další dny: napřed vyšší priorita, potom dřívější den.' +
+            (qd.mimo ? ' Mimo filtr z dnešní a starších dávek ' + liWaits(qd.mimo) + '; nejstarší z nich propadnou po ' + escapeHtml(liDayLabel(liShiftDate(qd.mimoDen, LI_DAVKA_MAX_STARI))) : '') + '</div>';
+    }
+    return html;
 }
 
 function liQueueHtml(qd, today) {
@@ -9376,10 +9461,11 @@ function liQueueHtml(qd, today) {
             '<span class="li-muted" style="font-size:12.5px;">na LinkedInu dnes ještě zbývá místo</span>' : '') + '</div>' : '';
     const list = qd.rows.length
         ? '<div class="li-batch">' + qd.rows.map(function (r) { return liBatchRowHtml(r, today); }).join('') + '</div>'
-        : '<div class="li-empty">Dnešních ' + qd.cap + ' lidí je vyřízeno.</div>';
+        : '<div class="li-empty">' + (qd.filtrOn && !qd.more ? 'Podle filtru už nikdo nečeká. Zvolte jinou prioritu nebo „Všichni“.' : 'Dnešních ' + qd.cap + ' lidí je vyřízeno.') + '</div>';
     return '<div class="li-section li-day li-day-today">' +
         '<div class="li-section-head"><h4>Dnes oslovit – ' + escapeHtml(liDayLabel(today)) + ' <span class="li-count">' + qd.rows.length + '</span></h4>' +
             '<span class="li-muted" style="font-size:12.5px;">dnes vyřízeno ' + qd.handledToday + ' z ' + qd.cap + '</span></div>' +
+        liFiltrHtml(qd) +
         '<div class="li-hint" style="margin-bottom:8px;">„Hledat na LinkedInu“ a pozvat bez poznámky. Kdo LinkedIn nemá, tomu napište e-mailem nebo přes formulář na webu a klikněte „Poslal e-mail“ nebo „Napsal přes web“. Koho nenajdete vůbec, označte „Nenašel“. Průběžně nebo na konci klikněte „Zapsat“. Kdo se dnes nestihne, přesune se na další den. Na LinkedInu dnes ještě asi ' + liPeopleAcc(room) + ' (zhruba ' + LI_TYDENNI_STROP + ' pozvánek za 7 dní).' +
             (notes.length ? ' (' + notes.join(', ') + ')' : '') + '</div>' +
         list + later + hidden +
@@ -9405,13 +9491,14 @@ function liBatchesHtml(today) {
     const qd = liQueue(today);
     const warn = state.liBatchWarn ? '<div class="li-empty li-red" style="margin-top:6px;">' + escapeHtml(state.liBatchWarn) + '</div>' : '';
     let html = '';
-    if (qd.rows.length || qd.more || qd.hidden.length) html = liQueueHtml(qd, today);
+    if (qd.rows.length || qd.more || qd.hidden.length || qd.filtrOn) html = liQueueHtml(qd, today);
     else {
         const future = (state.liBatches || []).map(function (r) { return r.den; }).filter(function (d) { return d > today; }).sort();
         const doneToday = qd.handledToday > 0 || liBatchDays()[today] === 'li-davka-hotova';
         const isDec = today.slice(5, 7) === '12';
-        html = box('<div class="li-empty">' + (doneToday ? 'Na dnešek je hotovo.' : 'Na dnešek nikdo nečeká.') +
-            (future.length ? ' Další dávka: ' + escapeHtml(liDayLabel(future[0])) + '.' : isDec ? ' Další dávky připraví Claude v lednu.' : ' Další dávky zatím nejsou – řekněte Claudovi.') + '</div>',
+        // Na dnešek nic není, ale v dávkách na další dny lidé čekají: filtrem si je jde vzít už dnes
+        html = box((qd.pool.typ.vse ? liFiltrHtml(qd) : '') + '<div class="li-empty">' + (doneToday ? 'Na dnešek je hotovo.' : 'Na dnešek nikdo nečeká.') +
+            (future.length ? ' Další dávka: ' + escapeHtml(liDayLabel(future[0])) : isDec ? ' Další dávky připraví Claude v lednu.' : ' Další dávky zatím nejsou – řekněte Claudovi.') + '</div>',
             '<button class="btn btn-ghost li-btn li-btn-small" onclick="liLoadBatches(true)">Načíst znovu</button>');
     }
     return html + warn;
